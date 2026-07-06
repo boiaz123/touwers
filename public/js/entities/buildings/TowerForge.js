@@ -83,45 +83,49 @@ export class TowerForge extends Building {
         this.fireIntensity = Math.sin(this.animationTime * 6) * 0.3 + 0.7;
         
         // Update workers
+        const renderSize = this._lastRenderSize || 128;
+        const sizeScale = renderSize / 128;
         this.workers.forEach(worker => {
             worker.workCooldown -= deltaTime;
             worker.hammerRaised = Math.max(0, worker.hammerRaised - deltaTime * 3);
-            
+
             if (worker.workCooldown <= 0) {
                 worker.hammerRaised = 1;
                 worker.workCooldown = 2 + Math.random() * 2;
-                
-                // Create sparks when worker strikes
+
+                // Create sparks when worker strikes - position scales with building size
                 if (worker.type === 'blacksmith') {
                     for (let i = 0; i < 3; i++) {
                         this.sparks.push({
-                            x: this.x + worker.x + (Math.random() - 0.5) * 5,
-                            y: this.y + worker.y + (Math.random() - 0.5) * 5,
-                            vx: (Math.random() - 0.5) * 40,
-                            vy: -Math.random() * 60 - 20,
+                            x: this.x + worker.x * sizeScale + (Math.random() - 0.5) * 5 * sizeScale,
+                            y: this.y + worker.y * sizeScale + (Math.random() - 0.5) * 5 * sizeScale,
+                            vx: (Math.random() - 0.5) * 40 * sizeScale,
+                            vy: (-Math.random() * 60 - 20) * sizeScale,
                             life: 0.8,
                             maxLife: 0.8,
-                            size: Math.random() * 1.5 + 0.5,
+                            size: (Math.random() * 1.5 + 0.5) * sizeScale,
                             color: Math.random() > 0.5 ? 'orange' : 'yellow'
                         });
                     }
                 }
             }
         });
-        
-        // Generate forge sparks from fire opening
+
+        // Generate forge sparks from fire opening.
+        // Opening center: x = this.x - 15 (matching renderForgeOpening's computed center),
+        // y = this.y - 5 (openingY + openingHeight/2 = this.y - openingHeight/2 - 5 + openingHeight/2).
         this.nextSparkTime -= deltaTime;
         if (this.nextSparkTime <= 0) {
             const sparkCount = this.isSelected ? 8 : 5;
             for (let i = 0; i < sparkCount; i++) {
                 this.sparks.push({
-                    x: this.x - 15 + (Math.random() - 0.5) * 25,
-                    y: this.y - 10 + (Math.random() - 0.5) * 15,
-                    vx: (Math.random() - 0.5) * 60,
-                    vy: -Math.random() * 80 - 30,
+                    x: this.x - 15 + (Math.random() - 0.5) * 25 * sizeScale,
+                    y: this.y - 5 + (Math.random() - 0.5) * 15 * sizeScale,
+                    vx: (Math.random() - 0.5) * 60 * sizeScale,
+                    vy: (-Math.random() * 80 - 30) * sizeScale,
                     life: 1.2,
                     maxLife: 1.2,
-                    size: Math.random() * 2 + 1,
+                    size: (Math.random() * 2 + 1) * sizeScale,
                     color: Math.random() > 0.4 ? 'orange' : (Math.random() > 0.7 ? 'yellow' : 'red')
                 });
             }
@@ -131,8 +135,9 @@ export class TowerForge extends Building {
         // Generate chimney smoke - FROM TOP OF INTEGRATED CHIMNEY
         this.nextSmokeTime -= deltaTime;
         if (this.nextSmokeTime <= 0) {
-            // Calculate chimney top position - must match renderChimney calculations
-            const size = 128; // Approximate building size
+            // Use the actual rendered size (cellSize * 4, resolution-dependent).
+            // Falls back to 128 only before the first render() call.
+            const size = this._lastRenderSize || 128;
             const buildingWidth = size * 0.9;
             const chimneyWidth = size * 0.16;
             const chimneyHeight = size * 0.7;
@@ -188,6 +193,9 @@ export class TowerForge extends Building {
     }
     
     render(ctx, size) {
+        // Cache the actual rendered size so update() can match chimney positions exactly.
+        this._lastRenderSize = size;
+
         if (!this.skipCanvas2DBodyRender) {
             this.renderStaticBack(ctx, size);
             this.renderDynamicParts(ctx, size);
@@ -586,9 +594,10 @@ export class TowerForge extends Building {
     }
     
     renderWorkers(ctx, size) {
+        const scale = size / 128;
         this.workers.forEach(worker => {
             ctx.save();
-            ctx.translate(this.x + worker.x, this.y + worker.y);
+            ctx.translate(this.x + worker.x * scale, this.y + worker.y * scale);
             
             // Worker shadow
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';

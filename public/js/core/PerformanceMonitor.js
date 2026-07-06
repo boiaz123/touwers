@@ -16,7 +16,7 @@ export class PerformanceMonitor {
         // Performance tracking
         this.frameTimings = [];
         this.targetFPS = 60;
-        this.enabled = false; // Disabled by default to avoid overhead
+        this.enabled = true;
     }
 
     startFrame() {

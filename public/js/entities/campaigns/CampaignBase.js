@@ -416,6 +416,10 @@ export class CampaignBase {
     }
 
     // Distribute totalSlots evenly along pathPoints by cumulative pixel distance.
+    // Uses linear interpolation within segments so slots are spaced exactly equal
+    // path-distance apart, rather than snapping to the nearest path-point vertex
+    // (which could place two consecutive slots on the same position when a segment
+    // is shorter than the slot spacing).
     // Returns an array of {x, y} position objects.
     _distributeSlotsByDistance(pathPoints, totalSlots) {
         const cum = [0];
@@ -429,11 +433,13 @@ export class CampaignBase {
         const result  = [];
         for (let s = 0; s < totalSlots; s++) {
             const target = (s + 1) * spacing;
-            let idx = pathPoints.length - 1;
-            for (let j = 1; j < cum.length; j++) {
-                if (cum[j] >= target) { idx = j; break; }
-            }
-            result.push({ ...pathPoints[idx] });
+            let idx = 1;
+            while (idx < cum.length - 1 && cum[idx] < target) idx++;
+            const segLen = cum[idx] - cum[idx - 1];
+            const t = segLen > 0 ? (target - cum[idx - 1]) / segLen : 0;
+            const p0 = pathPoints[idx - 1];
+            const p1 = pathPoints[idx];
+            result.push({ x: p0.x + (p1.x - p0.x) * t, y: p0.y + (p1.y - p0.y) * t });
         }
         return result;
     }

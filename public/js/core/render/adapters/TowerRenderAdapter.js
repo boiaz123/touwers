@@ -79,10 +79,16 @@ export class TowerRenderAdapter {
 
         const shim = new CanvasGraphicsShim(dynamic);
 
-        this._entries.set(tower, { container: entryContainer, back, front, dynamic, shim });
+        this._entries.set(tower, {
+            container: entryContainer, back, front, dynamic, shim,
+            lastAnimKey: -1,
+        });
         tower.skipCanvas2DBodyRender = true;
 
+        // Towers never move after placement: do the one-time position + zIndex set here
+        // so sync() never has to touch them again.
         this._positionStaticLayers(tower);
+        entryContainer.zIndex = tower.y;
     }
 
     _positionStaticLayers(tower) {
@@ -112,10 +118,15 @@ export class TowerRenderAdapter {
         const entry = this._entries.get(tower);
         if (!entry) return;
 
-        // Towers don't move once placed, but keep this cheap assignment rather than
-        // assuming - matches the pattern other (movable) entity adapters will need.
-        this._positionStaticLayers(tower);
-        entry.container.zIndex = tower.y;
+        // Position and zIndex are set once at register() — towers never move after
+        // placement so there is nothing to update on subsequent frames.
+
+        // ── 30fps rate-limit ──────────────────────────────────────────────────────
+        // Aim-angle drift, bow drawback, and muzzle flashes are imperceptible at 30fps
+        // for typical tower attack speeds. This halves dynamic-layer Graphics calls.
+        const animKey = (performance.now() / 33) | 0; // ~30fps bucket
+        if (animKey === entry.lastAnimKey) return;
+        entry.lastAnimKey = animKey;
 
         entry.shim.reset();
         entry.shim.level = level;

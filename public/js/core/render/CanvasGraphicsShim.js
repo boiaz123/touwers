@@ -83,6 +83,7 @@ export class CanvasGraphicsShim {
         this._fillStyle = '#000000';
         this._strokeStyle = '#000000';
         this._lineWidth = 1;
+        this._lineCap = 'butt';
         this._font = '10px sans-serif';
         this._textAlign = 'left';
         this._textBaseline = 'alphabetic';
@@ -114,6 +115,7 @@ export class CanvasGraphicsShim {
         this._fillStyle = '#000000';
         this._strokeStyle = '#000000';
         this._lineWidth = 1;
+        this._lineCap = 'butt';
         this._font = '10px sans-serif';
         this._textAlign = 'left';
         this._textBaseline = 'alphabetic';
@@ -326,16 +328,25 @@ export class CanvasGraphicsShim {
         );
     }
 
+    arcTo(x1, y1, x2, y2, radius) {
+        const m = this._matrix;
+        const p1x = m.a * x1 + m.c * y1 + m.e, p1y = m.b * x1 + m.d * y1 + m.f;
+        const p2x = m.a * x2 + m.c * y2 + m.e, p2y = m.b * x2 + m.d * y2 + m.f;
+        this.g.arcTo(p1x, p1y, p2x, p2y, radius * Math.hypot(m.a, m.b));
+    }
+
     fillRect(x, y, w, h) {
+        if (this._fillStyle === null) return;
         this.g.beginPath();
         this._rectPath(x, y, w, h);
         this.g.fill(this._fillStyle);
     }
 
     strokeRect(x, y, w, h) {
+        if (this._strokeStyle === null) return;
         this.g.beginPath();
         this._rectPath(x, y, w, h);
-        this.g.stroke({ width: this._lineWidth, color: this._strokeStyle });
+        this._applyStroke();
     }
 
     _rectPath(x, y, w, h) {
@@ -353,7 +364,21 @@ export class CanvasGraphicsShim {
     }
 
     fill() { if (this._fillStyle !== null) this.g.fill(this._fillStyle); }
-    stroke() { if (this._strokeStyle !== null) this.g.stroke({ width: this._lineWidth, color: this._strokeStyle }); }
+    stroke() { if (this._strokeStyle !== null) this._applyStroke(); }
+
+    /** strokeText: renders the stroke outline of text - approximated as a no-op here since
+     *  the primary visible text comes from fillText() below it in all current callers. */
+    strokeText() { /* not supported in shim; fillText provides the primary text render */ }
+
+    _applyStroke() {
+        const cap = this._lineCap || 'butt';
+        if (this._strokeStyle instanceof FillGradient) {
+            // FillGradient can't be passed as StrokeStyle.color — use the fill property instead.
+            this.g.stroke({ fill: this._strokeStyle, width: this._lineWidth, cap });
+        } else {
+            this.g.stroke({ width: this._lineWidth, color: this._strokeStyle, cap });
+        }
+    }
 
     // Normalizes rgba alpha in scientific notation (e.g. 1.32e-8) to a fixed-decimal string
     // that Pixi's color parser can handle. Only called when 'e' is in the string.

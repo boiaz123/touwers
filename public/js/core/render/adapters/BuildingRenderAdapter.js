@@ -65,10 +65,12 @@ export class BuildingRenderAdapter {
 
         const shim = new CanvasGraphicsShim(dynamic);
 
-        this._entries.set(building, { container: entryContainer, back, front, dynamic, shim });
+        this._entries.set(building, { container: entryContainer, back, front, dynamic, shim, lastAnimKey: -1 });
         building.skipCanvas2DBodyRender = true;
 
+        // Buildings never move — position and zIndex are set once here.
         this._positionStaticLayers(building);
+        entryContainer.zIndex = building.y;
     }
 
     _positionStaticLayers(building) {
@@ -99,8 +101,15 @@ export class BuildingRenderAdapter {
         const entry = this._entries.get(building);
         if (!entry) return;
 
-        this._positionStaticLayers(building);
-        entry.container.zIndex = building.y;
+        // Keep _lastRenderSize in sync so buildings that use it in update() (e.g. TowerForge
+        // smoke spawn) compute resolution-correct world positions.
+        building._lastRenderSize = buildingSize;
+
+        // Rate-limit dynamic redraws to ~30fps — buildings have continuous fire/glow animations
+        // but sub-frame precision is imperceptible.
+        const animKey = (performance.now() / 33) | 0;
+        if (animKey === entry.lastAnimKey) return;
+        entry.lastAnimKey = animKey;
 
         entry.shim.reset();
         entry.shim.level = level;

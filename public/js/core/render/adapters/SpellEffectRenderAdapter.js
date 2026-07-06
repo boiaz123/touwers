@@ -27,14 +27,29 @@ export class SpellEffectRenderAdapter {
         this.graphics = new Graphics();
         this.container.addChild(this.graphics);
         this.shim = new CanvasGraphicsShim(this.graphics);
+        this._lastAnimKey = -1;
     }
 
     /**
      * Call once per frame when the Pixi renderer is active.
+     * Spell particles are capped at 30fps — ring/particle drift at 60fps vs 30fps
+     * is imperceptible during the fast-paced spell activation window.
      * @param {(ctx: CanvasGraphicsShim) => void} renderSpellEffectsFn - GameplayState's own
      * renderSpellEffects method, bound to the instance, reused unmodified.
+     * @param {boolean} hasActiveEffects - skip the shim entirely when there are no active effects
      */
-    sync(renderSpellEffectsFn) {
+    sync(renderSpellEffectsFn, hasActiveEffects) {
+        if (!hasActiveEffects) {
+            // Clear any leftover spell graphics from the previous effect.
+            if (this._lastAnimKey !== -1) {
+                this.shim.reset();
+                this._lastAnimKey = -1;
+            }
+            return;
+        }
+        const animKey = (performance.now() / 33) | 0; // ~30fps bucket
+        if (animKey === this._lastAnimKey) return;
+        this._lastAnimKey = animKey;
         this.shim.reset();
         renderSpellEffectsFn(this.shim);
     }

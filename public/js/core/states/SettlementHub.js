@@ -103,6 +103,7 @@ export class SettlementHub {
         this.isFirstRender = true; // Force pre-render on next render
         this.activePopup = null;
         this._postSirFrogertyCooldown = 0;
+        this._sbCache = null; // Rebuild building sub-caches after settlementBuildings repopulates
         
         // Load settlement data from the current save slot
         // This includes gold, inventory, upgrades, and unlock progression
@@ -1344,13 +1345,16 @@ export class SettlementHub {
 
     renderBirds(ctx, canvas) {
         // Sporadic bird flocks flying across the sky
-        // Slower birds, less frequently, better V-formation
-        
-        const flocks = [
-            { startTime: 6, duration: 20, yOffset: canvas.height * 0.20, birdCount: 5, cycleLength: 45 },
-            { startTime: 31, duration: 20, yOffset: canvas.height * 0.28, birdCount: 4, cycleLength: 70 },
-            { startTime: 46, duration: 20, yOffset: canvas.height * 0.15, birdCount: 6, cycleLength: 100 },
-        ];
+        // Cache flock config (depends on canvas height)
+        if (!this._birdFlocks || this._birdFlocksH !== canvas.height) {
+            this._birdFlocksH = canvas.height;
+            this._birdFlocks = [
+                { startTime: 6,  duration: 20, yOffset: canvas.height * 0.20, birdCount: 5, cycleLength: 45 },
+                { startTime: 31, duration: 20, yOffset: canvas.height * 0.28, birdCount: 4, cycleLength: 70 },
+                { startTime: 46, duration: 20, yOffset: canvas.height * 0.15, birdCount: 6, cycleLength: 100 },
+            ];
+        }
+        const flocks = this._birdFlocks;
         
         flocks.forEach(flock => {
             // Calculate position in cycle
@@ -1452,44 +1456,50 @@ export class SettlementHub {
 
     renderWindGust(ctx, canvas) {
         // Occasional wind gust visual effect - longer streaks, fewer lines
-        // Creates subtle effect that moves slower and more naturally
-        
         const gustCycle = (this.animationTime % 15);
-        if (gustCycle > 10 && gustCycle < 12) {
-            const gustProgress = (gustCycle - 10) / 2;
-            const gustOpacity = (Math.sin(gustProgress * Math.PI) * 0.25) * this.contentOpacity;
-            
-            if (gustOpacity > 0.01) {
-                // Multiple longer parallel wind streaks at different heights
-                const streakLayers = [
-                    { yBase: canvas.height * 0.16, count: 2, spacing: 40 },
-                    { yBase: canvas.height * 0.26, count: 2, spacing: 45 },
-                    { yBase: canvas.height * 0.33, count: 2, spacing: 38 },
-                ];
-                
-                streakLayers.forEach(layer => {
-                    for (let i = 0; i < layer.count; i++) {
-                        const y = layer.yBase + (i * layer.spacing);
-                        const streakLength = 150 + Math.sin(gustProgress * Math.PI + i * 0.5) * 30;
-                        const streakX = -100 + gustProgress * (canvas.width + 200) * 0.8; // Slower movement
-                        
-                        // Soft gradient wind streak - longer and more subtle
-                        const gradient = ctx.createLinearGradient(
-                            streakX - streakLength, y,
-                            streakX + streakLength, y
-                        );
-                        gradient.addColorStop(0, `rgba(200, 220, 255, 0)`);
-                        gradient.addColorStop(0.2, `rgba(200, 220, 255, ${gustOpacity * 0.5})`);
-                        gradient.addColorStop(0.5, `rgba(200, 220, 255, ${gustOpacity})`);
-                        gradient.addColorStop(0.8, `rgba(200, 220, 255, ${gustOpacity * 0.5})`);
-                        gradient.addColorStop(1, `rgba(200, 220, 255, 0)`);
-                        
-                        ctx.fillStyle = gradient;
-                        ctx.fillRect(streakX - streakLength, y - 1, streakLength * 2, 2);
-                    }
-                });
-            }
+        if (gustCycle <= 10 || gustCycle >= 12) return;
+
+        const gustProgress = (gustCycle - 10) / 2;
+        const gustOpacity = (Math.sin(gustProgress * Math.PI) * 0.25) * this.contentOpacity;
+        if (gustOpacity <= 0.01) return;
+
+        // Pre-bake gradient strip once (avoids creating gradient objects every frame)
+        if (!this._windStreakCanvas) {
+            this._windStreakCanvas = document.createElement('canvas');
+            this._windStreakCanvas.width = 400;
+            this._windStreakCanvas.height = 2;
+            const wc = this._windStreakCanvas.getContext('2d');
+            const g = wc.createLinearGradient(0, 0, 400, 0);
+            g.addColorStop(0,   'rgba(200, 220, 255, 0)');
+            g.addColorStop(0.2, 'rgba(200, 220, 255, 0.5)');
+            g.addColorStop(0.5, 'rgba(200, 220, 255, 1)');
+            g.addColorStop(0.8, 'rgba(200, 220, 255, 0.5)');
+            g.addColorStop(1,   'rgba(200, 220, 255, 0)');
+            wc.fillStyle = g;
+            wc.fillRect(0, 0, 400, 2);
         }
+
+        // Cache streak layer config (depends on canvas height)
+        if (!this._windStreakLayers || this._windStreakLayersH !== canvas.height) {
+            this._windStreakLayersH = canvas.height;
+            this._windStreakLayers = [
+                { yBase: canvas.height * 0.16, count: 2, spacing: 40 },
+                { yBase: canvas.height * 0.26, count: 2, spacing: 45 },
+                { yBase: canvas.height * 0.33, count: 2, spacing: 38 },
+            ];
+        }
+
+        ctx.save();
+        ctx.globalAlpha = gustOpacity;
+        this._windStreakLayers.forEach(layer => {
+            for (let i = 0; i < layer.count; i++) {
+                const y = layer.yBase + (i * layer.spacing);
+                const streakLength = 150 + Math.sin(gustProgress * Math.PI + i * 0.5) * 30;
+                const streakX = -100 + gustProgress * (canvas.width + 200) * 0.8;
+                ctx.drawImage(this._windStreakCanvas, 0, 0, 400, 2, streakX - streakLength, y - 1, streakLength * 2, 2);
+            }
+        });
+        ctx.restore();
     }
 
     renderDistantHills(ctx, canvas) {
@@ -2770,12 +2780,25 @@ export class SettlementHub {
         // mode='interior-all' → ALL non-exterior buildings, Y-sorted (painter's algorithm), in clipped pass
         // mode='exterior'     → only exterior buildings (Castle, TrainingGrounds), unclipped, with headers
         // mode='headers'      → only name labels for interior clickable buildings, unclipped (above wall)
-        const headers = {
-            'TrainingGrounds': 'Campaign',
-            'MagicAcademy': 'Arcane Library',
-            'TowerForge': 'Buy & Sell',
-            'Castle': 'Manage Settlement'
-        };
+
+        // Cache filtered/sorted subsets — buildings never move or change identity at runtime.
+        if (!this._sbCache) {
+            this._sbCache = {
+                headers: {
+                    'TrainingGrounds': 'Campaign',
+                    'MagicAcademy': 'Arcane Library',
+                    'TowerForge': 'Buy & Sell',
+                    'Castle': 'Manage Settlement'
+                },
+                interior: this.settlementBuildings
+                    .filter(item => !item.exterior && item.building)
+                    .sort((a, b) => a.building.y - b.building.y),
+                exterior: this.settlementBuildings.filter(item => item.exterior && item.building),
+                headerItems: this.settlementBuildings
+                    .filter(item => !item.exterior && item.clickable && item.action && item.building),
+            };
+        }
+        const { headers, interior, exterior, headerItems } = this._sbCache;
 
         const renderBody = (item) => {
             ctx.globalAlpha = this.contentOpacity;
@@ -2790,29 +2813,18 @@ export class SettlementHub {
         };
 
         if (mode === 'interior-all') {
-            // All non-exterior buildings Y-sorted so farther-back (lower Y) draw first
-            const items = this.settlementBuildings.filter(item => !item.exterior && item.building);
-            items.sort((a, b) => a.building.y - b.building.y);
-            items.forEach(renderBody);
-
+            interior.forEach(renderBody);
         } else if (mode === 'exterior') {
-            this.settlementBuildings
-                .filter(item => item.exterior && item.building)
-                .forEach(item => {
-                    renderBody(item);
-                    if (item.clickable && item.action) {
-                        this.renderBuildingHeader(ctx, item, headers);
-                    }
-                });
-
+            exterior.forEach(item => {
+                renderBody(item);
+                if (item.clickable && item.action) this.renderBuildingHeader(ctx, item, headers);
+            });
         } else if (mode === 'headers') {
-            this.settlementBuildings
-                .filter(item => !item.exterior && item.clickable && item.action && item.building)
-                .forEach(item => {
-                    ctx.globalAlpha = this.contentOpacity;
-                    this.renderBuildingHeader(ctx, item, headers);
-                    ctx.globalAlpha = 1;
-                });
+            headerItems.forEach(item => {
+                ctx.globalAlpha = this.contentOpacity;
+                this.renderBuildingHeader(ctx, item, headers);
+                ctx.globalAlpha = 1;
+            });
         }
     }
 

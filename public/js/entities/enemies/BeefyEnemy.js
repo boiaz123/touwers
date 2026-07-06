@@ -359,20 +359,16 @@ export class BeefyEnemy extends BaseEnemy {
         
         ctx.restore();
         
-        // Health bar - only draw if not at full health or currently being damaged
-        const barWidth = baseSize * 3.6;
-        const barHeight = Math.max(2, baseSize * 0.4);
-        const barY = this.y - baseSize * 2.5;
-        
-        // Only render health bar if below max or very recently damaged
-        if (this.health < this.maxHealth || (this.lastDamageTime && performance.now() - this.lastDamageTime < 2000)) {
+        // Health bar — skipped during Mode A baking (adapter draws it separately).
+        if (!this._baking) {
+            const barWidth = baseSize * 3.6;
+            const barHeight = Math.max(2, baseSize * 0.4);
+            const barY = this.y - baseSize * 2.5;
             ctx.fillStyle = '#000';
             ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
-            
             const healthPercent = this.health / this.maxHealth;
             ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
             ctx.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
-            
             ctx.strokeStyle = '#2F2F2F';
             ctx.lineWidth = 0.8;
             ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);

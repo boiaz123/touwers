@@ -366,21 +366,20 @@ export class ShieldKnightEnemy extends BaseEnemy {
         
         ctx.restore();
         
-        // Health bar
-        const barWidth = baseSize * 3.2;
-        const barHeight = Math.max(2.2, baseSize * 0.44);
-        const barY = this.y - baseSize * 2.3;
-        
-        ctx.fillStyle = '#000';
-        ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
-        
-        const healthPercent = this.health / this.maxHealth;
-        ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
-        ctx.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
-        
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1.1;
-        ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+        // Health bar — skipped during Mode A baking (adapter draws it separately).
+        if (!this._baking) {
+            const barWidth = baseSize * 3.2;
+            const barHeight = Math.max(2.2, baseSize * 0.44);
+            const barY = this.y - baseSize * 2.3;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
+            const healthPercent = this.health / this.maxHealth;
+            ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
+            ctx.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
+            ctx.strokeStyle = '#2F2F2F';
+            ctx.lineWidth = 1.1;
+            ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+        }
     }
 
 

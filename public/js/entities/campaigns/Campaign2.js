@@ -93,7 +93,11 @@ export class Campaign2 extends CampaignBase {
         
         this.generatePathAndSlots();
         this.generateTerrainCache();
-        
+
+        // Invalidate render caches so they rebuild at the current resolution
+        this.backgroundCanvas = null;
+        this.terrainCanvas = null;
+
         super.enter();
     }
     
@@ -131,9 +135,9 @@ export class Campaign2 extends CampaignBase {
             { x: width + 20, y: height * 0.76 }
         ];
         
-        // Generate 10 level slots distributed evenly by path distance
+        // Generate level slots for every registered level, distributed evenly along the path
         this.levelSlots = [];
-        const totalSlots = 10;
+        const totalSlots = this.levels.length;
         const positions = this._distributeSlotsByDistance(this.pathPoints, totalSlots);
 
         for (let i = 0; i < totalSlots; i++) {
@@ -373,25 +377,39 @@ export class Campaign2 extends CampaignBase {
 
     renderBackground(ctx) {
         const canvas = this.stateManager.canvas;
-        
-        // Sky gradient
-        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.6);
-        grad.addColorStop(0, '#1a3a5a');
-        grad.addColorStop(0.3, '#3a5a8a');
-        grad.addColorStop(0.7, '#6a9aca');
-        grad.addColorStop(1, '#8ab4da');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Render full-screen mountain range
-        this.drawFullMountainRange(ctx, canvas);
-        
-        ctx.globalAlpha = 1;
+        // Cache sky + mountain range — neither animates.
+        if (!this.backgroundCanvas) {
+            this.backgroundCanvas = document.createElement('canvas');
+            this.backgroundCanvas.width = canvas.width;
+            this.backgroundCanvas.height = canvas.height;
+            const bgCtx = this.backgroundCanvas.getContext('2d');
+
+            const grad = bgCtx.createLinearGradient(0, 0, 0, canvas.height * 0.6);
+            grad.addColorStop(0, '#1a3a5a');
+            grad.addColorStop(0.3, '#3a5a8a');
+            grad.addColorStop(0.7, '#6a9aca');
+            grad.addColorStop(1, '#8ab4da');
+            bgCtx.fillStyle = grad;
+            bgCtx.fillRect(0, 0, canvas.width, canvas.height);
+            this.drawFullMountainRange(bgCtx, canvas);
+            bgCtx.globalAlpha = 1;
+        }
+        ctx.drawImage(this.backgroundCanvas, 0, 0);
     }
 
     renderTerrain(ctx) {
         const canvas = this.stateManager.canvas;
-        
+        // Cache ground, texture, lake, rocks, path — none of these animate.
+        if (!this.terrainCanvas) {
+            this.terrainCanvas = document.createElement('canvas');
+            this.terrainCanvas.width = canvas.width;
+            this.terrainCanvas.height = canvas.height;
+            this._buildTerrainCache(this.terrainCanvas.getContext('2d'), canvas);
+        }
+        ctx.drawImage(this.terrainCanvas, 0, 0);
+    }
+
+    _buildTerrainCache(ctx, canvas) {
         // Ground separation line - lighter ground below mountains
         const separationY = canvas.height * 0.55;
         ctx.fillStyle = '#a8c8e1';

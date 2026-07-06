@@ -102,7 +102,11 @@ export class Campaign1 extends CampaignBase {
         
         // Generate static terrain cache once
         this.generateTerrainCache();
-        
+
+        // Invalidate render caches so they rebuild at the current resolution
+        this.backgroundCanvas = null;
+        this.terrainCanvas = null;
+
         // Call parent enter
         super.enter();
     }
@@ -451,34 +455,25 @@ export class Campaign1 extends CampaignBase {
     
     renderTerrain(ctx) {
         const canvas = this.stateManager.canvas;
-        
-        // Render water features FIRST (behind everything)
-        if (this.terrainDetails && this.terrainDetails.water) {
-            for (const water of this.terrainDetails.water) {
-                this.drawWater(ctx, water);
+        // Cache terrain (water, rocks, path) to an offscreen canvas — none of these animate.
+        if (!this.terrainCanvas) {
+            this.terrainCanvas = document.createElement('canvas');
+            this.terrainCanvas.width = canvas.width;
+            this.terrainCanvas.height = canvas.height;
+            const tc = this.terrainCanvas.getContext('2d');
+
+            if (this.terrainDetails && this.terrainDetails.water) {
+                for (const water of this.terrainDetails.water) this.drawWater(tc, water);
             }
-        }
-        
-        // Render rocks
-        if (this.terrainDetails && this.terrainDetails.rocks) {
-            for (const rock of this.terrainDetails.rocks) {
-                this.drawRock(ctx, rock.x, rock.y, rock.size);
+            if (this.terrainDetails && this.terrainDetails.rocks) {
+                for (const rock of this.terrainDetails.rocks) this.drawRock(tc, rock.x, rock.y, rock.size);
             }
-        }
-        
-        // Render small rocks for ground detail
-        if (this.terrainDetails && this.terrainDetails.smallRocks) {
-            for (const rock of this.terrainDetails.smallRocks) {
-                this.drawSmallRock(ctx, rock.x, rock.y, rock.size, rock.opacity);
+            if (this.terrainDetails && this.terrainDetails.smallRocks) {
+                for (const rock of this.terrainDetails.smallRocks) this.drawSmallRock(tc, rock.x, rock.y, rock.size, rock.opacity);
             }
+            this.renderPath(tc);
         }
-        
-        // Render the path on the ground
-        this.renderPath(ctx);
-        
-        // Render all trees on top of the path - sorted by Y for 2.5D perspective
-        // Lower Y (top of screen) renders first, appears behind
-        // Higher Y (bottom of screen) renders last, appears in front
+        ctx.drawImage(this.terrainCanvas, 0, 0);
     }
 
     render(ctx) {

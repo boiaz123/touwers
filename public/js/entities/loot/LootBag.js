@@ -339,17 +339,25 @@ export class LootBag {
         
         ctx.restore();
 
-        // Draw floating text if just dropped
-        if (this.animationTime < 0.5) {
-            const floatOffset = (1 - this.animationTime / 0.5) * 20;
+        // Repeating floating text pop: rises in then fades out, cycles every 3.5s.
+        const cycleT  = this.animationTime % 3.5;
+        const visible = cycleT < 0.75;
+        if (visible) {
+            const p          = cycleT / 0.75;                     // 0→1 over visible window
+            const alpha      = p < 0.2 ? p / 0.2                  // fade in
+                             : p < 0.75 ? 1                        // hold
+                             : (1 - p) / 0.25;                     // fade out
+            const floatOffset = (1 - Math.min(p / 0.3, 1)) * 18; // rises in first 30% then stops
             ctx.save();
-            ctx.translate(x, y - 35 - floatOffset);
+            ctx.translate(x, y - 36 - floatOffset);
+            if (ctx.globalAlpha !== undefined) ctx.globalAlpha = alpha;
             ctx.fillStyle = this.isRare ? '#C4B5FD' : '#FFD700';
             ctx.font = 'bold 13px Arial';
             ctx.textAlign = 'center';
             ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
             ctx.shadowBlur = 3;
             ctx.fillText(this.isRare ? 'Rare Loot!' : 'Loot!', 0, 0);
+            if (ctx.globalAlpha !== undefined) ctx.globalAlpha = 1;
             ctx.restore();
         }
     }
@@ -573,13 +581,16 @@ export class RealmShardDrop {
             ctx.beginPath(); ctx.arc(sx, sy, 2 + Math.sin(t * 3 + i) * 0.8, 0, Math.PI * 2); ctx.fill();
         });
 
-        // "Realm Shard!" text popup on spawn
-        if (this.animationTime < 0.8) {
-            const floatOffset = (1 - this.animationTime / 0.8) * 24;
+        // Repeating text pop cycling every 4s.
+        const cycleT  = this.animationTime % 4.0;
+        const visible = cycleT < 0.85;
+        if (visible) {
+            const p          = cycleT / 0.85;
+            const alpha      = p < 0.18 ? p / 0.18 : p < 0.75 ? 1 : (1 - p) / 0.25;
+            const floatOffset = (1 - Math.min(p / 0.3, 1)) * 22;
             ctx.save();
-            ctx.translate(0, -22 - floatOffset);
-            const textAlpha = this.animationTime < 0.5 ? 1 : (1 - (this.animationTime - 0.5) / 0.3);
-            ctx.globalAlpha = textAlpha;
+            ctx.translate(0, -24 - floatOffset);
+            ctx.globalAlpha = alpha;
             ctx.fillStyle = '#FFD700';
             ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'center';

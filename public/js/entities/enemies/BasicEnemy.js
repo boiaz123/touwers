@@ -275,25 +275,20 @@ export class BasicEnemy extends BaseEnemy {
         
         ctx.restore();
 
-        // --- HEALTH BAR (OPTIMIZED) ---
-        
-        const barWidth = baseSize * 3;
-        const barHeight = baseSize * 0.35;
-        const barY = this.y - baseSize * 2.1;
-        const barX = this.x - barWidth / 2;
-        const healthPercent = this.health / this.maxHealth;
-        
-        // Background
-        ctx.fillStyle = '#000';
-        ctx.fillRect(barX, barY, barWidth, barHeight);
-        
-        // Health fill
-        ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
-        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
-        
-        // Border
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(barX, barY, barWidth, barHeight);
+        // Health bar — skipped during Mode A baking (adapter draws it separately).
+        if (!this._baking) {
+            const barWidth = baseSize * 3;
+            const barHeight = baseSize * 0.35;
+            const barY = this.y - baseSize * 2.1;
+            const barX = this.x - barWidth / 2;
+            const healthPercent = this.health / this.maxHealth;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+            ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
+            ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+            ctx.strokeStyle = '#2F2F2F';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(barX, barY, barWidth, barHeight);
+        }
     }
 }

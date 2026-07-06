@@ -148,7 +148,42 @@ export class OptionsMenu {
         if (!this.resolutionSelector) {
             this.resolutionSelector = new ResolutionSelector(this.stateManager.game);
         }
+
+        // When opened from the settlement hub, unsaved campaign progress would be lost on
+        // the resolution-change page reload. Give the player a chance to save first.
+        if (this.stateManager.previousState === 'settlementHub'
+                && this.stateManager.currentSaveSlot
+                && this.stateManager.currentSaveData) {
+            this._pendingResolutionOpen = true;
+            this._resolutionSavePrompt = {
+                visible:  true,
+                hoverBtn: null, // 'save' | 'skip' | 'cancel'
+            };
+            return;
+        }
+
         this.resolutionSelector.show();
+    }
+
+    /** Save settlement state to disk (mirrors SettlementHub.saveSettlement without closing the hub). */
+    async _performSettlementSave() {
+        const sm = this.stateManager;
+        const settlementData = {
+            playerGold:        sm.playerGold        || 0,
+            playerInventory:   sm.playerInventory   || [],
+            upgrades:          sm.upgradeSystem          ? sm.upgradeSystem.serialize()          : { purchasedUpgrades: [] },
+            marketplace:       sm.marketplaceSystem      ? sm.marketplaceSystem.serialize()      : { consumables: {} },
+            statistics:        sm.gameStatistics         ? sm.gameStatistics.serialize()         : {},
+            achievements:      sm.achievementSystem      ? sm.achievementSystem.serialize()      : { unlockedIds: [] },
+            lastPlayedLevel:   sm.currentSaveData.lastPlayedLevel,
+            unlockedLevels:    sm.currentSaveData.unlockedLevels,
+            completedLevels:   sm.currentSaveData.completedLevels,
+            completedCampaigns:sm.currentSaveData.completedCampaigns,
+            unlockedCampaigns: sm.currentSaveData.unlockedCampaigns,
+            unlockSystem:      sm.currentSaveData.unlockSystem,
+        };
+        SaveSystem.updateAndSaveSettlementData(sm.currentSaveSlot, settlementData);
+        await SaveSystem.persistToFile(sm.currentSaveSlot);
     }
 
     setupMouseListeners() {
@@ -224,6 +259,15 @@ export class OptionsMenu {
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
 
+        // Update save-prompt hover state when the prompt is visible.
+        if (this._resolutionSavePrompt && this._resolutionSavePrompt.visible && this._savePromptBtns) {
+            const { b1x, b2x, b3x, btnY, btnW, btnH } = this._savePromptBtns;
+            const over = (bx) => x >= bx && x <= bx + btnW && y >= btnY && y <= btnY + btnH;
+            this._resolutionSavePrompt.hoverBtn = over(b1x) ? 'save' : over(b2x) ? 'skip' : over(b3x) ? 'cancel' : null;
+            this.stateManager.canvas.style.cursor = this._resolutionSavePrompt.hoverBtn ? 'pointer' : 'default';
+            return;
+        }
+
         const backPos = this.getBackButtonPosition();
         this.buttons.back.hovered = x >= backPos.x && x <= backPos.x + backPos.width &&
                                     y >= backPos.y && y <= backPos.y + backPos.height;
@@ -297,6 +341,25 @@ export class OptionsMenu {
     }
 
     handleClick(x, y) {
+        // Save prompt intercepts all clicks when visible.
+        if (this._resolutionSavePrompt && this._resolutionSavePrompt.visible && this._savePromptBtns) {
+            const { b1x, b2x, b3x, btnY, btnW, btnH } = this._savePromptBtns;
+            const inBtn = (bx) => x >= bx && x <= bx + btnW && y >= btnY && y <= btnY + btnH;
+            if (inBtn(b1x)) {
+                // Save then open resolution selector
+                this._resolutionSavePrompt.visible = false;
+                this._performSettlementSave().then(() => this.resolutionSelector.show());
+            } else if (inBtn(b2x)) {
+                // Skip save, open resolution selector directly
+                this._resolutionSavePrompt.visible = false;
+                this.resolutionSelector.show();
+            } else if (inBtn(b3x)) {
+                // Cancel
+                this._resolutionSavePrompt.visible = false;
+            }
+            return;
+        }
+
         const backPos = this.getBackButtonPosition();
         if (x >= backPos.x && x <= backPos.x + backPos.width &&
             y >= backPos.y && y <= backPos.y + backPos.height) {
@@ -629,8 +692,96 @@ export class OptionsMenu {
 
             ctx.globalAlpha = 1;
 
+            // ── Save prompt (shown when opening resolution from settlement hub) ──────
+            if (this._resolutionSavePrompt && this._resolutionSavePrompt.visible) {
+                this._renderSavePrompt(ctx);
+            }
+
         } catch (error) {
             console.error('OptionsMenu render error:', error);
         }
+    }
+
+    _renderSavePrompt(ctx) {
+        const canvas = this.stateManager.canvas;
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const pw = Math.min(480, canvas.width * 0.85);
+        const ph = 220;
+        const px = cx - pw / 2;
+        const py = cy - ph / 2;
+        const btnW = 130;
+        const btnH = 40;
+        const gap = 16;
+        const btnY = py + ph - btnH - 24;
+        const p = this._resolutionSavePrompt;
+
+        // Dim overlay
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+
+        // Panel
+        ctx.fillStyle = '#1a0f0a';
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 2;
+        this._roundRect(ctx, px, py, pw, ph, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        // Title
+        ctx.fillStyle = '#d4af37';
+        ctx.font = `bold ${Math.round(pw * 0.05)}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('Save Before Changing Resolution?', cx, py + 24);
+
+        // Body
+        ctx.fillStyle = '#c8b98a';
+        ctx.font = `${Math.round(pw * 0.038)}px serif`;
+        ctx.fillText('Changing resolution will reload the game.', cx, py + 70);
+        ctx.fillText('Unsaved settlement progress will be lost.', cx, py + 100);
+
+        // Buttons: Save | Don't Save | Cancel
+        const totalW = btnW * 3 + gap * 2;
+        const b1x = cx - totalW / 2;
+        const b2x = b1x + btnW + gap;
+        const b3x = b2x + btnW + gap;
+
+        this._renderPromptBtn(ctx, b1x, btnY, btnW, btnH, 'Save', p.hoverBtn === 'save', '#4a7c59', '#6aab7a');
+        this._renderPromptBtn(ctx, b2x, btnY, btnW, btnH, "Don't Save", p.hoverBtn === 'skip', '#5a3a1a', '#8b6030');
+        this._renderPromptBtn(ctx, b3x, btnY, btnW, btnH, 'Cancel', p.hoverBtn === 'cancel', '#2a1a2e', '#5a3a6a');
+
+        // Store button rects for click/hover detection
+        this._savePromptBtns = { b1x, b2x, b3x, btnY, btnW, btnH };
+    }
+
+    _renderPromptBtn(ctx, x, y, w, h, label, hovered, bg, bgHover) {
+        ctx.fillStyle = hovered ? bgHover : bg;
+        ctx.strokeStyle = '#d4af37';
+        ctx.lineWidth = 1.5;
+        this._roundRect(ctx, x, y, w, h, 8);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, x + w / 2, y + h / 2);
+    }
+
+    _roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
     }
 }

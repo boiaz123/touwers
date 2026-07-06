@@ -21,6 +21,7 @@ import { DefenderRenderAdapter } from '../render/adapters/DefenderRenderAdapter.
 import { TerrainRenderAdapter } from '../render/adapters/TerrainRenderAdapter.js';
 import { PixiTextureCache } from '../render/PixiTextureCache.js';
 import { ObjectPool } from '../ObjectPool.js';
+import { PerformanceMonitor } from '../PerformanceMonitor.js';
 import { Container } from 'pixi.js';
 
 const INITIAL_WAVE_COOLDOWN = 30;
@@ -35,6 +36,7 @@ export class GameplayState {
         this.towerManager = null;
         this.enemyManager = null;
         this.lootManager = new LootManager();
+        this.performanceMonitor = new PerformanceMonitor();
         this.uiManager = null;
         this.selectedTowerType = null;
         this.selectedBuildingType = null;
@@ -2326,7 +2328,7 @@ export class GameplayState {
             if (!this.spellEffectRenderAdapter) {
                 this.spellEffectRenderAdapter = new SpellEffectRenderAdapter(this.stateManager.pixiApp.app.stage);
             }
-            this.spellEffectRenderAdapter.sync(this.renderSpellEffects.bind(this));
+            this.spellEffectRenderAdapter.sync(this.renderSpellEffects.bind(this), this.spellEffects.length > 0);
         } else {
             this.renderSpellEffects(ctx);
         }
@@ -2337,6 +2339,11 @@ export class GameplayState {
         // Render results screen overlay on top of the still-visible battlefield
         if (this.resultsScreen && this.resultsScreen.isShowing) {
             this.resultsScreen.render(ctx);
+        }
+
+        // Performance overlay — always on top of everything including results screen.
+        if (this.performanceMonitor) {
+            this.performanceMonitor.render(ctx, 10, 10);
         }
     }
 
@@ -2362,6 +2369,8 @@ export class GameplayState {
         if (!this._pixiEntityLayer) {
             this._pixiEntityLayer = new Container();
             this._pixiEntityLayer.sortableChildren = true;
+            // Game uses its own JS click/hit detection - Pixi event traversal is pure overhead.
+            this._pixiEntityLayer.eventMode = 'none';
             this.stateManager.pixiApp.app.stage.addChild(this._pixiEntityLayer);
         }
         return this._pixiEntityLayer;
