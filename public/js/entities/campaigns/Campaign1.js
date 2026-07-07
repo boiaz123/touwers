@@ -330,7 +330,10 @@ export class Campaign1 extends CampaignBase {
             this.backgroundCanvas = document.createElement('canvas');
             this.backgroundCanvas.width = canvas.width;
             this.backgroundCanvas.height = canvas.height;
-            const bgCtx = this.backgroundCanvas.getContext('2d');
+            // alpha:false is safe here - _renderForestBackdrop fillRects the entire
+            // canvas first; terrainCanvas below stays alpha since it only draws
+            // partial content (water/rocks/path) over a transparent rest.
+            const bgCtx = this.backgroundCanvas.getContext('2d', { alpha: false });
             this._renderForestBackdrop(bgCtx, canvas.width, canvas.height);
         }
         ctx.drawImage(this.backgroundCanvas, 0, 0);

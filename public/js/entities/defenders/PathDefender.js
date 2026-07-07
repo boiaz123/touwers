@@ -1,4 +1,5 @@
 import { DefenderBase } from './DefenderBase.js';
+import { HitSplatter } from '../effects/HitSplatter.js';
 
 /**
  * PathDefender - A defender stationed on a specific point on the path
@@ -85,6 +86,8 @@ export class PathDefender extends DefenderBase {
             splatter.update(deltaTime);
             if (splatter.life > 0) {
                 this.hitSplatters[splWrite++] = splatter;
+            } else {
+                HitSplatter.release(splatter);
             }
         }
         this.hitSplatters.length = splWrite;

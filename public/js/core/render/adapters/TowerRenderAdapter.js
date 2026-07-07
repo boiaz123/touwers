@@ -82,6 +82,15 @@ export class TowerRenderAdapter {
         this._entries.set(tower, {
             container: entryContainer, back, front, dynamic, shim,
             lastAnimKey: -1,
+            // Per-instance offset into the 33ms bucket below (see sync()) - without this,
+            // performance.now() is identical for every tower at a given instant, so every
+            // tower's redraw bucket flips on the SAME frame: cheap frames where nothing
+            // redraws, then one expensive frame every ~33ms where all N towers redraw at
+            // once. Measured directly via the ?stresstest harness: at a fixed entity count,
+            // renderSync/pixiSubmit varied 2-3x frame-to-frame from this clustering alone.
+            // Spreading the offset breaks the synchronization so redraw work is instead
+            // spread evenly across frames.
+            animPhaseOffset: Math.random() * 33,
         });
         tower.skipCanvas2DBodyRender = true;
 
@@ -124,7 +133,10 @@ export class TowerRenderAdapter {
         // ── 30fps rate-limit ──────────────────────────────────────────────────────
         // Aim-angle drift, bow drawback, and muzzle flashes are imperceptible at 30fps
         // for typical tower attack speeds. This halves dynamic-layer Graphics calls.
-        const animKey = (performance.now() / 33) | 0; // ~30fps bucket
+        // (A 15fps variant was tried to cut CPU cost further at high tower counts, but it
+        // was visibly choppy and wasn't where the real per-wave performance hit came from
+        // anyway - see the combat-interaction cost investigated instead.)
+        const animKey = ((performance.now() + entry.animPhaseOffset) / 33) | 0; // ~30fps bucket, phase-staggered per tower
         if (animKey === entry.lastAnimKey) return;
         entry.lastAnimKey = animKey;
 

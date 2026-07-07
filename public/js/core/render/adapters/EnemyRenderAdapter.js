@@ -16,10 +16,36 @@ const BAKE_PAD = 9;
 const BAKE_FRAMES = 16;
 
 /**
- * BasicEnemy (and most humanoid enemies) drive walk-cycle via sin(t × WALK_FREQ).
- * One cycle = 2π / WALK_FREQ seconds. Frames are sampled uniformly over one cycle.
+ * BasicEnemy (and most humanoid enemies) drive walk-cycle via sin(t × frequency).
+ * One cycle = 2π / frequency seconds. Frames are sampled uniformly over one cycle.
+ * Default for enemy types that don't override via getWalkFrequency() (see below) -
+ * BasicEnemy/ArcherEnemy/VillagerEnemy/MageEnemy all use exactly this value already.
  */
 const WALK_FREQ = 8; // radians per second
+
+/**
+ * Some enemy types intentionally animate at a different rate for character feel
+ * (e.g. BeefyEnemy's slower, heavier gait) and expose it via an optional
+ * getWalkFrequency() method. Baking with the wrong frequency doesn't freeze the
+ * pose (each frame is still computed live from animationTime), but it samples
+ * less - or more - than one full cycle, so the loop visibly snaps/discontinuities
+ * at the wrap point instead of animating smoothly. Falls back to WALK_FREQ for
+ * every type that doesn't override it.
+ */
+function _walkFreq(entity) {
+    return typeof entity.getWalkFrequency === 'function' ? entity.getWalkFrequency() : WALK_FREQ;
+}
+
+/**
+ * Per-type override for the Mode B redraw rate below, mirroring _walkFreq() above. ANIM_FPS=20
+ * was tuned for typical humanoid animation cycles (~0.6-1s), but a fast short-cycle animation
+ * (e.g. base FrogEnemy's 0.4s hop) only gets ~8 redraws/cycle at that rate - visibly choppier
+ * than a longer-cycle type gets at the same fps. Falls back to ANIM_FPS for every type that
+ * doesn't override it.
+ */
+function _animFps(entity) {
+    return typeof entity.getAnimFps === 'function' ? entity.getAnimFps() : ANIM_FPS;
+}
 
 /**
  * Mode-B (live-Graphics) redraws are capped at this rate. At 60fps, roughly
@@ -100,7 +126,7 @@ function _bakeFrames(entity, sizeHint) {
     const hasJump      = typeof entity.jumpAnimationTimer === 'number';
     const cycleDuration = hasJump
         ? (entity.jumpAnimationDuration || 0.4)
-        : (2 * Math.PI) / WALK_FREQ;
+        : (2 * Math.PI) / _walkFreq(entity);
 
     const frames = [];
     for (let i = 0; i < BAKE_FRAMES; i++) {
@@ -143,7 +169,7 @@ function _bakeFrames(entity, sizeHint) {
  * Map the entity's current animation state to a baked frame index [0, frameCount).
  *
  * Jump enemies: scrub through the jump cycle (jumpAnimationTimer / jumpAnimationDuration).
- * Walk enemies: scrub through the sine walk cycle using (animationTime × WALK_FREQ + phaseOffset).
+ * Walk enemies: scrub through the sine walk cycle using (animationTime × _walkFreq(entity) + phaseOffset).
  *
  * This mirrors exactly how _bakeFrames populates the frame array, so frame i
  * always corresponds to the correct animation pose.
@@ -153,7 +179,7 @@ function _frameIndex(entity, frameCount) {
         const t = entity.jumpAnimationTimer / (entity.jumpAnimationDuration || 0.4);
         return Math.floor(((t % 1) + 1) % 1 * frameCount) % frameCount;
     }
-    const raw   = entity.animationTime * WALK_FREQ + (entity.animationPhaseOffset || 0);
+    const raw   = entity.animationTime * _walkFreq(entity) + (entity.animationPhaseOffset || 0);
     const phase = ((raw % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
     return Math.floor(phase / (2 * Math.PI) * frameCount) % frameCount;
 }
@@ -260,6 +286,14 @@ export class EnemyRenderAdapter {
                 modeA:          false,
                 entryContainer, dynamic, shim,
                 lastAnimKey:    -1,
+                // Per-instance offset into the ANIM_FPS bucket below (see _syncModeB) -
+                // entity.animationTime naturally staggers same-wave enemies somewhat since
+                // it starts ticking at each one's own spawn moment, but simultaneously
+                // spawned/injected enemies (e.g. a full wave dropped at once) still share
+                // the same bucket boundary without this, clustering their redraw work into
+                // one frame in twenty rather than spreading it evenly - see the identical
+                // fix + measurement writeup in TowerRenderAdapter.js.
+                animPhaseOffset: Math.random() / ANIM_FPS,
             };
         }
 
@@ -329,9 +363,10 @@ export class EnemyRenderAdapter {
     // ── Mode B ──────────────────────────────────────────────────────────────
 
     _syncModeB(entity, sizeHint, entry) {
-        // Rate-limit redraws to ANIM_FPS.  Container position already updated above,
-        // so the entity tracks smoothly even when the Graphics content is cached.
-        const animKey = Math.floor(entity.animationTime * ANIM_FPS);
+        // Rate-limit redraws to _animFps(entity) (defaults to ANIM_FPS).  Container position
+        // already updated above, so the entity tracks smoothly even when the Graphics content
+        // is cached.
+        const animKey = Math.floor((entity.animationTime + entry.animPhaseOffset) * _animFps(entity));
         if (animKey === entry.lastAnimKey) return;
         entry.lastAnimKey = animKey;
 

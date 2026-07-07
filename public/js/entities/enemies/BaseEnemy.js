@@ -300,7 +300,7 @@ export class BaseEnemy {
         this.health -= finalDamage;
         
         // Create a hit splatter effect with the final calculated damage
-        const splatter = new HitSplatter(this.x, this.y - 20, finalDamage, damageType, followTarget ? this : null);
+        const splatter = HitSplatter.acquire(this.x, this.y - 20, finalDamage, damageType, followTarget ? this : null);
         this.hitSplatters.push(splatter);
         
         // Apply earth damage armor reduction effect

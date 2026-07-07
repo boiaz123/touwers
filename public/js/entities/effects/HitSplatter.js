@@ -1,26 +1,33 @@
+import { ObjectPool } from '../../core/ObjectPool.js';
+
 /**
  * HitSplatter - Floating damage indicator that rises and fades with type-specific styling
  */
 export class HitSplatter {
     constructor(x, y, damage, damageType = 'physical', followTarget = null) {
+        this.reset(x, y, damage, damageType, followTarget);
+    }
+
+    /** Reinitializes a pooled instance in place - see acquire()/release() below. */
+    reset(x, y, damage, damageType = 'physical', followTarget = null) {
         this.x = x;
         this.y = y;
         this.damage = Math.round(damage);
         this.damageType = damageType;
         this.followTarget = followTarget; // For DoT effects that follow enemies
-        
+
         // Animation properties
         this.life = 1.2; // Longer lifetime for better visibility
         this.maxLife = 1.2;
-        
+
         // Movement
         this.vx = (Math.random() - 0.5) * 60; // Horizontal drift
         this.vy = -120; // Rise speed
-        
+
         // Size animation
         this.scale = 0.8;
         this.maxScale = 1.3;
-        
+
         // Rotation for stylized effect
         this.rotation = 0;
         this.rotationSpeed = Math.random() * 3 - 1.5;
@@ -30,6 +37,15 @@ export class HitSplatter {
         this.glowColor = HitSplatter.GLOW_MAP[damageType] || HitSplatter.GLOW_MAP.physical;
         this.glowColorMid = HitSplatter.GLOW_MID_MAP[damageType] || HitSplatter.GLOW_MID_MAP.physical;
         this.ringColorBase = this.color.replace('rgb(', 'rgba(').replace(')', ', ');
+
+        // Pre-rendered "damage number + outline" bitmap, shared across every splatter with
+        // the same (damage, color) pair (see _getCachedText below) - looked up once here
+        // instead of re-running strokeText+fillText every render() call for this
+        // splatter's entire 1.2s lifetime. Text shaping/rasterization is by far the most
+        // expensive part of this draw; a cached bitmap turns it into a cheap drawImage().
+        this._textCanvas = HitSplatter._getCachedText(this.damage.toString(), this.color);
+
+        return this;
     }
 
     static COLOR_MAP = {
@@ -51,93 +67,86 @@ export class HitSplatter {
         physical: 'rgba(255, 255, 200, 0.4)'
     };
 
-    /**
-     * Get color based on damage type
-     */
-    getColor() {
-        switch(this.damageType) {
-            case 'fire':
-                return 'rgb(255, 80, 0)'; // Bright orange-red for fire
-            case 'water':
-                return 'rgb(50, 220, 255)'; // Bright cyan for water
-            case 'air':
-                return 'rgb(100, 200, 255)'; // Light blue for air/chain
-            case 'earth':
-                return 'rgb(220, 150, 30)'; // Bright gold for earth/piercing
-            case 'poison':
-                return 'rgb(100, 255, 100)'; // Bright lime green for poison
-            case 'arcane':
-                return 'rgb(186, 85, 211)'; // Medium orchid for arcane
-            case 'ice':
-                return 'rgb(100, 220, 255)'; // Bright ice blue for ice/frost
-            case 'electricity':
-                return 'rgb(255, 255, 100)'; // Bright yellow for electricity
-            case 'magic':
-                return 'rgb(186, 85, 211)'; // Medium orchid for magic/arcane
-            case 'physical':
-            default:
-                return 'rgb(255, 255, 200)'; // Bright yellow-white for physical
+    // Shared bitmap cache: key is "<damageStr>:<color>", since font/size/color/outline are
+    // fully determined by those two values. Capped so a very long session (many distinct
+    // damage rolls) can't grow this unboundedly - oldest entries are evicted first.
+    static _textCache = new Map();
+    static _textCacheOrder = [];
+    static _TEXT_CACHE_MAX = 300;
+
+    static _getCachedText(damageStr, color) {
+        const key = damageStr + ':' + color;
+        const cached = HitSplatter._textCache.get(key);
+        if (cached) return cached;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 32;
+        const ctx = canvas.getContext('2d');
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+
+        ctx.font = 'bold 22px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        ctx.lineWidth = 3;
+        ctx.strokeText(damageStr, cx, cy);
+
+        ctx.fillStyle = color;
+        ctx.fillText(damageStr, cx, cy);
+
+        HitSplatter._textCache.set(key, canvas);
+        HitSplatter._textCacheOrder.push(key);
+        if (HitSplatter._textCacheOrder.length > HitSplatter._TEXT_CACHE_MAX) {
+            HitSplatter._textCache.delete(HitSplatter._textCacheOrder.shift());
         }
+        return canvas;
     }
-    
-    /**
-     * Get glow color (brighter for better visibility)
-     */
-    getGlowColor() {
-        switch(this.damageType) {
-            case 'fire':
-                return 'rgba(255, 100, 0, 0.6)';
-            case 'water':
-                return 'rgba(50, 220, 255, 0.6)';
-            case 'air':
-                return 'rgba(100, 200, 255, 0.5)';
-            case 'earth':
-                return 'rgba(220, 150, 30, 0.6)';
-            case 'poison':
-                return 'rgba(100, 255, 100, 0.6)';
-            case 'arcane':
-                return 'rgba(186, 85, 211, 0.6)';
-            case 'magic':
-                return 'rgba(186, 85, 211, 0.6)';
-            case 'ice':
-                return 'rgba(100, 220, 255, 0.6)';
-            case 'electricity':
-                return 'rgba(255, 255, 100, 0.6)';
-            case 'physical':
-            default:
-                return 'rgba(255, 255, 200, 0.5)';
-        }
+
+    // Free-list pool - acquire()/release() instead of `new`/GC per hit. See BaseEnemy.js's
+    // takeDamage() (acquire) and EnemyManager.js's splatter compaction loops (release).
+    static _pool = new ObjectPool(() => new HitSplatter(0, 0, 0, 'physical', null));
+
+    static acquire(x, y, damage, damageType, followTarget) {
+        return HitSplatter._pool.acquire().reset(x, y, damage, damageType, followTarget);
     }
-    
+
+    static release(instance) {
+        instance.followTarget = null; // don't keep a dead enemy reference alive via the pool
+        HitSplatter._pool.release(instance);
+    }
+
     /**
      * Update the hit splatter position and animation
      */
     update(deltaTime) {
         this.life -= deltaTime;
         this.rotation += this.rotationSpeed * deltaTime;
-        
+
         // If following a target, update position to stay near it
         if (this.followTarget && !this.followTarget.isDead()) {
             // Maintain offset from target
             const offsetX = this.x - this.followTarget.x;
             const offsetY = this.y - this.followTarget.y;
-            
+
             // Keep the offset but make it decay slightly so it drifts up
             this.x = this.followTarget.x + offsetX * 0.98;
             this.y = this.followTarget.y + offsetY * 0.98;
-            
+
             // While following, keep upward motion
             this.vy = -120;
         } else {
             // Normal movement: rise with gravity effect
             this.x += this.vx * deltaTime;
             this.y += this.vy * deltaTime;
-            
+
             // Apply upward acceleration to vy (gravity working against upward motion)
             // Ensure it always rises upward - never settle on the ground
             this.vy = Math.max(this.vy - 60 * deltaTime, -120); // Never go below -120 (always rising)
         }
-        
+
         // Scale animation: start small, grow, then shrink as it fades
         const progress = 1 - (this.life / this.maxLife);
         if (progress < 0.2) {
@@ -148,7 +157,7 @@ export class HitSplatter {
             this.scale = this.maxScale - (this.maxScale - 0.5) * ((progress - 0.2) / 0.8);
         }
     }
-    
+
     /**
      * Check if the splatter is still alive
      */
@@ -156,7 +165,7 @@ export class HitSplatter {
         // Use small epsilon to prevent floating point precision issues
         return this.life > 0.001;
     }
-    
+
     /**
      * Render the hit splatter
      */
@@ -164,7 +173,6 @@ export class HitSplatter {
         if (!this.isAlive()) return;
 
         const opacity = Math.max(0, this.life / this.maxLife);
-        const damageStr = this.damage.toString();
 
         ctx.save();
         ctx.translate(this.x, this.y);
@@ -192,18 +200,12 @@ export class HitSplatter {
         ctx.arc(0, 0, 11, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.font = 'bold 22px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Text outline
-        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-        ctx.lineWidth = 3;
-        ctx.strokeText(damageStr, 0, 0);
-
-        // Main text
-        ctx.fillStyle = this.color;
-        ctx.fillText(damageStr, 0, 0);
+        // Damage number + outline - pre-rendered once per (damage, color) pair (see reset()/
+        // _getCachedText above), blitted here instead of calling strokeText/fillText every
+        // frame. globalAlpha (still `opacity` from the background circle above) applies to
+        // drawImage exactly like it did to the text draws, so the fade is unchanged.
+        const tc = this._textCanvas;
+        ctx.drawImage(tc, -tc.width / 2, -tc.height / 2);
 
         // Ring
         ctx.strokeStyle = this.ringColorBase + (0.5 * opacity).toFixed(2) + ')';

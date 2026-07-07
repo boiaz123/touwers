@@ -112,34 +112,50 @@ export class PoisonArcherTower extends Tower {
         this.cooldown = Math.max(0, this.cooldown - deltaTime);
         this.animationTime += deltaTime;
         this.drawback = Math.max(0, this.drawback - deltaTime * 3);
-        
-        // OPTIMIZATION: Only rescan if current target is dead/gone/out-of-range
-        if (this.target) {
-            if (this.target.health <= 0 || this.target.reachedEnd) {
-                this.target = null;
-            } else {
-                const dx = this.target.x - this.x;
-                const dy = this.target.y - this.y;
-                // Keep target on the exact frame a shot triggers (matches Tower.update behaviour)
-                const shotTriggeredThisFrame = prevCooldown > 0 && this.cooldown === 0;
-                if (!shotTriggeredThisFrame && dx * dx + dy * dy > this.range * this.range) {
+
+        // Handle disabled state (mage/frog king blockade spell). This tower doesn't call
+        // super.update() - it fully reimplements targeting/shooting below instead of relying
+        // on Tower.js's base update() - so it never inherited the disabled-timer countdown
+        // every other tower type gets from there. Without this, isDisabled/disabledTimer set
+        // externally by the spell (MageEnemy.js) just sat frozen and this tower kept firing
+        // as if unaffected, with the disabled overlay stuck on-screen forever.
+        if (this.isDisabled) {
+            this.disabledTimer -= deltaTime;
+            if (this.disabledTimer <= 0) {
+                this.isDisabled = false;
+                this.disabledTimer = 0;
+            }
+            this.target = null;
+            this.archerPosition.hidden = true;
+        } else {
+            // OPTIMIZATION: Only rescan if current target is dead/gone/out-of-range
+            if (this.target) {
+                if (this.target.health <= 0 || this.target.reachedEnd) {
                     this.target = null;
+                } else {
+                    const dx = this.target.x - this.x;
+                    const dy = this.target.y - this.y;
+                    // Keep target on the exact frame a shot triggers (matches Tower.update behaviour)
+                    const shotTriggeredThisFrame = prevCooldown > 0 && this.cooldown === 0;
+                    if (!shotTriggeredThisFrame && dx * dx + dy * dy > this.range * this.range) {
+                        this.target = null;
+                    }
                 }
             }
+            if (!this.target) {
+                this.target = this.findTarget(enemies);
+            }
+
+            // Update archer visibility based on target
+            this.archerPosition.hidden = !this.target;
+
+            // Only shoot if we have a valid target and proper positioning
+            if (this.target && this.cooldown === 0 && !this.archerPosition.hidden) {
+                this.shoot();
+                this.cooldown = 1 / this.fireRate;
+            }
         }
-        if (!this.target) {
-            this.target = this.findTarget(enemies);
-        }
-        
-        // Update archer visibility based on target
-        this.archerPosition.hidden = !this.target;
-        
-        // Only shoot if we have a valid target and proper positioning
-        if (this.target && this.cooldown === 0 && !this.archerPosition.hidden) {
-            this.shoot();
-            this.cooldown = 1 / this.fireRate;
-        }
-        
+
         // Update poison arrows (compact in-place)
         let paWrite = 0;
         for (let ai = 0; ai < this.poisonArrows.length; ai++) {

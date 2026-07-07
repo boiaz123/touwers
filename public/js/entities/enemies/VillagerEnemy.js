@@ -27,12 +27,6 @@ export class VillagerEnemy extends BaseEnemy {
         this.attackDamage = 4;
         this.attackSpeed = 0.8;
         
-        // Optimization: Cache animation values
-        this.cachedAnimTime = 0;
-        this.cachedWalkCycle = 0;
-        this.cachedBobAnimation = 0;
-        this.cachedArmSwing = { left: 0, right: 0 };
-        
         // Torch particle system (lightweight)
         this.torchParticles = [];
 
@@ -63,15 +57,7 @@ export class VillagerEnemy extends BaseEnemy {
     update(deltaTime) {
         this.animationTime += deltaTime;
         this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
-        
-        // Pre-calculate animation values for rendering to avoid recalculation per frame
-        const animTime = this.animationTime * 8 + this.animationPhaseOffset;
-        this.cachedAnimTime = animTime;
-        this.cachedWalkCycle = Math.sin(animTime) * 0.5;
-        this.cachedBobAnimation = Math.sin(animTime) * 0.3;
-        this.cachedArmSwing.left = Math.sin(animTime) * 0.6;
-        this.cachedArmSwing.right = Math.sin(animTime + Math.PI) * 0.55;
-        
+
         // Update torch particles for burning effect
         if (this.weaponType === 'torch') {
             this.updateTorchParticles(deltaTime);
@@ -212,13 +198,19 @@ export class VillagerEnemy extends BaseEnemy {
     }
 
     renderDynamicParts(ctx, baseSize) {
-        // Use pre-calculated animation values
-        const walkCycle = this.cachedWalkCycle;
-        const bobAnimation = this.cachedBobAnimation;
-        const armSwingFreq = this.cachedAnimTime;
-        const leftArmBase = this.cachedArmSwing.left;
+        // Compute pose directly from animationTime (not a this.update()-only cache) so this
+        // is correct regardless of when/how often update() last ran - EnemyRenderAdapter's
+        // Mode A frame-baking pass calls renderDynamicParts() directly at many different
+        // animationTime values without ever calling update() in between, so a pose cached by
+        // update() stayed frozen across every baked frame (this was the missing walk
+        // animation - only animationTime-driven bits, like the torch flicker below, varied).
+        const animTime = this.animationTime * 8 + this.animationPhaseOffset;
+        const walkCycle = Math.sin(animTime) * 0.5;
+        const bobAnimation = Math.sin(animTime) * 0.3;
+        const armSwingFreq = animTime;
+        const leftArmBase = Math.sin(animTime) * 0.6;
         const leftArmBend = Math.sin(armSwingFreq * 2) * 0.15;
-        const rightArmBase = this.cachedArmSwing.right;
+        const rightArmBase = Math.sin(animTime + Math.PI) * 0.55;
         const rightArmBend = Math.sin(armSwingFreq * 2 + Math.PI / 3) * 0.18;
         
         // Enemy shadow
@@ -475,8 +467,13 @@ export class VillagerEnemy extends BaseEnemy {
         ctx.arc(0, torchHeadY - baseSize * 0.35, baseSize * 0.5, 0, Math.PI * 2);
         ctx.fill();
         
-        // Animated flames with better burning effect
-        const flameFlicker = Math.sin(this.animationTime * 8 + Math.random() * Math.PI) * 0.2 + 0.8;
+        // Animated flames with better burning effect. Uses animationPhaseOffset (a fixed
+        // per-instance value, not Math.random()) so the flicker phase varies between
+        // villagers but is deterministic across calls - this is Mode A (baked): a true
+        // Math.random() here would get sampled once at bake time and frozen into that
+        // frame forever, making the "flicker" a fixed pattern that repeats every walk
+        // cycle instead of animating.
+        const flameFlicker = Math.sin(this.animationTime * 8 + this.animationPhaseOffset) * 0.2 + 0.8;
         const flameWave = Math.sin(this.animationTime * 4) * 0.1;
         
         // Outer flame envelope (dark orange)

@@ -28,10 +28,17 @@ export class KnightEnemy extends BaseEnemy {
         this.skipCanvas2DBodyRender = false;
     }
 
+    /** Slower gait than the default (see renderDynamicParts' animTime) - told to
+     *  EnemyRenderAdapter's Mode A frame-baker so it samples/plays back a full cycle at
+     *  this rate instead of assuming every enemy type walks at the default frequency. */
+    getWalkFrequency() {
+        return 7;
+    }
+
     update(deltaTime) {
         this.animationTime += deltaTime;
         this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
-        
+
         // Don't move if attacking a defender (path or castle)
         if (this.isAttackingDefender) {
             return;

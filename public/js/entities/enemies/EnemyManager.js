@@ -1,4 +1,5 @@
 import { EnemyRegistry } from './EnemyRegistry.js';
+import { HitSplatter } from '../effects/HitSplatter.js';
 
 export class EnemyManager {
     constructor(path) {
@@ -12,13 +13,7 @@ export class EnemyManager {
         
         // Keep track of splatters from dead enemies to render them until they fade
         this.orphanedSplatters = [];
-        
-        // Continuous spawn mode: alternates between enemy types
-        this.continuousMode = false;
-        this.spawnPatternIndex = 0;
-        // Updated pattern: 2 basic, 1 beefy, 1 knight, 1 shield knight, 1 mage, 1 villager, 1 archer, 1 frog
-        this.spawnPattern = ['basic', 'basic', 'beefyenemy', 'knight', 'shieldknight', 'mage', 'villager', 'archer', 'frog'];
-        
+
         // Audio manager reference (will be set by GameplayState)
         this.audioManager = null;
         
@@ -34,7 +29,6 @@ export class EnemyManager {
     }
     
     spawnWave(waveNumber, count, health = 50, speed_multiplier = 1.0, spawnInterval = 1.0, enemyType = 'basic') {
-        this.continuousMode = false;
         this.spawning = true;
         this.spawnQueue = [];
         this.spawnQueueIndex = 0;
@@ -57,7 +51,6 @@ export class EnemyManager {
     }
     
     spawnWaveWithPattern(waveNumber, count, health_multiplier = 1, speed_multiplier = 1.0, spawnInterval = 1.0, pattern) {
-        this.continuousMode = false;
         this.spawning = true;
         this.spawnQueue = [];
         this.spawnQueueIndex = 0;
@@ -93,37 +86,7 @@ export class EnemyManager {
         }
     }
     
-    startContinuousSpawn(spawnInterval = 0.8, pattern = null) {
-        // Increased from 0.6 to 0.8 for sandbox mode
-        this.continuousMode = true;
-        this.spawning = true;
-        this.spawnInterval = spawnInterval;
-        this.spawnPatternIndex = 0;
-        this.spawnQueue = [];
-        this.spawnQueueIndex = 0;
-        this.spawnTimer = 0;
-        
-        if (pattern) {
-            this.spawnPattern = pattern;
-        }
-        
-    }
-    
     update(deltaTime) {
-        // In continuous mode, keep queue filled
-        if (this.continuousMode && this.spawnQueueIndex >= this.spawnQueue.length) {
-            const enemyType = this.spawnPattern[this.spawnPatternIndex % this.spawnPattern.length];
-            const defaultSpeed = EnemyRegistry.getDefaultSpeed(enemyType);
-            
-            this.spawnQueue.push({
-                type: enemyType,
-                health_multiplier: 1,
-                speed_multiplier: 1.0
-            });
-            this.spawnPatternIndex++;
-            
-        }
-        
         if (this.spawnQueueIndex < this.spawnQueue.length) {
             this.spawnTimer += deltaTime;
             
@@ -132,12 +95,12 @@ export class EnemyManager {
                 const enemyData = this.spawnQueue[this.spawnQueueIndex++];
                 
                 // Reset queue when fully consumed to free memory
-                if (this.spawnQueueIndex >= this.spawnQueue.length && !this.continuousMode) {
+                if (this.spawnQueueIndex >= this.spawnQueue.length) {
                     this.spawnQueue.length = 0;
                     this.spawnQueueIndex = 0;
                 }
-                
-                // Normalize enemy data: handle both "health" (from spawnWave) and "health_multiplier" (from waves/continuous)
+
+                // Normalize enemy data: handle both "health" (from spawnWave) and "health_multiplier" (from waves)
                 let healthMultiplier = enemyData.health_multiplier;
                 const speedMul = enemyData.speed_multiplier !== undefined ? enemyData.speed_multiplier : 1.0;
                 const baseSpeed = EnemyRegistry.getDefaultSpeed(enemyData.type) || 50;
@@ -185,7 +148,7 @@ export class EnemyManager {
                     this.spawnTimer = 0;
                 }
             }
-        } else if (!this.continuousMode && this.spawnQueueIndex >= this.spawnQueue.length) {
+        } else if (this.spawnQueueIndex >= this.spawnQueue.length) {
             this.spawning = false;
         }
         
@@ -205,18 +168,22 @@ export class EnemyManager {
                     splatters[j].update(deltaTime);
                     if (splatters[j].isAlive()) {
                         splatters[writeIdx++] = splatters[j];
+                    } else {
+                        HitSplatter.release(splatters[j]);
                     }
                 }
                 splatters.length = writeIdx;
             }
         }
-        
+
         // Update orphaned splatters from dead enemies (compact-in-place)
         let writeIdx = 0;
         for (let j = 0; j < this.orphanedSplatters.length; j++) {
             this.orphanedSplatters[j].update(deltaTime);
             if (this.orphanedSplatters[j].isAlive()) {
                 this.orphanedSplatters[writeIdx++] = this.orphanedSplatters[j];
+            } else {
+                HitSplatter.release(this.orphanedSplatters[j]);
             }
         }
         this.orphanedSplatters.length = writeIdx;

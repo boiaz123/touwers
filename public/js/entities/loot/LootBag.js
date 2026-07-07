@@ -4,34 +4,47 @@
  */
 export class LootBag {
     constructor(x, y, lootId, isRare = false) {
+        this.reset(x, y, lootId, isRare);
+    }
+
+    /**
+     * Reinitializes this bag for reuse from LootManager's ObjectPool - same fields
+     * the constructor sets, extracted here so acquire()'d pooled instances can be
+     * respawned without allocating a new object. Safe to pool: this entity is
+     * always rendered in Mode B (see EnemyRenderAdapter's register() - LootBag has
+     * no maxHealth so it never gets the baked-per-variant Mode A treatment), which
+     * re-reads isRare/lootId live every redraw instead of caching anything keyed
+     * by object identity at registration time.
+     */
+    reset(x, y, lootId, isRare = false) {
         this.x = x;
         this.y = y;
         this.lootId = lootId;
         this.isRare = isRare;
-        
+
         // Physics
         this.vx = (Math.random() - 0.5) * 200; // Random horizontal velocity
         this.vy = -300; // Initial upward velocity for jump effect
         this.gravity = 600; // Gravity acceleration
         this.onGround = false;
         this.groundLevel = null; // Will be set when bag hits bottom or is placed
-        
+
         // Animation
         this.animationTime = 0;
         this.bobAmount = 0; // For gentle bobbing on ground
         this.bobSpeed = 2; // Speed of bobbing animation
         this.collectAnimationTime = 0;
         this.isCollecting = false;
-        
+
         // Rare loot specific
         this.rareGlowAmount = 0;
         this.rarePulseTime = 0;
-        
+
         // Size and collision
         this.width = 28;
         this.height = 32;
         this.radius = 22; // Generous click radius for easier collection
-        
+
         // Lifetime
         this.lifetime = 120; // Seconds the bag stays on ground (0 = infinite)
         this.age = 0;
@@ -369,6 +382,16 @@ export class LootBag {
  */
 export class RealmShardDrop {
     constructor(x, y, lootId) {
+        this.particles = [];
+        this.reset(x, y, lootId);
+    }
+
+    /**
+     * Reinitializes this shard for reuse from LootManager's ObjectPool - same
+     * reasoning as LootBag.reset() (Mode B rendering, no cached-by-identity state).
+     * Reuses the existing particles array (truncated, not reallocated).
+     */
+    reset(x, y, lootId) {
         this.x = x;
         this.y = y;
         this.lootId = lootId;
@@ -385,7 +408,7 @@ export class RealmShardDrop {
         this.animationTime = 0;
         this.collectAnimationTime = 0;
         this.isCollecting = false;
-        this.particles = [];
+        this.particles.length = 0;
 
         // Size
         this.width = 30;

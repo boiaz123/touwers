@@ -33,6 +33,13 @@ export class ShieldKnightEnemy extends BaseEnemy {
         return this.armorColor;
     }
 
+    /** Slower gait than the default (see renderDynamicParts' animTime) - told to
+     *  EnemyRenderAdapter's Mode A frame-baker so it samples/plays back a full cycle at
+     *  this rate instead of assuming every enemy type walks at the default frequency. */
+    getWalkFrequency() {
+        return 7.5;
+    }
+
     getRandomArmorColor() {
         const armorColors = [
             '#4A5568', '#2C3E50', '#34495E', '#1A252F', '#3E4C59', '#556B82'

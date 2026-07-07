@@ -59,6 +59,15 @@ export class FrogEnemy extends BaseEnemy {
         return this.skinColor;
     }
 
+    /** This is Mode B (live-redraw), rate-limited by EnemyRenderAdapter's ANIM_FPS. The
+     *  default 20fps was tuned for ~0.6-1s animation cycles; this hop is only 0.4s
+     *  (jumpAnimationTimer below), so 20fps only samples it 8 times per cycle - visibly
+     *  choppier than the elemental frog variants get at the same fps over their longer 0.8s
+     *  active-jump phase. Doubling the rate here restores comparable smoothness. */
+    getAnimFps() {
+        return 40;
+    }
+
     getRandomSkinColor() {
         const skinColors = [
             '#2D5016', '#3D6B1F', '#4A7C3E', '#5A8C4E', '#1F3E1F', '#6B9D54'

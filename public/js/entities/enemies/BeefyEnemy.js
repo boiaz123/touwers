@@ -45,6 +45,13 @@ export class BeefyEnemy extends BaseEnemy {
         this.skipCanvas2DBodyRender = false;
     }
 
+    /** Slower gait than the default (see renderDynamicParts' animTime) - told to
+     *  EnemyRenderAdapter's Mode A frame-baker so it samples/plays back a full cycle at
+     *  this rate instead of assuming every enemy type walks at the default frequency. */
+    getWalkFrequency() {
+        return 6.5;
+    }
+
     /** Per-instance tunic color variant, so baked layers (if any subclass adds them) don't collide across different-colored instances. */
     getRenderVariantKey() {
         return this.tunicColor;

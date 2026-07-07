@@ -28,6 +28,14 @@ const INITIAL_WAVE_COOLDOWN = 30;
 const BETWEEN_WAVE_COOLDOWN = 15;
 const ENEMY_CLICK_RADIUS = 28;
 
+// Sandbox mode: endless discrete waves cycling this fixed enemy roster (same mix the old
+// continuous-spawn stream used), gradually scaled up in health each wave rather than enemy
+// count - see startWave()'s isSandbox branch.
+const SANDBOX_ENEMY_PATTERN = ['basic', 'villager', 'beefyenemy', 'archer', 'mage', 'knight', 'frog'];
+const SANDBOX_WAVE_ENEMY_COUNT = 20;
+const SANDBOX_SPAWN_INTERVAL = 0.6;
+const SANDBOX_HEALTH_GROWTH_PER_WAVE = 0.08; // +8% enemy health per wave, compounding
+
 export class GameplayState {
     constructor(stateManager) {
         this.stateManager = stateManager;
@@ -37,6 +45,11 @@ export class GameplayState {
         this.enemyManager = null;
         this.lootManager = new LootManager();
         this.performanceMonitor = new PerformanceMonitor();
+
+        // Dev-only performance stress-test harness (see setupEventListeners /
+        // _devStressSpawn below). Inert unless the page was loaded with ?stresstest
+        // in the URL, so it can never be triggered by a player in a normal build.
+        this._stressTestEnabled = new URLSearchParams(window.location.search).has('stresstest');
         this.uiManager = null;
         this.selectedTowerType = null;
         this.selectedBuildingType = null;
@@ -804,18 +817,93 @@ export class GameplayState {
             this.handleClick(canvasX, canvasY);
         };
         this.stateManager.canvas.addEventListener('click', this.clickHandler);
+
+        // Dev-only stress-test hotkeys (see constructor's ?stresstest gate):
+        // Ctrl+Alt+S spawns a batch of enemies+towers (repeatable to ramp up further),
+        // Ctrl+Alt+C clears them, Ctrl+Alt+D dumps the perf history to console.table.
+        if (this._stressTestEnabled) {
+            this._stressTestKeyHandler = (e) => {
+                if (!e.ctrlKey || !e.altKey) return;
+                if (e.code === 'KeyS') { e.preventDefault(); this._devStressSpawn(150, 20); }
+                else if (e.code === 'KeyC') { e.preventDefault(); this._devStressClear(); }
+                else if (e.code === 'KeyD') { e.preventDefault(); this.performanceMonitor.dumpHistory(); }
+            };
+            document.addEventListener('keydown', this._stressTestKeyHandler);
+        }
     }
-    
+
     removeEventListeners() {
         if (this.mouseMoveHandler) {
             this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
             this.mouseMoveHandler = null;
         }
-        
+
         if (this.clickHandler) {
             this.stateManager.canvas.removeEventListener('click', this.clickHandler);
             this.clickHandler = null;
         }
+
+        if (this._stressTestKeyHandler) {
+            document.removeEventListener('keydown', this._stressTestKeyHandler);
+            this._stressTestKeyHandler = null;
+        }
+    }
+
+    /**
+     * Dev-only: injects a batch of synthetic enemies+towers directly into the live
+     * managers (bypassing spawn timers/gold/unlocks entirely) so PerformanceMonitor's
+     * per-system slots can be observed at scales normal play never reaches. Repeatable -
+     * each call adds another batch, so pressing Ctrl+Alt+S repeatedly ramps up the count
+     * for a Phase 3-style stress run. See plan doc for the profiling methodology.
+     */
+    _devStressSpawn(enemyCount = 150, towerCount = 20) {
+        if (!this.enemyManager || !this.towerManager || !this.level) return;
+
+        const enemyTypes = SANDBOX_ENEMY_PATTERN;
+        for (let i = 0; i < enemyCount; i++) {
+            const type = enemyTypes[i % enemyTypes.length];
+            const speed = EnemyRegistry.getDefaultSpeed(type) || 50;
+            const enemy = EnemyRegistry.createEnemy(type, this.enemyManager.path, 1, speed);
+            if (!enemy) continue;
+            if (this.stateManager.audioManager) enemy.audioManager = this.stateManager.audioManager;
+            this.enemyManager.enemies.push(enemy);
+        }
+
+        // guard-post excluded: it places on the path itself via a different call convention
+        const towerTypes = ['basic', 'cannon', 'archer', 'magic', 'barricade', 'poison', 'combination'];
+        const level = this.level;
+        const cellSize = level.cellSize || 20;
+        let placed = 0;
+        for (let gy = 0; gy < level.gridHeight - 1 && placed < towerCount; gy += 2) {
+            for (let gx = 0; gx < level.gridWidth - 1 && placed < towerCount; gx += 2) {
+                if (this.towerManager.isTowerPositionOccupied(gx, gy)) continue;
+                if (level.occupiedCells.has(`${gx},${gy}`) || level.occupiedCells.has(`${gx + 1},${gy}`) ||
+                    level.occupiedCells.has(`${gx},${gy + 1}`) || level.occupiedCells.has(`${gx + 1},${gy + 1}`)) continue;
+
+                const type = towerTypes[placed % towerTypes.length];
+                const x = (gx + 1) * cellSize;
+                const y = (gy + 1) * cellSize;
+                const tower = TowerRegistry.createTower(type, x, y, gx, gy);
+                if (!tower) continue;
+                if (this.towerManager.audioManager) tower.audioManager = this.towerManager.audioManager;
+                this.towerManager.towers.push(tower);
+                this.towerManager.markTowerPosition(gx, gy);
+                placed++;
+            }
+        }
+
+        console.log(`[stress-test] +${enemyCount} enemies, +${placed} towers ` +
+            `(totals: ${this.enemyManager.enemies.length} enemies, ${this.towerManager.towers.length} towers)`);
+    }
+
+    /** Dev-only: clears everything _devStressSpawn added, for a clean re-run between tiers. */
+    _devStressClear() {
+        if (this.enemyManager) this.enemyManager.enemies.length = 0;
+        if (this.towerManager) {
+            this.towerManager.towers.length = 0;
+            this.towerManager.occupiedPositions.clear();
+        }
+        console.log('[stress-test] cleared enemies/towers');
     }
     
     handleMouseMove(e) {
@@ -987,12 +1075,42 @@ export class GameplayState {
                 this.createSpellEffect('meteorStrike', x, y, spell);
                 break;
                 
-            case 'chainLightning':
+            case 'chainLightning': {
                 this.stateManager.audioManager.playSFX('chain-lightning');
-                let targets = [...this.enemyManager.enemies]
-                    .sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y))
-                    .slice(0, spell.chainCount);
-                
+                // Chain lightning has unlimited range by design (SuperWeaponLab.js's
+                // spell definition has no range cap, only chainCount), so it must
+                // consider every enemy - SpatialGrid's cell partitioning can't narrow
+                // the search the way tower targeting does when the query has to cover
+                // the whole map anyway. The actual cost was the full array copy plus
+                // O(N log N) sort (with a Math.hypot call per comparison) just to grab
+                // the nearest few; a bounded top-K selection removes both without
+                // changing which enemies get hit, since chainCount is single digits.
+                const enemies = this.enemyManager.enemies;
+                const chainCount = spell.chainCount;
+                const targets = [];
+                const pickCount = Math.min(chainCount, enemies.length);
+                if (pickCount > 0) {
+                    const distSq = new Array(enemies.length);
+                    for (let i = 0; i < enemies.length; i++) {
+                        const dx = enemies[i].x - x;
+                        const dy = enemies[i].y - y;
+                        distSq[i] = dx * dx + dy * dy;
+                    }
+                    const used = new Array(enemies.length).fill(false);
+                    for (let k = 0; k < pickCount; k++) {
+                        let bestIdx = -1;
+                        let bestDist = Infinity;
+                        for (let i = 0; i < enemies.length; i++) {
+                            if (!used[i] && distSq[i] < bestDist) {
+                                bestDist = distSq[i];
+                                bestIdx = i;
+                            }
+                        }
+                        used[bestIdx] = true;
+                        targets.push(enemies[bestIdx]);
+                    }
+                }
+
                 targets.forEach((enemy, index) => {
                     setTimeout(() => {
                         if (enemy.freezeTimer > 0 && this.stateManager.gameStatistics) {
@@ -1004,6 +1122,7 @@ export class GameplayState {
                 });
                 this.createSpellEffect('chainLightning', x, y, spell, targets);
                 break;
+            }
         }
         
         this.uiManager.updateSpellUI();
@@ -1532,8 +1651,21 @@ export class GameplayState {
         this.waveCompleted = false;
         
         if (this.isSandbox) {
-            // Sandbox mode: continuous spawning with all enemy types
-            this.enemyManager.startContinuousSpawn(0.6, ['basic', 'villager', 'beefyenemy', 'archer', 'mage', 'knight','frog']);
+            // Sandbox mode: endless discrete waves (same enemy-manager wave path as
+            // campaign levels, so it naturally hooks into the existing wave-complete/
+            // cooldown/next-wave cycle in _checkWaveCompletion() - maxWavesForLevel is
+            // Infinity for sandbox so that cycle just never terminates). Enemy count per
+            // wave stays fixed; health compounds each wave so it keeps getting harder
+            // instead of the old flat forever-stream.
+            const healthMultiplier = Math.pow(1 + SANDBOX_HEALTH_GROWTH_PER_WAVE, this.gameState.wave - 1);
+            this.enemyManager.spawnWaveWithPattern(
+                this.gameState.wave,
+                SANDBOX_WAVE_ENEMY_COUNT,
+                healthMultiplier,
+                1.0,
+                SANDBOX_SPAWN_INTERVAL,
+                SANDBOX_ENEMY_PATTERN
+            );
         } else {
             // Campaign mode: traditional wave spawning
             const waveConfig = this.getWaveConfig(this.currentLevel, this.gameState.wave);
@@ -1740,8 +1872,20 @@ export class GameplayState {
         this._updateGuardPostDefenderCache(guardPostTowers);
 
         if (this.enemyManager) {
+            this.performanceMonitor.beginSlot('enemyUpdate');
             this.enemyManager.update(adjustedDeltaTime);
-            if (this.towerManager) this.towerManager.update(adjustedDeltaTime, this.enemyManager.enemies);
+            this.performanceMonitor.endSlot('enemyUpdate');
+            if (this.towerManager) {
+                this.performanceMonitor.beginSlot('towerUpdate');
+                this.towerManager.update(adjustedDeltaTime, this.enemyManager.enemies);
+                this.performanceMonitor.endSlot('towerUpdate');
+            }
+            this.performanceMonitor.setEntityCounts({
+                towers: this.towerManager ? this.towerManager.towers.length : 0,
+                enemies: this.enemyManager.enemies.length,
+                buildings: this.towerManager && this.towerManager.buildingManager ? this.towerManager.buildingManager.buildings.length : 0,
+                loot: this.lootManager ? this.lootManager.lootBags.length : 0,
+            });
         }
 
         if (this.level && typeof this.level.updateRealmEffects === 'function') {
@@ -2186,7 +2330,9 @@ export class GameplayState {
             if (!this.backgroundRenderAdapter) {
                 this.backgroundRenderAdapter = new BackgroundRenderAdapter(this.stateManager.pixiApp.app.stage);
             }
+            this.performanceMonitor.beginSlot('renderSync');
             this.level.skipCanvas2DBackgroundBlit = this.backgroundRenderAdapter.syncLevel(this.level);
+            this.performanceMonitor.endSlot('renderSync');
         }
 
         // Pixi's sortableChildren + per-entity zIndex (set to each entity's y in every
@@ -2209,7 +2355,9 @@ export class GameplayState {
                     tower.renderDisabledOverlay(ctx);
                 }
                 if (pixiActive) {
+                    this.performanceMonitor.beginSlot('renderSync');
                     this._syncTowerPixi(tower, ctx);
+                    this.performanceMonitor.endSlot('renderSync');
                 }
             }
         }
@@ -2224,7 +2372,9 @@ export class GameplayState {
                 building.render(ctx, buildingSize);
                 ctx.buildingManager = null;
                 if (pixiActive) {
+                    this.performanceMonitor.beginSlot('renderSync');
                     this._syncBuildingPixi(building, buildingSize);
+                    this.performanceMonitor.endSlot('renderSync');
                 }
             }
         }
@@ -2240,7 +2390,9 @@ export class GameplayState {
                     }
                 }
                 if (pixiActive) {
+                    this.performanceMonitor.beginSlot('renderSync');
                     this._syncEnemyPixi(enemy, ctx);
+                    this.performanceMonitor.endSlot('renderSync');
                 }
             }
         }
@@ -2251,7 +2403,9 @@ export class GameplayState {
                 const bag = bags[i];
                 bag.render(ctx);
                 if (pixiActive) {
+                    this.performanceMonitor.beginSlot('renderSync');
                     this._syncEnemyPixi(bag, ctx);
+                    this.performanceMonitor.endSlot('renderSync');
                 }
             }
         }
@@ -2259,7 +2413,9 @@ export class GameplayState {
         if (this.level.castle) {
             this.level.castle.render(ctx);
             if (pixiActive) {
+                this.performanceMonitor.beginSlot('renderSync');
                 this._syncBuildingPixi(this.level.castle, Math.max(this.level.castle.wallWidth, this.level.castle.towerHeight + 50) * 1.5);
+                this.performanceMonitor.endSlot('renderSync');
             }
         }
 
@@ -2273,7 +2429,9 @@ export class GameplayState {
                 // back to Canvas2D only during Pixi's brief async-init window (pixiActive
                 // false), matching every other entity type's bootstrap-frame behavior.
                 if (pixiActive) {
+                    this.performanceMonitor.beginSlot('renderSync');
                     this._syncTerrainPixi(el);
+                    this.performanceMonitor.endSlot('renderSync');
                 } else {
                     this.level.renderSingleTerrainElement(ctx, el);
                 }
@@ -2283,6 +2441,7 @@ export class GameplayState {
         // Drop Pixi adapter entries for towers/buildings/enemies+loot that were sold,
         // removed, or died since last frame (their managers own removal and don't know
         // about rendering, so this is a cheap per-frame reconciliation instead).
+        this.performanceMonitor.beginSlot('renderSync');
         if (this.towerRenderAdapter && this.towerManager && this.towerManager.towers) {
             this._pruneTowerPixiAdapter();
         }
@@ -2292,6 +2451,7 @@ export class GameplayState {
         if (this.enemyRenderAdapter) {
             this._pruneEnemyPixiAdapter();
         }
+        this.performanceMonitor.endSlot('renderSync');
 
         // Render orphaned splatters from dead enemies
         if (this.enemyManager && this.enemyManager.orphanedSplatters) {
@@ -2303,7 +2463,11 @@ export class GameplayState {
         // Render defender if active (after all main entities)
         if (this.level.castle && this.level.castle.defender && !this.level.castle.defender.isDead()) {
             this.level.castle.defender.render(ctx);
-            if (pixiActive) this._syncDefenderPixi(this.level.castle.defender, ctx);
+            if (pixiActive) {
+                this.performanceMonitor.beginSlot('renderSync');
+                this._syncDefenderPixi(this.level.castle.defender, ctx);
+                this.performanceMonitor.endSlot('renderSync');
+            }
         }
 
         // Render guard post defenders
@@ -2313,14 +2477,20 @@ export class GameplayState {
                 const tower = towers[i];
                 if (tower.type === 'guard-post' && tower.defender && !tower.defender.isDead()) {
                     tower.defender.render(ctx);
-                    if (pixiActive) this._syncDefenderPixi(tower.defender, ctx);
+                    if (pixiActive) {
+                        this.performanceMonitor.beginSlot('renderSync');
+                        this._syncDefenderPixi(tower.defender, ctx);
+                        this.performanceMonitor.endSlot('renderSync');
+                    }
                 }
             }
         }
         if (this.defenderRenderAdapter) {
+            this.performanceMonitor.beginSlot('renderSync');
             this._pruneDefenderPixiAdapter();
+            this.performanceMonitor.endSlot('renderSync');
         }
-        
+
         // Spell/particle effects draw into a Pixi shim via the exact same
         // renderSpellEffects(ctx) method, unmodified - see SpellEffectRenderAdapter.js.
         // Falls back to direct Canvas2D only during Pixi's brief async-init window.
@@ -2328,7 +2498,9 @@ export class GameplayState {
             if (!this.spellEffectRenderAdapter) {
                 this.spellEffectRenderAdapter = new SpellEffectRenderAdapter(this.stateManager.pixiApp.app.stage);
             }
+            this.performanceMonitor.beginSlot('renderSync');
             this.spellEffectRenderAdapter.sync(this.renderSpellEffects.bind(this), this.spellEffects.length > 0);
+            this.performanceMonitor.endSlot('renderSync');
         } else {
             this.renderSpellEffects(ctx);
         }

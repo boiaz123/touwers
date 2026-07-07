@@ -1269,6 +1269,10 @@ body {
 .spell-btn.ready {
     animation: spellPulse 1.8s ease-in-out infinite;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 8px rgba(139, 92, 246, 0.4);
+    /* Only element with a genuine continuous box-shadow animation - promote it to
+       its own compositor layer. Not applied broadly (e.g. #stats-bar/#tower-sidebar
+       are static chrome and would just waste a layer with no animation to justify it). */
+    will-change: box-shadow;
 }
 
 @keyframes spellPulse {

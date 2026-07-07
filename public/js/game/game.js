@@ -127,6 +127,14 @@ export class Game {
             
             // Setup shutdown handler for graceful cleanup
             this.setupShutdownHandlers();
+
+            // Dev-only: exposes the Game instance for the ?stresstest harness's browser-driven
+            // profiling (see GameplayState's _devStressSpawn/_stressTestEnabled) to read
+            // PerformanceMonitor stats and trigger stress batches without simulating clicks
+            // through the whole canvas-drawn menu chain on every run.
+            if (new URLSearchParams(window.location.search).has('stresstest')) {
+                window.__gameInstance = this;
+            }
             
             // Initialize states and start game loop (async: syncs save files first)
             this.initializeStates().catch(error => {
@@ -757,7 +765,23 @@ export class Game {
             // _syncXPixi calls). Rendering before would always composite last frame's
             // stage contents, one frame stale.
             if (pixiShouldRender && this.pixiApp && this.pixiApp.ready) {
+                // This GPU-submit call happens after stateManager.render()'s endRender()
+                // measurement window closes, so it was previously invisible to
+                // PerformanceMonitor entirely. Recorded against the same monitor instance
+                // so it shows up (one frame later) alongside the other per-system slots.
+                const perfMonitor = this.stateManager.currentState && this.stateManager.currentState.performanceMonitor;
+                if (perfMonitor) {
+                    // Not reset in startFrame() - this measurement completes after this
+                    // frame's overlay draw, so it must survive to be shown next frame.
+                    perfMonitor.slotTimes.pixiSubmit = 0;
+                    perfMonitor.beginSlot('pixiSubmit');
+                }
+                this.pixiApp.resetDrawCallCount();
                 this.pixiApp.renderFrame();
+                if (perfMonitor) {
+                    perfMonitor.endSlot('pixiSubmit');
+                    perfMonitor.setDrawCalls(this.pixiApp.getDrawCallCount());
+                }
             }
 
         } catch (error) {

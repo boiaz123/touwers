@@ -11,6 +11,10 @@ export class PixiApp {
     constructor() {
         this.app = null;
         this.ready = false;
+        // Dev-diagnostic only (see PerformanceMonitor's drawCalls stat): counts raw
+        // gl.draw*() calls per frame by wrapping the WebGL context once at init, since
+        // Pixi v8's public Renderer API doesn't expose a draw-call counter itself.
+        this._drawCallCount = 0;
     }
 
     /**
@@ -29,6 +33,7 @@ export class PixiApp {
             antialias: true,
             backgroundAlpha: 0,
             preference: 'webgl',
+            powerPreference: 'high-performance',
             // Pixi's Application defaults to autoStart:true, running its OWN
             // requestAnimationFrame render loop completely unsynchronized with
             // game.js's own loop (which already calls renderFrame() manually, once
@@ -65,8 +70,32 @@ export class PixiApp {
         // even without z-index - belt-and-suspenders.
         mountParent.insertBefore(this.app.canvas, mountParent.firstChild);
 
+        this._wrapGLDrawCalls();
+
         this.ready = true;
         return this.app;
+    }
+
+    /** Wraps drawArrays/drawElements on the underlying WebGL context so draw-call
+     *  count can be surfaced in the performance overlay. Purely additive counting -
+     *  never changes arguments or return values. No-op if the context isn't WebGL
+     *  (e.g. a future canvas/webgpu fallback), since gl would be undefined then. */
+    _wrapGLDrawCalls() {
+        const gl = this.app.renderer.gl;
+        if (!gl) return;
+        const drawArrays = gl.drawArrays.bind(gl);
+        const drawElements = gl.drawElements.bind(gl);
+        gl.drawArrays = (...args) => { this._drawCallCount++; return drawArrays(...args); };
+        gl.drawElements = (...args) => { this._drawCallCount++; return drawElements(...args); };
+    }
+
+    /** Call once per frame right before renderFrame() to get that frame's count in isolation. */
+    resetDrawCallCount() {
+        this._drawCallCount = 0;
+    }
+
+    getDrawCallCount() {
+        return this._drawCallCount;
     }
 
     setVisible(visible) {

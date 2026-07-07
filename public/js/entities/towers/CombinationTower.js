@@ -35,7 +35,17 @@ export class CombinationTower extends Tower {
         // doesn't use back to their default so a reused bolt never leaks a stale variant flag.
         this._lightningBoltPool = new ObjectPool(() => ({
             startX: 0, startY: 0, endX: 0, endY: 0, life: 0, maxLife: 0,
-            segments: null, color: '', size: 0,
+            // Fixed-size, pre-allocated once per bolt slot and mutated in place by
+            // generateLightningSegments() every shot instead of being replaced with a fresh
+            // array of fresh objects each time (was 8 new object literals per shot, unpooled).
+            // segmentCount tracks how many of the 8 pre-allocated slots are actually "live"
+            // this shot (the render loop iterates up to this, not segments.length, which
+            // always stays 8) - the arcane-bolt effect only needs 1 of the 8 per bolt; keeping
+            // the backing array at a fixed size means it never has to be resized/reallocated
+            // no matter which effect type reuses this pooled bolt slot next.
+            segments: Array.from({ length: 8 }, () => ({ fromX: 0, fromY: 0, toX: 0, toY: 0 })),
+            segmentCount: 8,
+            color: '', size: 0,
             isMagma: false, isTempest: false, isMeteor: false
         }));
         this.magicParticles = [];
@@ -148,14 +158,33 @@ export class CombinationTower extends Tower {
     chainToNearbyEnemies(originalTarget, damage, damageType) {
         const chainRange = 100;
         if (!this.enemies) return;
-        
-        for (let i = 0; i < this.enemies.length; i++) {
-            const enemy = this.enemies[i];
-            if (enemy !== originalTarget && !enemy.isDead()) {
-                const dist = Math.hypot(enemy.x - originalTarget.x, enemy.y - originalTarget.y);
-                if (dist <= chainRange) {
-                    const chainDamage = Math.floor(damage * 0.5);
-                    enemy.takeDamage(chainDamage, 0, damageType);
+
+        // OPTIMIZATION: use the spatial grid (injected by TowerManager every frame, same
+        // as MagicTower's chainLightning) instead of scanning every enemy - turns O(allEnemies)
+        // into O(nearbyEnemies) per cast.
+        if (this._spatialGrid) {
+            const grid = this._spatialGrid;
+            const count = grid.query(originalTarget.x, originalTarget.y, chainRange);
+            const buf = grid._queryBuf;
+            for (let i = 0; i < count; i++) {
+                const enemy = buf[i];
+                if (enemy !== originalTarget && !enemy.isDead()) {
+                    const dist = Math.hypot(enemy.x - originalTarget.x, enemy.y - originalTarget.y);
+                    if (dist <= chainRange) {
+                        const chainDamage = Math.floor(damage * 0.5);
+                        enemy.takeDamage(chainDamage, 0, damageType);
+                    }
+                }
+            }
+        } else {
+            for (let i = 0; i < this.enemies.length; i++) {
+                const enemy = this.enemies[i];
+                if (enemy !== originalTarget && !enemy.isDead()) {
+                    const dist = Math.hypot(enemy.x - originalTarget.x, enemy.y - originalTarget.y);
+                    if (dist <= chainRange) {
+                        const chainDamage = Math.floor(damage * 0.5);
+                        enemy.takeDamage(chainDamage, 0, damageType);
+                    }
                 }
             }
         }
@@ -272,12 +301,12 @@ export class CombinationTower extends Tower {
             bolt.endY = this.target.y;
             bolt.life = 0.3 - delay;
             bolt.maxLife = 0.3;
-            bolt.segments = [{
-                fromX: this.x + (this.target.x - this.x) * progress,
-                fromY: this.y + (this.target.y - this.y) * progress,
-                toX: this.x + (this.target.x - this.x) * (progress + 0.25),
-                toY: this.y + (this.target.y - this.y) * (progress + 0.25)
-            }];
+            const seg = bolt.segments[0];
+            seg.fromX = this.x + (this.target.x - this.x) * progress;
+            seg.fromY = this.y + (this.target.y - this.y) * progress;
+            seg.toX = this.x + (this.target.x - this.x) * (progress + 0.25);
+            seg.toY = this.y + (this.target.y - this.y) * (progress + 0.25);
+            bolt.segmentCount = 1;
             bolt.color = 'rgba(100, 150, 255, ';
             bolt.size = 6;
             bolt.isMagma = false;
@@ -360,12 +389,8 @@ export class CombinationTower extends Tower {
             bolt.endY = this.target.y;
             bolt.life = projectileLife - delay;
             bolt.maxLife = projectileLife;
-            bolt.segments = [{
-                fromX: this.x + (this.target.x - this.x) * progress,
-                fromY: this.y + (this.target.y - this.y) * progress,
-                toX: this.x + (this.target.x - this.x) * (progress + 0.2),
-                toY: this.y + (this.target.y - this.y) * (progress + 0.2)
-            }];
+            // No segments needed - the render loop's isMagma branch draws a glowing orb
+            // interpolated from startX/Y+endX/Y+life progress only, never reads bolt.segments.
             bolt.color = 'rgba(255, 100, 0, ';
             bolt.isMagma = true;
             bolt.isTempest = false;
@@ -424,7 +449,8 @@ export class CombinationTower extends Tower {
             bolt.endY = this.target.y;
             bolt.life = 0.4;
             bolt.maxLife = 0.4;
-            bolt.segments = this.generateLightningSegments(this.x, this.y, this.target.x + offset, this.target.y);
+            this.generateLightningSegments(this.x, this.y, this.target.x + offset, this.target.y, bolt.segments);
+            bolt.segmentCount = 8; // full chain - reset in case this pooled slot was last a 1-segment arcane bolt
             bolt.color = 'rgba(255, 255, 100, ';
             bolt.isMagma = false;
             bolt.isTempest = true;
@@ -502,12 +528,8 @@ export class CombinationTower extends Tower {
         meteorBolt.endY = this.target.y;
         meteorBolt.life = 0.5;
         meteorBolt.maxLife = 0.5;
-        meteorBolt.segments = [{
-            fromX: this.target.x,
-            fromY: meteorStartY,
-            toX: this.target.x,
-            toY: this.target.y
-        }];
+        // No segments needed - the render loop's isMeteor branch draws a falling-rock sprite
+        // interpolated from startX/Y+endX/Y+life progress only, never reads bolt.segments.
         meteorBolt.color = 'rgba(200, 100, 50, ';
         meteorBolt.isMagma = false;
         meteorBolt.isTempest = false;
@@ -566,31 +588,30 @@ export class CombinationTower extends Tower {
         return false;
     }
     
-    generateLightningSegments(startX, startY, endX, endY) {
-        const segments = [];
-        const segmentCount = 8;
+    /** Mutates the given fixed-size `segments` array in place (see the pool factory above) instead of returning a fresh array of fresh objects every shot. */
+    generateLightningSegments(startX, startY, endX, endY, segments) {
+        const segmentCount = segments.length;
         const variance = 20;
-        
+
         let currentX = startX;
         let currentY = startY;
-        
+
         for (let i = 1; i <= segmentCount; i++) {
             const t = i / segmentCount;
             let targetX = startX + (endX - startX) * t;
             let targetY = startY + (endY - startY) * t;
-            
+
             if (i < segmentCount) {
                 targetX += (Math.random() - 0.5) * variance;
                 targetY += (Math.random() - 0.5) * variance;
             }
-            
-            segments.push({
-                fromX: currentX,
-                fromY: currentY,
-                toX: targetX,
-                toY: targetY
-            });
-            
+
+            const seg = segments[i - 1];
+            seg.fromX = currentX;
+            seg.fromY = currentY;
+            seg.toX = targetX;
+            seg.toY = targetY;
+
             currentX = targetX;
             currentY = targetY;
         }
@@ -787,7 +808,7 @@ export class CombinationTower extends Tower {
                 ctx.strokeStyle = (bolt.color || 'rgba(255, 255, 100, ') + alpha + ')';
                 ctx.lineWidth = 3;
                 
-                for (let s = 0; s < bolt.segments.length; s++) {
+                for (let s = 0; s < bolt.segmentCount; s++) {
                     const segment = bolt.segments[s];
                     ctx.beginPath();
                     ctx.moveTo(segment.fromX, segment.fromY);
@@ -798,7 +819,7 @@ export class CombinationTower extends Tower {
                 // Default lightning rendering
                 ctx.strokeStyle = (bolt.color || this.getCombinationColor()) + alpha + ')';
                 ctx.lineWidth = 4;
-                for (let s = 0; s < bolt.segments.length; s++) {
+                for (let s = 0; s < bolt.segmentCount; s++) {
                     const segment = bolt.segments[s];
                     ctx.beginPath();
                     ctx.moveTo(segment.fromX, segment.fromY);

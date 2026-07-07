@@ -382,7 +382,10 @@ export class Campaign2 extends CampaignBase {
             this.backgroundCanvas = document.createElement('canvas');
             this.backgroundCanvas.width = canvas.width;
             this.backgroundCanvas.height = canvas.height;
-            const bgCtx = this.backgroundCanvas.getContext('2d');
+            // alpha:false is safe here - the sky/mountain backdrop fillRects the entire
+            // canvas first; terrainCanvas below stays alpha since _buildTerrainCache only
+            // fills from separationY down, leaving the sky area transparent on purpose.
+            const bgCtx = this.backgroundCanvas.getContext('2d', { alpha: false });
 
             const grad = bgCtx.createLinearGradient(0, 0, 0, canvas.height * 0.6);
             grad.addColorStop(0, '#1a3a5a');

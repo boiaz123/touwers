@@ -686,7 +686,11 @@ export class LevelBase {
             this.backgroundCanvas = document.createElement('canvas');
             this.backgroundCanvas.width = ctx.canvas.width;
             this.backgroundCanvas.height = ctx.canvas.height;
-            const bgCtx = this.backgroundCanvas.getContext('2d');
+            // alpha:false is safe here - the backdrop always fillRects the entire
+            // canvas before anything else, unlike terrainCanvas below which only
+            // draws water/river/path over a transparent rest that must show this
+            // background through.
+            const bgCtx = this.backgroundCanvas.getContext('2d', { alpha: false });
             this._renderBackgroundToCanvas(bgCtx);
         }
 

@@ -23,6 +23,13 @@ export class BarricadeTower extends Tower {
         this._smokeZonePool = new ObjectPool(() => ({
             x: 0, y: 0, radius: 0, life: 0, maxLife: 0, smokeIntensity: 0, maxEnemiesSlowed: 0
         }));
+        // Scratch buffer + grow-only candidate-object pool for update()'s per-zone
+        // enemies-in-range scan below - that scan previously allocated a fresh array plus a
+        // fresh {enemy, distSq} object per candidate EVERY FRAME for every active slow zone
+        // (worse cadence than a per-shot pool, since zones persist for seconds). Reused here
+        // the same way SpatialGrid reuses its _queryBuf.
+        this._enemiesInRangeBuf = [];
+        this._candidatePool = [];
         
         // Rubble cloud mechanics
         this.maxEnemiesSlowed = 4; // Base capacity: max 4 enemies per slow zone
@@ -109,7 +116,9 @@ export class BarricadeTower extends Tower {
             zone.smokeIntensity = Math.min(1, zone.smokeIntensity + deltaTime * 2);
             
             // OPTIMIZATION: Use spatial grid to find enemies near zone
-            const enemiesInRange = [];
+            const enemiesInRange = this._enemiesInRangeBuf;
+            enemiesInRange.length = 0;
+            let candIdx = 0;
             const radiusSq = zone.radius * zone.radius;
             if (this._spatialGrid) {
                 const grid = this._spatialGrid;
@@ -124,7 +133,12 @@ export class BarricadeTower extends Tower {
                     const dy = enemy.y - zone.y;
                     const distSq = dx * dx + dy * dy;
                     if (distSq <= radiusSq) {
-                        enemiesInRange.push({ enemy, distSq });
+                        let cand = this._candidatePool[candIdx];
+                        if (!cand) { cand = { enemy: null, distSq: 0 }; this._candidatePool[candIdx] = cand; }
+                        cand.enemy = enemy;
+                        cand.distSq = distSq;
+                        enemiesInRange.push(cand);
+                        candIdx++;
                     }
                 }
             } else {
@@ -137,7 +151,12 @@ export class BarricadeTower extends Tower {
                     const dy = enemy.y - zone.y;
                     const distSq = dx * dx + dy * dy;
                     if (distSq <= radiusSq) {
-                        enemiesInRange.push({ enemy, distSq });
+                        let cand = this._candidatePool[candIdx];
+                        if (!cand) { cand = { enemy: null, distSq: 0 }; this._candidatePool[candIdx] = cand; }
+                        cand.enemy = enemy;
+                        cand.distSq = distSq;
+                        enemiesInRange.push(cand);
+                        candIdx++;
                     }
                 }
             }

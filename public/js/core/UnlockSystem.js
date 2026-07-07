@@ -10,6 +10,7 @@ export class UnlockSystem {
         this.maxForges = 1;
         this.mineCount = 0;
         this.academyCount = 0;
+        this.academyLevel = 0; // Kept in sync via onAcademyLevelChanged() - see _tryUnlockSuperweapon()
         this.trainingGroundsCount = 0;
         this.superweaponCount = 0;
         this.diamondPressCount = 0;
@@ -63,6 +64,7 @@ export class UnlockSystem {
     
     onAcademyBuilt() {
         this.academyCount++;
+        this.academyLevel = 1;
         // Level 1: Magic Tower and Gem Mining automatically unlocked
         this.magicTowerUnlockedByAcademy = true; // Mark magic tower as unlocked by academy
         this.unlockedTowers.add('magic');
@@ -96,10 +98,19 @@ export class UnlockSystem {
         return false;
     }
     
-    // New: Method to unlock superweapon when academy reaches level 3
-    // Only unlocks if the player has purchased the superweapon-lab-unlock upgrade in the settlement
-    onAcademyLevelThree() {
-        if (this.superweaponLabUnlockPurchased) {
+    // Tracks the placed academy's current level and re-checks the superweapon unlock every
+    // time it changes (not just the one instant it first hits 3) - the marketplace purchase
+    // and the academy-level-3 milestone can happen in either order across a campaign
+    // playthrough, and this used to only ever check purchased-then-leveled. A player who
+    // leveled the academy to 3 before buying the upgrade got permanently stuck with no
+    // later recheck, since nothing re-fires once the academy is already past level 3.
+    onAcademyLevelChanged(newLevel) {
+        this.academyLevel = newLevel;
+        this._tryUnlockSuperweapon();
+    }
+
+    _tryUnlockSuperweapon() {
+        if (this.academyLevel >= 3 && this.superweaponLabUnlockPurchased) {
             this.superweaponUnlocked = true;
             this.unlockedBuildings.add('superweapon');
         }
@@ -130,9 +141,11 @@ export class UnlockSystem {
     }
 
     // Unlock Super Weapon Lab via the purchased 'superweapon-lab-unlock' upgrade (available after Campaign 2)
-    // Sets flag only - actual in-game unlock happens when academy reaches level 3
+    // Also immediately unlocks if the academy is already at level 3+ (see _tryUnlockSuperweapon) -
+    // covers the purchase happening after the academy was already leveled up.
     onSuperweaponLabUnlockPurchased() {
         this.superweaponLabUnlockPurchased = true;
+        this._tryUnlockSuperweapon();
     }
     
     // New: Method to handle Training Grounds level upgrades

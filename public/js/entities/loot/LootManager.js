@@ -1,5 +1,6 @@
 import { LootBag, RealmShardDrop } from './LootBag.js';
 import { LootRegistry } from './LootRegistry.js';
+import { ObjectPool } from '../../core/ObjectPool.js';
 
 /**
  * LootManager - Manages all loot bags in the current level
@@ -10,6 +11,12 @@ export class LootManager {
         this.lootBags = [];
         this.collectedLoot = []; // Array of loot IDs collected during this level
         this.audioManager = null; // Will be set by GameplayState
+
+        // Pooled the same way tower projectiles already are (ObjectPool.js) - bags/shards
+        // were previously a fresh `new` per drop, left for GC on pickup/expiry. Two
+        // separate pools since LootBag and RealmShardDrop are different shapes.
+        this._lootBagPool = new ObjectPool(() => new LootBag(0, 0, null, false));
+        this._realmShardPool = new ObjectPool(() => new RealmShardDrop(0, 0, null));
     }
 
     /**
@@ -20,15 +27,16 @@ export class LootManager {
      * @param {boolean} isRare - Whether this is a rare legendary loot drop
      */
     spawnLoot(x, y, lootId, isRare = false) {
-        const bag = new LootBag(x, y, lootId, isRare);
+        const bag = this._lootBagPool.acquire();
+        bag.reset(x, y, lootId, isRare);
         this.lootBags.push(bag);
-        
+
         // Play drop sound
         if (this.audioManager) {
             const dropSound = isRare ? 'rare-loot-drop' : 'loot-drop';
             this.audioManager.playSFX(dropSound);
         }
-        
+
         return bag;
     }
 
@@ -36,7 +44,8 @@ export class LootManager {
      * Spawn a realm shard drop (special magical crystal)
      */
     spawnRealmShard(x, y, lootId) {
-        const shard = new RealmShardDrop(x, y, lootId);
+        const shard = this._realmShardPool.acquire();
+        shard.reset(x, y, lootId);
         this.lootBags.push(shard);
         if (this.audioManager) {
             this.audioManager.playSFX('shard-drop');
@@ -71,7 +80,17 @@ export class LootManager {
     collectLoot(lootBag) {
         lootBag.collect();
         this.collectedLoot.push(lootBag.lootId);
-        
+        // Bounded: only the results screen's "collected this level" summary (see
+        // getCollectedLoot()) reads this, and no campaign level realistically drops anywhere
+        // near this many items. Sandbox mode reuses one LootManager for its entire endless
+        // session (no per-level reset point ever recreates it), so without this cap the array
+        // would otherwise grow by one entry per pickup forever - resetCollectedLoot() alone
+        // isn't enough since nothing ever calls it in sandbox.
+        if (this.collectedLoot.length > 1000) {
+            this.collectedLoot.length = 0;
+        }
+
+
         // Play collection sound
         if (this.audioManager) {
             const collectSound = lootBag.isRare ? 'rare-loot-collect' : 'loot-collect';
@@ -119,6 +138,13 @@ export class LootManager {
             const expired = bag.lifetime > 0 && bag.age >= bag.lifetime && !bag.isCollecting;
             if (!bag.isCollected() && !expired) {
                 this.lootBags[lbWrite++] = bag;
+            } else {
+                // Return to its pool now that it's fully removed from play.
+                if (bag instanceof RealmShardDrop) {
+                    this._realmShardPool.release(bag);
+                } else {
+                    this._lootBagPool.release(bag);
+                }
             }
         }
         this.lootBags.length = lbWrite;

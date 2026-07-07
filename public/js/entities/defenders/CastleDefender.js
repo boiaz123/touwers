@@ -67,6 +67,8 @@ export class CastleDefender extends DefenderBase {
             splatter.update(deltaTime);
             if (splatter.life > 0) {
                 this.hitSplatters[splWrite++] = splatter;
+            } else {
+                HitSplatter.release(splatter);
             }
         }
         this.hitSplatters.length = splWrite;

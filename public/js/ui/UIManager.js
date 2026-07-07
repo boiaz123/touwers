@@ -2523,9 +2523,7 @@ export class UIManager {
                         }
                         
                         const newLevel = academyData.academy.academyLevel;
-                        if (newLevel === 3) {
-                            this.towerManager.getUnlockSystem().onAcademyLevelThree();
-                        }
+                        this.towerManager.getUnlockSystem().onAcademyLevelChanged(newLevel);
                         
                         this.updateUI();
                         this.updateUIAvailability();

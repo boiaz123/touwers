@@ -134,7 +134,7 @@ export class DefenderBase {
         this.health -= actualDamage;
         this.damageFlashTimer = 0.2;
         
-        const splatter = new HitSplatter(this.x, this.y - 30, actualDamage, 'physical', null);
+        const splatter = HitSplatter.acquire(this.x, this.y - 30, actualDamage, 'physical', null);
         this.hitSplatters.push(splatter);
         
         return actualDamage;

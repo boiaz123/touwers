@@ -31,7 +31,11 @@ export class MagicTower extends Tower {
         // dropped from update()'s compaction loops below.
         this._lightningBoltPool = new ObjectPool(() => ({
             startX: 0, startY: 0, endX: 0, endY: 0, life: 0, maxLife: 0,
-            segments: null, color: ''
+            // Fixed-size, pre-allocated once per bolt slot and mutated in place by
+            // generateLightningSegments() every shot instead of being replaced with a fresh
+            // array of fresh objects each time (was 8 new object literals per shot, unpooled).
+            segments: Array.from({ length: 8 }, () => ({ fromX: 0, fromY: 0, toX: 0, toY: 0 })),
+            color: ''
         }));
         this.magicParticles = [];
         this._magicParticlePool = new ObjectPool(() => ({
@@ -263,7 +267,7 @@ export class MagicTower extends Tower {
         bolt.endY = this.target.y;
         bolt.life = 0.3;
         bolt.maxLife = 0.3;
-        bolt.segments = this.generateLightningSegments(this.x, this.y, this.target.x, this.target.y);
+        this.generateLightningSegments(this.x, this.y, this.target.x, this.target.y, bolt.segments);
         bolt.color = boltColor;
         this.lightningBolts.push(bolt);
 
@@ -333,36 +337,35 @@ export class MagicTower extends Tower {
         }
     }
     
-    generateLightningSegments(startX, startY, endX, endY) {
-        const segments = [];
-        const segmentCount = 8;
+    /** Mutates the given fixed-size `segments` array in place (see the pool factory above) instead of returning a fresh array of fresh objects every shot. */
+    generateLightningSegments(startX, startY, endX, endY, segments) {
+        const segmentCount = segments.length;
         const variance = 20;
-        
+
         let currentX = startX;
         let currentY = startY;
-        
+
         for (let i = 1; i <= segmentCount; i++) {
             const t = i / segmentCount;
             let targetX = startX + (endX - startX) * t;
             let targetY = startY + (endY - startY) * t;
-            
+
             // Add random variance except for the last segment
             if (i < segmentCount) {
                 targetX += (Math.random() - 0.5) * variance;
                 targetY += (Math.random() - 0.5) * variance;
             }
-            
-            segments.push({
-                fromX: currentX,
-                fromY: currentY,
-                toX: targetX,
-                toY: targetY
-            });
-            
+
+            const seg = segments[i - 1];
+            seg.fromX = currentX;
+            seg.fromY = currentY;
+            seg.toX = targetX;
+            seg.toY = targetY;
+
             currentX = targetX;
             currentY = targetY;
         }
-        
+
         return segments;
     }
     
