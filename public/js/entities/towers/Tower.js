@@ -25,11 +25,6 @@ export class Tower {
         // Disabled state (applied by mage enemy blockade spell)
         this.isDisabled = false;
         this.disabledTimer = 0;
-
-        // Offscreen canvas cache for the disabled overlay (redrawn at 20fps max)
-        this._disabledOverlayCanvas = null;
-        this._disabledOverlaySize = 0;
-        this._disabledOverlayLastRenderTime = 0;
     }
     
     update(deltaTime, enemies) {
@@ -232,20 +227,26 @@ export class Tower {
         const now = Date.now() / 1000;
         const nowMs = Date.now();
 
-        // Lazy-create offscreen canvas; invalidate if tower size changed
+        // The smoke/glow pattern below is driven only by canvasSize and the shared clock -
+        // nothing tower-specific goes into it - so every disabled tower of the same size
+        // renders an identical pattern. Cache ONE offscreen canvas per size on the class
+        // (instead of one per tower instance) so a wave that disables many towers at once
+        // doesn't redraw the same ~30-op smoke effect once per tower, 20 times a second.
+        if (!Tower._sharedDisabledOverlays) Tower._sharedDisabledOverlays = new Map();
         const canvasSize = Math.ceil(towerSize * 4);
-        if (!this._disabledOverlayCanvas || this._disabledOverlaySize !== canvasSize) {
-            this._disabledOverlayCanvas = document.createElement('canvas');
-            this._disabledOverlayCanvas.width = canvasSize;
-            this._disabledOverlayCanvas.height = canvasSize;
-            this._disabledOverlaySize = canvasSize;
-            this._disabledOverlayLastRenderTime = 0;
+        let shared = Tower._sharedDisabledOverlays.get(canvasSize);
+        if (!shared) {
+            const canvas = document.createElement('canvas');
+            canvas.width = canvasSize;
+            canvas.height = canvasSize;
+            shared = { canvas, lastRenderTime: 0 };
+            Tower._sharedDisabledOverlays.set(canvasSize, shared);
         }
 
         // Redraw smoke/glow layers at 20fps — stutter is imperceptible for ambient effects
-        if (nowMs - this._disabledOverlayLastRenderTime >= 50) {
-            this._disabledOverlayLastRenderTime = nowMs;
-            const oc = this._disabledOverlayCanvas.getContext('2d');
+        if (nowMs - shared.lastRenderTime >= 50) {
+            shared.lastRenderTime = nowMs;
+            const oc = shared.canvas.getContext('2d');
             const cx = canvasSize / 2;
             const cy = canvasSize / 2;
             const pulse = 0.5 + 0.5 * Math.sin(now * 2.0);
@@ -356,7 +357,7 @@ export class Tower {
         }
 
         // Blit cached smoke overlay to the world canvas
-        ctx.drawImage(this._disabledOverlayCanvas, this.x - canvasSize / 2, this.y - canvasSize / 2, canvasSize, canvasSize);
+        ctx.drawImage(shared.canvas, this.x - canvasSize / 2, this.y - canvasSize / 2, canvasSize, canvasSize);
 
         // 7. Countdown bar — rendered at full fps for smooth animation
         ctx.save();

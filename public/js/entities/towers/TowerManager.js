@@ -411,6 +411,7 @@ export class TowerManager {
         if (this._lastTowerCount !== currentTowerCount) {
             this._lastTowerCount = currentTowerCount;
             this._towerStatsNeedUpdate = true;
+            this._barricadeTowers = this.towers.filter(t => t.type === 'barricade');
         }
         
         // OPTIMIZATION: Only reapply building upgrade stats when something changed
@@ -473,7 +474,36 @@ export class TowerManager {
             const poisonBonus = tower.type === 'poison' ? cachedPoisonBonus : 0;
             tower.update(deltaTime, enemies, poisonBonus);
         }
-        
+
+        // Restore speed for enemies no longer inside ANY BarricadeTower's slow zone.
+        // Must run once here, after every barricade tower's zone-loop above has already
+        // marked this frame's _slowedSet, rather than inside each tower's own update():
+        // per-tower restore independently fought every OTHER barricade tower's active slow
+        // on enemies outside its own zones (cancelling each other out as more towers were
+        // built), and also fought Frost Nova / MagicTower water slows on enemies nowhere
+        // near a barricade at all, since both write the same enemy.originalSpeed/speed.
+        if (this._barricadeTowers && this._barricadeTowers.length > 0) {
+            if (!this._restoreSlowedSetBuf) this._restoreSlowedSetBuf = new Set();
+            const slowedByBarricade = this._restoreSlowedSetBuf;
+            slowedByBarricade.clear();
+            for (let i = 0; i < this._barricadeTowers.length; i++) {
+                const bt = this._barricadeTowers[i];
+                if (bt._slowedSet) {
+                    for (const enemy of bt._slowedSet) slowedByBarricade.add(enemy);
+                }
+            }
+            const restoreRate = 1 - Math.pow(0.3, deltaTime);
+            for (let i = 0; i < enemies.length; i++) {
+                const enemy = enemies[i];
+                // freezeTimer > 0 means Frost Nova / MagicTower water currently owns this
+                // enemy's speed (restored on timer expiry in GameplayState) - don't fight it.
+                if (enemy.hasOwnProperty('originalSpeed') && !slowedByBarricade.has(enemy) &&
+                    !(enemy.freezeTimer > 0) && enemy.speed < enemy.originalSpeed) {
+                    enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
+                }
+            }
+        }
+
         // Update building manager
         this.buildingManager.update(deltaTime);
     }

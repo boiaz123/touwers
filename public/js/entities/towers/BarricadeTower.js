@@ -183,15 +183,10 @@ export class BarricadeTower extends Tower {
             }
         }
         this.slowZones.length = zoneWrite;
-        
-        // Restore speed for enemies not being slowed (O(n) with Set lookup instead of O(n*k))
-        for (let i = 0; i < enemies.length; i++) {
-            const enemy = enemies[i];
-            if (enemy.hasOwnProperty('originalSpeed') && !this._slowedSet.has(enemy) && enemy.speed < enemy.originalSpeed) {
-                const restoreRate = 1 - Math.pow(0.3, deltaTime);
-                enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
-            }
-        }
+        // Speed restoration for enemies that left this tower's zones now happens once,
+        // globally, in TowerManager.update() after ALL barricade towers have updated -
+        // doing it per-instance here fought every other barricade tower's active slow on
+        // enemies outside this tower's own zones (see TowerManager.js for the full reason).
     }
     
     rollBarrel() {

@@ -105,7 +105,9 @@ export class BasicEnemy extends BaseEnemy {
 
         // Hit splatters - not yet migrated
         if (this.hitSplatters.length > 0) {
-            this.hitSplatters.forEach(splatter => splatter.render(ctx));
+            for (let i = 0; i < this.hitSplatters.length; i++) {
+                this.hitSplatters[i].render(ctx);
+            }
         }
     }
 

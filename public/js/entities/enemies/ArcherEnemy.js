@@ -38,7 +38,9 @@ export class ArcherEnemy extends BaseEnemy {
         }
 
         // Render hit splatters - not yet migrated
-        this.hitSplatters.forEach(splatter => splatter.render(ctx));
+        for (let i = 0; i < this.hitSplatters.length; i++) {
+            this.hitSplatters[i].render(ctx);
+        }
     }
 
     /** No static structure for this enemy - present for EnemyRenderAdapter's uniform convention. */
