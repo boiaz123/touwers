@@ -730,6 +730,59 @@ export class LevelBase {
         // No-op: vegetation and rocks are rendered by GameplayState in entity-sorted order
     }
 
+    /**
+     * The screen-space Y used to depth-sort a terrain element against towers/enemies/other
+     * terrain (Y-sort "ground contact point"). Must mirror the y-shift renderSingleTerrainElement
+     * applies before actually drawing each type, otherwise the sort key and the pixels it's
+     * supposed to describe disagree: 'tree' (and non-mountain 'vegetation') are drawn shifted
+     * up by size*0.45 so the canopy has room to grow from its trunk, while 'rock'/'cactus'/
+     * 'drybush'/mountain-vegetation are drawn anchored exactly at their grid row. Using the raw,
+     * unshifted gridY for every type (as this used to) makes a tree's sort key sit up to
+     * size*0.45px below its actual painted base - on mountain levels (sizeScale 1.5, the
+     * largest of any campaign) that's often more than a full grid row, letting a rock declared
+     * later in the level file win same-row zIndex ties and draw in front of a tree it should
+     * be behind.
+     */
+    getTerrainElementDepthY(element) {
+        const campaign = this.getCampaign();
+        const screenY = element.gridY * this.cellSize;
+        if (element.type === 'water') return screenY;
+        const baseSize = element.size * this.cellSize;
+        const sizeScale = (campaign !== 'forest' && campaign !== 'desert') ? 1.5 : 0.75;
+        const size = baseSize * sizeScale;
+
+        if (element.type === 'tree' || (element.type === 'vegetation' && campaign !== 'mountain')) {
+            return screenY - size * 0.45;
+        }
+        if (element.type === 'rock' || element.type === 'cactus' || element.type === 'drybush') {
+            // Ground-hugging clutter that never gets the upward shift above (including mountain
+            // vegetation, whose canopy - unlike every other campaign's - anchors flush with its
+            // own gridY too, see the mountain branch above). A rock and a tree can therefore land
+            // on the *exact* same sort key despite one visually towering over the other; that tie
+            // used to resolve by array insertion order, so whichever was declared later in the
+            // level file always won - typically the rock, since level files list rocks after
+            // vegetation. A sub-pixel nudge makes rock/cactus/drybush always lose ties against
+            // foliage at the same row instead, without perturbing any real (non-tied) ordering.
+            return screenY - 0.5;
+        }
+        return screenY;
+    }
+
+    /**
+     * terrainElements sorted by depth-Y for correct painter's-algorithm draw order.
+     * Only used by the brief Canvas2D fallback render path (before Pixi's async init
+     * finishes and zIndex-based sorting takes over) - cached since terrainElements never
+     * changes after level load (see TerrainRenderAdapter.js's class doc comment).
+     */
+    getTerrainElementsSortedByDepth() {
+        if (!this._depthSortedTerrainElements || this._depthSortedTerrainElements.length !== this.terrainElements.length) {
+            this._depthSortedTerrainElements = [...this.terrainElements].sort(
+                (a, b) => this.getTerrainElementDepthY(a) - this.getTerrainElementDepthY(b)
+            );
+        }
+        return this._depthSortedTerrainElements;
+    }
+
     renderSingleTerrainElement(ctx, element) {
         const campaign = this.getCampaign();
         const screenX = element.gridX * this.cellSize;
@@ -1693,10 +1746,12 @@ export class LevelBase {
             // Regular grid-based placement preview for other towers and buildings
             else if (this.previewGridX !== undefined && this.previewGridY !== undefined) {
                 const isBuilding = this.previewSize === 4;
-                const canPlace = isBuilding ? 
+                const fitsOnGrid = isBuilding ?
                     this.canPlaceBuilding(this.previewGridX, this.previewGridY, this.previewSize, this.previewTowerManager) :
                     this.canPlaceTower(this.previewGridX, this.previewGridY, this.previewTowerManager);
-                
+                const canAfford = this.previewCanAffordFn ? this.previewCanAffordFn() : true;
+                const canPlace = fitsOnGrid && canAfford;
+
                 ctx.fillStyle = canPlace ? 'rgba(0, 255, 0, 0.4)' : 'rgba(255, 0, 0, 0.4)';
                 
                 const size = this.previewSize * this.cellSize;
@@ -1745,11 +1800,12 @@ export class LevelBase {
         }
     }
     
-    setPlacementPreview(screenX, screenY, show = true, towerManager = null, size = 2, towerType = null) {
+    setPlacementPreview(screenX, screenY, show = true, towerManager = null, size = 2, towerType = null, canAffordFn = null) {
         this.showPlacementPreview = show;
         this.previewTowerManager = towerManager;
         this.previewSize = size;
         this.previewTowerType = towerType;
+        this.previewCanAffordFn = canAffordFn;
         if (show) {
             if (towerType === 'guard-post') {
                 // For guard posts, store raw screen coordinates
@@ -1816,16 +1872,18 @@ export class LevelBase {
 
         // Determine if close enough to path (within 60px)
         const isOnPath = nearestDistance <= 60;
+        const canAfford = this.previewCanAffordFn ? this.previewCanAffordFn() : true;
+        const canPlace = isOnPath && canAfford;
 
         // Render the placement preview circle
         const radius = 25;
-        ctx.fillStyle = isOnPath ? 'rgba(0, 255, 0, 0.3)' : 'rgba(255, 0, 0, 0.3)';
+        ctx.fillStyle = canPlace ? 'rgba(0, 255, 0, 0.3)' : 'rgba(255, 0, 0, 0.3)';
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fill();
 
         // Add border
-        ctx.strokeStyle = isOnPath ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)';
+        ctx.strokeStyle = canPlace ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);

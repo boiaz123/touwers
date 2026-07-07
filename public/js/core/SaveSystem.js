@@ -131,7 +131,9 @@ export class SaveSystem {
             unlockedCampaigns: settlementData.unlockedCampaigns || ['campaign-1'],
             // Unlock system state (persistent unlocks across levels)
             unlockSystem: settlementData.unlockSystem || SaveSystem.DEFAULT_UNLOCK_STATE,
-            playerLevels: settlementData.playerLevels || []
+            playerLevels: settlementData.playerLevels || [],
+            // Best battle score per level, keyed by scopedLevelId(campaignId, levelId)
+            levelHighScores: settlementData.levelHighScores || {}
         };
 
         try {
@@ -206,7 +208,8 @@ export class SaveSystem {
             completedCampaigns: updateData.completedCampaigns !== undefined ? updateData.completedCampaigns : (existingSave?.completedCampaigns || []),
             unlockedCampaigns: updateData.unlockedCampaigns !== undefined ? updateData.unlockedCampaigns : (existingSave?.unlockedCampaigns || ['campaign-1']),
             unlockSystem: updateData.unlockSystem || existingSave?.unlockSystem || SaveSystem.DEFAULT_UNLOCK_STATE,
-            playerLevels: updateData.playerLevels !== undefined ? updateData.playerLevels : (existingSave?.playerLevels || [])
+            playerLevels: updateData.playerLevels !== undefined ? updateData.playerLevels : (existingSave?.playerLevels || []),
+            levelHighScores: updateData.levelHighScores !== undefined ? updateData.levelHighScores : (existingSave?.levelHighScores || {})
         };
 
         const key = this.getSaveSlotKey(slotNumber);
@@ -316,7 +319,8 @@ export class SaveSystem {
             completedCampaigns: [],
             unlockedCampaigns: ['campaign-1'],
             unlockSystem: SaveSystem.DEFAULT_UNLOCK_STATE,
-            playerLevels: []
+            playerLevels: [],
+            levelHighScores: {}
         };
     }
 
@@ -402,6 +406,35 @@ export class SaveSystem {
             completedLevels.push(scopedId);
         }
         return completedLevels;
+    }
+
+    /**
+     * Record a level's battle score, keeping only the best (highest) result.
+     * @param {string} levelId - Level just completed
+     * @param {string} campaignId - Campaign the level belongs to
+     * @param {number} score - Battle score achieved this run
+     * @param {Object} levelHighScores - Current { scopedLevelId: score } map
+     * @returns {Object} - Updated levelHighScores map
+     */
+    static recordLevelHighScore(levelId, campaignId, score, levelHighScores) {
+        const scopedId = campaignId ? this.scopedLevelId(campaignId, levelId) : levelId;
+        if (!levelHighScores[scopedId] || score > levelHighScores[scopedId]) {
+            levelHighScores[scopedId] = score;
+        }
+        return levelHighScores;
+    }
+
+    /**
+     * Get a level's best recorded battle score.
+     * @param {string} levelId - Level ID to check
+     * @param {string} campaignId - Campaign the level belongs to
+     * @param {Object} levelHighScores - { scopedLevelId: score } map
+     * @returns {number} - Best score, or 0 if the level has never been completed
+     */
+    static getLevelHighScore(levelId, campaignId, levelHighScores) {
+        if (!levelHighScores) return 0;
+        const scopedId = campaignId ? this.scopedLevelId(campaignId, levelId) : levelId;
+        return levelHighScores[scopedId] || 0;
     }
 
     /**

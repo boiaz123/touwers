@@ -64,7 +64,11 @@ export class TerrainRenderAdapter {
         const sprite = new Sprite(texture);
         sprite.anchor.set(0.5, 0.5);
         sprite.position.set(element.gridX * cellSize, element.gridY * cellSize);
-        sprite.zIndex = element.gridY * cellSize; // matches the Y-sort key the removed manual JS sort used for 'terrain' entities
+        // Sort key uses the element's actual painted ground-contact Y (see
+        // LevelBase.getTerrainElementDepthY), not the raw gridY - trees are drawn shifted
+        // up from their grid row so the canopy has headroom, so their zIndex needs the
+        // same shift or they tie/lose against same-row rocks that have no such shift.
+        sprite.zIndex = level.getTerrainElementDepthY(element);
         this.container.addChild(sprite);
 
         this._entries.set(element, sprite);

@@ -89,20 +89,24 @@ export class UIManager {
                 btn.style.display = 'flex';
                 // Check if affordable (or free from marketplace)
                 const canAfford = this.gameState.canAfford(cost) || isFreeFromMarketplace;
-                
-                // Determine if button should be disabled (limit or affordability)
-                if (!canAfford || !canBuild) {
+
+                // Only disable for build-limit/unlock reasons - affordability no longer
+                // blocks entering placement mode. The placement preview shows red/green
+                // based on gold and turns green once enough coins are available.
+                if (!canBuild) {
                     btn.classList.add('disabled');
                     btn.disabled = true;
-                    btn.classList.remove('free-placement');
+                    btn.classList.remove('free-placement', 'unaffordable');
                 } else {
                     btn.classList.remove('disabled');
                     btn.disabled = false;
                     // Add free-placement class if this is a free build
                     if (isFreeFromMarketplace) {
                         btn.classList.add('free-placement');
+                        btn.classList.remove('unaffordable');
                     } else {
                         btn.classList.remove('free-placement');
+                        btn.classList.toggle('unaffordable', !canAfford);
                     }
                 }
             }
@@ -129,20 +133,24 @@ export class UIManager {
                 // Check if it can be built (not at limit) and affordable (or free from marketplace)
                 const canBuild = this.towerManager.unlockSystem.canBuildBuilding(buildingType);
                 const canAfford = this.gameState.canAfford(cost) || isFreeFromMarketplace;
-                
-                // Determine if button should be disabled
-                if (!canBuild || !canAfford) {
+
+                // Only disable for build-limit/unlock reasons - affordability no longer
+                // blocks entering placement mode. The placement preview shows red/green
+                // based on gold and turns green once enough coins are available.
+                if (!canBuild) {
                     btn.classList.add('disabled');
                     btn.disabled = true;
-                    btn.classList.remove('free-placement');
+                    btn.classList.remove('free-placement', 'unaffordable');
                 } else {
                     btn.classList.remove('disabled');
                     btn.disabled = false;
                     // Add free-placement class if this is a free build
                     if (isFreeFromMarketplace) {
                         btn.classList.add('free-placement');
+                        btn.classList.remove('unaffordable');
                     } else {
                         btn.classList.remove('free-placement');
+                        btn.classList.toggle('unaffordable', !canAfford);
                     }
                 }
             }
@@ -490,14 +498,11 @@ export class UIManager {
         }
 
         const towerType = btn.dataset.type;
-        const cost = parseInt(btn.dataset.cost);
-        
-        // Check if player can afford this tower OR if it's free from marketplace
-        const isFree = this.gameplayState.hasFreePlacement(towerType, true);
-        if (!isFree && !this.gameState.canAfford(cost)) {
-            return;
-        }
-        
+
+        // Note: affordability is no longer required to enter placement mode -
+        // the placement preview shows red/green based on gold instead, and
+        // turns green automatically once the player can afford it.
+
         // Deselect all towers and buildings when starting placement
         if (this.towerManager) {
             this.towerManager.towers.forEach(tower => tower.isSelected = false);
@@ -533,14 +538,11 @@ export class UIManager {
         }
 
         const buildingType = btn.dataset.type;
-        const cost = parseInt(btn.dataset.cost);
-        
-        // Check if player can afford this building OR if it's free from marketplace
-        const isFree = this.gameplayState.hasFreePlacement(buildingType, false);
-        if (!isFree && !this.gameState.canAfford(cost)) {
-            return;
-        }
-        
+
+        // Note: affordability is no longer required to enter placement mode -
+        // the placement preview shows red/green based on gold instead, and
+        // turns green automatically once the player can afford it.
+
         // Deselect all towers and buildings when starting placement
         if (this.towerManager) {
             this.towerManager.towers.forEach(tower => tower.isSelected = false);
@@ -1202,25 +1204,28 @@ export class UIManager {
                 btn.classList.remove('free-placement');
             } else {
                 btn.style.display = 'flex';
-                // Button is unlocked, now check if it can be built (not at limit) and affordable
+                // Button is unlocked - only disable for build-limit reasons; affordability
+                // no longer blocks entering placement mode (preview shows red/green instead)
                 const canAfford = this.gameState.canAfford(cost) || isFreeFromMarketplace;
-                if (!canBuild || !canAfford) {
+                if (!canBuild) {
                     btn.classList.add('disabled');
                     btn.disabled = true;
-                    btn.classList.remove('free-placement');
+                    btn.classList.remove('free-placement', 'unaffordable');
                 } else {
                     btn.classList.remove('disabled');
                     btn.disabled = false;
                     // Add free-placement class if this is a free build
                     if (isFreeFromMarketplace) {
                         btn.classList.add('free-placement');
+                        btn.classList.remove('unaffordable');
                     } else {
                         btn.classList.remove('free-placement');
+                        btn.classList.toggle('unaffordable', !canAfford);
                     }
                 }
             }
         });
-        
+
         // Update building button states - show when unlocked, disable based on limits and resources
         document.querySelectorAll('.building-btn').forEach(btn => {
             const type = btn.dataset.type;
@@ -1240,22 +1245,25 @@ export class UIManager {
                 btn.classList.remove('free-placement');
             } else {
                 btn.style.display = 'flex';
-                // Building is unlocked, check if it can be built (at limit or affordable)
+                // Building is unlocked - only disable for build-limit reasons; affordability
+                // no longer blocks entering placement mode (preview shows red/green instead)
                 const canBuild = unlockSystem.canBuildBuilding(type);
                 const canAfford = this.gameState.canAfford(cost) || isFreeFromMarketplace;
-                
-                if (!canBuild || !canAfford) {
+
+                if (!canBuild) {
                     btn.classList.add('disabled');
                     btn.disabled = true;
-                    btn.classList.remove('free-placement');
+                    btn.classList.remove('free-placement', 'unaffordable');
                 } else {
                     btn.classList.remove('disabled');
                     btn.disabled = false;
                     // Add free-placement class if this is a free build
                     if (isFreeFromMarketplace) {
                         btn.classList.add('free-placement');
+                        btn.classList.remove('unaffordable');
                     } else {
                         btn.classList.remove('free-placement');
+                        btn.classList.toggle('unaffordable', !canAfford);
                     }
                 }
             }

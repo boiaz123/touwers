@@ -1,6 +1,7 @@
 import { CampaignBase } from './CampaignBase.js';
 import { LevelRegistry } from '../levels/LevelRegistry.js';
 import { Castle } from '../buildings/Castle.js';
+import { SaveSystem } from '../../core/SaveSystem.js';
 import { MountainLevel1 } from '../levels/Mountain/MountainLevel1.js';
 import { MountainLevel2 } from '../levels/Mountain/MountainLevel2.js';
 import { MountainLevel3 } from '../levels/Mountain/MountainLevel3.js';
@@ -88,6 +89,8 @@ export class Campaign2 extends CampaignBase {
             name: level.name,
             difficulty: level.difficulty,
             unlocked: level.id === 'level1' || (saveData && saveData.unlockedLevels && saveData.unlockedLevels.includes(`${this.campaignId}:${level.id}`)),
+            completed: !!(saveData && saveData.completedLevels && saveData.completedLevels.includes(`${this.campaignId}:${level.id}`)),
+            highScore: SaveSystem.getLevelHighScore(level.id, this.campaignId, saveData && saveData.levelHighScores),
             type: 'campaign'
         }));
         

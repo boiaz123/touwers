@@ -2,6 +2,7 @@ import { CampaignBase } from './CampaignBase.js';
 import { LevelRegistry } from '../levels/LevelRegistry.js';
 import { Castle } from '../buildings/Castle.js';
 import { LevelBase } from '../levels/LevelBase.js';
+import { SaveSystem } from '../../core/SaveSystem.js';
 // Import level classes - they auto-register when imported
 import { ForestLevel1 } from '../levels/Forest/ForestLevel1.js';
 import { ForestLevel2 } from '../levels/Forest/ForestLevel2.js';
@@ -93,6 +94,8 @@ export class Campaign1 extends CampaignBase {
             difficulty: level.difficulty,
             // Legacy saves stored unscoped level IDs (e.g. 'level3') for campaign-1; keep honoring those
             unlocked: level.id === 'level1' || (saveData && saveData.unlockedLevels && (saveData.unlockedLevels.includes(`${this.campaignId}:${level.id}`) || saveData.unlockedLevels.includes(level.id))),
+            completed: !!(saveData && saveData.completedLevels && (saveData.completedLevels.includes(`${this.campaignId}:${level.id}`) || saveData.completedLevels.includes(level.id))),
+            highScore: SaveSystem.getLevelHighScore(level.id, this.campaignId, saveData && saveData.levelHighScores),
             type: 'campaign'
         }));
 

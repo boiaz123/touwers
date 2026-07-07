@@ -347,6 +347,7 @@ export class CampaignBase {
         if (!slot || !slot.level) return;
 
         const level = slot.level;
+        const isCompleted = !!level.completed;
         const displayName = level.name || `Level ${index + 1}`;
         const x = slot.x;
         const y = slot.y - 78;  // hover just above castle top
@@ -354,7 +355,9 @@ export class CampaignBase {
         const style = this.labelStyle || {};
         const bg1    = style.bg1    || 'rgba(40, 25, 10, 0.93)';
         const bg2    = style.bg2    || 'rgba(55, 35, 15, 0.97)';
-        const border = style.border || 'rgba(160, 120, 50, 0.85)';
+        // Completed levels get a victory-green ribbon border instead of the campaign's
+        // default accent, so a beaten level reads differently at a glance on the map.
+        const border = isCompleted ? 'rgba(90, 200, 110, 0.9)' : (style.border || 'rgba(160, 120, 50, 0.85)');
         const text   = style.text   || '#f0e0b0';
 
         ctx.save();
@@ -411,6 +414,129 @@ export class CampaignBase {
         // Text
         ctx.fillStyle = text;
         ctx.fillText(displayName, x, y);
+
+        ctx.restore();
+
+        // Completion medal (seal) pinned to the left edge of the name ribbon, plus the
+        // player's best battle score for this level in a small pill above everything.
+        if (isCompleted) {
+            this.renderCompletionMedal(ctx, x - bannerW / 2, y);
+            if (level.highScore > 0) {
+                this.renderHighScoreBadge(ctx, x, y - bannerH / 2 - 17, level.highScore);
+            }
+        }
+    }
+
+    /**
+     * Small circular seal with a hand-drawn checkmark (no emoji), pinned to a completed
+     * level's name ribbon so a beaten level reads differently from the map at a glance.
+     */
+    renderCompletionMedal(ctx, x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+        const r = 11;
+
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 1;
+
+        const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 1, 0, 0, r);
+        grad.addColorStop(0,    '#8fe0a0');
+        grad.addColorStop(0.55, '#4caf60');
+        grad.addColorStop(1,    '#2e7d40');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+
+        ctx.strokeStyle = 'rgba(20, 60, 25, 0.75)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(232, 255, 224, 0.65)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, r - 2, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Checkmark - dark under-stroke then a lighter top stroke for a little relief
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#0d2a10';
+        ctx.lineWidth = 2.6;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.45, 0.6);
+        ctx.lineTo(-r * 0.10, r * 0.42);
+        ctx.lineTo(r * 0.50, -r * 0.38);
+        ctx.stroke();
+        ctx.strokeStyle = '#eafff0';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.45, 0);
+        ctx.lineTo(-r * 0.10, r * 0.36);
+        ctx.lineTo(r * 0.50, -r * 0.44);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    /**
+     * Small golden pill showing the player's best battle score for a completed level,
+     * hovering just above the level's name ribbon.
+     */
+    renderHighScoreBadge(ctx, x, y, score) {
+        ctx.save();
+        ctx.font = 'bold 11px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const scoreText = Math.floor(score).toLocaleString();
+        const textW = ctx.measureText(scoreText).width;
+        const pillW = textW + 30;
+        const pillH = 18;
+
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+        ctx.shadowBlur = 5;
+        ctx.shadowOffsetY = 2;
+        const grad = ctx.createLinearGradient(x, y - pillH / 2, x, y + pillH / 2);
+        grad.addColorStop(0, 'rgba(30, 22, 8, 0.92)');
+        grad.addColorStop(1, 'rgba(48, 34, 10, 0.96)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(x - pillW / 2, y - pillH / 2, pillW, pillH, pillH / 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.85)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.roundRect(x - pillW / 2, y - pillH / 2, pillW, pillH, pillH / 2);
+        ctx.stroke();
+
+        // Small four-point star glyph ahead of the score, drawn (not an emoji)
+        const starX = x - pillW / 2 + 11;
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.moveTo(starX, y - 5.5);
+        ctx.lineTo(starX + 1.6, y - 1.6);
+        ctx.lineTo(starX + 5.5, y);
+        ctx.lineTo(starX + 1.6, y + 1.6);
+        ctx.lineTo(starX, y + 5.5);
+        ctx.lineTo(starX - 1.6, y + 1.6);
+        ctx.lineTo(starX - 5.5, y);
+        ctx.lineTo(starX - 1.6, y - 1.6);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+        ctx.fillText(scoreText, x + 6, y + 1);
+        ctx.fillStyle = '#ffe9a8';
+        ctx.fillText(scoreText, x + 5, y);
 
         ctx.restore();
     }

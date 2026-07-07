@@ -509,6 +509,26 @@ export class GameplayState {
     }
     
     /**
+     * Whether the currently selected tower/building can actually be afforded
+     * right now (or is free from a marketplace consumable). Used to drive the
+     * red/green placement preview so players can stay in placement mode while
+     * saving up gold.
+     */
+    canAffordSelectedPlacement() {
+        if (this.selectedTowerType) {
+            if (this.hasFreePlacement(this.selectedTowerType, true)) return true;
+            const towerType = TowerRegistry.getTowerType(this.selectedTowerType);
+            return towerType ? this.gameState.canAfford(towerType.cost) : true;
+        }
+        if (this.selectedBuildingType) {
+            if (this.hasFreePlacement(this.selectedBuildingType, false)) return true;
+            const buildingType = BuildingRegistry.getBuildingType(this.selectedBuildingType);
+            return buildingType ? this.gameState.canAfford(buildingType.cost) : true;
+        }
+        return true;
+    }
+
+    /**
      * Check if a free placement is available WITHOUT consuming it
      * Used by UI to display free-placement styling
      */
@@ -914,7 +934,7 @@ export class GameplayState {
             const buildingType = BuildingRegistry.getBuildingType(this.selectedBuildingType);
             size = buildingType?.size || 4;
         }
-        this.level.setPlacementPreview(x, y, true, this.towerManager, size, this.selectedTowerType);
+        this.level.setPlacementPreview(x, y, true, this.towerManager, size, this.selectedTowerType, () => this.canAffordSelectedPlacement());
     }
 
     refreshPlacementPreview() {
@@ -927,7 +947,7 @@ export class GameplayState {
         }
         const x = this.lastMouseX || 0;
         const y = this.lastMouseY || 0;
-        this.level.setPlacementPreview(x, y, true, this.towerManager, size, this.selectedTowerType);
+        this.level.setPlacementPreview(x, y, true, this.towerManager, size, this.selectedTowerType, () => this.canAffordSelectedPlacement());
     }
     
     /**
@@ -947,9 +967,9 @@ export class GameplayState {
             const buildingType = BuildingRegistry.getBuildingType(this.selectedBuildingType);
             size = buildingType?.size || 4;
         }
-        this.level.setPlacementPreview(x, y, true, this.towerManager, size, this.selectedTowerType);
+        this.level.setPlacementPreview(x, y, true, this.towerManager, size, this.selectedTowerType, () => this.canAffordSelectedPlacement());
     }
-    
+
     activateSpellTargeting(spellId) {
         this.selectedSpell = spellId;
         this.stateManager.canvas.style.cursor = 'crosshair';
@@ -1763,6 +1783,20 @@ export class GameplayState {
             // Mark level as completed
             saveData.completedLevels = SaveSystem.markLevelCompleted(this.currentLevel, saveData.completedLevels, this.currentCampaignId);
 
+            // Record this run's battle score against the level's best (same formula the
+            // results screen animates - see ResultsScreen.calculateBattleScore). completeLevel()
+            // already returned early above for sandbox runs, so every path reaching here is a
+            // real campaign level.
+            const runScore = ResultsScreen.calculateBattleScore({
+                enemiesSlain: this.totalEnemiesSpawned,
+                timeTaken: Math.round((Date.now() / 1000) - this.levelStartTime),
+                goldRemaining: this.gameState.gold,
+                goldEarned: this.goldEarnedThisLevel
+            });
+            saveData.levelHighScores = SaveSystem.recordLevelHighScore(
+                this.currentLevel, this.currentCampaignId, runScore, saveData.levelHighScores || {}
+            );
+
             // Unlock next level
             saveData.unlockedLevels = SaveSystem.unlockNextLevel(this.currentLevel, saveData.unlockedLevels, this.currentCampaignId);
             
@@ -2384,19 +2418,6 @@ export class GameplayState {
             }
         }
 
-        if (this.lootManager && this.lootManager.lootBags) {
-            const bags = this.lootManager.lootBags;
-            for (let i = 0; i < bags.length; i++) {
-                const bag = bags[i];
-                bag.render(ctx);
-                if (pixiActive) {
-                    this.performanceMonitor.beginSlot('renderSync');
-                    this._syncEnemyPixi(bag, ctx);
-                    this.performanceMonitor.endSlot('renderSync');
-                }
-            }
-        }
-
         if (this.level.castle) {
             this.level.castle.render(ctx);
             if (pixiActive) {
@@ -2407,7 +2428,10 @@ export class GameplayState {
         }
 
         if (this.level && this.level.terrainElements) {
-            const terrain = this.level.terrainElements;
+            // Pixi path doesn't care about iteration order (zIndex owns layering), but the
+            // Canvas2D fallback draws in whatever order it iterates - use the depth-sorted
+            // view there so e.g. a rock doesn't draw over a tree it should be behind.
+            const terrain = pixiActive ? this.level.terrainElements : this.level.getTerrainElementsSortedByDepth();
             for (let i = 0; i < terrain.length; i++) {
                 const el = terrain[i];
                 if (el.type === 'water') continue;
@@ -2421,6 +2445,24 @@ export class GameplayState {
                     this.performanceMonitor.endSlot('renderSync');
                 } else {
                     this.level.renderSingleTerrainElement(ctx, el);
+                }
+            }
+        }
+
+        // Loot is drawn after terrain (and everything else above) so it always renders on
+        // top and never visually disappears behind trees, rocks or buildings. Under Pixi
+        // this is belt-and-suspenders (LOOT_ZINDEX_BOOST in EnemyRenderAdapter already
+        // guarantees it); it matters for real during the brief Canvas2D fallback window
+        // before Pixi finishes its async init, since Canvas2D draw order IS layering order.
+        if (this.lootManager && this.lootManager.lootBags) {
+            const bags = this.lootManager.lootBags;
+            for (let i = 0; i < bags.length; i++) {
+                const bag = bags[i];
+                bag.render(ctx);
+                if (pixiActive) {
+                    this.performanceMonitor.beginSlot('renderSync');
+                    this._syncEnemyPixi(bag, ctx);
+                    this.performanceMonitor.endSlot('renderSync');
                 }
             }
         }

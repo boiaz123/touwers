@@ -1465,13 +1465,22 @@ export class ResultsScreen {
      * Rewards: enemies slain, fast completion, gold efficiency, and economic output.
      */
     _calculateFinalScore() {
-        const enemiesScore = this.stats.enemiesSlain * 10;
+        return ResultsScreen.calculateBattleScore(this.stats);
+    }
+
+    /**
+     * Static form of the battle score formula so callers that need the number without an
+     * animating ResultsScreen instance (e.g. GameplayState persisting a level's high score)
+     * can compute the exact same value shown on this screen.
+     */
+    static calculateBattleScore({ enemiesSlain = 0, timeTaken = 0, goldRemaining = 0, goldEarned = 0 }) {
+        const enemiesScore = enemiesSlain * 10;
         // Time bonus: up to 5000 for instant completion, -5 per second elapsed
-        const timeBonus = Math.max(0, 5000 - this.stats.timeTaken * 5);
+        const timeBonus = Math.max(0, 5000 - timeTaken * 5);
         // Gold surplus bonus: reward spending wisely and keeping reserves
-        const goldBonus = Math.floor(this.stats.goldRemaining * 2);
+        const goldBonus = Math.floor(goldRemaining * 2);
         // Economy bonus: reward high total gold throughput
-        const economyBonus = Math.floor(this.stats.goldEarned * 0.5);
+        const economyBonus = Math.floor(goldEarned * 0.5);
         return enemiesScore + timeBonus + goldBonus + economyBonus;
     }
 

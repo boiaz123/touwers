@@ -67,6 +67,20 @@ const HB_BUCKETS = 20; // resolution of health-change detection
  */
 const PARTICLE_FIELDS = ['magicParticles', 'crystalParticles', 'orbParticles'];
 
+/**
+ * Loot (LootBag / RealmShardDrop, identified by their shared `lootId` field - see
+ * LootBag.js) must always render above trees, rocks, buildings and enemies so it can
+ * never visually disappear behind ground clutter it happens to drop next to. All other
+ * entities in this shared, Y-sorted container use their world Y as zIndex; loot instead
+ * gets that same Y pushed into its own zIndex band, comfortably above anything terrain/
+ * entity Y-sort could produce (levels are at most a few thousand px tall).
+ */
+const LOOT_ZINDEX_BOOST = 1000000;
+
+function _zIndexFor(entity) {
+    return entity.lootId !== undefined ? LOOT_ZINDEX_BOOST + entity.y : entity.y;
+}
+
 // ---------------------------------------------------------------------------
 // Module-level helpers (not on prototype – keeps sync() allocation-free)
 // ---------------------------------------------------------------------------
@@ -303,7 +317,7 @@ export class EnemyRenderAdapter {
         // Position eagerly so entity does not flash at (0,0) on the first frame.
         entryContainer.x      = entity.x;
         entryContainer.y      = entity.y;
-        entryContainer.zIndex = entity.y;
+        entryContainer.zIndex = _zIndexFor(entity);
     }
 
     unregister(entity) {
@@ -326,7 +340,7 @@ export class EnemyRenderAdapter {
         // Container world position + Y-sort zIndex updated every frame for both modes.
         entry.entryContainer.x      = entity.x;
         entry.entryContainer.y      = entity.y;
-        entry.entryContainer.zIndex = entity.y;
+        entry.entryContainer.zIndex = _zIndexFor(entity);
 
         if (entry.modeA) {
             this._syncModeA(entity, sizeHint, entry);
