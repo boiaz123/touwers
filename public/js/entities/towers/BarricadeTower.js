@@ -170,7 +170,12 @@ export class BarricadeTower extends Tower {
             // Apply slow to closest enemies
             for (let i = 0; i < slowed; i++) {
                 const enemy = enemiesInRange[i].enemy;
-                const targetSpeed = enemy.originalSpeed * 0.25;
+                // Clamp to the enemy's CURRENT speed, never above it - an enemy already
+                // slower than this zone's 25% (frozen by Frost Nova, water-slowed by a
+                // Magic Tower, or already pulled lower by another zone) must stay there;
+                // targeting the raw 25%-of-original figure would pull its speed back UP
+                // toward 25%, easing off a stronger effect instead of leaving it alone.
+                const targetSpeed = Math.min(enemy.speed, enemy.originalSpeed * 0.25);
                 const slowRate = 1 - Math.pow(0.05, deltaTime);
                 enemy.speed = enemy.speed + (targetSpeed - enemy.speed) * slowRate;
                 this._slowedSet.add(enemy);
