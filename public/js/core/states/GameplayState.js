@@ -803,20 +803,12 @@ export class GameplayState {
         // Mouse move listener for placement preview
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
-        
-        // FIXED: Unified click handler that properly routes all menu types
-        this.clickHandler = (e) => {
-            const rect = this.stateManager.canvas.getBoundingClientRect();
-            // Account for CSS scaling (same as mousemove handler)
-            const scaleX = this.stateManager.canvas.width / rect.width;
-            const scaleY = this.stateManager.canvas.height / rect.height;
-            const canvasX = (e.clientX - rect.left) * scaleX;
-            const canvasY = (e.clientY - rect.top) * scaleY;
-            
-            // All click handling is now done in handleClick method, which prioritizes placement
-            this.handleClick(canvasX, canvasY);
-        };
-        this.stateManager.canvas.addEventListener('click', this.clickHandler);
+
+        // NOTE: no click listener registered here - game.js already has a single global
+        // canvas 'click' listener that routes through GameStateManager.handleClick() to
+        // this.handleClick(). Adding a second one here fired handleClick() twice per click
+        // (e.g. a spell-cast click would cast the spell, clear selectedSpell, then the
+        // second call would fall through to the enemy-intel check and reopen that panel).
 
         // Dev-only stress-test hotkeys (see constructor's ?stresstest gate):
         // Ctrl+Alt+S spawns a batch of enemies+towers (repeatable to ramp up further),
@@ -836,11 +828,6 @@ export class GameplayState {
         if (this.mouseMoveHandler) {
             this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
             this.mouseMoveHandler = null;
-        }
-
-        if (this.clickHandler) {
-            this.stateManager.canvas.removeEventListener('click', this.clickHandler);
-            this.clickHandler = null;
         }
 
         if (this._stressTestKeyHandler) {

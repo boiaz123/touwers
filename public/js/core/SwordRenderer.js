@@ -83,7 +83,7 @@ export function drawMedievalSword(ctx, x, y, primaryColor, accentColor, scale = 
     ctx.stroke();
 }
 
-const CURSOR_SCALE = 0.22;
+const CURSOR_SCALE = 0.22 * 0.65; // 65% of the original cursor size
 const CURSOR_PRIMARY_COLOR = '#d4af37';
 const CURSOR_ACCENT_COLOR = '#8b7355';
 

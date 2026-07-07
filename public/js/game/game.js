@@ -446,6 +446,18 @@ export class Game {
                 }
             });
 
+            // Sell (DEL) - sells whatever tower/building's upgrade panel is currently open,
+            // by reusing that panel's own Sell button (same refund/cleanup logic as clicking it).
+            this.inputManager.on('sell', () => {
+                const refs = getGameplayRefs();
+                if (!refs || refs.gameplayState.isPaused) return;
+                const sellBtn = Array.from(document.querySelectorAll('.sell-tower-btn, .sell-building-btn'))
+                    .find(btn => btn.offsetParent !== null);
+                if (sellBtn) {
+                    sellBtn.click();
+                }
+            });
+
             // Tower hotkeys
             const towerTypes = ['basic', 'cannon', 'archer', 'magic', 'barricade', 'poison', 'combination', 'guard-post'];
             for (const type of towerTypes) {

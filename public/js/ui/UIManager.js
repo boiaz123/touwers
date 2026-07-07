@@ -4232,7 +4232,7 @@ export class UIManager {
                         <button class="compact-upgrade-btn panel-upgrade-btn" 
                                 data-upgrade="${upgrade.id}" 
                                 ${isMaxed || !canAfford || isLocked ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : (isLocked ? 'max' : (upgrade.cost ? `<span class="coin-xs"></span>${upgrade.cost}` : '\u2014'))}
+                            ${isMaxed ? 'MAX' : (isLocked ? '\u2014' : (upgrade.cost ? `<span class="coin-xs"></span>${upgrade.cost}` : '\u2014'))}
                         </button>
                     </div>
                 `;

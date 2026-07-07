@@ -68,7 +68,10 @@ export class ResultsScreen {
 
         // Button state
         this.buttons = [];
-        this.selectedButtonIndex = 0;
+        // -1 = no button pre-highlighted; only keyboard/gamepad navigation (if wired up)
+        // should ever cause one button to render in the gold "selected" style, since
+        // the buttons are otherwise meant to look identical (see renderButtons()).
+        this.selectedButtonIndex = -1;
 
         // Particle effects
         this.particles = [];
@@ -87,7 +90,7 @@ export class ResultsScreen {
         this.lootAnimationTime = 0; // Reset cumulative loot animation time
         this.lootAnimationIndex = 0;
         this.particles = [];
-        this.selectedButtonIndex = 0;
+        this.selectedButtonIndex = -1;
         
         // Set delay before showing screen (3 seconds for level complete, 0 for game over)
         if (type === 'levelComplete') {
@@ -141,8 +144,8 @@ export class ResultsScreen {
                 ];
             } else {
                 this.buttons = [
-                    { label: 'RETURN TO SETTLEMENT', action: 'settlement' },
-                    { label: 'RETURN TO CAMPAIGN MAP', action: 'campaignMap' }
+                    { label: 'RETURN TO CAMPAIGN MAP', action: 'campaignMap' },
+                    { label: 'RETURN TO SETTLEMENT', action: 'settlement' }
                 ];
             }
         } else {
@@ -428,7 +431,7 @@ export class ResultsScreen {
             this.selectedButtonIndex = Math.max(0, this.selectedButtonIndex - 1);
         } else if (key === 'ArrowRight') {
             this.selectedButtonIndex = Math.min(this.buttons.length - 1, this.selectedButtonIndex + 1);
-        } else if (key === 'Enter') {
+        } else if (key === 'Enter' && this.buttons[this.selectedButtonIndex]) {
             this.execute(this.buttons[this.selectedButtonIndex].action);
         }
     }

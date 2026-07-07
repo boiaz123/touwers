@@ -16,6 +16,7 @@ export class InputManager {
         'speed3': '3',          // 3
         'cancel': 'Escape',     // ESC
         'menu': 'm',            // M
+        'sell': 'Delete',       // DEL - sell selected tower/building
 
         // Tower hotkeys
         'tower_basic': 'q',
@@ -51,6 +52,7 @@ export class InputManager {
         'speed3': 'Speed 3x',
         'cancel': 'Cancel / Close',
         'menu': 'Open Menu',
+        'sell': 'Sell Selected Tower/Building',
         'tower_basic': 'Watch Tower',
         'tower_cannon': 'Trebuchet Tower',
         'tower_archer': 'Archer Tower',
@@ -73,7 +75,7 @@ export class InputManager {
 
     // Action categories for display grouping
     static ACTION_CATEGORIES = {
-        'Game Controls': ['pause', 'nextWave', 'speed1', 'speed2', 'speed3', 'cancel', 'menu'],
+        'Game Controls': ['pause', 'nextWave', 'speed1', 'speed2', 'speed3', 'cancel', 'menu', 'sell'],
         'Tower Hotkeys': ['tower_basic', 'tower_cannon', 'tower_archer', 'tower_magic', 'tower_barricade', 'tower_poison', 'tower_combination', 'tower_guard-post'],
         'Building Hotkeys': ['building_mine', 'building_forge', 'building_academy', 'building_training', 'building_superweapon', 'building_diamond-press'],
         'Spell Hotkeys': ['spell_arcaneBlast', 'spell_frostNova', 'spell_meteorStrike', 'spell_chainLightning']
