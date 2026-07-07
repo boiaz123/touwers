@@ -182,8 +182,86 @@ export class DefenderBase {
         // intentionally empty
     }
 
+    /**
+     * Lazily builds (or rebuilds, if the rendering context or size changed - e.g. switching
+     * between raw Canvas2D pre-Pixi-registration and the Pixi CanvasGraphicsShim post-
+     * registration) the 8 gradients used by renderLegs/renderTorso/renderArmorPlate/
+     * renderPauldrons/renderHead/renderLeftArm/renderRightArm. None of these actually change
+     * frame-to-frame for an existing defender - they depend only on baseSize/level/armourColor,
+     * all fixed once the defender is placed (renderSword's gradient is the one exception,
+     * since its geometry tracks live arm-sway/attack-swing and must stay dynamic).
+     * Previously every one of these 8 was recreated from scratch every single frame
+     * (createLinearGradient/createRadialGradient each build a GPU texture under Pixi), which
+     * is why even an idle defender with no combat happening had a real per-frame cost.
+     */
+    _ensureCachedGradients(ctx, baseSize) {
+        if (this._gradCtx === ctx && this._gradBaseSize === baseSize) return;
+        this._gradCtx = ctx;
+        this._gradBaseSize = baseSize;
+
+        const gc = this.armourColor;
+
+        this._legGrad = [-1, 1].map(side => {
+            const lx = side * baseSize * 0.23;
+            const grad = ctx.createLinearGradient(lx - baseSize * 0.16, 0, lx + baseSize * 0.16, 0);
+            grad.addColorStop(0,    this.darkenColor(gc, 0.28));
+            grad.addColorStop(0.35, this.lightenColor(gc, 0.14));
+            grad.addColorStop(0.65, this.lightenColor(gc, 0.08));
+            grad.addColorStop(1,    this.darkenColor(gc, 0.22));
+            return grad;
+        });
+
+        const ng = ctx.createLinearGradient(-baseSize * 0.22, 0, baseSize * 0.22, 0);
+        ng.addColorStop(0,   this.darkenColor(this.armourColor, 0.2));
+        ng.addColorStop(0.5, this.lightenColor(this.armourColor, 0.15));
+        ng.addColorStop(1,   this.darkenColor(this.armourColor, 0.2));
+        this._torsoGrad = ng;
+
+        const ph = baseSize * (0.82 + (this.level - 1) * 0.1);
+        const pw = baseSize * 1.08;
+        const px = -pw / 2, py = -ph;
+        const pg = ctx.createLinearGradient(px, py, px + pw, py + ph);
+        pg.addColorStop(0,    this.lightenColor(this.armourColor, 0.25));
+        pg.addColorStop(0.25, this.lightenColor(this.armourColor, 0.15));
+        pg.addColorStop(0.5,  this.armourColor);
+        pg.addColorStop(0.75, this.darkenColor(this.armourColor, 0.12));
+        pg.addColorStop(1,    this.darkenColor(this.armourColor, 0.28));
+        this._armorPlateGrad = pg;
+
+        const pc = this.lightenColor(this.armourColor, 0.18);
+        const ps = baseSize * (0.3 + (this.level - 1) * 0.08);
+        this._pauldronGrad = [[-1, -0.3], [1, 0.3]].map(([side]) => {
+            const px2 = side * baseSize * 0.73;
+            const py2 = -baseSize * 0.3;
+            const grad = ctx.createRadialGradient(px2 - side * ps * 0.25, py2 - ps * 0.2, 0, px2, py2, ps * 1.5);
+            grad.addColorStop(0, this.lightenColor(pc, 0.2));
+            grad.addColorStop(0.5, pc);
+            grad.addColorStop(1, this.darkenColor(pc, 0.25));
+            return grad;
+        });
+
+        const hx = 0, hy = -baseSize * 1.38, hs = baseSize * 0.7;
+        const ac = this.armourColor;
+        const hg = ctx.createRadialGradient(hx - hs * 0.25, hy - hs * 0.28, hs * 0.1, hx, hy, hs * 1.2);
+        hg.addColorStop(0, this.lightenColor(ac, 0.25));
+        hg.addColorStop(0.4, ac);
+        hg.addColorStop(1, this.darkenColor(ac, 0.35));
+        this._headGrad = hg;
+
+        const armGrad = (sx) => {
+            const grad = ctx.createLinearGradient(sx - baseSize * 0.18, 0, sx + baseSize * 0.18, 0);
+            grad.addColorStop(0,    this.darkenColor(this.armourColor, 0.3));
+            grad.addColorStop(0.38, this.lightenColor(this.armourColor, 0.16));
+            grad.addColorStop(1,    this.darkenColor(this.armourColor, 0.22));
+            return grad;
+        };
+        this._leftArmGrad = armGrad(-baseSize * 0.76);
+        this._rightArmGrad = armGrad(baseSize * 0.76);
+    }
+
     /** Strategy B (per-instance Graphics, redrawn every frame): the whole figure - breathing/sway/attack animation and health bar are continuous, so nothing here is bakeable. */
     renderDynamicParts(ctx, baseSize) {
+        this._ensureCachedGradients(ctx, baseSize);
         const breathe = Math.sin(this.animationTime * 1.5) * 0.15;
         const idleLeftArmSway  = Math.sin(this.animationTime * 1.2) * 0.25;
         const idleRightArmSway = Math.sin(this.animationTime * 1.2 + Math.PI) * 0.25;
@@ -249,14 +327,10 @@ export class DefenderBase {
         const gc = this.armourColor;
         const kc = this.lightenColor(gc, 0.22);
 
-        for (const side of [-1, 1]) {
+        for (let sideIdx = 0; sideIdx < 2; sideIdx++) {
+            const side = sideIdx === 0 ? -1 : 1;
             const lx = side * baseSize * 0.23;
-            const grad = ctx.createLinearGradient(lx - baseSize * 0.16, 0, lx + baseSize * 0.16, 0);
-            grad.addColorStop(0,    this.darkenColor(gc, 0.28));
-            grad.addColorStop(0.35, this.lightenColor(gc, 0.14));
-            grad.addColorStop(0.65, this.lightenColor(gc, 0.08));
-            grad.addColorStop(1,    this.darkenColor(gc, 0.22));
-            ctx.fillStyle = grad;
+            ctx.fillStyle = this._legGrad[sideIdx];
             ctx.fillRect(lx - baseSize * 0.15, baseSize * 0.22, baseSize * 0.3, baseSize * 1.08);
             ctx.strokeStyle = '#090909';
             ctx.lineWidth = 1;
@@ -311,11 +385,7 @@ export class DefenderBase {
         ctx.strokeRect(-baseSize * 0.72, -baseSize * 0.88, baseSize * 0.14, baseSize * 1.27);
         ctx.strokeRect( baseSize * 0.58, -baseSize * 0.88, baseSize * 0.14, baseSize * 1.27);
 
-        const ng = ctx.createLinearGradient(-baseSize * 0.22, 0, baseSize * 0.22, 0);
-        ng.addColorStop(0,   this.darkenColor(this.armourColor, 0.2));
-        ng.addColorStop(0.5, this.lightenColor(this.armourColor, 0.15));
-        ng.addColorStop(1,   this.darkenColor(this.armourColor, 0.2));
-        ctx.fillStyle = ng;
+        ctx.fillStyle = this._torsoGrad;
         ctx.fillRect(-baseSize * 0.2, -baseSize * 0.97, baseSize * 0.4, baseSize * 0.18);
         ctx.strokeStyle = '#090909';
         ctx.lineWidth = 1;
@@ -339,13 +409,7 @@ export class DefenderBase {
         const px = -pw / 2, py = -ph;
         const accentCol = this.getAccentColor();
 
-        const pg = ctx.createLinearGradient(px, py, px + pw, py + ph);
-        pg.addColorStop(0,    this.lightenColor(this.armourColor, 0.25));
-        pg.addColorStop(0.25, this.lightenColor(this.armourColor, 0.15));
-        pg.addColorStop(0.5,  this.armourColor);
-        pg.addColorStop(0.75, this.darkenColor(this.armourColor, 0.12));
-        pg.addColorStop(1,    this.darkenColor(this.armourColor, 0.28));
-        ctx.fillStyle = pg;
+        ctx.fillStyle = this._armorPlateGrad;
         ctx.fillRect(px, py, pw, ph * 0.9);
         ctx.strokeStyle = '#0a0a0a';
         ctx.lineWidth = 1.5;
@@ -399,7 +463,9 @@ export class DefenderBase {
         const ps = baseSize * (0.3 + (this.level - 1) * 0.08);
         const accentCol = this.getAccentColor();
 
-        for (const [side, angle] of [[-1, -0.3], [1, 0.3]]) {
+        const pauldronSides = [[-1, -0.3], [1, 0.3]];
+        for (let sideIdx = 0; sideIdx < pauldronSides.length; sideIdx++) {
+            const [side, angle] = pauldronSides[sideIdx];
             const px = side * baseSize * 0.73;
             const py = -baseSize * 0.3;
 
@@ -408,11 +474,7 @@ export class DefenderBase {
             ctx.ellipse(px, py + ps * 0.14, ps * 1.1, ps * 1.28, angle, 0, Math.PI * 2);
             ctx.fill();
 
-            const pg = ctx.createRadialGradient(px - side * ps * 0.25, py - ps * 0.2, 0, px, py, ps * 1.5);
-            pg.addColorStop(0, this.lightenColor(pc, 0.2));
-            pg.addColorStop(0.5, pc);
-            pg.addColorStop(1, this.darkenColor(pc, 0.25));
-            ctx.fillStyle = pg;
+            ctx.fillStyle = this._pauldronGrad[sideIdx];
             ctx.beginPath();
             ctx.ellipse(px, py, ps, ps * 1.2, angle, 0, Math.PI * 2);
             ctx.fill();
@@ -446,14 +508,9 @@ export class DefenderBase {
         ctx.ellipse(hx, hy + hs * 0.75, hs * 0.42, hs * 0.2, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        const hg = ctx.createRadialGradient(hx - hs * 0.25, hy - hs * 0.28, hs * 0.1, hx, hy, hs * 1.2);
-        hg.addColorStop(0, this.lightenColor(ac, 0.25));
-        hg.addColorStop(0.4, ac);
-        hg.addColorStop(1, this.darkenColor(ac, 0.35));
-
         if (this.level === 1) {
             // Bascinet with nasal bar
-            ctx.fillStyle = hg;
+            ctx.fillStyle = this._headGrad;
             ctx.beginPath();
             ctx.arc(hx, hy, hs, 0, Math.PI * 2);
             ctx.fill();
@@ -498,7 +555,7 @@ export class DefenderBase {
 
         } else if (this.level === 2) {
             // Armet with full-width visor slit and gold crest fin
-            ctx.fillStyle = hg;
+            ctx.fillStyle = this._headGrad;
             ctx.beginPath();
             ctx.arc(hx, hy, hs, 0, Math.PI * 2);
             ctx.fill();
@@ -536,7 +593,7 @@ export class DefenderBase {
 
         } else {
             // Grand great helm with animated plume
-            ctx.fillStyle = hg;
+            ctx.fillStyle = this._headGrad;
             ctx.beginPath();
             ctx.arc(hx, hy, hs * 1.04, 0, Math.PI * 2);
             ctx.fill();
@@ -590,11 +647,7 @@ export class DefenderBase {
         const wx = ex + Math.cos(wa) * baseSize * 0.38;
         const wy = ey + Math.sin(wa) * baseSize * 0.38;
 
-        const ag = ctx.createLinearGradient(sx - baseSize * 0.18, 0, sx + baseSize * 0.18, 0);
-        ag.addColorStop(0,    this.darkenColor(this.armourColor, 0.3));
-        ag.addColorStop(0.38, this.lightenColor(this.armourColor, 0.16));
-        ag.addColorStop(1,    this.darkenColor(this.armourColor, 0.22));
-        ctx.strokeStyle = ag;
+        ctx.strokeStyle = this._leftArmGrad;
         ctx.lineWidth = baseSize * 0.36;
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -746,11 +799,7 @@ export class DefenderBase {
             wy = ey + Math.sin(wa) * baseSize * 0.4;
         }
 
-        const ag = ctx.createLinearGradient(sx - baseSize * 0.18, 0, sx + baseSize * 0.18, 0);
-        ag.addColorStop(0,    this.darkenColor(this.armourColor, 0.3));
-        ag.addColorStop(0.38, this.lightenColor(this.armourColor, 0.16));
-        ag.addColorStop(1,    this.darkenColor(this.armourColor, 0.22));
-        ctx.strokeStyle = ag;
+        ctx.strokeStyle = this._rightArmGrad;
         ctx.lineWidth = baseSize * 0.36;
         ctx.lineCap = 'round';
         ctx.beginPath();
