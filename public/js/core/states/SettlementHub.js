@@ -104,6 +104,8 @@ export class SettlementHub {
         this.activePopup = null;
         this._postSirFrogertyCooldown = 0;
         this._sbCache = null; // Rebuild building sub-caches after settlementBuildings repopulates
+        this._sceneBehindCanvas = null; // Rebuild baked static scene layers (terrain/walls/paths)
+        this._sceneFrontOverlayCanvas = null;
         
         // Load settlement data from the current save slot
         // This includes gold, inventory, upgrades, and unlock progression
@@ -1412,27 +1414,28 @@ export class SettlementHub {
     renderBird(ctx, x, y, scale, wingFlap) {
         // Bird body with flapping wings
         // wingFlap is 0-1 indicating wing position in flap cycle
-        
-        // Calculate wing positions based on flap
-        const wingUp = wingFlap > 0.5;
-        const wingAngle = (wingFlap - 0.5) * Math.PI; // 0 to PI for full flap
-        
+
+        // Calculate wing positions based on flap. wingY is continuously interpolated
+        // across the full down->up range (was a hard wingFlap>0.5 threshold before,
+        // which snapped the wingtip between two fixed heights instead of flapping
+        // smoothly through the midpoint).
+        const wingAngle = (wingFlap - 0.5) * Math.PI;
+        const wingY = y + (1 * scale) - wingFlap * (3 * scale); // wingFlap 0 -> y+1*scale (down), 1 -> y-2*scale (up)
+
         // Draw left wing
         ctx.strokeStyle = 'rgba(80, 80, 80, 0.8)';
         ctx.lineWidth = 1.5 * scale;
         ctx.beginPath();
         ctx.moveTo(x - 2 * scale, y);
         const leftWingX = x - 8 * scale - Math.abs(Math.sin(wingAngle) * 4 * scale);
-        const leftWingY = wingUp ? y - 2 * scale : y + 1 * scale;
-        ctx.quadraticCurveTo(x - 5 * scale, leftWingY, leftWingX, leftWingY + 1 * scale);
+        ctx.quadraticCurveTo(x - 5 * scale, wingY, leftWingX, wingY + 1 * scale);
         ctx.stroke();
-        
+
         // Draw right wing
         ctx.beginPath();
         ctx.moveTo(x + 2 * scale, y);
         const rightWingX = x + 8 * scale + Math.abs(Math.sin(wingAngle) * 4 * scale);
-        const rightWingY = wingUp ? y - 2 * scale : y + 1 * scale;
-        ctx.quadraticCurveTo(x + 5 * scale, rightWingY, rightWingX, rightWingY + 1 * scale);
+        ctx.quadraticCurveTo(x + 5 * scale, wingY, rightWingX, wingY + 1 * scale);
         ctx.stroke();
         
         // Draw bird body
@@ -1780,27 +1783,45 @@ export class SettlementHub {
         const centerY = canvas.height * 0.76;  // Ground level, lower
         const sf = canvas.width / 1920;
 
-        // Exterior trees behind the wall — sorted by Y so distant ones draw first
-        this.renderSettlementTerrain(ctx, canvas, centerX, centerY);
+        // Terrain/wall/palisade/paths/details/front-wall-overlay are 100% deterministic
+        // functions of canvas size (no animationTime, hover, or upgrade-state reads - verified),
+        // so they were being replayed as ~1000+ live vector draw calls every frame for no
+        // reason. Bake them to offscreen canvases once and blit instead - but only once
+        // contentOpacity has reached 1 (steady state; it's set to 1 immediately and never
+        // animated elsewhere, so this is effectively always true, kept only as a safety net):
+        // baking flattens overlapping semi-transparent shapes before the outer globalAlpha
+        // multiply is applied, which is only guaranteed pixel-identical to the original
+        // sequential per-shape alpha blending when that multiplier is exactly 1.
+        const useCachedStatics = this.contentOpacity >= 1;
+        if (useCachedStatics) {
+            this._ensureSceneStaticLayers(canvas, centerX, centerY, sf);
+        }
 
-        // Back-arc (upper/rear half) exterior wall decoration drawn BEFORE the wall
-        // so it correctly appears behind the wall structure
-        this.renderWallExteriorDecoration(ctx, centerX, centerY, false);
+        if (useCachedStatics) {
+            ctx.drawImage(this._sceneBehindCanvas, 0, 0);
+        } else {
+            // Exterior trees behind the wall — sorted by Y so distant ones draw first
+            this.renderSettlementTerrain(ctx, canvas, centerX, centerY);
 
-        // Render 3D palisade walls (includes guard towers in front)
-        this.renderEllipticalPalisade(ctx, canvas, centerX, centerY);
+            // Back-arc (upper/rear half) exterior wall decoration drawn BEFORE the wall
+            // so it correctly appears behind the wall structure
+            this.renderWallExteriorDecoration(ctx, centerX, centerY, false);
 
-        // Front-arc (lower/front half) exterior wall decoration drawn AFTER the wall
-        // so it correctly appears in front of the wall base for proper perspective
-        this.renderWallExteriorDecoration(ctx, centerX, centerY, true);
+            // Render 3D palisade walls (includes guard towers in front)
+            this.renderEllipticalPalisade(ctx, canvas, centerX, centerY);
 
-        // Render interior elements clipped tightly to the wall ellipse
-        ctx.save();
-        this.createEllipseClipPath(ctx, centerX, centerY, 358 * sf, 138 * sf);
-        this.renderSettlementPaths(ctx, canvas, centerX, centerY);   // floor surface + fountain
-        // Details (crates, barrels, shrubs) drawn ON TOP of paths, still inside wall clip
-        this.renderSettlementDetails(ctx, centerX, centerY);
-        ctx.restore();
+            // Front-arc (lower/front half) exterior wall decoration drawn AFTER the wall
+            // so it correctly appears in front of the wall base for proper perspective
+            this.renderWallExteriorDecoration(ctx, centerX, centerY, true);
+
+            // Render interior elements clipped tightly to the wall ellipse
+            ctx.save();
+            this.createEllipseClipPath(ctx, centerX, centerY, 358 * sf, 138 * sf);
+            this.renderSettlementPaths(ctx, canvas, centerX, centerY);   // floor surface + fountain
+            // Details (crates, barrels, shrubs) drawn ON TOP of paths, still inside wall clip
+            this.renderSettlementDetails(ctx, centerX, centerY);
+            ctx.restore();
+        }
 
         // Render ALL interior buildings (forge, academy, guard posts) in one Y-sorted pass.
         // Use a very tall clip so tower tops are never cut off, while the wide
@@ -1813,7 +1834,11 @@ export class SettlementHub {
 
         // Re-render front-arc wall posts + horizontal rail + gate + guard towers on top of
         // all interior content so they correctly occlude lower building portions.
-        this.renderFrontWallOverlay(ctx, canvas, centerX, centerY);
+        if (useCachedStatics) {
+            ctx.drawImage(this._sceneFrontOverlayCanvas, 0, 0);
+        } else {
+            this.renderFrontWallOverlay(ctx, canvas, centerX, centerY);
+        }
 
         // Render exterior buildings (TrainingGrounds, Castle — intentionally outside the wall)
         this.renderSettlementBuildings(ctx, canvas, 'exterior');
@@ -1836,7 +1861,42 @@ export class SettlementHub {
         ctx.ellipse(centerX, centerY + 50 * sf, 340 * sf, 120 * sf, 0, 0, Math.PI * 2);
         ctx.fill();
     }
-    
+
+    /**
+     * Bakes the deterministic (canvas-size-only) parts of the settlement scene to two
+     * offscreen canvases: everything that draws behind the buildings (terrain, wall
+     * decoration, palisade, paths, details) and the front-wall overlay that draws on
+     * top of them. Split in two so buildings can still be drawn live in between, at
+     * the exact same point in the paint order as before. Rebuilt only on resize.
+     */
+    _ensureSceneStaticLayers(canvas, centerX, centerY, sf) {
+        if (this._sceneBehindCanvas && this._sceneLayerW === canvas.width && this._sceneLayerH === canvas.height) {
+            return;
+        }
+        this._sceneLayerW = canvas.width;
+        this._sceneLayerH = canvas.height;
+
+        this._sceneBehindCanvas = document.createElement('canvas');
+        this._sceneBehindCanvas.width = canvas.width;
+        this._sceneBehindCanvas.height = canvas.height;
+        const bctx = this._sceneBehindCanvas.getContext('2d');
+        this.renderSettlementTerrain(bctx, canvas, centerX, centerY);
+        this.renderWallExteriorDecoration(bctx, centerX, centerY, false);
+        this.renderEllipticalPalisade(bctx, canvas, centerX, centerY);
+        this.renderWallExteriorDecoration(bctx, centerX, centerY, true);
+        bctx.save();
+        this.createEllipseClipPath(bctx, centerX, centerY, 358 * sf, 138 * sf);
+        this.renderSettlementPaths(bctx, canvas, centerX, centerY);
+        this.renderSettlementDetails(bctx, centerX, centerY);
+        bctx.restore();
+
+        this._sceneFrontOverlayCanvas = document.createElement('canvas');
+        this._sceneFrontOverlayCanvas.width = canvas.width;
+        this._sceneFrontOverlayCanvas.height = canvas.height;
+        const fctx = this._sceneFrontOverlayCanvas.getContext('2d');
+        this.renderFrontWallOverlay(fctx, canvas, centerX, centerY);
+    }
+
     renderActiveBoons(ctx, canvas) {
         if (!this.stateManager.marketplaceSystem) return;
         
