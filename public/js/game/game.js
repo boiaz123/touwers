@@ -446,12 +446,13 @@ export class Game {
                 }
             });
 
-            // Sell (DEL) - sells whatever tower/building's upgrade panel is currently open,
-            // by reusing that panel's own Sell button (same refund/cleanup logic as clicking it).
+            // Sell (DEL) - sells whatever tower's upgrade panel is currently open, by reusing
+            // that panel's own Sell button (same refund/cleanup logic as clicking it). Special
+            // buildings (forge, academy, etc.) are immutable once built and have no sell button.
             this.inputManager.on('sell', () => {
                 const refs = getGameplayRefs();
                 if (!refs || refs.gameplayState.isPaused) return;
-                const sellBtn = Array.from(document.querySelectorAll('.sell-tower-btn, .sell-building-btn'))
+                const sellBtn = Array.from(document.querySelectorAll('.sell-tower-btn'))
                     .find(btn => btn.offsetParent !== null);
                 if (sellBtn) {
                     sellBtn.click();
@@ -472,13 +473,26 @@ export class Game {
                 });
             }
 
-            // Building hotkeys
+            // Collect Gold (G) - collects gold/gems from every ready gold mine at once,
+            // without opening the gold mine menu. Z stays dedicated to building mines.
+            this.inputManager.on('collectGold', () => {
+                const refs = getGameplayRefs();
+                if (!refs || !refs.uiManager) return;
+                if (refs.gameplayState.isPaused) return;
+                refs.gameplayState.collectAllReadyMines();
+            });
+
+            // Building hotkeys - if the building already exists on the field, interact with
+            // it directly (open its menu) instead of entering placement mode. Gold mines are
+            // excluded since they can have multiple instances and have their own dedicated
+            // collect-gold hotkey (G), so Z always stays available for building more mines.
             const buildingTypes = ['mine', 'forge', 'academy', 'training', 'superweapon', 'diamond-press'];
             for (const type of buildingTypes) {
                 this.inputManager.on('building_' + type, () => {
                     const refs = getGameplayRefs();
                     if (!refs || !refs.uiManager) return;
                     if (refs.gameplayState.isPaused) return;
+                    if (type !== 'mine' && refs.gameplayState.handleBuildingHotkey(type)) return;
                     const btn = document.querySelector(`.building-btn[data-type="${type}"]`);
                     if (btn && !btn.disabled && btn.style.display !== 'none') {
                         refs.uiManager.selectBuilding(btn);

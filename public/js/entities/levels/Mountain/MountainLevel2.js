@@ -257,7 +257,7 @@ export class MountainLevel2 extends LevelBase {
         }
         // Wave 6
         , { 
-            enemyHealth_multiplier: 0.5 ,
+            enemyHealth_multiplier: 1,
             speedMultiplier: 0.58, 
             spawnInterval: 0.4, 
             pattern: [{ type: 'beefyenemy', count: 7 }] 
@@ -265,8 +265,8 @@ export class MountainLevel2 extends LevelBase {
         // Wave 7
         , { 
             enemyHealth_multiplier: 1, 
-            speedMultiplier: 1.22, 
-            spawnInterval: 1.5, 
+            speedMultiplier: 1, 
+            spawnInterval: 4.5, 
             pattern: [{ type: 'shieldknight', count: 3 }] 
         }
         // Wave 8
@@ -306,16 +306,16 @@ export class MountainLevel2 extends LevelBase {
         }
         // Wave 13
         , { 
-            enemyHealth_multiplier: 3, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 0.90, 
-            spawnInterval: 0.6, 
+            spawnInterval: 1.2, 
             pattern: [{ type: 'basic', count: 16 }, { type: 'villager', count: 11 }, { type: 'archer', count: 6 }, { type: 'beefyenemy', count: 6 }, { type: 'shieldknight', count: 6 }] 
         }
         // Wave 14
         , { 
-            enemyHealth_multiplier: 4, 
-            speedMultiplier: 1.86, 
-            spawnInterval: 1, 
+            enemyHealth_multiplier: 3, 
+            speedMultiplier: 1.2, 
+            spawnInterval: 2, 
             pattern: [{ type: 'shieldknight', count: 8 }] 
         }
         // Wave 15
@@ -327,21 +327,21 @@ export class MountainLevel2 extends LevelBase {
         }
         // Wave 16
         , { 
-            enemyHealth_multiplier: 7, 
-            speedMultiplier: 1.57, 
+            enemyHealth_multiplier: 5, 
+            speedMultiplier: 1.2, 
             spawnInterval: 0.4, 
             pattern: [{ type: 'shieldknight', count: 3 }] 
         }
         // Wave 17
         , { 
             enemyHealth_multiplier: 2, 
-            speedMultiplier: 2.83, 
+            speedMultiplier: 2, 
             spawnInterval: 0.3, 
             pattern: [{ type: 'archer', count: 45 }] 
         }
         // Wave 18
         , { 
-            enemyHealth_multiplier: 9, 
+            enemyHealth_multiplier: 7.25, 
             speedMultiplier: 1.13, 
             spawnInterval: 2, 
             pattern: [{ type: 'knight', count: 1 }] 

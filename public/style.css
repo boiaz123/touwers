@@ -2927,7 +2927,6 @@ body.orientation-portrait .side-panel {
 
 /* Sell button variant - red/brown tone for buttons with red inline styles */
 .sell-tower-btn,
-.sell-building-btn,
 button[style*="ff4444"],
 button[style*="#ff4444"] {
     background: linear-gradient(135deg, rgba(120, 60, 60, 0.95) 0%, rgba(100, 40, 40, 0.95) 100%) !important;
@@ -2936,7 +2935,6 @@ button[style*="#ff4444"] {
 }
 
 .sell-tower-btn:hover:not(:disabled),
-.sell-building-btn:hover:not(:disabled),
 button[style*="ff4444"]:hover:not(:disabled),
 button[style*="#ff4444"]:hover:not(:disabled) {
     background: linear-gradient(135deg, rgba(140, 80, 80, 0.98) 0%, rgba(120, 60, 60, 0.98) 100%) !important;

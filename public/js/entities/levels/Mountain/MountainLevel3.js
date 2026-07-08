@@ -266,35 +266,35 @@ export class MountainLevel3 extends LevelBase {
         const waveConfigs = [
         // Wave 1
         { 
-            enemyHealth_multiplier: 1, 
+            enemyHealth_multiplier: 0.8, 
             speedMultiplier: 0.90, 
             spawnInterval: 1.5, 
-            pattern: [{ type: 'basic', count: 25 }, { type: 'villager', count: 25 }, { type: 'archer', count: 25 }] 
+            pattern: [{ type: 'basic', count: 35 }, { type: 'villager', count: 30 }, { type: 'archer', count: 30 }] 
         }
         // Wave 2
         , { 
             enemyHealth_multiplier: 1.5, 
             speedMultiplier: 2.08, 
-            spawnInterval: 0.6, 
+            spawnInterval: 2, 
             pattern: [{ type: 'archer', count: 55 }] 
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 2.5, 
+            enemyHealth_multiplier: 4, 
             speedMultiplier: 0.75, 
             spawnInterval: 0.7, 
             pattern: [{ type: 'beefyenemy', count: 12 }] 
         }
         // Wave 4
         , { 
-            enemyHealth_multiplier: 1.5, 
+            enemyHealth_multiplier: 1.2, 
             speedMultiplier: 1, 
             spawnInterval: 4, 
             pattern: [{ type: 'knight', count: 4 }] 
         }
         // Wave 5
         , { 
-            enemyHealth_multiplier: 10, 
+            enemyHealth_multiplier: 6, 
             speedMultiplier: 1.29, 
             spawnInterval: 0.8, 
             pattern: [{ type: 'shieldknight', count: 1 }] 

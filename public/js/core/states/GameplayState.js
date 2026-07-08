@@ -1460,85 +1460,130 @@ export class GameplayState {
 
         // Only show menus if not in placement mode
         const clickResult = this.towerManager.handleClick(x, y, this.level.resolutionManager);
-        
+
         // Track that a selection was made so deselection only runs when needed
         if (clickResult) {
             this._hasSelection = true;
-            if (clickResult.type === 'forge_menu') {
-                this.uiManager.showForgeUpgradeMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'academy_menu') {
-                this.uiManager.showAcademyUpgradeMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'castle_menu') {
-                this.uiManager.showCastleUpgradeMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'magic_tower_menu') {
-                this.uiManager.showMagicTowerElementMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'combination_tower_menu') {
-                this.uiManager.showCombinationTowerMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'basic_tower_stats') {
-                this.uiManager.showBasicTowerStatsMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'tower_stats') {
-                this.uiManager.showTowerStatsMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'guard_post_menu') {
-                this.uiManager.showGuardPostMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'superweapon_menu') {
-                this.uiManager.showSuperWeaponMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'diamond_press_menu') {
-                if (this.stateManager.audioManager) {
-                    this.stateManager.audioManager.playSFX('diamond-press');
-                }
-                this.uiManager.showDiamondPressMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'training_menu') {
-                this.uiManager.showTrainingGroundsMenu(clickResult);
-                return;
-            } else if (clickResult.type === 'goldmine_menu') {
-                // Only show goldmine menu if mine is NOT ready
-                // If mine is ready, clicking should ONLY collect (handled elsewhere)
-                if (clickResult.goldMine && clickResult.goldMine.goldReady !== true) {
-                    this.uiManager.showGoldMineMenu(clickResult);
-                }
-                return;
-            } else if (typeof clickResult === 'number') {
-                // Gold collection - close any open goldmine menu
-                if (this.stateManager.audioManager) {
-                    this.stateManager.audioManager.playSFX('minegoldclick');
-                }
-                this.uiManager.closeAllPanels();
-                this.gameState.gold += clickResult;
-                this.uiManager.updateUI();
-                this.uiManager.updateButtonStates();
-                return;
-            } else if (typeof clickResult === 'object' && (clickResult.fire !== undefined || clickResult.diamond !== undefined)) {
-                // Gem collection from gold mine - close any open goldmine menu
-                this.uiManager.closeAllPanels();
-                const academies = this.towerManager.buildingManager.buildings.filter(b => 
-                    b.constructor.name === 'MagicAcademy'
-                );
-                if (academies.length > 0) {
-                    const academy = academies[0];
-                    // Add collected gems to academy
-                    if (clickResult.fire) academy.gems.fire += clickResult.fire;
-                    if (clickResult.water) academy.gems.water += clickResult.water;
-                    if (clickResult.air) academy.gems.air += clickResult.air;
-                    if (clickResult.earth) academy.gems.earth += clickResult.earth;
-                    if (clickResult.diamond) academy.gems.diamond += clickResult.diamond;
-                    
-                    // Show gem collection popup
-                    this.showGemCollectionPopup(clickResult);
-                }
-                this.uiManager.updateUI();
-                return;
-            }
         }
+        this.dispatchBuildingClickResult(clickResult);
+    }
+
+    // Routes a tower/building click result (from TowerManager.handleClick, or from a building
+    // hotkey re-invoking building.onClick() directly) to the right menu/collection handling.
+    // Returns true if the result was handled (a menu opened or gold/gems were collected).
+    dispatchBuildingClickResult(clickResult) {
+        if (!clickResult) return false;
+        if (clickResult.type === 'forge_menu') {
+            this.uiManager.showForgeUpgradeMenu(clickResult);
+            return true;
+        } else if (clickResult.type === 'academy_menu') {
+            this.uiManager.showAcademyUpgradeMenu(clickResult);
+            return true;
+        } else if (clickResult.type === 'castle_menu') {
+            this.uiManager.showCastleUpgradeMenu(clickResult);
+            return true;
+        } else if (clickResult.type === 'magic_tower_menu') {
+            this.uiManager.showMagicTowerElementMenu(clickResult);
+            return true;
+        } else if (clickResult.type === 'combination_tower_menu') {
+            this.uiManager.showCombinationTowerMenu(clickResult);
+            return true;
+        } else if (clickResult.type === 'basic_tower_stats') {
+            this.uiManager.showBasicTowerStatsMenu(clickResult);
+            return true;
+        } else if (clickResult.type === 'tower_stats') {
+            this.uiManager.showTowerStatsMenu(clickResult);
+            return true;
+        } else if (clickResult.type === 'guard_post_menu') {
+            this.uiManager.showGuardPostMenu(clickResult);
+            return true;
+        } else if (clickResult.type === 'superweapon_menu') {
+            this.uiManager.showSuperWeaponMenu(clickResult);
+            return true;
+        } else if (clickResult.type === 'diamond_press_menu') {
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('diamond-press');
+            }
+            this.uiManager.showDiamondPressMenu(clickResult);
+            return true;
+        } else if (clickResult.type === 'training_menu') {
+            this.uiManager.showTrainingGroundsMenu(clickResult);
+            return true;
+        } else if (clickResult.type === 'goldmine_menu') {
+            // Only show goldmine menu if mine is NOT ready
+            // If mine is ready, clicking should ONLY collect (handled elsewhere)
+            if (clickResult.goldMine && clickResult.goldMine.goldReady !== true) {
+                this.uiManager.showGoldMineMenu(clickResult);
+            }
+            return true;
+        } else if (typeof clickResult === 'number') {
+            // Gold collection - close any open goldmine menu
+            if (this.stateManager.audioManager) {
+                this.stateManager.audioManager.playSFX('minegoldclick');
+            }
+            this.uiManager.closeAllPanels();
+            this.gameState.gold += clickResult;
+            this.uiManager.updateUI();
+            this.uiManager.updateButtonStates();
+            return true;
+        } else if (typeof clickResult === 'object' && (clickResult.fire !== undefined || clickResult.diamond !== undefined)) {
+            // Gem collection from gold mine - close any open goldmine menu
+            this.uiManager.closeAllPanels();
+            const academies = this.towerManager.buildingManager.buildings.filter(b =>
+                b.constructor.name === 'MagicAcademy'
+            );
+            if (academies.length > 0) {
+                const academy = academies[0];
+                // Add collected gems to academy
+                if (clickResult.fire) academy.gems.fire += clickResult.fire;
+                if (clickResult.water) academy.gems.water += clickResult.water;
+                if (clickResult.air) academy.gems.air += clickResult.air;
+                if (clickResult.earth) academy.gems.earth += clickResult.earth;
+                if (clickResult.diamond) academy.gems.diamond += clickResult.diamond;
+
+                // Show gem collection popup
+                this.showGemCollectionPopup(clickResult);
+            }
+            this.uiManager.updateUI();
+            return true;
+        }
+        return false;
+    }
+
+    // Building hotkeys: if the building type already exists on the field, interact with it
+    // directly (open its menu) instead of entering placement mode. Gold mines are excluded
+    // by the caller since they use a dedicated collect-gold hotkey instead (see collectAllReadyMines).
+    // Returns true if the hotkey was handled here (caller should not fall back to placement).
+    handleBuildingHotkey(type) {
+        const classNames = {
+            forge: 'TowerForge',
+            academy: 'MagicAcademy',
+            training: 'TrainingGrounds',
+            superweapon: 'SuperWeaponLab',
+            'diamond-press': 'DiamondPress'
+        };
+        const className = classNames[type];
+        if (!className) return false;
+        const building = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === className);
+        if (!building) return false;
+        // Deselect other buildings first, matching normal click behavior
+        this.towerManager.buildingManager.buildings.forEach(b => {
+            if (b !== building && b.deselect) b.deselect();
+        });
+        const result = this.towerManager.getBuildingMenuResult(building);
+        if (result) this._hasSelection = true;
+        return this.dispatchBuildingClickResult(result);
+    }
+
+    // Collects gold/gems from every ready gold mine at once (bound to the dedicated
+    // collectGold hotkey), without ever opening a gold mine menu.
+    collectAllReadyMines() {
+        const mines = this.towerManager.buildingManager.buildings.filter(b => b.constructor.name === 'GoldMine');
+        if (mines.length === 0) return false;
+        mines.filter(mine => mine.goldReady === true).forEach(mine => {
+            this.dispatchBuildingClickResult(mine.onClick());
+        });
+        return true;
     }
     
     showGemCollectionPopup(gemsCollected) {

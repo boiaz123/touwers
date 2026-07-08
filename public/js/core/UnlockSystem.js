@@ -184,50 +184,6 @@ export class UnlockSystem {
         this.onGuardPostDestroyed();
     }
     
-    /**
-     * Building sold - decrement building count
-     */
-    onBuildingSold(buildingType) {
-        switch(buildingType) {
-            case 'forge':
-                if (this.forgeCount > 0) {
-                    this.forgeCount--;
-                    if (this.forgeCount === 0) {
-                        this.hasForge = false;
-                    }
-                }
-                break;
-            case 'mine':
-                if (this.mineCount > 0) {
-                    this.mineCount--;
-                }
-                break;
-            case 'academy':
-                if (this.academyCount > 0) {
-                    this.academyCount--;
-                }
-                break;
-            case 'training':
-                if (this.trainingGroundsCount > 0) {
-                    this.trainingGroundsCount--;
-                }
-                break;
-            case 'superweapon':
-                if (this.superweaponCount > 0) {
-                    this.superweaponCount--;
-                }
-                break;
-            case 'diamond-press':
-                if (this.diamondPressCount > 0) {
-                    this.diamondPressCount--;
-                }
-                break;
-            case 'guard-post':
-                this.onGuardPostDestroyed();
-                break;
-        }
-    }
-    
     // New: Method to handle gem mining research
     onGemMiningResearched() {
         this.gemMiningResearched = true;

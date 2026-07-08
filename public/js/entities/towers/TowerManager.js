@@ -841,36 +841,9 @@ export class TowerManager {
         // Then check building icon clicks with improved detection
         const buildingResult = this.buildingManager.handleClick(x, y, resolutionManager);
         if (buildingResult) {
-            if (buildingResult.type === 'forge_menu') {
-                return buildingResult;
-            } else if (buildingResult.type === 'academy_menu') {
-                buildingResult.unlockSystem = this.unlockSystem;
-                return buildingResult;
-            } else if (buildingResult.type === 'superweapon_menu') {
-                // New: Handle super weapon menu
-                return buildingResult;
-            } else if (buildingResult.type === 'training_menu') {
-                buildingResult.unlockSystem = this.unlockSystem;
-                // Also set it on the building instance for filtering logic
-                buildingResult.trainingGrounds.unlockSystem = this.unlockSystem;
-                // Recompute upgrades now that unlockSystem is set
-                buildingResult.upgrades = buildingResult.trainingGrounds.getUpgradeOptions();
-                return buildingResult;
-            } else if (buildingResult.type === 'diamond_press_menu') {
-                // Handle diamond press menu
-                return buildingResult;
-            } else if (buildingResult.type === 'goldmine_menu') {
-                // Handle gold mine menu
-                return buildingResult;
-            } else if (typeof buildingResult === 'number') {
-                // Gold collection
-                return buildingResult;
-            } else if (typeof buildingResult === 'object' && (buildingResult.fire !== undefined || buildingResult.diamond !== undefined)) {
-                // Gem collection from gold mine
-                return buildingResult;
-            }
+            return this.enrichBuildingResult(buildingResult);
         }
-        
+
         // NEW: Check castle click
         if (this.level && this.level.castle) {
             if (this.level.castle.isPointInside(x, y, this.level.cellSize)) {
@@ -890,7 +863,31 @@ export class TowerManager {
         
         return null;
     }
-    
+
+    // Attaches the extra context (unlockSystem, recomputed upgrades) that some building
+    // menu results need beyond what building.onClick() returns on its own.
+    enrichBuildingResult(buildingResult) {
+        if (buildingResult.type === 'academy_menu') {
+            buildingResult.unlockSystem = this.unlockSystem;
+        } else if (buildingResult.type === 'training_menu') {
+            buildingResult.unlockSystem = this.unlockSystem;
+            // Also set it on the building instance for filtering logic
+            buildingResult.trainingGrounds.unlockSystem = this.unlockSystem;
+            // Recompute upgrades now that unlockSystem is set
+            buildingResult.upgrades = buildingResult.trainingGrounds.getUpgradeOptions();
+        }
+        return buildingResult;
+    }
+
+    // Re-derives the same menu-result shape as handleClick's building branch, but directly
+    // from a building instance instead of from click coordinates. Used by building hotkeys.
+    getBuildingMenuResult(building) {
+        if (!building || !building.onClick) return null;
+        const result = building.onClick();
+        if (!result) return result;
+        return this.enrichBuildingResult(result);
+    }
+
     selectMagicTowerElement(tower, element) {
         if (tower && tower.setElement) {
             tower.setElement(element);
@@ -1115,38 +1112,5 @@ export class TowerManager {
         }
         
         this.removeTower(tower);
-    }
-    
-    sellBuilding(building) {
-        if (!building) return false;
-        
-        const buildingType = building.constructor.name;
-        const buildingSize = building.size || 4;
-        
-        // Handle the sale through building manager
-        const result = this.buildingManager.sellBuilding(building);
-        
-        if (result) {
-            // Remove from level's occupied cells
-            if (this.level) {
-                this.level.removeBuilding(building.gridX, building.gridY, buildingSize);
-            }
-            
-            // Notify unlock system to decrement building counts
-            // Map constructor names to building types for unlock system
-            let unlocksType = null;
-            if (buildingType === 'TowerForge') unlocksType = 'forge';
-            else if (buildingType === 'GoldMine') unlocksType = 'mine';
-            else if (buildingType === 'MagicAcademy') unlocksType = 'academy';
-            else if (buildingType === 'TrainingGrounds') unlocksType = 'training';
-            else if (buildingType === 'SuperWeaponLab') unlocksType = 'superweapon';
-            else if (buildingType === 'DiamondPress') unlocksType = 'diamond-press';
-            
-            if (unlocksType) {
-                this.unlockSystem.onBuildingSold(unlocksType);
-            }
-        }
-        
-        return result;
     }
 }

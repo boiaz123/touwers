@@ -486,15 +486,6 @@ export class LevelBase {
         }
     }
     
-    removeBuilding(gridX, gridY, size = 4) {
-        // Free up the building area from occupied cells
-        for (let x = gridX; x < gridX + size; x++) {
-            for (let y = gridY; y < gridY + size; y++) {
-                this.occupiedCells.delete(`${x},${y}`);
-            }
-        }
-    }
-    
     screenToGrid(screenX, screenY) {
         // Use ResolutionManager if available, otherwise use cellSize
         if (this.resolutionManager) {

@@ -247,37 +247,5 @@ export class BuildingManager {
         });
     }
     
-    /**
-     * Sell a building: free up grid positions, refund 70% of cost, remove building
-     */
-    sellBuilding(building) {
-        if (!building) return false;
-        
-        // Get building cost info
-        const buildingInfo = building.constructor.getInfo();
-        const refund = Math.floor(buildingInfo.cost * 0.7);
-        
-        // Free up the occupied positions
-        const size = building.size || 4;
-        for (let x = building.gridX; x < building.gridX + size; x++) {
-            for (let y = building.gridY; y < building.gridY + size; y++) {
-                this.occupiedPositions.delete(`${x},${y}`);
-            }
-        }
-        
-        // Remove building from array
-        const index = this.buildings.indexOf(building);
-        if (index !== -1) {
-            this.buildings.splice(index, 1);
-        }
-        
-        // Refund the player
-        this.gameState.gold += refund;
-        
-        // Recalculate tower upgrades (since building effects may have changed)
-        this.calculateTowerUpgrades();
-        
-        return true;
-    }
 }
 

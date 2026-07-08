@@ -1474,7 +1474,7 @@ export class UIManager {
         // Update panel upgrade buttons (castle, guard-post hire, etc.)
         document.querySelectorAll('.panel-upgrade-btn, .upgrade-button').forEach(btn => {
             if (btn.classList.contains('compact-upgrade-btn')) return; // Already handled above
-            if (btn.textContent.includes('MAX') || btn.classList.contains('sell-building-btn') || btn.classList.contains('sell-tower-btn')) return;
+            if (btn.textContent.includes('MAX') || btn.classList.contains('sell-tower-btn')) return;
 
             const actionRow = btn.closest('.upgrade-action-row') || btn.closest('.panel-upgrade-item');
             if (!actionRow) return;
@@ -1717,9 +1717,6 @@ export class UIManager {
                     <div class="forge-header-top">
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
                             <div class="forge-icon-display"><img src="assets/buildings/forge.png" alt="Tower Forge" style="width: 100%; height: 100%; object-fit: contain;"></div>
-                            <button class="upgrade-button sell-building-btn" data-building-id="forge" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
-                                Sell
-                            </button>
                         </div>
                         <div class="forge-info-wrapper">
                             <div class="forge-title-row">
@@ -2127,18 +2124,6 @@ export class UIManager {
                 tooltips.forEach(tooltip => tooltip.remove());
             });
         }
-        
-        // Add sell button listener
-        const sellBtn = panel.querySelector('.sell-building-btn');
-        if (sellBtn) {
-            sellBtn.addEventListener('click', () => {
-                this.towerManager.sellBuilding(forgeData.forge);
-                this.updateUI();
-                this.updateButtonStates();
-                this.level.setPlacementPreview(0, 0, false);
-                this.closeForgePanelWithAnimation();
-            }, { once: true });
-        }
     }
 
     closeForgePanelWithAnimation() {
@@ -2356,9 +2341,6 @@ export class UIManager {
                 <div class="forge-header-top">
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
                         <div class="forge-icon-display"><img src="assets/buildings/academy.png" alt="Magic Academy" style="width: 100%; height: 100%; object-fit: contain;"></div>
-                        <button class="upgrade-button sell-building-btn" data-building-id="academy" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
-                            Sell
-                        </button>
                     </div>
                     <div class="forge-info-wrapper">
                         <div class="forge-title-row">
@@ -2678,17 +2660,6 @@ export class UIManager {
             });
         });
         
-        // Add sell button listener
-        const sellBtn = panel.querySelector('.sell-building-btn');
-        if (sellBtn) {
-            sellBtn.addEventListener('click', () => {
-                this.towerManager.sellBuilding(academyData.academy);
-                this.updateUI();
-                this.updateButtonStates();
-                this.level.setPlacementPreview(0, 0, false);
-                this.closePanelWithAnimation('academy-panel');
-            }, { once: true });
-        }
     }
 
     showMagicTowerElementMenu(towerData) {
@@ -3352,9 +3323,6 @@ export class UIManager {
                 <div class="forge-header-top">
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
                         <div class="forge-icon-display"><img src="assets/buildings/superweapon.png" alt="Super Weapon Lab" style="width: 100%; height: 100%; object-fit: contain;"></div>
-                        <button class="upgrade-button sell-building-btn" data-building-id="superweapon" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
-                            Sell
-                        </button>
                     </div>
                     <div class="forge-info-wrapper">
                         <div class="forge-title-row">
@@ -3786,18 +3754,6 @@ export class UIManager {
         panel._upgradeClickHandler = handleUpgradeClick;
         panel.addEventListener('click', panel._upgradeClickHandler);
         
-        // Sell button listener
-        const sellBtn = panel.querySelector('.sell-building-btn');
-        if (sellBtn) {
-            sellBtn.addEventListener('click', () => {
-                this.towerManager.sellBuilding(menuData.building);
-                this.updateUI();
-                this.updateButtonStates();
-                this.level.setPlacementPreview(0, 0, false);
-                this.closePanelWithAnimation('superweapon-panel');
-            }, { once: true });
-        }
-
         // Lab level upgrade button hover
         const labLevelBtn = panel.querySelector('.forge-level-upgrade-btn');
         const labUpgrade = menuData.building.getLabUpgradeOption();
@@ -4110,9 +4066,6 @@ export class UIManager {
                 <div class="forge-header-top">
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
                         <div class="forge-icon-display"><img src="assets/buildings/training.png" alt="Training Grounds" style="width: 100%; height: 100%; object-fit: contain;"></div>
-                        <button class="upgrade-button sell-building-btn" data-building-id="training" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
-                            Sell
-                        </button>
                     </div>
                     <div class="forge-info-wrapper">
                         <div class="forge-title-row">
@@ -4434,17 +4387,6 @@ export class UIManager {
             });
         }
         
-        // Add sell button listener
-        const sellBtn = panel.querySelector('.sell-building-btn');
-        if (sellBtn) {
-            sellBtn.addEventListener('click', () => {
-                this.towerManager.sellBuilding(trainingData.trainingGrounds);
-                this.updateUI();
-                this.updateButtonStates();
-                this.level.setPlacementPreview(0, 0, false);
-                this.closePanelWithAnimation('training-panel');
-            }, { once: true });
-        }
     }
 
     showTrainingGroundsMenu(trainingData) {
@@ -4499,9 +4441,6 @@ export class UIManager {
                 <div class="forge-header-top">
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
                         <div class="forge-icon-display"><img src="assets/buildings/mine.png" alt="Gold Mine" style="width: 100%; height: 100%; object-fit: contain;"></div>
-                        <button class="upgrade-button sell-building-btn" data-building-id="goldmine" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
-                            Sell
-                        </button>
                     </div>
                     <div class="forge-info-wrapper">
                         <div class="forge-title-row">
@@ -4597,18 +4536,6 @@ export class UIManager {
             };
         }
         
-        // Add sell button listener
-        const sellBtn = panel.querySelector('.sell-building-btn');
-        if (sellBtn) {
-            sellBtn.onclick = () => {
-                this.towerManager.sellBuilding(goldMine);
-                this.updateUI();
-                this.updateButtonStates();
-                this.level.setPlacementPreview(0, 0, false);
-                this.closePanelWithAnimation('goldmine-panel');
-            };
-        }
-        
         // Show the panel
         panel.style.display = 'flex';
         panel.classList.remove('closing');
@@ -4646,15 +4573,11 @@ export class UIManager {
         const canExchange = fire >= 3 && water >= 3 && air >= 3 && earth >= 3;
 
         // Build the menu HTML
-        const sellRefund = Math.floor(500 * 0.7);
         let contentHTML = `
             <div class="forge-panel-header">
                 <div class="forge-header-top">
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem;">
                         <div class="forge-icon-display"><img src="assets/buildings/diamondpress.png" alt="Diamond Press" style="width: 100%; height: 100%; object-fit: contain;"></div>
-                        <button class="upgrade-button sell-building-btn" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
-                            Sell
-                        </button>
                     </div>
                     <div class="forge-info-wrapper">
                         <div class="forge-title-row">
@@ -4739,18 +4662,6 @@ export class UIManager {
                     this.updateUI();
                     this.showDiamondPressMenu(menuData);
                 }
-            });
-        }
-
-        // Setup sell button
-        const sellBtn = panel.querySelector('.sell-building-btn');
-        if (sellBtn) {
-            sellBtn.addEventListener('click', () => {
-                this.towerManager.sellBuilding(menuData.diamondPress);
-                this.updateUI();
-                this.updateButtonStates();
-                this.level.setPlacementPreview(0, 0, false);
-                this.closePanelWithAnimation('diamond-press-panel');
             });
         }
 

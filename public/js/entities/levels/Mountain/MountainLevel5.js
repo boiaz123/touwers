@@ -181,15 +181,15 @@ export class MountainLevel5 extends LevelBase {
         }
         // Wave 6
         , { 
-            enemyHealth_multiplier: 5, 
+            enemyHealth_multiplier: 3, 
             speedMultiplier: 1.29, 
             spawnInterval: 1.8, 
             pattern: [{ type: 'shieldknight', count: 4 }] 
         }
         // Wave 7
         , { 
-            enemyHealth_multiplier: 3, 
-            speedMultiplier: 1.29, 
+            enemyHealth_multiplier: 2.3, 
+            speedMultiplier: 1.1, 
             spawnInterval: 1.2, 
             pattern: [{ type: 'shieldknight', count: 6 }] 
         }
@@ -223,7 +223,7 @@ export class MountainLevel5 extends LevelBase {
         }
         // Wave 12
         , { 
-            enemyHealth_multiplier: 5, 
+            enemyHealth_multiplier: 4, 
             speedMultiplier: 1.57, 
             spawnInterval: 0.4, 
             pattern: [{ type: 'shieldknight', count: 3 }] 
@@ -251,7 +251,7 @@ export class MountainLevel5 extends LevelBase {
         }
         // Wave 16
         , { 
-            enemyHealth_multiplier: 8, 
+            enemyHealth_multiplier: 6, 
             speedMultiplier: 0.88, 
             spawnInterval: 1.2, 
             pattern: [{ type: 'knight', count: 1 }] 
@@ -272,14 +272,14 @@ export class MountainLevel5 extends LevelBase {
         }
         // Wave 19
         , { 
-            enemyHealth_multiplier: 8, 
+            enemyHealth_multiplier: 6, 
             speedMultiplier: 1.29, 
             spawnInterval: 0.7, 
             pattern: [{ type: 'shieldknight', count: 3 }] 
         }
         // Wave 20
         , { 
-            enemyHealth_multiplier: 8, 
+            enemyHealth_multiplier: 7, 
             speedMultiplier: 0.88, 
             spawnInterval: 0.5, 
             pattern: [{ type: 'knight', count: 1 }, { type: 'shieldknight', count: 3 }] 

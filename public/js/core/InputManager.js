@@ -16,31 +16,32 @@ export class InputManager {
         'speed3': '3',          // 3
         'cancel': 'Escape',     // ESC
         'menu': 'm',            // M
-        'sell': 'Delete',       // DEL - sell selected tower/building
+        'sell': 'Delete',       // DEL - sell selected tower
 
         // Tower hotkeys
         'tower_basic': 'q',
-        'tower_cannon': 'w',
+        'tower_cannon': 't',
         'tower_archer': 'e',
-        'tower_magic': 'r',
-        'tower_barricade': 't',
-        'tower_poison': 'y',
-        'tower_combination': 'u',
-        'tower_guard-post': 'i',
+        'tower_magic': 'y',
+        'tower_barricade': 'w',
+        'tower_poison': 'r',
+        'tower_combination': 'i',
+        'tower_guard-post': 'u',
 
         // Building hotkeys
         'building_mine': 'z',
+        'collectGold': 'g',    // G - collect gold from all ready mines (Z stays free for building mines)
         'building_forge': 'x',
         'building_academy': 'c',
         'building_training': 'v',
         'building_superweapon': 'b',
-        'building_diamond-press': 'g',
+        'building_diamond-press': 'n',
 
         // Spell hotkeys
-        'spell_arcaneBlast': 'f',
-        'spell_frostNova': 'h',
-        'spell_meteorStrike': 'j',
-        'spell_chainLightning': 'k'
+        'spell_arcaneBlast': 'a',
+        'spell_frostNova': 's',
+        'spell_meteorStrike': 'd',
+        'spell_chainLightning': 'f'
     };
 
     // Human-readable action names for the controls screen
@@ -52,7 +53,7 @@ export class InputManager {
         'speed3': 'Speed 3x',
         'cancel': 'Cancel / Close',
         'menu': 'Open Menu',
-        'sell': 'Sell Selected Tower/Building',
+        'sell': 'Sell Selected Tower',
         'tower_basic': 'Watch Tower',
         'tower_cannon': 'Trebuchet Tower',
         'tower_archer': 'Archer Tower',
@@ -62,6 +63,7 @@ export class InputManager {
         'tower_combination': 'Combination Tower',
         'tower_guard-post': 'Guard Post',
         'building_mine': 'Gold Mine',
+        'collectGold': 'Collect Gold (Ready Mines)',
         'building_forge': 'Tower Forge',
         'building_academy': 'Magic Academy',
         'building_training': 'Training Grounds',
@@ -77,7 +79,7 @@ export class InputManager {
     static ACTION_CATEGORIES = {
         'Game Controls': ['pause', 'nextWave', 'speed1', 'speed2', 'speed3', 'cancel', 'menu', 'sell'],
         'Tower Hotkeys': ['tower_basic', 'tower_cannon', 'tower_archer', 'tower_magic', 'tower_barricade', 'tower_poison', 'tower_combination', 'tower_guard-post'],
-        'Building Hotkeys': ['building_mine', 'building_forge', 'building_academy', 'building_training', 'building_superweapon', 'building_diamond-press'],
+        'Building Hotkeys': ['building_mine', 'collectGold', 'building_forge', 'building_academy', 'building_training', 'building_superweapon', 'building_diamond-press'],
         'Spell Hotkeys': ['spell_arcaneBlast', 'spell_frostNova', 'spell_meteorStrike', 'spell_chainLightning']
     };
 
@@ -167,6 +169,12 @@ export class InputManager {
             const saved = localStorage.getItem(InputManager.STORAGE_KEY);
             if (saved) {
                 const parsed = JSON.parse(saved);
+                // Migration: saves from before the 'collectGold' hotkey existed still have
+                // 'building_diamond-press' on its old default key ('g'), which now collides
+                // with collectGold's default. Drop the stale entry so the new default (L) applies.
+                if (!('collectGold' in parsed) && parsed['building_diamond-press'] === 'g') {
+                    delete parsed['building_diamond-press'];
+                }
                 // Merge with defaults so new actions added later get their defaults
                 this.bindings = { ...InputManager.DEFAULT_BINDINGS, ...parsed };
             } else {
