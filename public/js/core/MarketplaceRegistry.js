@@ -283,7 +283,7 @@ export class MarketplaceRegistry {
             drawIcon: _drawHammer,
             category: 'building',
             type: 'consumable',
-            effect: 'Free Tower Forge in your next level\nItem is consumed as soon as you start\nQuiting the level without using it will forfeit the item',
+            effect: 'Free Tower Forge in your next level\nItem is consumed as soon as you start\nQuiting the level will forfeit the item',
             requirements: []
         },
         'training-materials': {
@@ -293,7 +293,7 @@ export class MarketplaceRegistry {
             drawIcon: _drawMedal,
             category: 'building',
             type: 'consumable',
-            effect: 'Free Training Grounds in your next level\nItem is consumed as soon as you start\nQuiting the level without using it will forfeit the item',
+            effect: 'Free Training Grounds in your next level\nItem is consumed as soon as you start\nQuiting the level will forfeit the item',
             requirements: ['training-gear']
         },
         'rabbits-foot': {
@@ -303,7 +303,7 @@ export class MarketplaceRegistry {
             drawIcon: _drawRabbitPaw,
             category: 'loot',
             type: 'consumable',
-            effect: 'The chances of normale loot are doubled in your next level\nItem is consumed as soon as you start\nQuiting the level without using it will forfeit the item',
+            effect: 'The chances of normale loot are doubled in your next level\nItem is consumed as soon as you start\nQuiting the level will forfeit the item',
             requirements: []
         },
         'strange-talisman': {
@@ -313,7 +313,7 @@ export class MarketplaceRegistry {
             drawIcon: _drawCrystalOrb,
             category: 'loot',
             type: 'consumable',
-            effect: 'Enemies carrying Legendary loot will drop two bags in your next level\nItem is consumed as soon as you start\nQuiting the level without using it will forfeit the item',
+            effect: 'Enemies carrying Legendary loot will drop two bags in your next level\nItem is consumed as soon as you start\nQuiting the level will forfeit the item',
             requirements: [],
             campaignRequirement: 'campaign-2'
         },
@@ -324,7 +324,7 @@ export class MarketplaceRegistry {
             drawIcon: _drawMagicBox,
             category: 'building',
             type: 'consumable',
-            effect: 'Free Magic Tower in your next level\nItem is consumed as soon as you start\nQuiting the level without using it will forfeit the item',
+            effect: 'Free Magic Tower in your next level\nItem is consumed as soon as you start\nQuiting the level will forfeit the item',
             requirements: ['magic-academy-unlock']
         },
         'frog-king-bane': {

@@ -5175,7 +5175,7 @@ class UpgradesMenu {
                 id: 'training-gear',
                 name: 'Training Gear',
                 description: 'An old armory crate salvaged from the barracks. The gear inside is worn but reliable — enough to train a handful of brave volunteers to stand guard.',
-                effect: 'Unlocks Training Grounds building in levels\nAllows hiring combat defenders to protect towers\nDefenders fight enemies and respawn for a fee',
+                effect: 'Unlocks Training Grounds building in levels\nAllows hiring combat defenders to protect towers\nGives access to additional tower upgrades',
                 cost: 500,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5253,7 +5253,7 @@ class UpgradesMenu {
                 id: 'wooden-chest',
                 name: 'Wooden Chest',
                 description: 'A battered supply chest recovered from an abandoned outpost. The coins inside smell of old campaigns.',
-                effect: 'Permanently grants +100 starting gold in every level\nStacks with other gold chest bonuses\nGold is added at the very start of each battle',
+                effect: 'Permanently grants +100 starting gold in every level',
                 cost: 250,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5282,7 +5282,7 @@ class UpgradesMenu {
                 id: 'golden-chest',
                 name: 'Golden Chest',
                 description: 'A heavily reinforced chest bearing the royal seal. The lock is already broken — whoever owned this left in quite a hurry.',
-                effect: 'Permanently grants +300 starting gold in every level\nStacks with the Wooden Chest bonus\nGold is added at the very start of each battle',
+                effect: 'Permanently grants +300 starting gold in every level',
                 cost: 400,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5322,7 +5322,7 @@ class UpgradesMenu {
                 id: 'platinum-chest',
                 name: 'Platinum Chest',
                 description: 'A seamless chest carved from polished platinum ore. Enchanted to stay sealed — until it recognized you.',
-                effect: 'Permanently grants +500 starting gold in every level\nStacks with previous gold bonuses\nGold is added at the very start of each battle',
+                effect: 'Permanently grants +500 starting gold in every level',
                 cost: 600,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5366,7 +5366,7 @@ class UpgradesMenu {
                 id: 'diamond-pickaxe',
                 name: 'Diamond Pickaxe',
                 description: 'Forged from compressed diamond crystals. The miners say it hums softly near gemstone veins, as if drawn to them.',
-                effect: 'Increases gem drop chance from Gold Mines\nGems are used at the Forge for tower upgrades\nHigher gem yields mean more powerful enhancements',
+                effect: 'Increases gem drop chance from Gold Mines\nGems are used to upgrade your magical abilities',
                 cost: 800,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5394,7 +5394,7 @@ class UpgradesMenu {
                 id: 'magic-academy-unlock',
                 name: 'Academy Blueprints',
                 description: 'Detailed schematics for an arcane academy, scrawled in a language only mages can read. Someone has helpfully added illustrations.',
-                effect: 'Unlocks Magic Academy building in levels\nEnables construction of advanced arcane towers\nUnlocks gem-powered tower enhancements at the Forge',
+                effect: 'Unlocks Magic Academy building in levels\nEnables construction of advanced arcane towers',
                 cost: 1500,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -5430,7 +5430,7 @@ class UpgradesMenu {
                 id: 'superweapon-lab-unlock',
                 name: 'Super Weapon Lab Plans',
                 description: 'Classified engineering documents wrapped in wax paper. The diagrams show devices that probably should not exist, and almost certainly work.',
-                effect: 'Unlocks Super Weapon Lab building in levels\nEnables construction of combination towers\nUnlocks powerful siege weapons for your defense',
+                effect: 'Unlocks Super Weapon Lab building in levels\nEnables construction of combination towers',
                 cost: 2500,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -6972,10 +6972,10 @@ class UpgradesMenu {
         // Wrap description text (measured against the actual draw font, with the
         // scrollbar's width always reserved so wrapping never depends on whether
         // the scrollbar ends up showing)
-        ctx.font = '9px Arial';
+        ctx.font = '11px Arial';
         const descAvailWidth = width - 19;
         const lines = this.wrapTextToWidth(ctx, item.description, descAvailWidth);
-        const lineHeight = 11;
+        const lineHeight = 14;
 
         // Calculate max scroll
         const maxVisibleLines = Math.floor((descBoxHeight - (textPadding * 2)) / lineHeight) - 1;
@@ -6989,7 +6989,7 @@ class UpgradesMenu {
         ctx.rect(x + 5, descBoxStartY + 2, width - 10 - scrollBarWidth, descBoxHeight - 4);
         ctx.clip();
 
-        ctx.font = '9px Arial';
+        ctx.font = '11px Arial';
         ctx.fillStyle = isDisabled ? '#9a9a9a' : '#c9a961';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
@@ -7003,31 +7003,31 @@ class UpgradesMenu {
         }
 
         ctx.restore();
-        
+
         // Draw scroll bar if there's scrollable content
         if (scrollState.maxScroll > 0) {
             const scrollBarX = x + width - 8;
             const scrollBarY = descBoxStartY + 2;
             const scrollBarHeight = descBoxHeight - 4;
-            
+
             // Background of scroll bar track
             ctx.fillStyle = '#1a1010';
             ctx.fillRect(scrollBarX, scrollBarY, 4, scrollBarHeight);
-            
+
             // Calculate scroll thumb position and size
             const thumbHeight = Math.max(8, (maxVisibleLines / lines.length) * (scrollBarHeight - 2));
             const thumbY = scrollBarY + 1 + (scrollState.scrollOffset / scrollState.maxScroll) * (scrollBarHeight - thumbHeight - 2);
-            
+
             // Draw scroll thumb
             ctx.fillStyle = scrollState.maxScroll > 0 ? '#8b7355' : '#5a4a3a';
             ctx.fillRect(scrollBarX + 0.5, thumbY, 3, thumbHeight);
         }
-        
+
         // ===== EFFECTS SECTION AT BOTTOM (BEFORE BUTTON) =====
         const effectBoxStartY = descBoxStartY + descBoxHeight + 2;
         const buttonTopY = y + height - 47;
         const effectBoxHeight = buttonTopY - effectBoxStartY;
-        
+
         // Effects header/content
         if (item.effect && effectBoxHeight > 0) {
             // Effect text with bullet points - clipped to tile bounds
@@ -7035,12 +7035,12 @@ class UpgradesMenu {
             ctx.beginPath();
             ctx.rect(x + 4, effectBoxStartY, width - 8, effectBoxHeight);
             ctx.clip();
-            
-            ctx.font = 'bold 12px Arial';
+
+            ctx.font = 'bold 15px Arial';
             ctx.fillStyle = '#FFD700';
             ctx.textAlign = 'left';
             ctx.textBaseline = 'top';
-            
+
             // Split effect by newlines first, then wrap each line if needed
             // Each newline-separated sentence gets ONE bullet; wrapped continuations are indented
             const rawEffectLines = item.effect.split('\n').map(line => line.trim()).filter(line => line.length > 0);
@@ -7054,8 +7054,8 @@ class UpgradesMenu {
                     effectLines.push({ text: wrappedLines[wi], isBullet: wi === 0 });
                 }
             }
-            
-            const effectLineHeight = 15;
+
+            const effectLineHeight = 18;
             const maxEffectLines = Math.max(1, Math.floor(effectBoxHeight / effectLineHeight));
             const effectTextStartY = effectBoxStartY + 2;
             for (let i = 0; i < Math.min(effectLines.length, maxEffectLines); i++) {
@@ -7262,10 +7262,10 @@ class UpgradesMenu {
         // Wrap description text (measured against the actual draw font, with the
         // scrollbar's width always reserved so wrapping never depends on whether
         // the scrollbar ends up showing)
-        ctx.font = '9px Arial';
+        ctx.font = '11px Arial';
         const descAvailWidth = width - 19;
         const lines = this.wrapTextToWidth(ctx, item.description, descAvailWidth);
-        const lineHeight = 11;
+        const lineHeight = 14;
 
         // Calculate max scroll
         const maxVisibleLines = Math.floor((descBoxHeight - (textPadding * 2)) / lineHeight) - 1;
@@ -7279,7 +7279,7 @@ class UpgradesMenu {
         ctx.rect(x + 5, descBoxStartY + 2, width - 10 - scrollBarWidth, descBoxHeight - 4);
         ctx.clip();
 
-        ctx.font = '9px Arial';
+        ctx.font = '11px Arial';
         ctx.fillStyle = isDisabled ? '#9a9a9a' : '#c9a961';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';

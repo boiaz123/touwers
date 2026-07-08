@@ -51,7 +51,7 @@ export class SirFrogerty {
             {
                 title: 'Welcome to Thy Settlement!',
                 lines: [
-                    'Welcome, Commander, to thine own settlement!',
+                    'Welcome to thine own settlement!',
                     'This humble gathering of buildings shall serve as thy',
                     'base of operations against the evils that lieth ahead.',
                     '',
@@ -71,36 +71,36 @@ export class SirFrogerty {
                 ]
             },
             {
-                title: 'The Tower Forge',
+                title: 'The Arcane Library',
                 lines: [
-                    'The Tower Forge doth allow thee to spend thy',
+                    'The Arcane Library holdeth knowledge most valuable —',
+                    'intelligence upon thine enemies, moreover thy shall',
+                    'be shown thy prowess and thy downfall.',
+                    '',
+                    'Peruse it at thy leisure, though heed mine warning:',
+                    'an ill-informed Commander is a sure to slain!',
+                ]
+            },
+            {
+                title: 'The Marketplace',
+                lines: [
+                    'The Marketplace doth allow thee to spend thy',
                     'hard-earned gold upon permanent upgrades for thy',
                     'towers and brave defenders.',
                     '',
                     'Invest thy gold wisely, Commander, for these',
-                    'enhancements shall persist across ALL battles!',
-                ]
-            },
-            {
-                title: 'The Arcane Library',
-                lines: [
-                    'The Arcane Library holdeth knowledge most valuable —',
-                    'intelligence upon thine enemies, musical entertainment',
-                    'for thy weary troops, and sundry other mysteries.',
-                    '',
-                    'Peruse it at thy leisure, though heed mine warning:',
-                    'the enemy doth not wait for the well-read Commander!',
+                    'as arriving unprepared is arriving defeated!',
                 ]
             },
             {
                 title: 'On the Gathering of Loot',
                 lines: [
-                    'Heed mine counsel well, Commander: as thou dost do',
-                    'battle through the realms, thine enemies shall drop',
+                    'Commander: as thou dost do battle through the',
+                    'the realms, thine enemies shall drop',
                     'precious loot upon their defeat.',
                     '',
                     'Gather it and visit the Marketplace to sell it for',
-                    'gold, or use it to fuel thy mystical Arcane powers!',
+                    'gold, so thy might improve thy abilities!',
                 ]
             },
             {
@@ -174,12 +174,12 @@ export class SirFrogerty {
                     {
                         title: 'New Paths Open Before Thee!',
                         lines: [
-                            "The Ironstone Mountains now lie within thy reach!",
-                            "Head to the Campaign Map and challenge those peaks.",
-                            '',
-                            "Also: mine schematics for the grand Magic Academy",
-                            "are now available to purchase in the Upgrades shop!",
-                            "A worthy investment, I assure thee. *ribbit*",
+                            "Thou has access to the schematics of the Magic Academy.",
+                            "A worthy investment, I assure thee. *ribbit*",                            
+                            "Visit the marketplace to discover even more upgrades!",
+                            '',                            
+                            "The Ironstone Mountains now lie within thy reach.",
+                            "Head to the Campaign Map and challenge those peaks!",
                         ]
                     }
                 ];
@@ -190,11 +190,11 @@ export class SirFrogerty {
                         title: 'The Mountains Are Yours!',
                         lines: [
                             "By the great lily pad! Thou hath conquered the peaks!",
-                            "The cold winds carry the scent of sand and ancient dust —",
-                            "the Scorching Sands await thee beyond the passes.",
-                            '',
                             "Each victory hath grown thy renown, Commander.",
                             "The realm speaks thy name in hushed, awed tones.",
+                            '',
+                            "The cold winds carry the scent of sand and ancient dust —",
+                            "the Scorching Sands await thee beyond the passes.",
                         ]
                     },
                     {
@@ -204,8 +204,8 @@ export class SirFrogerty {
                             "Purchase them in the Upgrades shop to unlock",
                             "the most devastating ordnance the realm hath seen.",
                             '',
-                            "Also, the Strange Talisman may now be found in the",
-                            "Marketplace — tis most useful for rare loot. *ribbit*",
+                            "Rumour has it, that the Scorching Sands are housing —",
+                            "Ancient relics. Invest them wisely! *ribbit*",
                         ]
                     }
                 ];
@@ -220,15 +220,15 @@ export class SirFrogerty {
                             "even I — thine most distinguished adviser — feel",
                             "a shiver of awe. These frogs are not of this world.",
                             '',
-                            "And mine former king… hath noticed thee. Prepare.",
+                            "And mine former king… hath noticed thee. Prepare!",
                         ]
                     },
                     {
                         title: 'The Final Frontier!',
                         lines: [
-                            "The Frog King's Domain is now accessible!",
-                            "I need not tell thee that this shall be the",
-                            "most dangerous campaign thou hath faced.",
+                            "Your troups have activated the relic —",
+                            "The portal has opened to the frog king's realm,",
+                            "your most dangerous campaign lies ahead!",
                             '',
                             "Stock up well at the Marketplace, Commander.",
                             "And keep mine counsel close. *nervous ribbit*",
@@ -239,7 +239,7 @@ export class SirFrogerty {
             case 'campaign-4':
                 return [
                     {
-                        title: 'VICTORY! The King Is Defeated!',
+                        title: 'VICTORY! The Frog King Is Defeated!',
                         lines: [
                             "I… I cannot believe mine own eyes. Thou hath",
                             "done it, Commander. The Frog King falleth!",
