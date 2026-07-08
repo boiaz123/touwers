@@ -14,8 +14,8 @@ export class BuildingRegistry {
     static #registry = {
         'mine': { class: GoldMine, cost: 200, size: 4 },
         'forge': { class: TowerForge, cost: 300, size: 4 },
-        'academy': { class: MagicAcademy, cost: 250, size: 4 },
-        'training': { class: TrainingGrounds, cost: 400, size: 4, requiresUpgrade: 'training-gear' },
+        'academy': { class: MagicAcademy, cost: 500, size: 4 },
+        'training': { class: TrainingGrounds, cost: 200, size: 4, requiresUpgrade: 'training-gear' },
         'superweapon': { class: SuperWeaponLab, cost: 1000, size: 4 },
         'diamond-press': { class: DiamondPress, cost: 500, size: 2, requiresUpgrade: 'diamond-press-unlock' }
     };

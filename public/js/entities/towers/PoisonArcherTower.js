@@ -6,7 +6,7 @@ export class PoisonArcherTower extends Tower {
         super(x, y, gridX, gridY);
         this.range = 130;
         this.damage = 10;
-        this.fireRate = 0.4;
+        this.fireRate = 0.25;
         this.cooldown = 0;
         this.target = null;
         
@@ -128,7 +128,7 @@ export class PoisonArcherTower extends Tower {
             this.target = null;
             this.archerPosition.hidden = true;
         } else {
-            // OPTIMIZATION: Only rescan if current target is dead/gone/out-of-range
+            // OPTIMIZATION: Only rescan if current target is dead/gone/out-of-range/already poisoned
             if (this.target) {
                 if (this.target.health <= 0 || this.target.reachedEnd) {
                     this.target = null;
@@ -137,7 +137,11 @@ export class PoisonArcherTower extends Tower {
                     const dy = this.target.y - this.y;
                     // Keep target on the exact frame a shot triggers (matches Tower.update behaviour)
                     const shotTriggeredThisFrame = prevCooldown > 0 && this.cooldown === 0;
-                    if (!shotTriggeredThisFrame && dx * dx + dy * dy > this.range * this.range) {
+                    const outOfRange = !shotTriggeredThisFrame && dx * dx + dy * dy > this.range * this.range;
+                    // Once the current target is poisoned, re-scan so a fresh, unpoisoned
+                    // enemy gets prioritized instead of wasting shots on a target already ticking.
+                    const alreadyPoisoned = !shotTriggeredThisFrame && this.poisonedEnemies.has(this.target);
+                    if (outOfRange || alreadyPoisoned) {
                         this.target = null;
                     }
                 }
@@ -240,6 +244,45 @@ export class PoisonArcherTower extends Tower {
         }
     }
     
+    /**
+     * Prefers the nearest enemy that isn't poisoned yet, so shots spread the
+     * (permanent, until-death) DoT across as many enemies as possible instead
+     * of piling redundant hits onto a target that's already poisoned. Only
+     * falls back to an already-poisoned enemy when nothing else is in range.
+     */
+    findTarget(enemies) {
+        const grid = this._spatialGrid;
+        let closestUnpoisoned = null;
+        let closestUnpoisonedDistSq = this.range * this.range;
+        let closestPoisoned = null;
+        let closestPoisonedDistSq = this.range * this.range;
+
+        const consider = (enemy) => {
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const distSq = dx * dx + dy * dy;
+            if (this.poisonedEnemies.has(enemy)) {
+                if (distSq < closestPoisonedDistSq) {
+                    closestPoisoned = enemy;
+                    closestPoisonedDistSq = distSq;
+                }
+            } else if (distSq < closestUnpoisonedDistSq) {
+                closestUnpoisoned = enemy;
+                closestUnpoisonedDistSq = distSq;
+            }
+        };
+
+        if (grid) {
+            const count = grid.query(this.x, this.y, this.range);
+            const buf = grid._queryBuf;
+            for (let i = 0; i < count; i++) consider(buf[i]);
+        } else {
+            for (let i = 0; i < enemies.length; i++) consider(enemies[i]);
+        }
+
+        return closestUnpoisoned || closestPoisoned;
+    }
+
     applyPoisonToEnemy(enemy, towerForgeBonus = 0) {
         const basePoisonDamage = 13;
         
@@ -562,7 +605,7 @@ export class PoisonArcherTower extends Tower {
             description: 'Ranger shoots poison arrows that apply a permanent toxin, dealing heavy damage over time until the enemy dies.',
             damage: '13 poison/2s',
             range: '130',
-            fireRate: '0.4/sec',
+            fireRate: '0.25/sec',
             cost: 200,
             icon: ''
         };

@@ -29,7 +29,7 @@ export class TrainingGrounds extends Building {
         // Tower-specific fire rate upgrades
         this.upgrades = {
             barricadeFireRate: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.1 }, // Fire rate: 0.33 → 0.83 at level 5
-            poisonArcherTowerFireRate: { level: 0, maxLevel: 5, baseCost: 140, effect: 0.08 } // Fire rate: 0.4 → 0.8 at level 5
+            poisonArcherTowerFireRate: { level: 0, maxLevel: 5, baseCost: 140, effect: 0.05 } // Fire rate: 0.25 → 0.50 at level 5
         };
         
         this.trainingParticles = [];
@@ -1116,84 +1116,69 @@ export class TrainingGrounds extends Building {
     
     getUpgradeOptions() {
         const options = [];
-        
-        // Range upgrades for manned towers - map tower registry names to upgrade keys
-        const towerTypes = [
-            { id: 'archerTower', registryId: 'archer', name: 'Archer Tower', icon: '<img src="assets/towers/archer.png" class="upgrade-tower-icon">' },
-            { id: 'basicTower', registryId: 'basic', name: 'Watch Tower', icon: '<img src="assets/towers/basic.png" class="upgrade-tower-icon">' },
-            { id: 'cannonTower', registryId: 'cannon', name: 'Trebuchet Tower', icon: '<img src="assets/towers/cannon.png" class="upgrade-tower-icon">' }
-        ];
-        
-        // Add range upgrade for each manned tower - but only if the tower is unlocked
-        towerTypes.forEach(tower => {
-            // Check if this tower type is unlocked
-            const isTowerUnlocked = this.unlockSystem && this.unlockSystem.unlockedTowers.has(tower.registryId);
-            
-            // Only show the upgrade if the tower is unlocked
-            if (!isTowerUnlocked) {
-                return; // Skip this tower
-            }
-            
-            const upgrade = this.rangeUpgrades[tower.id];
-            const isUnlocked = this.trainingLevel > upgrade.level;
-            
-            options.push({
-                id: `range_${tower.id}`,
-                towerType: tower.id,
-                name: `${tower.name} Range Training`,
-                description: `Increase ${tower.name} range by ${upgrade.effect} per level`,
-                level: upgrade.level,
-                maxLevel: upgrade.maxLevel,
-                baseCost: upgrade.baseCost,
-                cost: this.calculateRangeUpgradeCost(tower.id),
-                icon: tower.icon,
-                isUnlocked: isUnlocked
-            });
-        });
-        
-        // Fire rate upgrades for special towers - map tower registry names
-        const fireRateUpgrades = [
+
+        // Tower upgrade definitions in hotkey order (Q/W/E/R/T = basic/barricade/archer/poison/cannon)
+        // to match Tower Forge's upgrade ordering. Each entry is either a 'range' upgrade
+        // (manned towers) or a 'fireRate' upgrade (barricade/poison).
+        const towerUpgradeOrder = [
+            { kind: 'range', id: 'basicTower', registryId: 'basic', name: 'Watch Tower', icon: '<img src="assets/towers/basic.png" class="upgrade-tower-icon">' },
             {
-                id: 'barricadeFireRate',
-                registryId: 'barricade',
+                kind: 'fireRate', id: 'barricadeFireRate', registryId: 'barricade',
                 name: 'Barricade Tower Fire Rate Training',
                 description: `Increase Barricade Tower barrel rolling speed (0.33 → 0.83 at level 5)`,
                 icon: '<img src="assets/towers/barricade.png" class="upgrade-tower-icon">'
             },
+            { kind: 'range', id: 'archerTower', registryId: 'archer', name: 'Archer Tower', icon: '<img src="assets/towers/archer.png" class="upgrade-tower-icon">' },
             {
-                id: 'poisonArcherTowerFireRate',
-                registryId: 'poison',
+                kind: 'fireRate', id: 'poisonArcherTowerFireRate', registryId: 'poison',
                 name: 'Poison Archer Tower Fire Rate Training',
-                description: `Increase Poison Archer Tower fire rate (0.4 → 0.8 per second at level 5)`,
+                description: `Increase Poison Archer Tower fire rate (0.25 → 0.50 per second at level 5)`,
                 icon: '<img src="assets/towers/poison.png" class="upgrade-tower-icon">'
-            }
+            },
+            { kind: 'range', id: 'cannonTower', registryId: 'cannon', name: 'Trebuchet Tower', icon: '<img src="assets/towers/cannon.png" class="upgrade-tower-icon">' }
         ];
-        
-        fireRateUpgrades.forEach(upgradeInfo => {
-            // Check if this tower type is unlocked
-            const isTowerUnlocked = this.unlockSystem && this.unlockSystem.unlockedTowers.has(upgradeInfo.registryId);
-            
+
+        towerUpgradeOrder.forEach(entry => {
             // Only show the upgrade if the tower is unlocked
+            const isTowerUnlocked = this.unlockSystem && this.unlockSystem.unlockedTowers.has(entry.registryId);
             if (!isTowerUnlocked) {
-                return; // Skip this tower
+                return;
             }
-            
-            const upgrade = this.upgrades[upgradeInfo.id];
-            const isUnlocked = this.trainingLevel > upgrade.level;
-            
-            options.push({
-                id: upgradeInfo.id,
-                name: upgradeInfo.name,
-                description: upgradeInfo.description,
-                level: upgrade.level,
-                maxLevel: upgrade.maxLevel,
-                baseCost: upgrade.baseCost,
-                cost: this.calculateUpgradeCost(upgradeInfo.id),
-                icon: upgradeInfo.icon,
-                isUnlocked: isUnlocked
-            });
+
+            if (entry.kind === 'range') {
+                const upgrade = this.rangeUpgrades[entry.id];
+                const isUnlocked = this.trainingLevel > upgrade.level;
+
+                options.push({
+                    id: `range_${entry.id}`,
+                    towerType: entry.id,
+                    name: `${entry.name} Range Training`,
+                    description: `Increase ${entry.name} range by ${upgrade.effect} per level`,
+                    level: upgrade.level,
+                    maxLevel: upgrade.maxLevel,
+                    baseCost: upgrade.baseCost,
+                    cost: this.calculateRangeUpgradeCost(entry.id),
+                    icon: entry.icon,
+                    isUnlocked: isUnlocked
+                });
+            } else {
+                const upgrade = this.upgrades[entry.id];
+                const isUnlocked = this.trainingLevel > upgrade.level;
+
+                options.push({
+                    id: entry.id,
+                    name: entry.name,
+                    description: entry.description,
+                    level: upgrade.level,
+                    maxLevel: upgrade.maxLevel,
+                    baseCost: upgrade.baseCost,
+                    cost: this.calculateUpgradeCost(entry.id),
+                    icon: entry.icon,
+                    isUnlocked: isUnlocked
+                });
+            }
         });
-        
+
         return options;
     }
     

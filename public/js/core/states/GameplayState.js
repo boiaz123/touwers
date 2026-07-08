@@ -695,10 +695,9 @@ export class GameplayState {
             console.warn('  WARNING: No marketplace system available!');
         }
         
-        // Stop level music before exiting
+        // Transition from level music to settlement music - playDifferentSettlementTheme()
+        // crossfades smoothly into the new track instead of hard-cutting.
         if (this.stateManager.audioManager) {
-            this.stateManager.audioManager.stopMusic();
-            // Resume settlement music when returning from a level - play a different track than last time
             this.stateManager.audioManager.playDifferentSettlementTheme();
         }
         
@@ -1471,7 +1470,10 @@ export class GameplayState {
     // Routes a tower/building click result (from TowerManager.handleClick, or from a building
     // hotkey re-invoking building.onClick() directly) to the right menu/collection handling.
     // Returns true if the result was handled (a menu opened or gold/gems were collected).
-    dispatchBuildingClickResult(clickResult) {
+    // closePanelOnCollect controls whether a gold/gem collection result closes whatever panel
+    // is currently open - true for a direct click on a mine (matches prior behavior), false for
+    // the collectGold hotkey, which should never dismiss a menu the player has open elsewhere.
+    dispatchBuildingClickResult(clickResult, { closePanelOnCollect = true } = {}) {
         if (!clickResult) return false;
         if (clickResult.type === 'forge_menu') {
             this.uiManager.showForgeUpgradeMenu(clickResult);
@@ -1521,14 +1523,14 @@ export class GameplayState {
             if (this.stateManager.audioManager) {
                 this.stateManager.audioManager.playSFX('minegoldclick');
             }
-            this.uiManager.closeAllPanels();
+            if (closePanelOnCollect) this.uiManager.closeAllPanels();
             this.gameState.gold += clickResult;
             this.uiManager.updateUI();
             this.uiManager.updateButtonStates();
             return true;
         } else if (typeof clickResult === 'object' && (clickResult.fire !== undefined || clickResult.diamond !== undefined)) {
             // Gem collection from gold mine - close any open goldmine menu
-            this.uiManager.closeAllPanels();
+            if (closePanelOnCollect) this.uiManager.closeAllPanels();
             const academies = this.towerManager.buildingManager.buildings.filter(b =>
                 b.constructor.name === 'MagicAcademy'
             );
@@ -1581,7 +1583,7 @@ export class GameplayState {
         const mines = this.towerManager.buildingManager.buildings.filter(b => b.constructor.name === 'GoldMine');
         if (mines.length === 0) return false;
         mines.filter(mine => mine.goldReady === true).forEach(mine => {
-            this.dispatchBuildingClickResult(mine.onClick());
+            this.dispatchBuildingClickResult(mine.onClick(), { closePanelOnCollect: false });
         });
         return true;
     }
@@ -1633,16 +1635,6 @@ export class GameplayState {
         
         // Close any open menus
         this.uiManager.closeAllPanels();
-    }
-    
-    getBuildingCost(buildingType) {
-        const costs = {
-            'mine': 200,
-            'forge': 300,
-            'academy': 250,
-            'superweapon': 500
-        };
-        return costs[buildingType] || 0;
     }
     
     getWaveConfig(level, wave) {

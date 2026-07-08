@@ -3209,7 +3209,7 @@ export class UIManager {
                 statBadgesHTML = `
                     <span class="effect-badge">${sv(poisonTickDmg, basePoisonTickDmg, '/2s')}</span>
                     <span class="effect-badge">${sv(tower.range, tower.originalRange || 130)}</span>
-                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.4, '/s')}</span>
+                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.25, '/s')}</span>
                 `;
                 break;
             }
@@ -4056,7 +4056,7 @@ export class UIManager {
         }
         
         if (trainingGrounds.upgrades.poisonArcherTowerFireRate.level > 0) {
-            const fireRate = (0.8 + trainingGrounds.upgrades.poisonArcherTowerFireRate.level * 0.08).toFixed(2);
+            const fireRate = (0.25 + trainingGrounds.upgrades.poisonArcherTowerFireRate.level * 0.05).toFixed(2);
             effectsList.push(`Poison: ${fireRate}/sec`);
         }
         
@@ -4135,8 +4135,8 @@ export class UIManager {
                     nextValue = `${nextRate}/sec`;
                 } else if (upgrade.id === 'poisonArcherTowerFireRate') {
                     // Poison archer fire rate
-                    const currentRate = (0.8 + upgrade.level * 0.08).toFixed(2);
-                    const nextRate = (0.8 + (upgrade.level + 1) * 0.08).toFixed(2);
+                    const currentRate = (0.25 + upgrade.level * 0.05).toFixed(2);
+                    const nextRate = (0.25 + (upgrade.level + 1) * 0.05).toFixed(2);
                     currentValue = `${currentRate}/sec`;
                     nextValue = `${nextRate}/sec`;
                 }
@@ -4154,7 +4154,7 @@ export class UIManager {
                     const curRate = (0.2 + upgrade.level * 0.1).toFixed(1);
                     tooltipText += `<div>\u26A1 Fire Rate: <span style="color: #FFD700;">${curRate}/sec</span></div>`;
                 } else if (upgrade.id === 'poisonArcherTowerFireRate') {
-                    const curRate = (0.8 + upgrade.level * 0.08).toFixed(2);
+                    const curRate = (0.25 + upgrade.level * 0.05).toFixed(2);
                     tooltipText += `<div>\u26A1 Fire Rate: <span style="color: #FFD700;">${curRate}/sec</span></div>`;
                 }
                 
@@ -4166,7 +4166,7 @@ export class UIManager {
                     } else if (upgrade.id === 'barricadeFireRate') {
                         tooltipText += `<div>Fire Rate: +0.1/sec</div>`;
                     } else if (upgrade.id === 'poisonArcherTowerFireRate') {
-                        tooltipText += `<div>Fire Rate: +0.08/sec</div>`;
+                        tooltipText += `<div>Fire Rate: +0.05/sec</div>`;
                     }
                     if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;"><span class="coin-xs"></span>${upgrade.cost}</span></div>`;
                     tooltipText += `</div>`;

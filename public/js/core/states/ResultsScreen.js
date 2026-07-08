@@ -107,9 +107,9 @@ export class ResultsScreen {
             this.animationPhase = 'defeat';
             // Select a random defeat quote
             this.selectedDefeatQuote = this.defeatQuotes[Math.floor(Math.random() * this.defeatQuotes.length)];
-            // Play defeat music immediately
+            // Play defeat music immediately - fade the battle music out under the sting instead of a hard cut
             if (this.stateManager.audioManager) {
-                this.stateManager.audioManager.stopMusic();
+                this.stateManager.audioManager.stopMusic(true);
                 this.stateManager.audioManager.playSFX('defeat-tune');
             }
         } else {
@@ -266,9 +266,10 @@ export class ResultsScreen {
                 this.isShowing = true;
                 this.showDelay = 0;
                 
-                // For levelComplete, play victory tune at the start of the animation
+                // For levelComplete, play victory tune at the start of the animation -
+                // fade the battle music out under the sting instead of a hard cut
                 if (this.resultType === 'levelComplete' && this.stateManager.audioManager) {
-                    this.stateManager.audioManager.stopMusic();
+                    this.stateManager.audioManager.stopMusic(true);
                     this.stateManager.audioManager.playSFX('victory-tune');
                 }
             } else {

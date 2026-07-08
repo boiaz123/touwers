@@ -319,8 +319,6 @@ export class DefenderBase {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(`Defender L${this.level}`, this.x, barY + barHeight / 2);
-
-        this.hitSplatters.forEach(s => s.render(ctx));
     }
 
     renderLegs(ctx, baseSize) {
