@@ -195,7 +195,7 @@ export class ForestLevel11 extends LevelBase {
         }
         // Wave 5
         , { 
-            enemyHealth_multiplier: 4, 
+            enemyHealth_multiplier: 3, 
             speedMultiplier: 0.75, 
             spawnInterval: 5, 
             pattern: [{ type: 'beefyenemy', count: 9 }] 
@@ -230,7 +230,7 @@ export class ForestLevel11 extends LevelBase {
         }
         // Wave 10
         , { 
-            enemyHealth_multiplier: 3, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 1.1, 
             spawnInterval: 9, 
             pattern: [{ type: 'knight', count: 1 }] 
@@ -244,7 +244,7 @@ export class ForestLevel11 extends LevelBase {
         }
         // Wave 12
         , { 
-            enemyHealth_multiplier: 9, 
+            enemyHealth_multiplier: 5, 
             speedMultiplier: 0.58, 
             spawnInterval: 5, 
             pattern: [{ type: 'beefyenemy', count: 4 }] 
@@ -261,18 +261,18 @@ export class ForestLevel11 extends LevelBase {
             enemyHealth_multiplier: 4, 
             speedMultiplier: 0.88, 
             spawnInterval: 1.5, 
-            pattern: [{ type: 'knight', count: 1, healthMultiplier: 3 }, { type: 'beefyenemy', count: 4, healthMultiplier: 4, speedMultiplier: 1 }, { type: 'basic', count: 8 }, { type: 'villager', count: 12 }, { type: 'archer', count: 6, speedMultiplier: 1.6 }] 
+            pattern: [{ type: 'knight', count: 1, healthMultiplier: 2 }, { type: 'beefyenemy', count: 4, healthMultiplier: 4, speedMultiplier: 1 }, { type: 'basic', count: 8 }, { type: 'villager', count: 12 }, { type: 'archer', count: 6, speedMultiplier: 1.6 }] 
         }
         // Wave 15
         , { 
-            enemyHealth_multiplier: 5, 
+            enemyHealth_multiplier: 3, 
             speedMultiplier: 0.4, 
             spawnInterval: 13, 
             pattern: [{ type: 'knight', count: 3 }] 
         }
         // Wave 16
         , { 
-            enemyHealth_multiplier: 9, 
+            enemyHealth_multiplier: 5, 
             speedMultiplier: 0.88, 
             spawnInterval: 1, 
             pattern: [{ type: 'knight', count: 1 }] 

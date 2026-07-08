@@ -321,9 +321,9 @@ export class MountainLevel1 extends LevelBase {
         }
         // Wave 4
         , { 
-            enemyHealth_multiplier: 2.5, 
-            speedMultiplier: 0.75, 
-            spawnInterval: 7, 
+            enemyHealth_multiplier: 2, 
+            speedMultiplier: 0.6, 
+            spawnInterval: 10, 
             pattern: [{ type: 'beefyenemy', count: 35 }] 
         }
         // Wave 5
@@ -335,22 +335,22 @@ export class MountainLevel1 extends LevelBase {
         }
         // Wave 6
         , { 
-            enemyHealth_multiplier: 4, 
+            enemyHealth_multiplier: 3, 
             speedMultiplier: 1.0, 
             spawnInterval: 2, 
             pattern: [{ type: 'knight', count: 1 }] 
         }
         // Wave 7
         , { 
-            enemyHealth_multiplier: 6, 
-            speedMultiplier: 1.13, 
+            enemyHealth_multiplier: 4, 
+            speedMultiplier: 1.0, 
             spawnInterval: 30, 
             pattern: [{ type: 'knight', count: 2 }] 
         }
         // Wave 8
         , { 
-            enemyHealth_multiplier: 4, 
-            speedMultiplier: 1.0, 
+            enemyHealth_multiplier: 3.5, 
+            speedMultiplier: 0.8, 
             spawnInterval: 0.2, 
             pattern: [{ type: 'knight', count: 2 }] 
         }
