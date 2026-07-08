@@ -100,6 +100,8 @@ export class Campaign2 extends CampaignBase {
         // Invalidate render caches so they rebuild at the current resolution
         this.backgroundCanvas = null;
         this.terrainCanvas = null;
+        this._sortedRenderables = null;
+        this._treeSpriteCache = null;
 
         super.enter();
     }
@@ -163,7 +165,14 @@ export class Campaign2 extends CampaignBase {
         const canvas = this.stateManager.canvas;
         const width = canvas.width;
         const height = canvas.height;
-        
+
+        // Trees below are sized in absolute pixels, so scale them (and their spacing)
+        // against the internal canvas resolution - otherwise a higher resolution setting
+        // renders the same fixed pixel size trees, making them look smaller and sparser
+        // relative to the larger canvas. Matches the scaleFactor convention used by
+        // LevelBase/ResolutionManager (1920px reference width, clamped 0.5x-2.5x).
+        const scaleFactor = Math.max(0.5, Math.min(2.5, width / 1920));
+
         // Generate a full-screen mountain range with multiple peaks
         // The entire background will be one continuous mountain range
         this.terrainDetails.mountainRangeGenerated = true;
@@ -217,12 +226,14 @@ export class Campaign2 extends CampaignBase {
         
         // Generate trees away from the path and lake - MUCH DENSER in bottom half
         const trees = [];
-        const pathBuffer = 120;
-        const lakeBuffer = 180;
+        const pathBuffer = 120 * scaleFactor;
+        const lakeBuffer = 180 * scaleFactor;
         const mountainBaseLine = height * 0.55; // Trees below this line
-        
-        // Tighter tree density with better spreading - reduced grid spacing
-        const gridSpacing = 35; // Smaller spacing for more trees
+
+        // Tighter tree density with better spreading - reduced grid spacing.
+        // Scaled with resolution so tree count/spacing stays visually consistent
+        // instead of thinning out at higher internal canvas resolutions.
+        const gridSpacing = 35 * scaleFactor; // Smaller spacing for more trees
         
         // Left side trees
         for (let x = 0; x < width * 0.4; x += gridSpacing) {
@@ -251,7 +262,7 @@ export class Campaign2 extends CampaignBase {
                     trees.push({
                         x: tx,
                         y: ty,
-                        size: 28 + Math.random() * 24,
+                        size: (28 + Math.random() * 24) * scaleFactor,
                         gridX: Math.floor(tx / 10),
                         gridY: Math.floor(ty / 10)
                     });
@@ -286,7 +297,7 @@ export class Campaign2 extends CampaignBase {
                     trees.push({
                         x: tx,
                         y: ty,
-                        size: 28 + Math.random() * 24,
+                        size: (28 + Math.random() * 24) * scaleFactor,
                         gridX: Math.floor(tx / 10),
                         gridY: Math.floor(ty / 10)
                     });
@@ -321,7 +332,7 @@ export class Campaign2 extends CampaignBase {
                     trees.push({
                         x: tx,
                         y: ty,
-                        size: 28 + Math.random() * 24,
+                        size: (28 + Math.random() * 24) * scaleFactor,
                         gridX: Math.floor(tx / 10),
                         gridY: Math.floor(ty / 10)
                     });
@@ -524,25 +535,32 @@ export class Campaign2 extends CampaignBase {
         this.renderBackground(ctx, canvas);
         this.renderTerrain(ctx);
 
-        // Depth-sorted interleave of trees and level-slot castles
-        const renderables = [];
-        if (this.terrainDetails && this.terrainDetails.trees) {
-            for (const tree of this.terrainDetails.trees) {
-                renderables.push({ type: 'tree', y: tree.y, data: tree });
-            }
-        }
-        if (this.levelSlots) {
-            for (let i = 0; i < this.levelSlots.length; i++) {
-                const slot = this.levelSlots[i];
-                if (slot && slot.level) {
-                    renderables.push({ type: 'castle', y: slot.y, index: i });
+        // Depth-sorted interleave of trees and level-slot castles. Tree/castle positions
+        // never change after generation, so the sort only needs to happen once and is
+        // cached instead of re-allocating + re-sorting a few hundred entries every frame.
+        if (!this._sortedRenderables) {
+            const renderables = [];
+            if (this.terrainDetails && this.terrainDetails.trees) {
+                for (const tree of this.terrainDetails.trees) {
+                    const seed = Math.floor((tree.gridX || tree.x) * 0.5 + (tree.gridY || tree.y) * 0.7) % 4;
+                    renderables.push({ type: 'tree', y: tree.y, data: tree, seed });
                 }
             }
+            if (this.levelSlots) {
+                for (let i = 0; i < this.levelSlots.length; i++) {
+                    const slot = this.levelSlots[i];
+                    if (slot && slot.level) {
+                        renderables.push({ type: 'castle', y: slot.y, index: i });
+                    }
+                }
+            }
+            renderables.sort((a, b) => a.y - b.y);
+            this._sortedRenderables = renderables;
         }
-        renderables.sort((a, b) => a.y - b.y);
-        for (const r of renderables) {
+        for (const r of this._sortedRenderables) {
             if (r.type === 'tree') {
-                this.drawMountainTree(ctx, r.data.x, r.data.y, r.data.size, r.data.gridX, r.data.gridY);
+                const sprite = this._getMountainTreeSprite(r.seed, r.data.size);
+                ctx.drawImage(sprite, r.data.x - sprite.anchorX, r.data.y - sprite.anchorY);
             } else {
                 this.renderLevelSlot(ctx, r.index);
             }
@@ -900,6 +918,10 @@ export class Campaign2 extends CampaignBase {
     
     drawMountainTree(ctx, x, y, size, gridX, gridY) {
         const seed = Math.floor((gridX || x) * 0.5 + (gridY || y) * 0.7) % 4;
+        this._drawMountainTreeAtSeed(ctx, x, y, size, seed);
+    }
+
+    _drawMountainTreeAtSeed(ctx, x, y, size, seed) {
         const scaledSize = size * 1.8;
         // Ground shadow — cold dark tint under mountain pine
         ctx.save();
@@ -916,6 +938,33 @@ export class Campaign2 extends CampaignBase {
             case 2: this.renderMountainPineType3(ctx, x, y, scaledSize); break;
             case 3: this.renderMountainPineType4(ctx, x, y, scaledSize); break;
         }
+    }
+
+    /**
+     * Mountain pines are entirely static but were being redrawn with their full
+     * multi-tier vector art every frame for every tree (100s of them) - the dominant
+     * cost of the mountain map's frame time. Bake each unique (seed, size-bucket)
+     * combination to a small offscreen canvas once and blit that instead; still drawn
+     * inline in y-sorted order so depth interleaving with castles is unaffected.
+     */
+    _getMountainTreeSprite(seed, size) {
+        if (!this._treeSpriteCache) this._treeSpriteCache = new Map();
+        const bucketSize = Math.max(4, Math.round(size / 2) * 2); // round to nearest 2px to limit unique sprites
+        const key = seed + '_' + bucketSize;
+        let sprite = this._treeSpriteCache.get(key);
+        if (!sprite) {
+            const scaledBucket = bucketSize * 1.8;
+            const pad = Math.ceil(scaledBucket * 1.1) + 8;
+            const dim = pad * 2;
+            sprite = document.createElement('canvas');
+            sprite.width = dim;
+            sprite.height = dim;
+            this._drawMountainTreeAtSeed(sprite.getContext('2d'), pad, pad, bucketSize, seed);
+            sprite.anchorX = pad;
+            sprite.anchorY = pad;
+            this._treeSpriteCache.set(key, sprite);
+        }
+        return sprite;
     }
     
     // Mountain pine type 1 - tall conifer matching LevelBase render

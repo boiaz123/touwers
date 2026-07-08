@@ -554,21 +554,22 @@ export class AudioManager {
     }
     
     /**
-     * Play a random settlement theme track
-     * Plays a random settlement song and loops it (doesn't switch to other songs)
+     * Play a random settlement theme track, then keep rotating through different
+     * settlement songs (crossfading, never repeating the one that just played) instead
+     * of looping the same track forever.
      * @returns {string} Name of the selected track
      */
     playRandomSettlementTheme() {
-        const track = this._pickRandomTrack(this.getSettlementTracks());
-        if (!track) { console.warn('AudioManager: No settlement tracks found'); return null; }
-        this.musicPlaylistMode = false;
-        this.currentMusicCategory = null;
-        return this.playMusic(track);
+        if (this.getSettlementTracks().length === 0) {
+            console.warn('AudioManager: No settlement tracks found');
+            return null;
+        }
+        return this.playMusicCategory('settlement');
     }
 
     /**
-     * Play a different settlement theme when returning from a level
-     * Ensures we don't play the same track that might still be in memory
+     * Play a different settlement theme when returning from a level (picked to avoid
+     * whatever was just playing), then keep rotating through the settlement playlist.
      * @returns {string} Name of the selected track
      */
     playDifferentSettlementTheme() {
@@ -576,8 +577,8 @@ export class AudioManager {
         if (tracks.length === 0) { console.warn('AudioManager: No settlement tracks found'); return null; }
         const track = this._pickRandomTrack(tracks, this.currentMusicTrack) || this._pickRandomTrack(tracks);
         if (!track) return null;
-        this.musicPlaylistMode = false;
-        this.currentMusicCategory = null;
+        this.musicPlaylistMode = true;
+        this.currentMusicCategory = 'settlement';
         return this.playMusic(track);
     }
 

@@ -109,6 +109,8 @@ export class Campaign1 extends CampaignBase {
         // Invalidate render caches so they rebuild at the current resolution
         this.backgroundCanvas = null;
         this.terrainCanvas = null;
+        this._sortedRenderables = null;
+        this._treeSpriteCache = null;
 
         // Call parent enter
         super.enter();
@@ -265,35 +267,42 @@ export class Campaign1 extends CampaignBase {
         // Generate scattered trees with natural distribution - very dense forest
         const scatteredTrees = [];
         const waterRegions = this.terrainDetails.water;
-        
+
+        // Trees are sized in absolute pixels, so scale them (and their spacing buffers)
+        // against the internal canvas resolution - otherwise a higher resolution setting
+        // renders the same fixed pixel size trees, making them look smaller and sparser
+        // relative to the larger canvas. Matches the scaleFactor convention used by
+        // LevelBase/ResolutionManager (1920px reference width, clamped 0.5x-2.5x).
+        const scaleFactor = Math.max(0.5, Math.min(2.5, width / 1920));
+
         // Placement attempts - perspective-aware sizing (front trees larger)
         const attempts = 15000;
         for (let attempt = 0; attempt < attempts; attempt++) {
             const x = Math.random() * width;
             const y = Math.random() * height;
-            
+
             // Perspective factor: 0 = top of screen (far), 1 = bottom (close)
             const perspectiveFactor = Math.min(1, Math.max(0, y / height));
             // Trees closer to camera are larger - matches 2.5D level rendering
-            const treeSize = 30 + perspectiveFactor * 42 + Math.random() * 10;
-            
+            const treeSize = (30 + perspectiveFactor * 42 + Math.random() * 10) * scaleFactor;
+
             // Check if too close to water
             let tooCloseToWater = false;
             for (const water of waterRegions) {
                 const dist = Math.hypot(x - water.x, y - water.y);
-                const minDist = Math.max(water.radiusX, water.radiusY) + 35;
+                const minDist = Math.max(water.radiusX, water.radiusY) + 35 * scaleFactor;
                 if (dist < minDist) {
                     tooCloseToWater = true;
                     break;
                 }
             }
             if (tooCloseToWater) continue;
-            
+
             // Check if too close to road path
             let tooCloseToRoad = false;
             for (const roadPoint of this.pathPoints) {
                 const dist = Math.hypot(x - roadPoint.x, y - roadPoint.y);
-                if (dist < 55) {
+                if (dist < 55 * scaleFactor) {
                     tooCloseToRoad = true;
                     break;
                 }
@@ -487,25 +496,31 @@ export class Campaign1 extends CampaignBase {
         this.renderBackground(ctx, canvas);
         this.renderTerrain(ctx);
 
-        // Depth-sorted interleave of trees and level-slot castles
-        const renderables = [];
-        if (this.terrainDetails && this.terrainDetails.trees) {
-            for (const tree of this.terrainDetails.trees) {
-                renderables.push({ type: 'tree', y: tree.y, data: tree });
-            }
-        }
-        if (this.levelSlots) {
-            for (let i = 0; i < this.levelSlots.length; i++) {
-                const slot = this.levelSlots[i];
-                if (slot && slot.level) {
-                    renderables.push({ type: 'castle', y: slot.y, index: i });
+        // Depth-sorted interleave of trees and level-slot castles. Tree/castle positions
+        // never change after generation, so the sort only needs to happen once and is
+        // cached instead of re-allocating + re-sorting a few hundred entries every frame.
+        if (!this._sortedRenderables) {
+            const renderables = [];
+            if (this.terrainDetails && this.terrainDetails.trees) {
+                for (const tree of this.terrainDetails.trees) {
+                    renderables.push({ type: 'tree', y: tree.y, data: tree, seed: Math.floor(tree.x + tree.y) % 6 });
                 }
             }
+            if (this.levelSlots) {
+                for (let i = 0; i < this.levelSlots.length; i++) {
+                    const slot = this.levelSlots[i];
+                    if (slot && slot.level) {
+                        renderables.push({ type: 'castle', y: slot.y, index: i });
+                    }
+                }
+            }
+            renderables.sort((a, b) => a.y - b.y);
+            this._sortedRenderables = renderables;
         }
-        renderables.sort((a, b) => a.y - b.y);
-        for (const r of renderables) {
+        for (const r of this._sortedRenderables) {
             if (r.type === 'tree') {
-                this.drawTreeTopDown(ctx, r.data.x, r.data.y, r.data.size, r.data.variant);
+                const sprite = this._getTreeSprite(r.seed, r.data.size);
+                ctx.drawImage(sprite, r.data.x - sprite.anchorX, r.data.y - sprite.anchorY);
             } else {
                 this.renderLevelSlot(ctx, r.index);
             }
@@ -958,7 +973,10 @@ export class Campaign1 extends CampaignBase {
     
     drawTreeTopDown(ctx, x, y, size, variant = 0) {
         const seed = Math.floor(x + y) % 6;
+        this._drawTreeAtSeed(ctx, x, y, size, seed);
+    }
 
+    _drawTreeAtSeed(ctx, x, y, size, seed) {
         // Ground shadow — dark ellipse cast onto forest floor beneath the tree
         ctx.save();
         ctx.globalAlpha = 0.52;
@@ -976,6 +994,33 @@ export class Campaign1 extends CampaignBase {
             case 4: this.drawTreeType5(ctx, x, y, size); break;
             default: this.drawTreeType6(ctx, x, y, size); break;
         }
+    }
+
+    /**
+     * Trees are entirely static (fixed position, no animation), but were being redrawn
+     * with their full multi-path vector art every single frame for every tree (100s of
+     * them) - the dominant cost of the forest map's frame time. Bake each unique
+     * (seed, size-bucket) combination to a small offscreen canvas once and blit that
+     * instead; still drawn inline in y-sorted order so depth interleaving with castles
+     * is unaffected.
+     */
+    _getTreeSprite(seed, size) {
+        if (!this._treeSpriteCache) this._treeSpriteCache = new Map();
+        const bucketSize = Math.max(4, Math.round(size / 2) * 2); // round to nearest 2px to limit unique sprites
+        const key = seed + '_' + bucketSize;
+        let sprite = this._treeSpriteCache.get(key);
+        if (!sprite) {
+            const pad = Math.ceil(bucketSize * 1.5) + 8;
+            const dim = pad * 2;
+            sprite = document.createElement('canvas');
+            sprite.width = dim;
+            sprite.height = dim;
+            this._drawTreeAtSeed(sprite.getContext('2d'), pad, pad, bucketSize, seed);
+            sprite.anchorX = pad;
+            sprite.anchorY = pad;
+            this._treeSpriteCache.set(key, sprite);
+        }
+        return sprite;
     }
 
     drawTreeType1(ctx, x, y, size) {
