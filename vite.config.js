@@ -33,6 +33,20 @@ export default defineConfig({
     outDir: '../dist',
     emptyOutDir: true,
     target: 'es2020',
+    // Gameplay code identifies building/tower/enemy subclasses at runtime via
+    // `instance.constructor.name === 'GoldMine'` (etc.) in ~30 places across
+    // the codebase. esbuild's default minifier renames class declarations,
+    // silently breaking every one of those string comparisons (they always
+    // evaluate to false) while dev mode - unminified, native ESM - works
+    // fine. esbuild's `keepNames` transform option isn't honored by Vite's
+    // build-time minify step, so we use terser instead, which supports
+    // keep_classnames/keep_fnames directly and keeps `.constructor.name`
+    // truthful in the built app.
+    minify: 'terser',
+    terserOptions: {
+      keep_classnames: true,
+      keep_fnames: true,
+    },
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'public/index.html'),
