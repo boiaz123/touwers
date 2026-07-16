@@ -1,5 +1,5 @@
 import { BaseEnemy } from './BaseEnemy.js';
-import { drawTwoSegmentLimb, computeWalkCycle, mirroredLimbAngle, kneeFlex } from './HumanoidLimbRenderer.js';
+import { drawTwoSegmentLimb, computeWalkCycle, mirroredLimbAngle, kneeFlex, solveLegIK } from './HumanoidLimbRenderer.js';
 
 export class BeefyEnemy extends BaseEnemy {
     static BASE_STATS = {
@@ -137,28 +137,29 @@ export class BeefyEnemy extends BaseEnemy {
         ctx.save();
         ctx.translate(this.x, this.y + anim.bodyBob * 1.3);
 
-        // --- LEGS (two-segment, thick and heavy) --- Stance widened (0.28->0.4*baseSize)
-        // and hip-swing amplitude cut way down (0.32->0.14) from the previous version:
-        // with the old narrow stance, the *straight* leg alone at its swing extreme
-        // (no knee bend at all - that's when kneeFlex is exactly 0) already reached far
-        // enough past centerline for the boot ellipses to overlap, regardless of which
-        // way the knee bent - a rigid ~0.96*baseSize-long leg pivoting from a hip only
-        // 0.28*baseSize off center crosses at almost any visible swing angle. Widening
-        // the stance and shrinking the swing keeps the whole cycle's foot placement
-        // clear of the centerline with margin to spare.
-        const leftLegAngle = Math.PI / 2 + anim.legSwing * 0.14;
-        const rightLegAngle = Math.PI / 2 - anim.legSwing * 0.14;
+        // --- LEGS: IK-based foot placement so feet actually lift off the ground ---
+        const legUpper = baseSize * 0.50;
+        const legLower = baseSize * 0.46;
+        const legHipY  = baseSize * 0.38;
+        const groundY  = legHipY + (legUpper + legLower) * 0.96;
+        const strideX  = baseSize * 0.18;
+        const liftY    = baseSize * 0.20;
 
+        const leftFootX = -baseSize * 0.4 + anim.legSwing * strideX;
+        const leftFootY = groundY - kneeFlex(anim, false) * liftY;
+        const leftAngles = solveLegIK(-baseSize * 0.4, legHipY, leftFootX, leftFootY, legUpper, legLower, -1);
         const leftLeg = drawTwoSegmentLimb(
-            ctx, -baseSize * 0.4, baseSize * 0.38,
-            leftLegAngle, baseSize * 0.5,
-            leftLegAngle - kneeFlex(anim, false) * 0.14, baseSize * 0.46,
+            ctx, -baseSize * 0.4, legHipY,
+            leftAngles.upperAngle, legUpper, leftAngles.lowerAngle, legLower,
             { limbColor: v.legStroke, padColor: v.bootColor, limbWidth: baseSize * 0.28, padRadius: baseSize * 0.18, shadowColor: 'rgba(0,0,0,0.2)' }
         );
+
+        const rightFootX = baseSize * 0.4 - anim.legSwing * strideX;
+        const rightFootY = groundY - kneeFlex(anim, true) * liftY;
+        const rightAngles = solveLegIK(baseSize * 0.4, legHipY, rightFootX, rightFootY, legUpper, legLower, -1);
         const rightLeg = drawTwoSegmentLimb(
-            ctx, baseSize * 0.4, baseSize * 0.38,
-            rightLegAngle, baseSize * 0.5,
-            rightLegAngle + kneeFlex(anim, true) * 0.14, baseSize * 0.46,
+            ctx, baseSize * 0.4, legHipY,
+            rightAngles.upperAngle, legUpper, rightAngles.lowerAngle, legLower,
             { limbColor: v.legStroke, padColor: v.bootColor, limbWidth: baseSize * 0.28, padRadius: baseSize * 0.18, shadowColor: 'rgba(0,0,0,0.2)' }
         );
 
@@ -397,10 +398,10 @@ export class BeefyEnemy extends BaseEnemy {
         // --- BOOTS (drawn after legs so they cap the feet) ---
         ctx.fillStyle = v.bootColor;
         ctx.beginPath();
-        ctx.ellipse(leftLeg.endX, leftLeg.endY + baseSize * 0.13, baseSize * 0.18, baseSize * 0.14, anim.legSwing * 0.25, 0, Math.PI * 2);
+        ctx.ellipse(leftLeg.endX, leftLeg.endY + baseSize * 0.10, baseSize * 0.18, baseSize * 0.14, leftAngles.lowerAngle - Math.PI / 2, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(rightLeg.endX, rightLeg.endY + baseSize * 0.13, baseSize * 0.18, baseSize * 0.14, -anim.legSwing * 0.25, 0, Math.PI * 2);
+        ctx.ellipse(rightLeg.endX, rightLeg.endY + baseSize * 0.10, baseSize * 0.18, baseSize * 0.14, rightAngles.lowerAngle - Math.PI / 2, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();

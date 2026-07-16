@@ -154,3 +154,32 @@ export function mirroredLimbAngle(lean, swing, amplitude, isRight) {
     const leftAngle = (Math.PI / 2 + lean) + swing * amplitude;
     return isRight ? Math.PI - leftAngle : leftAngle;
 }
+
+/**
+ * Two-link leg IK: given a hip and a desired foot world-position, returns the
+ * {upperAngle, lowerAngle} pair that drawTwoSegmentLimb needs.
+ *
+ * kneeSign: +1 bends the knee outward-left  (left leg)
+ *           -1 bends the knee outward-right (right leg)
+ *
+ * The distance from hip to foot is clamped to the reachable range so callers
+ * don't need to guard against degenerate configurations.
+ */
+export function solveLegIK(hipX, hipY, footX, footY, upperLen, lowerLen, kneeSign) {
+    const dx = footX - hipX;
+    const dy = footY - hipY;
+    const raw = Math.sqrt(dx * dx + dy * dy);
+    const dist = Math.max(Math.abs(upperLen - lowerLen) + 0.01,
+                          Math.min(upperLen + lowerLen - 0.01, raw));
+    const hipToFoot = Math.atan2(dy, dx);
+    const cosA = (upperLen * upperLen + dist * dist - lowerLen * lowerLen)
+                 / (2 * upperLen * dist);
+    const alpha = Math.acos(Math.max(-1, Math.min(1, cosA)));
+    const upperAngle = hipToFoot + kneeSign * alpha;
+    const elbowX = hipX + Math.cos(upperAngle) * upperLen;
+    const elbowY = hipY + Math.sin(upperAngle) * upperLen;
+    return {
+        upperAngle,
+        lowerAngle: Math.atan2(footY - elbowY, footX - elbowX),
+    };
+}

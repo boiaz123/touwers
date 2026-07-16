@@ -1,5 +1,5 @@
 import { BaseEnemy } from './BaseEnemy.js';
-import { drawTwoSegmentLimb, computeWalkCycle, mirroredLimbAngle, kneeFlex } from './HumanoidLimbRenderer.js';
+import { drawTwoSegmentLimb, computeWalkCycle, mirroredLimbAngle, kneeFlex, solveLegIK } from './HumanoidLimbRenderer.js';
 import { drawTaperedPath } from './TaperedShapeRenderer.js';
 
 export class BasicEnemy extends BaseEnemy {
@@ -114,24 +114,29 @@ export class BasicEnemy extends BaseEnemy {
         ctx.save();
         ctx.translate(this.x, this.y + anim.bodyBob);
 
-        // --- LEGS (two-segment, knee bend tied to the stride) --- Stance widened
-        // (0.25->0.34*baseSize) and swing/knee-bend both cut down (0.3->0.15) - the
-        // previous narrow stance + wide swing let the rigid straight leg (the moment
-        // knee bend is zero, at the swing extremes) reach past centerline once the
-        // boot radius was added on top.
-        const leftLegAngle = Math.PI / 2 + anim.legSwing * 0.15;
-        const rightLegAngle = Math.PI / 2 - anim.legSwing * 0.15;
+        // --- LEGS: IK-based foot placement so feet actually lift off the ground ---
+        const legUpper = baseSize * 0.42;
+        const legLower = baseSize * 0.40;
+        const legHipY  = baseSize * 0.3;
+        const groundY  = legHipY + (legUpper + legLower) * 0.96;
+        const strideX  = baseSize * 0.18;
+        const liftY    = baseSize * 0.22;
 
+        const leftFootX = -baseSize * 0.34 + anim.legSwing * strideX;
+        const leftFootY = groundY - kneeFlex(anim, false) * liftY;
+        const leftAngles = solveLegIK(-baseSize * 0.34, legHipY, leftFootX, leftFootY, legUpper, legLower, -1);
         const leftLeg = drawTwoSegmentLimb(
-            ctx, -baseSize * 0.34, baseSize * 0.3,
-            leftLegAngle, baseSize * 0.42,
-            leftLegAngle - kneeFlex(anim, false) * 0.15, baseSize * 0.4,
+            ctx, -baseSize * 0.34, legHipY,
+            leftAngles.upperAngle, legUpper, leftAngles.lowerAngle, legLower,
             { limbColor: '#2F2F2F', padColor: '#1C1C1C', limbWidth: baseSize * 0.22, padRadius: baseSize * 0.14 }
         );
+
+        const rightFootX = baseSize * 0.34 - anim.legSwing * strideX;
+        const rightFootY = groundY - kneeFlex(anim, true) * liftY;
+        const rightAngles = solveLegIK(baseSize * 0.34, legHipY, rightFootX, rightFootY, legUpper, legLower, -1);
         const rightLeg = drawTwoSegmentLimb(
-            ctx, baseSize * 0.34, baseSize * 0.3,
-            rightLegAngle, baseSize * 0.42,
-            rightLegAngle + kneeFlex(anim, true) * 0.15, baseSize * 0.4,
+            ctx, baseSize * 0.34, legHipY,
+            rightAngles.upperAngle, legUpper, rightAngles.lowerAngle, legLower,
             { limbColor: '#2F2F2F', padColor: '#1C1C1C', limbWidth: baseSize * 0.22, padRadius: baseSize * 0.14 }
         );
 
@@ -253,10 +258,10 @@ export class BasicEnemy extends BaseEnemy {
         // --- BOOTS (drawn after legs so they cap the feet) ---
         ctx.fillStyle = '#1C1C1C';
         ctx.beginPath();
-        ctx.ellipse(leftLeg.endX, leftLeg.endY + baseSize * 0.1, baseSize * 0.17, baseSize * 0.13, 0, 0, Math.PI * 2);
+        ctx.ellipse(leftLeg.endX, leftLeg.endY + baseSize * 0.08, baseSize * 0.17, baseSize * 0.13, leftAngles.lowerAngle - Math.PI / 2, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.ellipse(rightLeg.endX, rightLeg.endY + baseSize * 0.1, baseSize * 0.17, baseSize * 0.13, 0, 0, Math.PI * 2);
+        ctx.ellipse(rightLeg.endX, rightLeg.endY + baseSize * 0.08, baseSize * 0.17, baseSize * 0.13, rightAngles.lowerAngle - Math.PI / 2, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = 'rgba(255,255,255,0.12)';
         ctx.beginPath();

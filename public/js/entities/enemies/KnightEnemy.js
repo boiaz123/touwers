@@ -1,5 +1,5 @@
 import { BaseEnemy } from './BaseEnemy.js';
-import { drawTwoSegmentLimb, computeWalkCycle, kneeFlex } from './HumanoidLimbRenderer.js';
+import { drawTwoSegmentLimb, computeWalkCycle, kneeFlex, solveLegIK } from './HumanoidLimbRenderer.js';
 
 export class KnightEnemy extends BaseEnemy {
     static BASE_STATS = {
@@ -287,21 +287,20 @@ export class KnightEnemy extends BaseEnemy {
         // Draw two-handed sword - uses BOTH hand positions and moves with walk cycle
         this.drawTwoHandedSword(ctx, leftArm.endX, leftArm.endY, rightArm.endX, rightArm.endY, baseSize, leftArmAngle, anim.legSwing * 0.4);
 
-        // --- LEGS WITH LEG ARMOR (heavy, tight-stride gait - small hip swing and a
-        // wider stance than the lighter troops so the feet have clearance and never
-        // cross the centerline; heavy plate armor should read as a short, stiff march
-        // rather than a wide natural stride anyway). Stance widened further (0.34->0.4)
-        // and swing/knee-bend both cut down (0.16->0.14) since even the old "wider"
-        // stance still let the rigid straight leg (the moment knee bend is zero, at
-        // the swing extremes) reach past centerline once the 0.26*baseSize boot radius
-        // is added on top - the boot itself needs the clearance, not just the ankle. ---
-        const leftLegAngle = Math.PI / 2 + anim.legSwing * 0.14;
-        const rightLegAngle = Math.PI / 2 - anim.legSwing * 0.14;
+        // --- LEGS WITH LEG ARMOR: IK-based foot placement for proper stepping ---
+        const legUpper = baseSize * 0.42;
+        const legLower = baseSize * 0.43;
+        const legHipY  = baseSize * 0.35;
+        const groundY  = legHipY + (legUpper + legLower) * 0.96;
+        const strideX  = baseSize * 0.17;
+        const liftY    = baseSize * 0.18;
 
+        const leftFootX = -baseSize * 0.4 + anim.legSwing * strideX;
+        const leftFootY = groundY - kneeFlex(anim, false) * liftY;
+        const leftAngles = solveLegIK(-baseSize * 0.4, legHipY, leftFootX, leftFootY, legUpper, legLower, -1);
         const leftLeg = drawTwoSegmentLimb(
-            ctx, -baseSize * 0.4, baseSize * 0.35,
-            leftLegAngle, baseSize * 0.42,
-            leftLegAngle - kneeFlex(anim, false) * 0.14, baseSize * 0.43,
+            ctx, -baseSize * 0.4, legHipY,
+            leftAngles.upperAngle, legUpper, leftAngles.lowerAngle, legLower,
             { limbColor: '#4A5568', padColor: '#2a2a2a', limbWidth: baseSize * 0.28, padRadius: 0 }
         );
         // Knee joint armor plate (drawn at the elbow/knee position the helper returned)
@@ -315,10 +314,12 @@ export class KnightEnemy extends BaseEnemy {
         ctx.fillStyle = '#3a3a3a';
         ctx.fillRect(leftLeg.elbowX - baseSize * 0.08, leftLeg.elbowY - baseSize * 0.12, baseSize * 0.16, baseSize * 0.08);
 
+        const rightFootX = baseSize * 0.4 - anim.legSwing * strideX;
+        const rightFootY = groundY - kneeFlex(anim, true) * liftY;
+        const rightAngles = solveLegIK(baseSize * 0.4, legHipY, rightFootX, rightFootY, legUpper, legLower, -1);
         const rightLeg = drawTwoSegmentLimb(
-            ctx, baseSize * 0.4, baseSize * 0.35,
-            rightLegAngle, baseSize * 0.42,
-            rightLegAngle + kneeFlex(anim, true) * 0.14, baseSize * 0.43,
+            ctx, baseSize * 0.4, legHipY,
+            rightAngles.upperAngle, legUpper, rightAngles.lowerAngle, legLower,
             { limbColor: '#4A5568', padColor: '#2a2a2a', limbWidth: baseSize * 0.28, padRadius: 0 }
         );
         ctx.fillStyle = '#5A6B7A';
@@ -332,34 +333,36 @@ export class KnightEnemy extends BaseEnemy {
         ctx.fillRect(rightLeg.elbowX - baseSize * 0.08, rightLeg.elbowY - baseSize * 0.12, baseSize * 0.16, baseSize * 0.08);
 
         // --- ARMORED BOOTS ---
+        const lTilt = leftAngles.lowerAngle - Math.PI / 2;
+        const rTilt = rightAngles.lowerAngle - Math.PI / 2;
         ctx.fillStyle = '#2a2a2a';
         ctx.beginPath();
-        ctx.ellipse(leftLeg.endX, leftLeg.endY + baseSize * 0.18, baseSize * 0.2, baseSize * 0.16, 0, 0, Math.PI * 2);
+        ctx.ellipse(leftLeg.endX, leftLeg.endY + baseSize * 0.14, baseSize * 0.2, baseSize * 0.16, lTilt, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#5A6B7A';
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.ellipse(leftLeg.endX, leftLeg.endY + baseSize * 0.18, baseSize * 0.2, baseSize * 0.16, 0, 0, Math.PI * 2);
+        ctx.ellipse(leftLeg.endX, leftLeg.endY + baseSize * 0.14, baseSize * 0.2, baseSize * 0.16, lTilt, 0, Math.PI * 2);
         ctx.stroke();
         ctx.strokeStyle = '#4A5568';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.ellipse(leftLeg.endX, leftLeg.endY + baseSize * 0.05, baseSize * 0.2, baseSize * 0.06, 0, 0, Math.PI * 2);
+        ctx.ellipse(leftLeg.endX, leftLeg.endY + baseSize * 0.03, baseSize * 0.2, baseSize * 0.06, lTilt, 0, Math.PI * 2);
         ctx.stroke();
 
         ctx.fillStyle = '#2a2a2a';
         ctx.beginPath();
-        ctx.ellipse(rightLeg.endX, rightLeg.endY + baseSize * 0.18, baseSize * 0.2, baseSize * 0.16, 0, 0, Math.PI * 2);
+        ctx.ellipse(rightLeg.endX, rightLeg.endY + baseSize * 0.14, baseSize * 0.2, baseSize * 0.16, rTilt, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#5A6B7A';
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.ellipse(rightLeg.endX, rightLeg.endY + baseSize * 0.18, baseSize * 0.2, baseSize * 0.16, 0, 0, Math.PI * 2);
+        ctx.ellipse(rightLeg.endX, rightLeg.endY + baseSize * 0.14, baseSize * 0.2, baseSize * 0.16, rTilt, 0, Math.PI * 2);
         ctx.stroke();
         ctx.strokeStyle = '#4A5568';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.ellipse(rightLeg.endX, rightLeg.endY + baseSize * 0.05, baseSize * 0.2, baseSize * 0.06, 0, 0, Math.PI * 2);
+        ctx.ellipse(rightLeg.endX, rightLeg.endY + baseSize * 0.03, baseSize * 0.2, baseSize * 0.06, rTilt, 0, Math.PI * 2);
         ctx.stroke();
 
         ctx.restore();
