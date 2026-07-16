@@ -298,7 +298,8 @@ export class SettlementHub {
             },
 
             // === GUARD POST QUARTERS (BARRACKS) ===
-            // Left cluster
+            // Left cluster — a couple of these are town houses instead (see
+            // this.townHouses below) so the cluster isn't 8 identical guard posts
             {
                 building: new GuardPost(centerX - 260 * sf, centerY - 20 * sf, 0, 0),
                 scale: 0.65 * sf,
@@ -306,19 +307,7 @@ export class SettlementHub {
                 action: null
             },
             {
-                building: new GuardPost(centerX - 240 * sf, centerY - 60 * sf, 0, 0),
-                scale: 0.65 * sf,
-                clickable: false,
-                action: null
-            },
-            {
                 building: new GuardPost(centerX - 220 * sf, centerY + 20 * sf, 0, 0),
-                scale: 0.65 * sf,
-                clickable: false,
-                action: null
-            },
-            {
-                building: new GuardPost(centerX - 200 * sf, centerY - 30 * sf, 0, 0),
                 scale: 0.65 * sf,
                 clickable: false,
                 action: null
@@ -337,17 +326,26 @@ export class SettlementHub {
                 action: null
             },
             {
-                building: new GuardPost(centerX + 180 * sf, centerY + 35 * sf, 0, 0),
-                scale: 0.65 * sf,
-                clickable: false,
-                action: null
-            },
-            {
                 building: new GuardPost(centerX + 240 * sf, centerY + 20 * sf, 0, 0),
                 scale: 0.65 * sf,
                 clickable: false,
                 action: null
             }
+        ];
+
+        // Decorative town houses — plain descriptors (not building-class instances),
+        // rendered through the Y-sorted interior building pass (see
+        // renderSettlementBuildings) so they layer correctly with everything else.
+        this.townHouses = [
+            // Top row — fills the gap between Magic Academy and Tower Forge
+            { x: centerX - 74 * sf, y: centerY - 116 * sf, scale: 0.85 * sf, variant: 0 },
+            { x: centerX + 2 * sf,  y: centerY - 126 * sf, scale: 0.8 * sf,  variant: 1 },
+            { x: centerX + 77 * sf, y: centerY - 113 * sf, scale: 0.85 * sf, variant: 2 },
+            // Mixed into the left guard-post cluster for variety
+            { x: centerX - 240 * sf, y: centerY - 60 * sf, scale: 0.7 * sf, variant: 1 },
+            { x: centerX - 200 * sf, y: centerY - 30 * sf, scale: 0.65 * sf, variant: 2 },
+            // Mixed into the right guard-post cluster
+            { x: centerX + 180 * sf, y: centerY + 35 * sf, scale: 0.7 * sf, variant: 0 }
         ];
         
         this.setupMouseListeners();
@@ -1984,10 +1982,32 @@ export class SettlementHub {
         const sf = this.stateManager.canvas.width / 1920;
         const rX = 360 * sf;
         const rY = 140 * sf;
-        const total = 64; // candidate positions around the full perimeter
 
-        for (let i = 0; i < total; i++) {
-            const angle = (i / total) * Math.PI * 2;
+        // ── Worn dirt transition band — grounds the wall into the terrain
+        // instead of grass butting straight up against the rampart edge ────────
+        const dirtRadX = rX + 40 * sf;
+        const dirtRadY = rY + 40 * sf;
+        const startAngle = frontHalf ? 0.05 : Math.PI + 0.05;
+        const endAngle   = frontHalf ? Math.PI - 0.05 : Math.PI * 2 - 0.05;
+        ctx.lineCap = 'butt';
+        ctx.strokeStyle = 'rgba(90, 74, 48, 0.28)';
+        ctx.lineWidth = 16 * sf;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, dirtRadX, dirtRadY, 0, startAngle, endAngle);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(112, 96, 62, 0.16)';
+        ctx.lineWidth = 7 * sf;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, dirtRadX - 3 * sf, dirtRadY - 3 * sf, 0, startAngle, endAngle);
+        ctx.stroke();
+
+        // ── Natural clumps of rocks/shrubs/grass tufts, grouped into loose
+        // clusters (rather than one item spaced evenly per slot) so the border
+        // reads as scattered undergrowth instead of a dotted ring ──────────────
+        const clusterTotal = 20; // candidate cluster centers around the full perimeter
+
+        for (let i = 0; i < clusterTotal; i++) {
+            const angle = (i / clusterTotal) * Math.PI * 2;
             const sinA = Math.sin(angle);
             const cosA = Math.cos(angle);
 
@@ -1998,56 +2018,149 @@ export class SettlementHub {
 
             // Skip gate gap (bottom-center) — gate is at angle ≈ π/2
             const normAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-            if (normAngle > 1.26 && normAngle < 1.88) continue; // ~72-108 deg
+            if (normAngle > 1.20 && normAngle < 1.94) continue; // ~69-111 deg
 
             // Skip guard-tower flanking zones (centerX ± ~120 px at the very bottom)
             if (sinA > 0.88 && Math.abs(cosA * rX) < 150) continue;
 
-            // Deterministic LCG values from index — stable across frames
+            // Deterministic LCG seeded from cluster index — stable across frames
             let s = (i * 1664525 + 1013904223) >>> 0;
-            const r1 = (s >>> 0) / 0x100000000;
-            s = (s * 1664525 + 1013904223) >>> 0;
-            const r2 = (s >>> 0) / 0x100000000;
-            s = (s * 1664525 + 1013904223) >>> 0;
-            const r3 = (s >>> 0) / 0x100000000;
+            const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return (s >>> 0) / 0x100000000; };
+            const r1 = rnd(), r2 = rnd(), r3 = rnd();
 
-            // Outset radially from wall surface, with tangential scatter
-            const outset  = 20 + r1 * 32;        // 20-52 px outside the wall
-            const tangent = (r2 - 0.5) * 22;     // ±11 px tangential jitter
-            const wx = centerX + (rX + outset) * cosA + (-sinA) * tangent;
-            const wy = centerY + (rY + outset) * sinA + cosA   * tangent;
+            // Cluster center — outset radially from wall surface with tangential scatter
+            const outset  = 22 + r1 * 30;
+            const tangent = (r2 - 0.5) * 20;
+            const cx = centerX + (rX + outset) * cosA + (-sinA) * tangent;
+            const cy = centerY + (rY + outset) * sinA + cosA   * tangent;
 
-            // Item type: 0 = medium rock, 1 = shrub, 2 = small rock
-            const type = Math.floor(r3 * 3);
+            const itemCount = 2 + Math.floor(r3 * 3); // 2-4 items per clump
 
-            if (type === 1) {
-                // Shrub — reuse existing helper
-                const r = 5 + r2 * 7;
-                this.renderShrub(ctx, wx, wy, r);
-            } else {
-                // Rock (medium or small)
-                const size = type === 0 ? (9 + r1 * 10) : (4 + r2 * 7);
-                const tone = 92 + Math.floor(r3 * 32);
-                const rot  = r1 * 1.5;
+            for (let j = 0; j < itemCount; j++) {
+                const jr1 = rnd(), jr2 = rnd(), jr3 = rnd();
+                // Tight local offset — keeps items visually clumped together
+                const localAngle = jr1 * Math.PI * 2;
+                const localDist = jr2 * 13 * sf;
+                const wx = cx + Math.cos(localAngle) * localDist;
+                const wy = cy + Math.sin(localAngle) * localDist * 0.6;
 
-                ctx.fillStyle = `rgb(${tone},${tone - 11},${tone - 24})`;
-                ctx.beginPath();
-                ctx.ellipse(wx, wy, size * 0.72, size * 0.44, rot, 0, Math.PI * 2);
-                ctx.fill();
+                // First item in every clump anchors as a shrub; the rest are
+                // small rocks/grass tucked beside it, like real undergrowth
+                const type = j === 0 ? 1 : Math.floor(jr3 * 3);
 
-                // Shadow underside
-                ctx.fillStyle = 'rgba(0,0,0,0.22)';
-                ctx.beginPath();
-                ctx.ellipse(wx + 1, wy + 2, size * 0.66, size * 0.30, rot, 0, Math.PI * 2);
-                ctx.fill();
+                if (type === 1) {
+                    const r = (5 + jr2 * 6) * sf;
+                    this.renderShrub(ctx, wx, wy, r);
+                } else if (type === 2) {
+                    // Grass tuft — a few thin curved blades
+                    ctx.strokeStyle = `rgba(${60 + jr3 * 30 | 0}, ${100 + jr3 * 40 | 0}, ${40 + jr3 * 20 | 0}, 0.85)`;
+                    ctx.lineWidth = 1.2 * sf;
+                    for (let b = 0; b < 3; b++) {
+                        const bAngle = -Math.PI / 2 + (b - 1) * 0.5 + (jr1 - 0.5) * 0.3;
+                        const bLen = (6 + jr2 * 5) * sf;
+                        ctx.beginPath();
+                        ctx.moveTo(wx, wy);
+                        ctx.quadraticCurveTo(
+                            wx + Math.cos(bAngle) * bLen * 0.6, wy + Math.sin(bAngle) * bLen * 0.6,
+                            wx + Math.cos(bAngle) * bLen, wy + Math.sin(bAngle) * bLen
+                        );
+                        ctx.stroke();
+                    }
+                } else {
+                    // Small rock
+                    const size = (5 + jr1 * 8) * sf;
+                    const tone = 92 + Math.floor(jr3 * 32);
+                    const rot  = jr1 * 1.5;
 
-                // Highlight
-                ctx.fillStyle = 'rgba(255,255,255,0.13)';
-                ctx.beginPath();
-                ctx.ellipse(wx - size * 0.18, wy - size * 0.14, size * 0.28, size * 0.16, rot, 0, Math.PI * 2);
-                ctx.fill();
+                    ctx.fillStyle = `rgb(${tone},${tone - 11},${tone - 24})`;
+                    ctx.beginPath();
+                    ctx.ellipse(wx, wy, size * 0.72, size * 0.44, rot, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+                    ctx.beginPath();
+                    ctx.ellipse(wx + 1, wy + 2, size * 0.66, size * 0.30, rot, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = 'rgba(255,255,255,0.13)';
+                    ctx.beginPath();
+                    ctx.ellipse(wx - size * 0.18, wy - size * 0.14, size * 0.28, size * 0.16, rot, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
         }
+    }
+
+    /**
+     * Draws a single palisade stick post with weathering variation, a lashing band
+     * (ties it visually to its neighbours instead of reading as a loose stake), and
+     * a contact shadow that grounds it against the earth rampart.
+     */
+    renderPalisadePost(ctx, x, y, i, sf = 1) {
+        const postWidth = 12 * sf;
+        const postHeight = (60 + (i % 3 === 0 ? 6 : 0)) * sf;
+
+        // Deterministic per-post weathering tone — avoids a uniform "extruded" look
+        let s = (i * 2654435761) >>> 0;
+        s = (s * 1664525 + 1013904223) >>> 0;
+        const w = ((s >>> 0) / 0x100000000 - 0.5) * 20;
+
+        // Contact shadow where the post meets the rampart crest
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + 1 * sf, postWidth * 0.75, 3 * sf, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Left side shadow (3D depth)
+        ctx.fillStyle = `rgb(${(74 + w * 0.4) | 0}, ${(58 + w * 0.3) | 0}, ${(42 + w * 0.2) | 0})`;
+        ctx.fillRect(x - postWidth / 2 - 3 * sf, y - postHeight, 3 * sf, postHeight);
+
+        // Main trunk - medium brown, weathered per-post
+        ctx.fillStyle = `rgb(${(107 + w) | 0}, ${(90 + w * 0.8) | 0}, ${(71 + w * 0.6) | 0})`;
+        ctx.fillRect(x - postWidth / 2, y - postHeight, postWidth, postHeight);
+
+        // Right side highlight (3D depth)
+        ctx.fillStyle = `rgb(${(139 + w * 0.5) | 0}, ${(122 + w * 0.4) | 0}, ${(103 + w * 0.3) | 0})`;
+        ctx.fillRect(x + postWidth / 2, y - postHeight, 2 * sf, postHeight);
+
+        // Vertical grain lines for wood texture
+        ctx.strokeStyle = '#4a3a2a';
+        ctx.lineWidth = 1;
+        for (let g = 0; g < postHeight; g += 6 * sf) {
+            ctx.beginPath();
+            ctx.moveTo(x - postWidth / 2 + 2 * sf, y - postHeight + g);
+            ctx.lineTo(x - postWidth / 2 + 2 * sf, y - postHeight + g + 4 * sf);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(x + postWidth / 2 - 2 * sf, y - postHeight + g);
+            ctx.lineTo(x + postWidth / 2 - 2 * sf, y - postHeight + g + 4 * sf);
+            ctx.stroke();
+        }
+
+        // Rope lashing — sits at the same height as the horizontal connecting rail,
+        // reinforcing that the posts read as one bound structure, not loose stakes
+        const lashY = y - postHeight * 0.68;
+        ctx.strokeStyle = '#5c4527';
+        ctx.lineWidth = 2.2 * sf;
+        ctx.beginPath();
+        ctx.moveTo(x - postWidth / 2 - 3 * sf, lashY - 1.2 * sf);
+        ctx.lineTo(x + postWidth / 2 + 2 * sf, lashY - 1.2 * sf);
+        ctx.stroke();
+        ctx.strokeStyle = '#3c2c18';
+        ctx.lineWidth = 1 * sf;
+        ctx.beginPath();
+        ctx.moveTo(x - postWidth / 2 - 3 * sf, lashY + 1.3 * sf);
+        ctx.lineTo(x + postWidth / 2 + 2 * sf, lashY + 1.3 * sf);
+        ctx.stroke();
+
+        // Post top cap - pointed
+        ctx.fillStyle = '#5a4a37';
+        ctx.beginPath();
+        ctx.moveTo(x - postWidth / 2, y - postHeight);
+        ctx.lineTo(x, y - postHeight - 5 * sf);
+        ctx.lineTo(x + postWidth / 2, y - postHeight);
+        ctx.fill();
     }
 
     renderEllipticalPalisade(ctx, canvas, centerX, centerY) {
@@ -2144,7 +2257,38 @@ export class SettlementHub {
         ctx.beginPath();
         ctx.ellipse(centerX, centerY - 3, radiusX + 3, radiusY + 1, 0, 0, Math.PI * 2);
         ctx.fill();
-        
+
+        // ── STONE FOOTING COURSE — grey stone blocks running the full perimeter
+        // just beneath the wood posts, in the same palette as the guard-tower and
+        // gate bases (#A9A9A9/#696969). This is what visually ties the wall, the
+        // gate and the two flanking towers together into one defensive structure
+        // instead of three unrelated props sharing a canvas.
+        const footingSpacing = 22;
+        const footingPerimeter = Math.PI * (radiusX + radiusY) * 1.5;
+        const footingCount = Math.ceil(footingPerimeter / footingSpacing);
+        for (let i = 0; i < footingCount; i++) {
+            const angle = (i / footingCount) * Math.PI * 2;
+            const fx = centerX + radiusX * Math.cos(angle);
+            const fy = centerY + radiusY * Math.sin(angle) - 1;
+
+            // Skip the gate gap so footing doesn't cut across the archway
+            if (Math.abs(fx - centerX) < 52 && fy > centerY + radiusY - 20) continue;
+
+            const tangent = Math.atan2(radiusY * Math.cos(angle), -radiusX * Math.sin(angle));
+            const blockW = 15, blockH = 7;
+            ctx.save();
+            ctx.translate(fx, fy);
+            ctx.rotate(tangent);
+            ctx.fillStyle = (i % 2 === 0) ? '#8a8a8a' : '#767676';
+            ctx.fillRect(-blockW / 2, -blockH / 2, blockW, blockH);
+            ctx.strokeStyle = '#4a4a4a';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(-blockW / 2, -blockH / 2, blockW, blockH);
+            ctx.fillStyle = 'rgba(255,255,255,0.12)';
+            ctx.fillRect(-blockW / 2, -blockH / 2, blockW, 1.5);
+            ctx.restore();
+        }
+
         // Draw vertical STICK posts around the ellipse with 3D trunk texture
         // Render in proper z-order: back posts first, then sides, then front for natural layering
         const postSpacing = 18; // Vertical sticks
@@ -2173,46 +2317,7 @@ export class SettlementHub {
         // Back-arc posts only — front-arc posts are re-drawn last via renderFrontWallOverlay
         // so they always appear in front of interior settlement buildings
         posts.filter(p => p.y <= centerY).forEach(post => {
-            const { x, y, i } = post;
-            
-            // Draw 3D trunk with texture - alternate slightly taller posts for handbuilt look
-            const postWidth = 12;
-            const postHeight = 60 + (i % 3 === 0 ? 6 : 0);
-            
-            // Left side shadow (3D depth)
-            ctx.fillStyle = '#4a3a2a';
-            ctx.fillRect(x - postWidth/2 - 3, y - postHeight, 3, postHeight);
-            
-            // Main trunk - medium brown
-            ctx.fillStyle = '#6b5a47';
-            ctx.fillRect(x - postWidth/2, y - postHeight, postWidth, postHeight);
-            
-            // Right side highlight (3D depth)
-            ctx.fillStyle = '#8b7a67';
-            ctx.fillRect(x + postWidth/2, y - postHeight, 2, postHeight);
-            
-            // Vertical grain lines for wood texture
-            ctx.strokeStyle = '#4a3a2a';
-            ctx.lineWidth = 1;
-            for (let g = 0; g < postHeight; g += 6) {
-                ctx.beginPath();
-                ctx.moveTo(x - postWidth/2 + 2, y - postHeight + g);
-                ctx.lineTo(x - postWidth/2 + 2, y - postHeight + g + 4);
-                ctx.stroke();
-                
-                ctx.beginPath();
-                ctx.moveTo(x + postWidth/2 - 2, y - postHeight + g);
-                ctx.lineTo(x + postWidth/2 - 2, y - postHeight + g + 4);
-                ctx.stroke();
-            }
-            
-            // Post top cap - pointed
-            ctx.fillStyle = '#5a4a37';
-            ctx.beginPath();
-            ctx.moveTo(x - postWidth/2, y - postHeight);
-            ctx.lineTo(x, y - postHeight - 5);
-            ctx.lineTo(x + postWidth/2, y - postHeight);
-            ctx.fill();
+            this.renderPalisadePost(ctx, post.x, post.y, post.i, sf);
         });
         // Note: horizontal rail, gate, and guard towers are rendered in renderFrontWallOverlay
     }
@@ -2246,39 +2351,7 @@ export class SettlementHub {
         posts.sort((a, b) => a.y - b.y);
 
         posts.forEach(post => {
-            const { x, y, i } = post;
-            const postWidth = 12 * sf;
-            const postHeight = (60 + (i % 3 === 0 ? 6 : 0)) * sf;
-
-            ctx.fillStyle = '#4a3a2a';
-            ctx.fillRect(x - postWidth/2 - 3 * sf, y - postHeight, 3 * sf, postHeight);
-
-            ctx.fillStyle = '#6b5a47';
-            ctx.fillRect(x - postWidth/2, y - postHeight, postWidth, postHeight);
-
-            ctx.fillStyle = '#8b7a67';
-            ctx.fillRect(x + postWidth/2, y - postHeight, 2 * sf, postHeight);
-
-            ctx.strokeStyle = '#4a3a2a';
-            ctx.lineWidth = 1;
-            for (let g = 0; g < postHeight; g += 6 * sf) {
-                ctx.beginPath();
-                ctx.moveTo(x - postWidth/2 + 2 * sf, y - postHeight + g);
-                ctx.lineTo(x - postWidth/2 + 2 * sf, y - postHeight + g + 4 * sf);
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.moveTo(x + postWidth/2 - 2 * sf, y - postHeight + g);
-                ctx.lineTo(x + postWidth/2 - 2 * sf, y - postHeight + g + 4 * sf);
-                ctx.stroke();
-            }
-
-            ctx.fillStyle = '#5a4a37';
-            ctx.beginPath();
-            ctx.moveTo(x - postWidth/2, y - postHeight);
-            ctx.lineTo(x, y - postHeight - 5 * sf);
-            ctx.lineTo(x + postWidth/2, y - postHeight);
-            ctx.fill();
+            this.renderPalisadePost(ctx, post.x, post.y, post.i, sf);
         });
 
         // Horizontal connecting rail — drawn over all posts and interior content
@@ -2293,10 +2366,13 @@ export class SettlementHub {
         ctx.ellipse(centerX, centerY - 48 * sf, radiusX - 6 * sf, radiusY - 6 * sf, 0, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Gate and guard towers — always topmost front elements
+        // Gate and guard towers — always topmost front elements. Towers sit
+        // right up against the gate posts so the whole thing reads as one
+        // gatehouse structure (tower-archway-tower) instead of a plain gate
+        // with two separate towers elsewhere along the wall.
         this.renderIntegratedGate(ctx, centerX, centerY + radiusY - 5 * sf, sf);
-        this.renderGuardTowerWithBase(ctx, centerX - 120 * sf, centerY + radiusY + 15 * sf, sf);
-        this.renderGuardTowerWithBase(ctx, centerX + 120 * sf, centerY + radiusY + 15 * sf, sf);
+        this.renderGuardTowerWithBase(ctx, centerX - 68 * sf, centerY + radiusY + 15 * sf, sf, -1);
+        this.renderGuardTowerWithBase(ctx, centerX + 68 * sf, centerY + radiusY + 15 * sf, sf, 1);
     }
 
     renderIntegratedGate(ctx, x, y, sf = 1) {
@@ -2307,7 +2383,28 @@ export class SettlementHub {
         ctx.translate(-x, -y);
         const gateWidth = 55;
         const gateHeight = 60;
-        
+
+        // Stone footing beneath the gate — same grey palette as the guard-tower
+        // bases (#A9A9A9/#696969), spanning tower-to-tower so the gate reads as
+        // part of the same structure as the towers flanking it, not a separate
+        // wooden prop. The towers redraw their own footing on top of the outer
+        // ends, so it's safe to run this the full width between them.
+        const footW = 184;
+        ctx.fillStyle = '#A9A9A9';
+        ctx.fillRect(x - footW / 2, y, footW, 9);
+        ctx.fillStyle = '#D3D3D3';
+        ctx.fillRect(x - footW / 2, y, footW, 2);
+        ctx.strokeStyle = '#696969';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - footW / 2, y, footW, 9);
+        for (let i = 1; i < 8; i++) {
+            const bx = x - footW / 2 + (footW * i / 8);
+            ctx.beginPath();
+            ctx.moveTo(bx, y);
+            ctx.lineTo(bx, y + 9);
+            ctx.stroke();
+        }
+
         // Posts flanking gate (left and right)
         // Left post
         ctx.fillStyle = '#4a3a2a';
@@ -2357,47 +2454,6 @@ export class SettlementHub {
         ctx.fillRect(x + gateWidth/2 + 2, y - gateHeight + 10, 4, 5);
         ctx.fillRect(x + gateWidth/2 + 2, y - 18, 4, 5);
         
-        // Fill gaps between gate and wall with wall pieces (left and right)
-        const wallGapSize = 8;
-        const wallGapHeight = gateHeight;
-        
-        // Left wall gap - small wooden fill posts
-        for (let i = 0; i < 3; i++) {
-            const fillX = x - gateWidth/2 - 5 - (i * 8);
-            ctx.fillStyle = '#6b5a47';
-            ctx.fillRect(fillX, y - gateHeight, 6, wallGapHeight);
-            
-            ctx.strokeStyle = '#4a3a2a';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(fillX, y - gateHeight, 6, wallGapHeight);
-            
-            // Wood grain
-            for (let g = 0; g < wallGapHeight; g += 8) {
-                ctx.beginPath();
-                ctx.moveTo(fillX + 1, y - gateHeight + g);
-                ctx.lineTo(fillX + 5, y - gateHeight + g);
-                ctx.stroke();
-            }
-        }
-        
-        // Right wall gap - small wooden fill posts
-        for (let i = 0; i < 3; i++) {
-            const fillX = x + gateWidth/2 + 5 + (i * 8);
-            ctx.fillStyle = '#6b5a47';
-            ctx.fillRect(fillX, y - gateHeight, 6, wallGapHeight);
-
-            ctx.strokeStyle = '#4a3a2a';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(fillX, y - gateHeight, 6, wallGapHeight);
-
-            // Wood grain
-            for (let g = 0; g < wallGapHeight; g += 8) {
-                ctx.beginPath();
-                ctx.moveTo(fillX + 1, y - gateHeight + g);
-                ctx.lineTo(fillX + 5, y - gateHeight + g);
-                ctx.stroke();
-            }
-        }
         ctx.restore();
     }
 
@@ -2577,8 +2633,12 @@ export class SettlementHub {
         ctx.stroke();
     }
 
-    renderGuardTowerWithBase(ctx, x, y, sf = 1) {
-        // Guard tower styled like BasicTower - wooden tower with stone base, connected to ground
+    renderGuardTowerWithBase(ctx, x, y, sf = 1, side = 1) {
+        // Guard tower styled like BasicTower - wooden tower with stone base, connected to ground.
+        // `side` picks which way the 3D depth panels turn: +1 turns them to the
+        // right (use for a tower on the right of the gate), -1 turns them to the
+        // left (use for a tower on the left) — so the "turned corner" always
+        // faces outward, away from the gate, instead of jutting into it.
         ctx.save();
         ctx.translate(x, y);
         ctx.scale(sf, sf);
@@ -2586,12 +2646,12 @@ export class SettlementHub {
         const towerSize = 50;
         const towerHeight = 70;
         const baseSize = 60;
-        const baseHeight = 12;
+        const baseHeight = 16;
         const platformSize = 55;
         const platformHeight = 8;
         const roofSize = 58;
         const roofHeight = 30;
-        
+
         // Shadow - connected to ground
         ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.save();
@@ -2599,30 +2659,59 @@ export class SettlementHub {
         ctx.scale(1, 0.3);
         ctx.fillRect(-baseSize/2, -baseSize/2, baseSize, baseSize);
         ctx.restore();
-        
-        // Stone base platform - connected to ground
-        ctx.fillStyle = '#A9A9A9';
+
+        // Outward-side depth strip — a plain flush-to-the-ground rectangle
+        // (same top/bottom as the front face, just narrower and darker), not a
+        // skewed diagonal panel, so there's no floating/mismatched-perspective
+        // edge where it should meet the ground.
+        const baseDepth = baseSize * 0.08;
+        const edgeX = x + side * baseSize / 2;
+        ctx.fillStyle = '#7c7c7c';
+        ctx.fillRect(Math.min(edgeX, edgeX + side * baseDepth), y - baseHeight, baseDepth, baseHeight);
+        ctx.strokeStyle = '#4a4a4a';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(Math.min(edgeX, edgeX + side * baseDepth), y - baseHeight, baseDepth, baseHeight);
+
+        // Stone base platform - connected to ground, gradient shaded so the
+        // outward side reads slightly darker (in shadow) than the gate-facing side
+        const baseGrad = ctx.createLinearGradient(x - side * baseSize / 2, 0, x + side * baseSize / 2, 0);
+        baseGrad.addColorStop(0, '#c2c2c2');
+        baseGrad.addColorStop(0.55, '#A9A9A9');
+        baseGrad.addColorStop(1, '#8c8c8c');
+        ctx.fillStyle = baseGrad;
         ctx.fillRect(x - baseSize/2, y - baseHeight, baseSize, baseHeight);
-        
+
         // Base top highlight
         ctx.fillStyle = '#D3D3D3';
         ctx.fillRect(x - baseSize/2, y - baseHeight, baseSize, 2);
-        
-        // Stone base detail
+
+        // Coursed masonry blocks — three offset rows instead of a single flat stroke
         ctx.strokeStyle = '#696969';
         ctx.lineWidth = 1;
+        const courseRows = 3;
+        const courseH = baseHeight / courseRows;
+        for (let row = 0; row < courseRows; row++) {
+            const rowY = y - baseHeight + row * courseH;
+            const off = (row % 2 === 0) ? 0 : baseSize * 0.08;
+            const blockW = baseSize / 6;
+            for (let col = -1; col < 7; col++) {
+                const bx1 = Math.max(x - baseSize / 2 + col * blockW + off, x - baseSize / 2);
+                const bx2 = Math.min(x - baseSize / 2 + (col + 1) * blockW + off, x + baseSize / 2);
+                if (bx2 > bx1) ctx.strokeRect(bx1, rowY, bx2 - bx1, courseH);
+            }
+        }
         ctx.strokeRect(x - baseSize/2, y - baseHeight, baseSize, baseHeight);
-        
+
         // Main tower body - wood
         const towerY = y - baseHeight - towerHeight;
-        
+
         // Wooden posts at corners — left post at outer left edge, right post at outer right edge
         ctx.fillStyle = '#7a3f18';
         const postSize = 6;
         const postOffset = towerSize/2 - postSize;
         ctx.fillRect(x - towerSize/2, towerY, postSize, towerHeight);  // left post at outer edge
         ctx.fillRect(x + postOffset, towerY, postSize, towerHeight);   // right post at outer edge
-        
+
         // Wood grain lines across full width
         ctx.strokeStyle = '#5a2f10';
         ctx.lineWidth = 1;
@@ -2633,11 +2722,16 @@ export class SettlementHub {
             ctx.lineTo(x + postOffset + postSize, grainY);
             ctx.stroke();
         }
-        
-        // Tower main fill between posts
-        ctx.fillStyle = '#8B7355';
+
+        // Tower main fill between posts — gradient shaded for a rounded read
+        // instead of a single flat tone
+        const towerGrad = ctx.createLinearGradient(x - towerSize / 2, 0, x + towerSize / 2, 0);
+        towerGrad.addColorStop(0, '#9c826a');
+        towerGrad.addColorStop(0.5, '#8B7355');
+        towerGrad.addColorStop(1, '#6f5a45');
+        ctx.fillStyle = towerGrad;
         ctx.fillRect(x - towerSize/2 + postSize, towerY, towerSize - (postSize * 2), towerHeight);
-        
+
         // Tower stones/planks
         ctx.strokeStyle = '#696969';
         ctx.lineWidth = 1;
@@ -2647,7 +2741,19 @@ export class SettlementHub {
             ctx.lineTo(x + towerSize/2, towerY + i);
             ctx.stroke();
         }
-        
+
+        // Corner knee-braces near the base — real timber-framed structural detail
+        ctx.strokeStyle = '#5a2f10';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - towerSize / 2 + postSize, towerY + towerHeight * 0.78);
+        ctx.lineTo(x - towerSize / 2 + postSize + 10, towerY + towerHeight * 0.98);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + towerSize / 2 - postSize, towerY + towerHeight * 0.78);
+        ctx.lineTo(x + towerSize / 2 - postSize - 10, towerY + towerHeight * 0.98);
+        ctx.stroke();
+
         // Metal corner plates — symmetric on both sides
         ctx.fillStyle = '#606060';
         ctx.fillRect(x - towerSize/2 - 1, towerY, 5, 12);
@@ -2727,6 +2833,25 @@ export class SettlementHub {
             ctx.lineTo(x + hw, sy);
             ctx.stroke();
         }
+
+        // Roof depth wedge — wraps the roof around the outward side for a
+        // fuller, less paper-thin silhouette
+        ctx.fillStyle = '#3d2010';
+        ctx.beginPath();
+        ctx.moveTo(x + side * roofHalfW, roofBaseY);
+        ctx.lineTo(x + side * (roofHalfW + 6), roofBaseY - 3);
+        ctx.lineTo(x + side * 6, roofPeakY - 3);
+        ctx.lineTo(x, roofPeakY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Eave highlight
+        ctx.strokeStyle = '#7a4a28';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x - roofHalfW, roofBaseY);
+        ctx.lineTo(x + roofHalfW, roofBaseY);
+        ctx.stroke();
 
         // Flagpole at peak
         ctx.strokeStyle = '#5a341d';
@@ -2843,6 +2968,11 @@ export class SettlementHub {
 
         // Cache filtered/sorted subsets — buildings never move or change identity at runtime.
         if (!this._sbCache) {
+            // Town houses are plain decorative props (not building-class instances), but they
+            // still need to Y-sort and paint alongside the real buildings/guard posts so the
+            // wall/palisade — baked once, behind everything — never ends up drawn on top of
+            // them (which happened when they lived in the tightly-clipped static details layer).
+            const houseItems = (this.townHouses || []).map(h => ({ isHouse: true, house: h }));
             this._sbCache = {
                 headers: {
                     'TrainingGrounds': 'Campaign',
@@ -2852,7 +2982,8 @@ export class SettlementHub {
                 },
                 interior: this.settlementBuildings
                     .filter(item => !item.exterior && item.building)
-                    .sort((a, b) => a.building.y - b.building.y),
+                    .concat(houseItems)
+                    .sort((a, b) => (a.isHouse ? a.house.y : a.building.y) - (b.isHouse ? b.house.y : b.building.y)),
                 exterior: this.settlementBuildings.filter(item => item.exterior && item.building),
                 headerItems: this.settlementBuildings
                     .filter(item => !item.exterior && item.clickable && item.action && item.building),
@@ -2862,7 +2993,9 @@ export class SettlementHub {
 
         const renderBody = (item) => {
             ctx.globalAlpha = this.contentOpacity;
-            if (item.building instanceof TrainingGrounds) {
+            if (item.isHouse) {
+                this.renderTownHouse(ctx, item.house.x, item.house.y, item.house.scale, item.house.variant);
+            } else if (item.building instanceof TrainingGrounds) {
                 this.renderTrainingGroundsPreview(ctx, item.building);
             } else {
                 const size = item.scale * 4;
@@ -3227,6 +3360,13 @@ export class SettlementHub {
     }
 
     renderSettlementDetails(ctx, centerX, centerY) {
+        // Note: town houses used to be drawn here, but this layer is clipped
+        // tightly to the wall ellipse and baked *before* the buildings pass —
+        // that clipped off house roofs/chimneys and let the wall render on top
+        // of them. They now live in this.townHouses and render through the
+        // Y-sorted renderSettlementBuildings('interior-all') pass instead,
+        // alongside the real buildings and guard posts (see enter()).
+
         // ── CRATES near TowerForge (right side) ────────────────────────────────
         this.renderCrate(ctx, centerX + 180, centerY - 65, 12);
         this.renderCrate(ctx, centerX + 194, centerY - 65, 12);
@@ -3401,6 +3541,198 @@ export class SettlementHub {
         ctx.fill();
     }
 
+    /**
+     * Small civilian cottage used to fill in the settlement between the main
+     * clickable buildings — timber-framed walls, a peaked thatch/shingle roof,
+     * a window with shutters and a flower box, and a chimney with static smoke.
+     */
+    renderTownHouse(ctx, x, y, scale = 1, variant = 0) {
+        const palettes = [
+            { wall: '#e6dab8', wallShade: '#c9bb92', wallLight: '#f2ead2', beam: '#4a3524', roofLit: '#c9a24a', roofShade: '#8f7025', door: '#5a3a1f', chimney: '#8a8378' },
+            { wall: '#d8b98a', wallShade: '#b8996a', wallLight: '#e6cea0', beam: '#3a2a1a', roofLit: '#9a4226', roofShade: '#6a2a16', door: '#3a2410', chimney: '#7a7268' },
+            { wall: '#cfc7a8', wallShade: '#aba282', wallLight: '#ddd6ba', beam: '#3f4a2c', roofLit: '#748c4e', roofShade: '#4c5e32', door: '#4a3018', chimney: '#8a8378' }
+        ];
+        const p = palettes[variant % palettes.length];
+
+        const w = 48 * scale;
+        const h = 44 * scale;
+
+        // Ground shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.26)';
+        ctx.beginPath();
+        ctx.ellipse(x + w * 0.06, y + h * 0.4, w * 0.56, h * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Stone footing — ties the house to the same material language as the
+        // town wall/gate/tower footing
+        ctx.fillStyle = '#8c8c8c';
+        ctx.fillRect(x - w * 0.5, y + h * 0.22, w, h * 0.11);
+        ctx.fillStyle = '#a8a8a8';
+        ctx.fillRect(x - w * 0.5, y + h * 0.22, w, h * 0.03);
+        ctx.strokeStyle = '#555555';
+        ctx.lineWidth = 0.7 * scale;
+        ctx.strokeRect(x - w * 0.5, y + h * 0.22, w, h * 0.11);
+
+        // Wall geometry
+        const wl = x - w * 0.44, wr = x + w * 0.44;
+        const wt = y - h * 0.2, wb = y + h * 0.22;
+        const wallW = wr - wl, wallH = wb - wt;
+        const depthW = w * 0.1;
+
+        // Right depth panel — turns the corner for a 3D read
+        ctx.fillStyle = p.wallShade;
+        ctx.beginPath();
+        ctx.moveTo(wr, wt);
+        ctx.lineTo(wr + depthW, wt - depthW * 0.5);
+        ctx.lineTo(wr + depthW, wb - depthW * 0.5);
+        ctx.lineTo(wr, wb);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = p.beam;
+        ctx.lineWidth = 0.8 * scale;
+        ctx.stroke();
+
+        // Front wall face
+        const wallGrad = ctx.createLinearGradient(wl, 0, wr, 0);
+        wallGrad.addColorStop(0, p.wallLight);
+        wallGrad.addColorStop(0.5, p.wall);
+        wallGrad.addColorStop(1, p.wallShade);
+        ctx.fillStyle = wallGrad;
+        ctx.fillRect(wl, wt, wallW, wallH);
+        ctx.strokeStyle = p.beam;
+        ctx.lineWidth = 1.3 * scale;
+        ctx.strokeRect(wl, wt, wallW, wallH);
+
+        // Half-timber frame accents
+        ctx.strokeStyle = p.beam;
+        ctx.lineWidth = 2 * scale;
+        ctx.beginPath(); ctx.moveTo(wl + wallW * 0.28, wt); ctx.lineTo(wl + wallW * 0.28, wb); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(wl + wallW * 0.72, wt); ctx.lineTo(wl + wallW * 0.72, wb); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(wl, wt + wallH * 0.4); ctx.lineTo(wr, wt + wallH * 0.4); ctx.stroke();
+
+        // Arched door
+        const dW = wallW * 0.26, dH = wallH * 0.62;
+        const dX = x - wallW * 0.18 - dW / 2, dYb = wb, dYt = dYb - dH;
+        ctx.fillStyle = p.door;
+        ctx.beginPath();
+        ctx.moveTo(dX, dYb);
+        ctx.lineTo(dX, dYt + dW * 0.5);
+        ctx.arc(dX + dW / 2, dYt + dW * 0.5, dW / 2, Math.PI, 0);
+        ctx.lineTo(dX + dW, dYb);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = p.beam;
+        ctx.lineWidth = 1 * scale;
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = scale * 0.6;
+        ctx.beginPath(); ctx.moveTo(dX + dW * 0.5, dYt + dW * 0.5); ctx.lineTo(dX + dW * 0.5, dYb); ctx.stroke();
+
+        // Window with shutters + flower box
+        const winCX = x + wallW * 0.22;
+        const winW = wallW * 0.22, winH = wallH * 0.28;
+        const winX = winCX - winW / 2, winY = wt + wallH * 0.12;
+        ctx.fillStyle = '#8ec6dc';
+        ctx.fillRect(winX, winY, winW, winH);
+        ctx.strokeStyle = p.beam;
+        ctx.lineWidth = 1 * scale;
+        ctx.strokeRect(winX, winY, winW, winH);
+        ctx.beginPath(); ctx.moveTo(winCX, winY); ctx.lineTo(winCX, winY + winH); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(winX, winY + winH / 2); ctx.lineTo(winX + winW, winY + winH / 2); ctx.stroke();
+        // Shutters
+        ctx.fillStyle = p.roofShade;
+        ctx.fillRect(winX - winW * 0.28, winY, winW * 0.22, winH);
+        ctx.fillRect(winX + winW * 1.06, winY, winW * 0.22, winH);
+        // Flower box
+        ctx.fillStyle = '#6b4a2a';
+        ctx.fillRect(winX - 1, winY + winH + 1, winW + 2, winH * 0.18);
+        const flowerColors = ['#e05a5a', '#f0c020', '#e574d6'];
+        for (let i = 0; i < 3; i++) {
+            ctx.fillStyle = flowerColors[(variant + i) % flowerColors.length];
+            ctx.beginPath();
+            ctx.arc(winX + winW * (0.2 + i * 0.3), winY + winH + 2, 1.6 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Roof
+        const roofBase = wt;
+        const roofPeak = y - h * 0.62;
+        const rHW = w * 0.56;
+
+        ctx.fillStyle = p.roofLit;
+        ctx.beginPath();
+        ctx.moveTo(x - rHW, roofBase);
+        ctx.lineTo(x, roofPeak);
+        ctx.lineTo(x, roofBase);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = p.roofShade;
+        ctx.beginPath();
+        ctx.moveTo(x, roofPeak);
+        ctx.lineTo(x + rHW, roofBase);
+        ctx.lineTo(x, roofBase);
+        ctx.closePath();
+        ctx.fill();
+
+        // Thatch/shingle texture rows
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.lineWidth = scale;
+        const roofH = roofBase - roofPeak;
+        for (let t = 0.22; t < 1.0; t += 0.16) {
+            const ly = roofPeak + roofH * t;
+            ctx.beginPath();
+            ctx.moveTo(x - rHW * t, ly);
+            ctx.lineTo(x + rHW * t, ly);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = p.beam;
+        ctx.lineWidth = 1.4 * scale;
+        ctx.beginPath();
+        ctx.moveTo(x - rHW, roofBase);
+        ctx.lineTo(x, roofPeak);
+        ctx.lineTo(x + rHW, roofBase);
+        ctx.stroke();
+        // Eave
+        ctx.strokeStyle = p.roofShade;
+        ctx.lineWidth = 2 * scale;
+        ctx.beginPath(); ctx.moveTo(x - rHW, roofBase); ctx.lineTo(x + rHW, roofBase); ctx.stroke();
+        // Ridge cap
+        ctx.fillStyle = p.roofLit;
+        ctx.fillRect(x - w * 0.04, roofPeak - h * 0.015, w * 0.08, h * 0.03);
+
+        // Roof depth side slope
+        ctx.fillStyle = p.roofShade;
+        ctx.beginPath();
+        ctx.moveTo(wr, roofBase);
+        ctx.lineTo(wr + depthW, roofBase - depthW * 0.5);
+        ctx.lineTo(x + depthW, roofPeak - depthW * 0.5);
+        ctx.lineTo(x, roofPeak);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = p.beam;
+        ctx.lineWidth = scale * 0.8;
+        ctx.stroke();
+
+        // Chimney with a soft static smoke wisp
+        const chimX = x + rHW * 0.42;
+        const chimYb = roofPeak + roofH * 0.42;
+        const chimYt = chimYb - h * 0.34;
+        ctx.fillStyle = p.chimney;
+        ctx.fillRect(chimX - w * 0.05, chimYt, w * 0.1, chimYb - chimYt);
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.lineWidth = 0.7 * scale;
+        ctx.strokeRect(chimX - w * 0.05, chimYt, w * 0.1, chimYb - chimYt);
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(chimX - w * 0.06, chimYt, w * 0.12, h * 0.02);
+
+        [0, 1, 2].forEach(k => {
+            ctx.fillStyle = `rgba(220,220,220,${0.22 - k * 0.06})`;
+            ctx.beginPath();
+            ctx.arc(chimX + k * 2.5 * scale, chimYt - k * 8 * scale - 4, (3 + k * 1.6) * scale, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
     renderSmallWatchTower(ctx, x, y, size) {
         // Small tower structure similar to guard post but just decorative
         // Base platform
@@ -3522,68 +3854,8 @@ export class SettlementHub {
             ctx.restore();
         };
 
-        // Helper: paved strip between two points
-        const drawPavedStrip = (p0, p1, width) => {
-            const dx = p1.x - p0.x;
-            const dy = p1.y - p0.y;
-            const angle = Math.atan2(dy, dx);
-            const hw = width * 0.5;
-            const perpX = -Math.sin(angle) * hw;
-            const perpY =  Math.cos(angle) * hw;
-
-            const bx = Math.min(p0.x, p1.x) - hw;
-            const by = Math.min(p0.y, p1.y) - hw;
-            const bw = Math.abs(p1.x - p0.x) + hw * 2;
-            const bh = Math.abs(p1.y - p0.y) + hw * 2;
-
-            drawPaverRegion(() => {
-                ctx.beginPath();
-                ctx.moveTo(p0.x + perpX, p0.y + perpY);
-                ctx.lineTo(p1.x + perpX, p1.y + perpY);
-                ctx.lineTo(p1.x - perpX, p1.y - perpY);
-                ctx.lineTo(p0.x - perpX, p0.y - perpY);
-                ctx.closePath();
-            }, bx, by, bw, bh, 0x9137);
-
-            // Curbing edges matching the plaza ring style
-            ctx.lineCap = 'round';
-            ctx.strokeStyle = '#c4b49a';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath(); ctx.moveTo(p0.x + perpX, p0.y + perpY); ctx.lineTo(p1.x + perpX, p1.y + perpY); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(p0.x - perpX, p0.y - perpY); ctx.lineTo(p1.x - perpX, p1.y - perpY); ctx.stroke();
-            ctx.strokeStyle = pathDark;
-            ctx.lineWidth = 2;
-            const opx = -Math.sin(angle) * (hw + 1.5);
-            const opy =  Math.cos(angle) * (hw + 1.5);
-            ctx.beginPath(); ctx.moveTo(p0.x + opx, p0.y + opy); ctx.lineTo(p1.x + opx, p1.y + opy); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(p0.x - opx, p0.y - opy); ctx.lineTo(p1.x - opx, p1.y - opy); ctx.stroke();
-        };
-
-        // ── 1. PATHS FIRST — plaza is drawn on top so the join looks clean ─────
-
-        // BRANCH 1: starts well inside plaza → Magic Academy (upper-left)
-        // Starting point is inside the plaza ellipse (79×59) so the plaza paving caps it cleanly
-        drawPavedStrip(
-            { x: centerX - 52, y: centerY - 36 },
-            { x: centerX - 130, y: centerY - 55 },
-            26
-        );
-
-        // BRANCH 2: starts well inside plaza → Tower Forge (upper-right)
-        drawPavedStrip(
-            { x: centerX + 52, y: centerY - 36 },
-            { x: centerX + 157, y: centerY - 50 },
-            26
-        );
-
-        // SHORT SOUTH TRAIL — fades below the plaza toward the gate
-        drawPavedStrip(
-            { x: centerX, y: centerY + 55 },
-            { x: centerX - 2, y: centerY + 105 },
-            24
-        );
-
-        // ── 2. CENTRAL PLAZA on top — caps path ends with a clean edge ─────────
+        // ── CENTRAL PLAZA — the only paved area in the settlement. No branch
+        // paths out to the buildings; just the stone plaza with the fountain.
         drawPaverRegion(() => {
             ctx.beginPath();
             ctx.ellipse(centerX, centerY, 79, 59, 0, 0, Math.PI * 2);
