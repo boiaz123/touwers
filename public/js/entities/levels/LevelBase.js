@@ -1758,7 +1758,12 @@ export class LevelBase {
                 
                 // Show radius for tower previews (not buildings)
                 if (!isBuilding && this.previewTowerType) {
-                    const towerRange = this.getEffectiveTowerRange(this.previewTowerType, this.previewTowerManager);
+                    // getEffectiveTowerRange() returns a base-resolution (1920x1080) stat;
+                    // scale it to the current resolution's pixel space so the placement
+                    // preview circle matches the range circle the tower will render once
+                    // placed (see Tower.js effectiveRange comment).
+                    const scaleFactor = this.resolutionManager ? this.resolutionManager.scaleFactor : 1;
+                    const towerRange = this.getEffectiveTowerRange(this.previewTowerType, this.previewTowerManager) * scaleFactor;
                     if (towerRange > 0) {
                         // Draw radius circle
                         ctx.strokeStyle = 'rgba(100, 200, 100, 0.4)';

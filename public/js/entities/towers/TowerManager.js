@@ -418,17 +418,23 @@ export class TowerManager {
         if (this._towerStatsNeedUpdate) {
             this._towerStatsNeedUpdate = false;
             const upgrades = this.buildingManager.towerUpgrades;
-            
+            // Tower range/splashRadius constants are authored in base-resolution (1920x1080)
+            // units, same as tower/enemy screen positions before ResolutionManager scales them
+            // by cellSize. Multiply by the same scaleFactor here so effective attack range and
+            // the rendered range circle always cover the same number of grid cells regardless
+            // of the selected resolution.
+            const rangeScaleFactor = (this.level && this.level.resolutionManager) ? this.level.resolutionManager.scaleFactor : 1;
+
             for (let i = 0; i < this.towers.length; i++) {
                 const tower = this.towers[i];
-                
+
                 // Store original values if not already stored
                 if (!tower.originalDamage) {
                     tower.originalDamage = tower.damage;
                     tower.originalRange = tower.range;
                     tower.originalFireRate = tower.fireRate;
                 }
-                
+
                 // Store barricade-specific original values if not already stored
                 if (tower.type === 'barricade') {
                     if (!tower.originalSlowDuration && tower.hasOwnProperty('slowDuration')) {
@@ -436,20 +442,31 @@ export class TowerManager {
                         tower.originalMaxEnemiesSlowed = tower.maxEnemiesSlowed;
                     }
                 }
-                
-                // Apply base building upgrades
+
+                // Apply base building upgrades (still in base-resolution units, matching the
+                // numbers shown in UI stat panels)
                 tower.damage = tower.originalDamage * upgrades.damage;
                 tower.range = tower.originalRange * upgrades.range;
                 tower.fireRate = tower.originalFireRate * upgrades.fireRate;
-                
+
                 // Apply forge-specific upgrades
                 this.applyForgeUpgrades(tower);
-                
+
                 // Apply Training Grounds range upgrades
                 this.applyTrainingGroundsUpgrades(tower);
-                
+
                 // Apply academy elemental bonuses to Magic Towers
                 this.applyAcademyUpgrades(tower);
+
+                // tower.range/splashRadius above stay in base-resolution units for stat
+                // display and upgrade math. Targeting/AoE logic and the rendered range
+                // circle need pixel values in the CURRENT resolution's space (matching how
+                // tower/enemy screen positions are scaled by cellSize), so compute scaled
+                // copies here instead of mutating the canonical stat.
+                tower.effectiveRange = tower.range * rangeScaleFactor;
+                if (tower.type === 'cannon') {
+                    tower.effectiveSplashRadius = tower.splashRadius * rangeScaleFactor;
+                }
             }
         }
         

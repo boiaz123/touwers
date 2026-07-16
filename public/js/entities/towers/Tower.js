@@ -6,8 +6,13 @@ export class Tower {
         this.gridY = gridY;
         this.type = null; // Will be set by TowerRegistry when creating
         
-        // Tower stats - all measured in base units, not pixels
-        // These stay constant across all resolutions
+        // Tower stats - all measured in base-resolution (1920x1080) units, not screen
+        // pixels. These stay constant across all resolutions and are what stat panels
+        // display. TowerManager derives `effectiveRange` (actual screen-pixel range used
+        // for targeting/AoE and the rendered range circle) by scaling this with the
+        // current resolution's cellSize, the same way tower/enemy positions are scaled.
+        // Until that first scaling pass runs, code reading range falls back to `range`
+        // itself (see `this.effectiveRange ?? this.range` at each use site).
         this.range = 120; // pixels at base resolution = 3.75 grid cells
         this.damage = 20;
         this.fireRate = 1;
@@ -55,7 +60,8 @@ export class Tower {
                 // triggers — the subclass fires this frame and needs the reference.
                 // It will be cleared next frame if still out of range.
                 const shotTriggeredThisFrame = prevCooldown > 0 && this.cooldown === 0;
-                if (!shotTriggeredThisFrame && dx * dx + dy * dy > this.range * this.range) {
+                const range = this.effectiveRange ?? this.range;
+                if (!shotTriggeredThisFrame && dx * dx + dy * dy > range * range) {
                     this.target = null;
                 }
             }
@@ -69,12 +75,13 @@ export class Tower {
     
     findTarget(enemies) {
         // OPTIMIZATION: Use spatial grid for fast range queries when available
+        const range = this.effectiveRange ?? this.range;
         const grid = this._spatialGrid;
         if (grid) {
-            const count = grid.query(this.x, this.y, this.range);
+            const count = grid.query(this.x, this.y, range);
             const buf = grid._queryBuf;
             let closest = null;
-            let closestDistSq = this.range * this.range;
+            let closestDistSq = range * range;
             for (let i = 0; i < count; i++) {
                 const enemy = buf[i];
                 const dx = enemy.x - this.x;
@@ -87,11 +94,11 @@ export class Tower {
             }
             return closest;
         }
-        
+
         // Fallback: linear scan of all enemies
         let closest = null;
-        let closestDistSq = this.range * this.range;
-        
+        let closestDistSq = range * range;
+
         for (let i = 0; i < enemies.length; i++) {
             const enemy = enemies[i];
             const dx = enemy.x - this.x;
@@ -191,10 +198,11 @@ export class Tower {
     
     renderRangeIndicator(ctx, color = 'rgba(139, 69, 19, 0.2)') {
         if (this.target) {
+            const range = this.effectiveRange ?? this.range;
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, range, 0, Math.PI * 2);
             ctx.stroke();
         }
     }
@@ -204,18 +212,19 @@ export class Tower {
      */
     renderAttackRadiusCircle(ctx, color = 'rgba(100, 200, 100, 0.3)') {
         if (this.isSelected) {
+            const range = this.effectiveRange ?? this.range;
             ctx.strokeStyle = 'rgba(100, 200, 100, 0.6)';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, range, 0, Math.PI * 2);
             ctx.stroke();
-            
+
             // Draw a dashed circle for better visibility
             ctx.strokeStyle = 'rgba(100, 200, 100, 0.4)';
             ctx.lineWidth = 1;
             ctx.setLineDash([5, 5]);
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.range, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, range, 0, Math.PI * 2);
             ctx.stroke();
             ctx.setLineDash([]); // Reset line dash
         }

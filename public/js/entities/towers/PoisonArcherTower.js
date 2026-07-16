@@ -137,7 +137,8 @@ export class PoisonArcherTower extends Tower {
                     const dy = this.target.y - this.y;
                     // Keep target on the exact frame a shot triggers (matches Tower.update behaviour)
                     const shotTriggeredThisFrame = prevCooldown > 0 && this.cooldown === 0;
-                    const outOfRange = !shotTriggeredThisFrame && dx * dx + dy * dy > this.range * this.range;
+                    const range = this.effectiveRange ?? this.range;
+                    const outOfRange = !shotTriggeredThisFrame && dx * dx + dy * dy > range * range;
                     // Once the current target is poisoned, re-scan so a fresh, unpoisoned
                     // enemy gets prioritized instead of wasting shots on a target already ticking.
                     const alreadyPoisoned = !shotTriggeredThisFrame && this.poisonedEnemies.has(this.target);
@@ -251,11 +252,12 @@ export class PoisonArcherTower extends Tower {
      * falls back to an already-poisoned enemy when nothing else is in range.
      */
     findTarget(enemies) {
+        const range = this.effectiveRange ?? this.range;
         const grid = this._spatialGrid;
         let closestUnpoisoned = null;
-        let closestUnpoisonedDistSq = this.range * this.range;
+        let closestUnpoisonedDistSq = range * range;
         let closestPoisoned = null;
-        let closestPoisonedDistSq = this.range * this.range;
+        let closestPoisonedDistSq = range * range;
 
         const consider = (enemy) => {
             const dx = enemy.x - this.x;
@@ -273,7 +275,7 @@ export class PoisonArcherTower extends Tower {
         };
 
         if (grid) {
-            const count = grid.query(this.x, this.y, this.range);
+            const count = grid.query(this.x, this.y, range);
             const buf = grid._queryBuf;
             for (let i = 0; i < count; i++) consider(buf[i]);
         } else {

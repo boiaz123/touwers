@@ -162,20 +162,25 @@ export class CannonTower extends Tower {
             this.audioManager.playSFX('trebuchet-impact');
         }
         
+        // splashRadius is a base-resolution (1920x1080) stat; AoE checks below need the
+        // current resolution's pixel space, matching enemy screen positions (see Tower.js
+        // effectiveRange comment).
+        const splashRadius = this.effectiveSplashRadius ?? this.splashRadius;
+
         const explosion = this._explosionPool.acquire();
         explosion.x = x;
         explosion.y = y;
         explosion.radius = 0;
-        explosion.maxRadius = this.splashRadius * 1.5;
+        explosion.maxRadius = splashRadius * 1.5;
         explosion.life = 1.0;
         explosion.maxLife = 1.0;
         this.explosions.push(explosion);
-        
+
         // OPTIMIZATION: Use spatial grid for AoE damage when available
-        const splashRadiusSq = this.splashRadius * this.splashRadius;
+        const splashRadiusSq = splashRadius * splashRadius;
         if (this._spatialGrid) {
             const grid = this._spatialGrid;
-            const count = grid.query(x, y, this.splashRadius);
+            const count = grid.query(x, y, splashRadius);
             const buf = grid._queryBuf;
             for (let i = 0; i < count; i++) {
                 const enemy = buf[i];
@@ -184,7 +189,7 @@ export class CannonTower extends Tower {
                 const distSq = dx * dx + dy * dy;
                 if (distSq <= splashRadiusSq) {
                     const distance = Math.sqrt(distSq);
-                    const damageFalloff = 1 - (distance / this.splashRadius) * 0.5;
+                    const damageFalloff = 1 - (distance / splashRadius) * 0.5;
                     const actualDamage = Math.floor(this.damage * damageFalloff);
                     enemy.takeDamage(actualDamage, 0, 'physical');
                 }
@@ -197,7 +202,7 @@ export class CannonTower extends Tower {
                 const distSq = dx * dx + dy * dy;
                 if (distSq <= splashRadiusSq) {
                     const distance = Math.sqrt(distSq);
-                    const damageFalloff = 1 - (distance / this.splashRadius) * 0.5;
+                    const damageFalloff = 1 - (distance / splashRadius) * 0.5;
                     const actualDamage = Math.floor(this.damage * damageFalloff);
                     enemy.takeDamage(actualDamage, 0, 'physical');
                 }
