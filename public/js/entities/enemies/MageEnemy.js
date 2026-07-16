@@ -701,20 +701,7 @@ export class MageEnemy extends BaseEnemy {
         }
 
         // Health bar - positioned above hat tip
-        const barWidth = baseSize * 3.2;
-        const barHeight = Math.max(2, baseSize * 0.42);
-        const barY = this.y - baseSize * 3.1;
-
-        ctx.fillStyle = '#000';
-        ctx.fillRect(this.x - barWidth / 2, barY, barWidth, barHeight);
-
-        const healthPercent = this.health / this.maxHealth;
-        ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
-        ctx.fillRect(this.x - barWidth / 2, barY, barWidth * healthPercent, barHeight);
-
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(this.x - barWidth / 2, barY, barWidth, barHeight);
+        this.renderHealthBar(ctx, baseSize, { widthMul: 3.2, heightMul: 0.42, yOffsetMul: -3.1 });
     }
 
     attackCastle(castle, deltaTime) {
@@ -934,21 +921,5 @@ export class MageEnemy extends BaseEnemy {
     getMagicParticleColor() {
         const colors = ['rgba(100, 149, 237, ', 'rgba(65, 105, 225, ', 'rgba(72, 209, 204, '];
         return colors[Math.floor(Math.random() * colors.length)];
-    }
-    
-    darkenColor(color, factor) {
-        if (color.startsWith('#')) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            
-            const newR = Math.max(0, Math.floor(r * (1 - factor)));
-            const newG = Math.max(0, Math.floor(g * (1 - factor)));
-            const newB = Math.max(0, Math.floor(b * (1 - factor)));
-            
-            return `rgb(${newR}, ${newG}, ${newB})`;
-        }
-        return color;
     }
 }

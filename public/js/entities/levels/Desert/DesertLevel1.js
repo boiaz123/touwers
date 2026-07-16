@@ -108,10 +108,10 @@ export class DesertLevel1 extends LevelBase {
         const waveConfigs = [
         // Wave 1
         { 
-            enemyHealth_multiplier: 1.3, 
-            speedMultiplier: 0.75, 
-            spawnInterval: 0.9, 
-            pattern: [{ type: 'archer', count: 2 }, { type: 'villager', count: 9 }, { type: 'basic', count: 4 }, { type: 'frog', count: 4 }] 
+            enemyHealth_multiplier: 0.1, 
+            speedMultiplier: 0.4, 
+            spawnInterval: 4, 
+            pattern: [{ type: 'archer', count: 3 }, { type: 'villager', count: 3 }, { type: 'basic', count: 3 }, { type: 'frog', count: 3 }, { type: 'beefyenemy', count: 1 }, { type: 'knight', count: 1 }, { type: 'shieldknight', count: 1 }, { type: 'mage', count: 1 }, { type: 'earthfrog', count: 1 }, { type: 'waterfrog', count: 1 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }, { type: 'frogking', count: 1 }] 
         }
         // Wave 2
         , { 

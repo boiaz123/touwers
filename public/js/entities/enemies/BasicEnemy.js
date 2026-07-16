@@ -1,4 +1,6 @@
 import { BaseEnemy } from './BaseEnemy.js';
+import { drawTwoSegmentLimb, computeWalkCycle, mirroredLimbAngle, kneeFlex } from './HumanoidLimbRenderer.js';
+import { drawTaperedPath } from './TaperedShapeRenderer.js';
 
 export class BasicEnemy extends BaseEnemy {
     static BASE_STATS = {
@@ -13,24 +15,21 @@ export class BasicEnemy extends BaseEnemy {
         const actualSpeed = speed !== null ? speed : baseStats.speed;
         const actualArmour = armour !== null ? armour : baseStats.armour;
         const actualMagicResistance = magicResistance !== null ? magicResistance : baseStats.magicResistance;
-        
+
         super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
         this.tunicColor = this.getRandomTunicColor();
         this.tunicColorHex = this.hexToRgb(this.tunicColor);
-        
+
         this.attackDamage = 5;
         this.attackSpeed = 1.0;
-        
+
         // Pre-calculate darkened tunic color for performance
         this.tunicDarkRGB = this.getRgbDarkenedByAmount(this.tunicColorHex, 0.2);
-        
+
         // Pre-compute color strings to avoid per-frame template literal allocation
         this._tunicDarkColorStr = `rgb(${this.tunicDarkRGB[0]},${this.tunicDarkRGB[1]},${this.tunicDarkRGB[2]})`;
         this._tunicMainColorStr = `rgb(${this.tunicColorHex[0]},${this.tunicColorHex[1]},${this.tunicColorHex[2]})`;
-        
-        // Animation cache to reduce computation (reuse same object, never reallocate)
-        this.cachedAnimFrame = -1;
-        this.cachedAnimValues = { walkCycle: 0, bobAnimation: 0, leftArmBase: 0, rightArmBase: 0, animTime: 0 };
+        this._tunicLightColorStr = this.lightenColor(this.tunicColor, 0.3);
 
         // Set by EnemyRenderAdapter once it has synced this enemy via Pixi (hit splatters
         // still draw here regardless - not yet migrated). No static structure for this
@@ -43,20 +42,20 @@ export class BasicEnemy extends BaseEnemy {
     getRenderVariantKey() {
         return this.tunicColor;
     }
-    
+
     getRandomTunicColor() {
         const tunicColors = [
             '#8B4513', '#4169E1', '#DC143C', '#2F4F4F', '#556B2F', '#8B008B'
         ];
         return tunicColors[Math.floor(Math.random() * tunicColors.length)];
     }
-    
+
     hexToRgb(hex) {
         // Parse hex color to RGB array
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [139, 69, 19];
     }
-    
+
     getRgbDarkenedByAmount(rgb, factor) {
         return [
             Math.max(0, rgb[0] * (1 - factor)),
@@ -64,30 +63,7 @@ export class BasicEnemy extends BaseEnemy {
             Math.max(0, rgb[2] * (1 - factor))
         ];
     }
-    
-    getAnimationFrame(time) {
-        // Cache animation calculations every 2 frames to reduce recalculation
-        const frameKey = Math.floor(time * 30) >> 1; // Every 2 frames
-        
-        if (this.cachedAnimFrame === frameKey) {
-            return this.cachedAnimValues;
-        }
-        
-        const animTime = time * 8 + this.animationPhaseOffset;
-        const walkCycle = Math.sin(animTime) * 0.5;
-        const armSwingFreq = animTime;
-        
-        // Mutate existing object instead of creating new (zero-allocation)
-        const v = this.cachedAnimValues;
-        v.walkCycle = walkCycle;
-        v.bobAnimation = Math.sin(animTime) * 0.3;
-        v.leftArmBase = Math.sin(armSwingFreq) * 0.6;
-        v.rightArmBase = Math.sin(armSwingFreq + Math.PI) * 0.55;
-        v.animTime = animTime;
-        this.cachedAnimFrame = frameKey;
-        return v;
-    }
-    
+
     render(ctx) {
         // baseSize depends on ctx.canvas.width (real screen resolution) - computed once
         // here, with a real ctx, and threaded through explicitly from here on, since
@@ -121,176 +97,273 @@ export class BasicEnemy extends BaseEnemy {
         // intentionally empty
     }
 
-    /** Strategy B (per-instance Graphics, redrawn every frame): the whole figure - bob/arm-swing/leg-swing are continuous, and health bar is health-dependent, so nothing here is bakeable. */
+    /**
+     * Strategy A (baked): this only runs live during Mode A's one-time bake pass
+     * (16 frames per unique tunic color, EnemyRenderAdapter.js), so unlike the old
+     * per-frame-Canvas2D era there's no ongoing cost to gradients/extra shading here -
+     * add detail freely, it's paid for once per color variant, not per frame/instance.
+     */
     renderDynamicParts(ctx, baseSize) {
-        const anim = this.getAnimationFrame(this.animationTime);
-        const bobAnimation = anim.bobAnimation;
-        const walkCycle = anim.walkCycle;
-        const leftArmBase = anim.leftArmBase;
-        const rightArmBase = anim.rightArmBase;
-        
-        // Simplified shadow - single fillRect instead of ellipse
+        const anim = computeWalkCycle(this.animationTime, this.animationPhaseOffset, 8);
+
         ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-        ctx.fillRect(this.x - baseSize * 0.8, this.y + baseSize * 1.5, baseSize * 1.6, baseSize * 0.3);
-        
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y + baseSize * 1.55, baseSize * 0.75, baseSize * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.save();
-        ctx.translate(this.x, this.y + bobAnimation);
-        
-        // --- BODY (SIMPLIFIED) ---
-        
-        // Dark back layer
-        ctx.fillStyle = this._tunicDarkColorStr;
-        ctx.fillRect(-baseSize * 0.6, -baseSize * 0.75, baseSize * 1.3, baseSize * 1.1);
-        
-        // Main tunic - NO gradient, just solid color with outline
-        ctx.fillStyle = this._tunicMainColorStr;
-        ctx.fillRect(-baseSize * 0.6, -baseSize * 0.8, baseSize * 1.2, baseSize * 1.2);
-        
-        ctx.strokeStyle = '#2F2F2F';
+        ctx.translate(this.x, this.y + anim.bodyBob);
+
+        // --- LEGS (two-segment, knee bend tied to the stride) --- Stance widened
+        // (0.25->0.34*baseSize) and swing/knee-bend both cut down (0.3->0.15) - the
+        // previous narrow stance + wide swing let the rigid straight leg (the moment
+        // knee bend is zero, at the swing extremes) reach past centerline once the
+        // boot radius was added on top.
+        const leftLegAngle = Math.PI / 2 + anim.legSwing * 0.15;
+        const rightLegAngle = Math.PI / 2 - anim.legSwing * 0.15;
+
+        const leftLeg = drawTwoSegmentLimb(
+            ctx, -baseSize * 0.34, baseSize * 0.3,
+            leftLegAngle, baseSize * 0.42,
+            leftLegAngle - kneeFlex(anim, false) * 0.15, baseSize * 0.4,
+            { limbColor: '#2F2F2F', padColor: '#1C1C1C', limbWidth: baseSize * 0.22, padRadius: baseSize * 0.14 }
+        );
+        const rightLeg = drawTwoSegmentLimb(
+            ctx, baseSize * 0.34, baseSize * 0.3,
+            rightLegAngle, baseSize * 0.42,
+            rightLegAngle + kneeFlex(anim, true) * 0.15, baseSize * 0.4,
+            { limbColor: '#2F2F2F', padColor: '#1C1C1C', limbWidth: baseSize * 0.22, padRadius: baseSize * 0.14 }
+        );
+
+        // --- TUNIC (gradient-shaded silhouette instead of a flat rectangle) ---
+        if (!this._tunicGrad || this._gradBaseSize !== baseSize || this._gradCtx !== ctx) {
+            this._gradCtx = ctx;
+            this._gradBaseSize = baseSize;
+            this._tunicGrad = ctx.createLinearGradient(-baseSize * 0.6, -baseSize * 0.8, baseSize * 0.6, baseSize * 0.4);
+            this._tunicGrad.addColorStop(0, this._tunicLightColorStr);
+            this._tunicGrad.addColorStop(0.45, this._tunicMainColorStr);
+            this._tunicGrad.addColorStop(1, this._tunicDarkColorStr);
+        }
+
+        ctx.fillStyle = this._tunicGrad;
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.55, -baseSize * 0.75);
+        ctx.lineTo(baseSize * 0.55, -baseSize * 0.75);
+        ctx.lineTo(baseSize * 0.62, baseSize * 0.4);
+        ctx.lineTo(-baseSize * 0.62, baseSize * 0.4);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = this._tunicDarkColorStr;
         ctx.lineWidth = 1;
-        ctx.strokeRect(-baseSize * 0.6, -baseSize * 0.8, baseSize * 1.2, baseSize * 1.2);
-        
-        // Simple highlight - just one rectangle
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.fillRect(-baseSize * 0.55, -baseSize * 0.7, baseSize * 0.15, baseSize * 0.7);
-        
-        // --- HEAD (SIMPLIFIED) ---
-        
-        ctx.fillStyle = '#D9C4A8';
+        ctx.stroke();
+
+        // Belt
+        ctx.fillStyle = '#4A3018';
+        ctx.fillRect(-baseSize * 0.58, baseSize * 0.12, baseSize * 1.16, baseSize * 0.14);
+        ctx.fillStyle = '#D4AF37';
+        ctx.beginPath();
+        ctx.arc(0, baseSize * 0.19, baseSize * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Collar
+        ctx.strokeStyle = this._tunicDarkColorStr;
+        ctx.lineWidth = baseSize * 0.06;
+        ctx.beginPath();
+        ctx.arc(0, -baseSize * 0.72, baseSize * 0.22, 0.15 * Math.PI, 0.85 * Math.PI);
+        ctx.stroke();
+
+        // --- LEFT ARM (swings normally with the stride) ---
+        const leftArmAngle = mirroredLimbAngle(0.205, anim.legSwing, 0.22, false);
+        drawTwoSegmentLimb(
+            ctx, -baseSize * 0.52, -baseSize * 0.4,
+            leftArmAngle, baseSize * 0.42,
+            leftArmAngle + 0.15, baseSize * 0.4,
+            { limbColor: '#D9C4A8', padColor: '#DDD4B8', limbWidth: baseSize * 0.26, padRadius: baseSize * 0.14, shadowColor: 'rgba(0,0,0,0.1)' }
+        );
+
+        // --- RIGHT ARM WITH CLUB (fixed, raised grip - not animated with the gait,
+        // exactly like VillagerEnemy's torch/pitchfork arm) ---
+        const clubArmAngle = -Math.PI / 2 + 0.3;
+        const rightHand = drawTwoSegmentLimb(
+            ctx, baseSize * 0.52, -baseSize * 0.4,
+            clubArmAngle, baseSize * 0.45,
+            clubArmAngle, baseSize * 0.4,
+            { limbColor: '#D9C4A8', padColor: '#DDD4B8', limbWidth: baseSize * 0.26, padRadius: baseSize * 0.14, shadowColor: 'rgba(0,0,0,0.1)' }
+        );
+
+        // --- CLUB ---
+        this.drawClub(ctx, rightHand.endX, rightHand.endY, baseSize, clubArmAngle);
+
+        // --- HEAD (soft gradient shading instead of flat fill) ---
+        if (!this._headGrad || this._headGradBaseSize !== baseSize || this._headGradCtx !== ctx) {
+            this._headGradCtx = ctx;
+            this._headGradBaseSize = baseSize;
+            this._headGrad = ctx.createRadialGradient(-baseSize * 0.15, -baseSize * 1.32, baseSize * 0.1, 0, -baseSize * 1.2, baseSize * 0.55);
+            this._headGrad.addColorStop(0, '#E8D4B8');
+            this._headGrad.addColorStop(1, '#B8956A');
+        }
+        ctx.fillStyle = this._headGrad;
         ctx.beginPath();
         ctx.arc(0, -baseSize * 1.2, baseSize * 0.5, 0, Math.PI * 2);
         ctx.fill();
-        
-        ctx.strokeStyle = '#B8956A';
-        ctx.lineWidth = 0.5;
+        ctx.strokeStyle = '#8a6a45';
+        ctx.lineWidth = 0.6;
         ctx.stroke();
-        
-        // --- HELMET (SIMPLIFIED) ---
-        
-        ctx.fillStyle = '#696969';
+
+        // --- HELMET (metal sheen gradient + rivets + nasal guard) ---
+        if (!this._helmGrad || this._helmGradBaseSize !== baseSize || this._helmGradCtx !== ctx) {
+            this._helmGradCtx = ctx;
+            this._helmGradBaseSize = baseSize;
+            this._helmGrad = ctx.createLinearGradient(-baseSize * 0.6, -baseSize * 1.8, baseSize * 0.6, -baseSize * 0.85);
+            this._helmGrad.addColorStop(0, '#8a8a8a');
+            this._helmGrad.addColorStop(0.5, '#5a5a5a');
+            this._helmGrad.addColorStop(1, '#2F2F2F');
+        }
+        ctx.fillStyle = this._helmGrad;
         ctx.beginPath();
         ctx.arc(0, -baseSize * 1.2, baseSize * 0.62, Math.PI * 0.95, Math.PI * 2.05);
         ctx.fill();
-        
-        ctx.strokeStyle = '#2F2F2F';
+        ctx.strokeStyle = '#1a1a1a';
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(-baseSize * 0.62, -baseSize * 1.2);
         ctx.lineTo(baseSize * 0.62, -baseSize * 1.2);
         ctx.stroke();
-        
-        // Simple highlight dot instead of full circle
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+
+        // Nasal guard
+        ctx.fillStyle = '#3a3a3a';
+        ctx.fillRect(-baseSize * 0.05, -baseSize * 1.2, baseSize * 0.1, baseSize * 0.35);
+
+        // Rivets
+        ctx.fillStyle = '#2a2a2a';
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.2, -baseSize * 1.35, baseSize * 0.1, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.42, -baseSize * 1.42, baseSize * 0.05, 0, Math.PI * 2);
         ctx.fill();
-        
-        // --- ARMS (OPTIMIZED) ---
-        
-        // Left arm
-        const leftShoulderX = -baseSize * 0.5;
-        const leftShoulderY = -baseSize * 0.35;
-        const leftSwingForward = leftArmBase;
-        const leftElbowX = leftShoulderX + leftSwingForward * baseSize * 0.12;
-        const leftElbowY = leftShoulderY + baseSize * 0.45 - leftSwingForward * baseSize * 0.2;
-        const leftWristX = leftElbowX + leftSwingForward * baseSize * 0.1;
-        const leftWristY = leftElbowY + baseSize * 0.5;
-        
-        // Single stroke for both upper and lower arm
-        ctx.strokeStyle = '#D9C4A8';
-        ctx.lineWidth = baseSize * 0.28;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
         ctx.beginPath();
-        ctx.moveTo(leftShoulderX, leftShoulderY);
-        ctx.lineTo(leftElbowX, leftElbowY);
-        ctx.lineTo(leftWristX, leftWristY);
-        ctx.stroke();
-        
-        // Left hand
-        ctx.fillStyle = '#DDD4B8';
-        ctx.beginPath();
-        ctx.arc(leftWristX, leftWristY, baseSize * 0.14, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.42, -baseSize * 1.42, baseSize * 0.05, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Right arm
-        const rightShoulderX = baseSize * 0.5;
-        const rightShoulderY = -baseSize * 0.35;
-        const rightSwingForward = rightArmBase;
-        const rightElbowX = rightShoulderX + rightSwingForward * baseSize * 0.12;
-        const rightElbowY = rightShoulderY + baseSize * 0.45 - rightSwingForward * baseSize * 0.2;
-        const rightWristX = rightElbowX + rightSwingForward * baseSize * 0.1;
-        const rightWristY = rightElbowY + baseSize * 0.5;
-        
-        ctx.strokeStyle = '#D9C4A8';
-        ctx.lineWidth = baseSize * 0.28;
+
+        // Helmet highlight
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.beginPath();
-        ctx.moveTo(rightShoulderX, rightShoulderY);
-        ctx.lineTo(rightElbowX, rightElbowY);
-        ctx.lineTo(rightWristX, rightWristY);
-        ctx.stroke();
-        
-        ctx.fillStyle = '#DDD4B8';
-        ctx.beginPath();
-        ctx.arc(rightWristX, rightWristY, baseSize * 0.14, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.2, -baseSize * 1.38, baseSize * 0.11, 0, Math.PI * 2);
         ctx.fill();
-        
-        // --- LEGS (SIMPLIFIED) ---
-        
-        const leftHipX = -baseSize * 0.25;
-        const leftHipY = baseSize * 0.35;
-        const leftLegAngle = walkCycle * 0.35;
-        const leftFootX = leftHipX + Math.sin(leftLegAngle) * baseSize * 0.65;
-        const leftFootY = leftHipY + Math.cos(leftLegAngle) * baseSize * 0.75;
-        
-        // Left leg - single line
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = baseSize * 0.22;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(leftHipX, leftHipY);
-        ctx.lineTo(leftFootX, leftFootY);
-        ctx.stroke();
-        
-        const rightHipX = baseSize * 0.25;
-        const rightHipY = baseSize * 0.35;
-        const rightLegAngle = -walkCycle * 0.35;
-        const rightFootX = rightHipX + Math.sin(rightLegAngle) * baseSize * 0.65;
-        const rightFootY = rightHipY + Math.cos(rightLegAngle) * baseSize * 0.75;
-        
-        // Right leg - single line
-        ctx.beginPath();
-        ctx.moveTo(rightHipX, rightHipY);
-        ctx.lineTo(rightFootX, rightFootY);
-        ctx.stroke();
-        
-        // --- BOOTS (SIMPLIFIED) ---
-        
+
+        // --- BOOTS (drawn after legs so they cap the feet) ---
         ctx.fillStyle = '#1C1C1C';
         ctx.beginPath();
-        ctx.arc(leftFootX, leftFootY + baseSize * 0.12, baseSize * 0.15, 0, Math.PI * 2);
+        ctx.ellipse(leftLeg.endX, leftLeg.endY + baseSize * 0.1, baseSize * 0.17, baseSize * 0.13, 0, 0, Math.PI * 2);
         ctx.fill();
-        
         ctx.beginPath();
-        ctx.arc(rightFootX, rightFootY + baseSize * 0.12, baseSize * 0.15, 0, Math.PI * 2);
+        ctx.ellipse(rightLeg.endX, rightLeg.endY + baseSize * 0.1, baseSize * 0.17, baseSize * 0.13, 0, 0, Math.PI * 2);
         ctx.fill();
-        
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.beginPath();
+        ctx.ellipse(leftLeg.endX - baseSize * 0.05, leftLeg.endY + baseSize * 0.06, baseSize * 0.06, baseSize * 0.04, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(rightLeg.endX - baseSize * 0.05, rightLeg.endY + baseSize * 0.06, baseSize * 0.06, baseSize * 0.04, 0, 0, Math.PI * 2);
+        ctx.fill();
+
         ctx.restore();
 
         // Health bar — skipped during Mode A baking (adapter draws it separately).
         if (!this._baking) {
-            const barWidth = baseSize * 3;
-            const barHeight = baseSize * 0.35;
-            const barY = this.y - baseSize * 2.1;
-            const barX = this.x - barWidth / 2;
-            const healthPercent = this.health / this.maxHealth;
-            ctx.fillStyle = '#000';
-            ctx.fillRect(barX, barY, barWidth, barHeight);
-            ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
-            ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
-            ctx.strokeStyle = '#2F2F2F';
-            ctx.lineWidth = 0.5;
-            ctx.strokeRect(barX, barY, barWidth, barHeight);
+            this.renderHealthBar(ctx, baseSize, { widthMul: 3.0, heightMul: 0.35, yOffsetMul: -2.1, strokeWidth: 0.5 });
         }
+    }
+
+    /** Heavy studded war club, held raised in a fixed grip - gives the plain soldier
+     *  something to actually hold, matching VillagerEnemy's torch/pitchfork treatment.
+     *  Rotates by `armAngle + Math.PI/2` (matching VillagerEnemy.drawTorch/drawPitchfork's
+     *  convention exactly) since the club body is drawn growing along local +Y from the
+     *  grip - using the opposite sign here previously pointed the heavy head back down
+     *  behind the hand/torso instead of up and visible, which is why it was unrecognizable. */
+    drawClub(ctx, handX, handY, baseSize, armAngle) {
+        ctx.save();
+        ctx.translate(handX, handY);
+        ctx.rotate(armAngle + Math.PI / 2);
+
+        // A blackjack/sap silhouette - a slender shaft for most of its length with a
+        // modest rounded bulge only near the very top, not a wide lumpy head starting
+        // a third of the way up (the previous version's headWidth was nearly as large
+        // as the club was long, which is what read as a shield rather than a club).
+        // Built as one continuous drawTaperedPath through hand->neck->bulb->tip so the
+        // whole silhouette is a single smooth taper instead of a separate handle
+        // polygon glued to a separate bulbous head shape.
+        const clubLength = baseSize * 1.5;
+        const handleWidth = baseSize * 0.15;
+        const neckY = clubLength * 0.6;
+        const bulbY = clubLength * 0.85;
+        const tipY = clubLength;
+        const bulbWidth = baseSize * 0.37;
+        const tipWidth = baseSize * 0.22;
+
+        if (!this._clubGrad || this._clubGradBaseSize !== baseSize || this._clubGradCtx !== ctx) {
+            this._clubGradCtx = ctx;
+            this._clubGradBaseSize = baseSize;
+            this._clubGrad = ctx.createLinearGradient(-bulbWidth / 2, 0, bulbWidth / 2, 0);
+            this._clubGrad.addColorStop(0, '#4a2f18');
+            this._clubGrad.addColorStop(0.5, '#7a4f28');
+            this._clubGrad.addColorStop(1, '#4a2f18');
+        }
+        drawTaperedPath(
+            ctx,
+            [{ x: 0, y: 0 }, { x: 0, y: neckY }, { x: 0, y: bulbY }, { x: 0, y: tipY }],
+            [handleWidth, handleWidth, bulbWidth, tipWidth],
+            this._clubGrad,
+            '#2f1c0a',
+            1
+        );
+
+        // Rounded cap at the very top - the "bulkier top" finishing touch, capping
+        // the taper's flat end with an actual round silhouette.
+        ctx.fillStyle = '#6e4423';
+        ctx.beginPath();
+        ctx.arc(0, tipY, tipWidth * 0.58, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#2f1c0a';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Leather grip wrap bands on the slender shaft
+        ctx.strokeStyle = '#2a1a0a';
+        ctx.lineWidth = baseSize * 0.025;
+        for (let i = 1; i <= 3; i++) {
+            const gy = neckY * (i / 4);
+            ctx.beginPath();
+            ctx.moveTo(-handleWidth / 2, gy);
+            ctx.lineTo(handleWidth / 2, gy);
+            ctx.stroke();
+        }
+
+        // Metal studs driven into the bulb - the clearest "this is a weapon" cue
+        ctx.fillStyle = '#8a8a8a';
+        const studRows = [bulbY - baseSize * 0.05, bulbY + baseSize * 0.09];
+        const studOffsets = [-0.22, 0.22];
+        for (const rowY of studRows) {
+            for (const off of studOffsets) {
+                ctx.beginPath();
+                ctx.arc(off * bulbWidth, rowY, baseSize * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        for (const rowY of studRows) {
+            for (const off of studOffsets) {
+                ctx.beginPath();
+                ctx.arc(off * bulbWidth - baseSize * 0.015, rowY - baseSize * 0.015, baseSize * 0.017, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Highlight down one side of the bulb for roundness
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.beginPath();
+        ctx.ellipse(-bulbWidth * 0.2, bulbY, bulbWidth * 0.12, (tipY - neckY) * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
     }
 }

@@ -1,8 +1,12 @@
 import { BaseEnemy } from './BaseEnemy.js';
+import { EnemyColorCache, FROG_KING_COLOR_VARIANTS } from '../../utils/EnemyColorCache.js';
+import { darkenColor, lightenColor } from '../../utils/colorUtils.js';
+import { drawFlipperFoot } from './FrogFlipperRenderer.js';
+import { drawTaperedPath } from './TaperedShapeRenderer.js';
 
 export class FrogKingEnemy extends BaseEnemy {
-    // Static color cache to avoid recalculation
-    static colorCache = new Map();
+    // Shared cached color-variant lookup (skinColor -> lighten/darken variants).
+    static _colors = new EnemyColorCache(FROG_KING_COLOR_VARIANTS);
 
     static BASE_STATS = {
         health: 45000,
@@ -49,8 +53,9 @@ export class FrogKingEnemy extends BaseEnemy {
         
         // Start with random vulnerability
         this.currentVulnerabilityType = this.selectRandomVulnerability();
-        this.setVulnerability(this.currentVulnerabilityType);
-        
+        this._transitionFlash = 0;
+        this.setVulnerability(this.currentVulnerabilityType, true);
+
         this.elementalType = 'frogking';
         this.sizeMultiplier = 4.0; // Larger than elemental frogs
         
@@ -100,12 +105,26 @@ export class FrogKingEnemy extends BaseEnemy {
         return this.skinColor;
     }
 
+    /** This is Mode B (live-redraw), rate-limited by EnemyRenderAdapter's ANIM_FPS. The
+     *  default 20fps under-samples this boss's large 0.8s jump arc badly enough to read
+     *  as stuttering/lag - as a solo boss the extra redraw cost is a non-issue. */
+    getAnimFps() {
+        return 36;
+    }
+
     selectRandomVulnerability() {
         const vulnerabilities = Object.keys(FrogKingEnemy.VULNERABILITIES);
         return vulnerabilities[Math.floor(Math.random() * vulnerabilities.length)];
     }
 
-    setVulnerability(vulnerabilityType) {
+    /**
+     * @param {boolean} silent - true for the initial spawn-time pick (no player-visible
+     * "something changed" to announce yet); false for a mid-fight rotation, which
+     * triggers the crown-flash + particle-burst tell in renderDynamicParts/spawnMagicParticle
+     * so players actually notice the weakness swapped instead of only seeing a subtle
+     * recolor.
+     */
+    setVulnerability(vulnerabilityType, silent = false) {
         const vulnData = FrogKingEnemy.VULNERABILITIES[vulnerabilityType];
         if (!vulnData) return;
 
@@ -120,6 +139,30 @@ export class FrogKingEnemy extends BaseEnemy {
         this.cachedDarkenColor = null;
         this.cachedDarken2Color = null;
         this._particleColorTable = null;
+
+        this._transitionFlash = silent ? 0 : 1.0;
+        if (!silent) this._spawnTransitionBurst();
+    }
+
+    /** One-shot ring of particles in the new element's color, fired the instant the
+     *  vulnerability rotates - reuses the existing capped magicParticles array/render
+     *  path rather than a second effect system. */
+    _spawnTransitionBurst() {
+        const count = Math.min(12, Math.max(0, 30 - this.magicParticles.length));
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2;
+            const speed = 60 + Math.random() * 40;
+            this.magicParticles.push({
+                x: this.x + Math.cos(angle) * 10,
+                y: this.y + Math.sin(angle) * 10 - 20,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 10,
+                life: 0.7,
+                maxLife: 0.7,
+                size: Math.random() * 2.5 + 2.5,
+                colorIndex: 0
+            });
+        }
     }
 
     update(deltaTime) {
@@ -143,6 +186,11 @@ export class FrogKingEnemy extends BaseEnemy {
         // Update crown and scepter animations
         this.crownRotation += deltaTime * 0.5; // Slow rotation
         this.scepterOscillation += deltaTime * 3;
+
+        // Decay the post-rotation crown/scepter flash (see setVulnerability's "tell")
+        if (this._transitionFlash > 0) {
+            this._transitionFlash = Math.max(0, this._transitionFlash - deltaTime / 0.6);
+        }
         
         // Particle effects
         this.particleSpawnCounter += deltaTime;
@@ -333,41 +381,6 @@ export class FrogKingEnemy extends BaseEnemy {
         }
     }
 
-    static getCachedColor(baseColor, operation) {
-        const key = baseColor + ':' + operation;
-        if (this.colorCache.has(key)) {
-            return this.colorCache.get(key);
-        }
-        
-        let result;
-        if (operation === 'lighten') {
-            result = FrogKingEnemy.lightenColor(baseColor, 0.15);
-        } else if (operation === 'darken') {
-            result = FrogKingEnemy.darkenColor(baseColor, 0.2);
-        } else if (operation === 'darken_body') {
-            result = FrogKingEnemy.darkenColor(baseColor, 0.4);
-        }
-        
-        this.colorCache.set(key, result);
-        return result;
-    }
-
-    static lightenColor(hexColor, amount) {
-        const num = parseInt(hexColor.replace('#', ''), 16);
-        const r = Math.min(255, Math.floor((num >> 16) + 255 * amount));
-        const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + 255 * amount));
-        const b = Math.min(255, Math.floor((num & 0x0000FF) + 255 * amount));
-        return '#' + (0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).substring(1);
-    }
-
-    static darkenColor(hexColor, amount) {
-        const num = parseInt(hexColor.replace('#', ''), 16);
-        const r = Math.max(0, Math.floor((num >> 16) * (1 - amount)));
-        const g = Math.max(0, Math.floor(((num >> 8) & 0x00FF) * (1 - amount)));
-        const b = Math.max(0, Math.floor((num & 0x0000FF) * (1 - amount)));
-        return '#' + (0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).substring(1);
-    }
-
     render(ctx) {
         // baseSize depends on ctx.canvas.width (real screen resolution) - computed once
         // here, with a real ctx, and cached on the instance so _syncEnemyPixi
@@ -409,21 +422,33 @@ export class FrogKingEnemy extends BaseEnemy {
         const jumpArc = 4 * this.jumpHeight * jumpProgress * (1 - jumpProgress);
         
         ctx.translate(this.x, this.y - jumpArc);
-        
+
+        // Subtle squash-and-stretch on the jump - smaller amplitude than the common
+        // frogs since a king's hop should read as dignified, not bouncy.
+        const squashAmount = Math.pow(Math.max(0, 1 - Math.sin(jumpProgress * Math.PI)), 3);
+        const stretchAmount = Math.sin(jumpProgress * Math.PI);
+        const bodyScaleX = 1 + squashAmount * 0.06 - stretchAmount * 0.03;
+        const bodyScaleY = 1 - squashAmount * 0.06 + stretchAmount * 0.05;
+
         // Cache colors for this render
         if (!this.cachedLightenColor) {
-            this.cachedLightenColor = FrogKingEnemy.getCachedColor(this.skinColor, 'lighten');
-            this.cachedDarkenColor = FrogKingEnemy.getCachedColor(this.skinColor, 'darken');
-            this.cachedDarken2Color = FrogKingEnemy.getCachedColor(this.skinColor, 'darken_body');
+            this.cachedLightenColor = FrogKingEnemy._colors.get(this.skinColor, 'lighten');
+            this.cachedDarkenColor = FrogKingEnemy._colors.get(this.skinColor, 'darken');
+            this.cachedDarken2Color = FrogKingEnemy._colors.get(this.skinColor, 'darken_body');
         }
         
+        // --- ROYAL CAPE (drawn first, behind everything - swaying, fixed royal color
+        // independent of the rotating elemental skin tone, so the king reads as
+        // consistently "royal" even as his vulnerability color shifts every 10s) ---
+        this.drawRoyalCape(ctx, baseSize);
+
         // --- BACK LEGS (DRAW FIRST) ---
         this.drawBattleLeg(ctx, -baseSize * 0.32, baseSize * 0.2, baseSize, false, true);
         this.drawBattleLeg(ctx, baseSize * 0.32, baseSize * 0.2, baseSize, true, true);
-        
+
         // --- LOWER BODY/ROBE ---
         // Royal tabard skirt flowing down from the torso
-        ctx.fillStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.45);
+        ctx.fillStyle = darkenColor(this.skinColor, 0.45);
         ctx.beginPath();
         ctx.moveTo(-baseSize * 0.44, baseSize * 0.12);
         ctx.quadraticCurveTo(-baseSize * 0.52, baseSize * 0.36, -baseSize * 0.34, baseSize * 0.56);
@@ -441,7 +466,7 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.stroke();
 
         // Tabard center heraldic stripe
-        ctx.fillStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.62);
+        ctx.fillStyle = darkenColor(this.skinColor, 0.62);
         ctx.beginPath();
         ctx.moveTo(-baseSize * 0.1, baseSize * 0.12);
         ctx.quadraticCurveTo(-baseSize * 0.12, baseSize * 0.36, -baseSize * 0.09, baseSize * 0.56);
@@ -451,7 +476,7 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.fill();
 
         // Lighter belly skin visible above tabard (frogs have pale bellies)
-        ctx.fillStyle = FrogKingEnemy.lightenColor(this.skinColor, 0.16);
+        ctx.fillStyle = lightenColor(this.skinColor, 0.16);
         ctx.beginPath();
         ctx.ellipse(0, baseSize * 0.22, baseSize * 0.28, baseSize * 0.17, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -461,20 +486,20 @@ export class FrogKingEnemy extends BaseEnemy {
             this._gradCtx = ctx;
             this._gradBaseSize = baseSize;
             this._bodyGrad = ctx.createLinearGradient(0, -baseSize * 0.42, 0, baseSize * 0.55);
-            this._bodyGrad.addColorStop(0, FrogKingEnemy.lightenColor(this.skinColor, 0.06));
+            this._bodyGrad.addColorStop(0, lightenColor(this.skinColor, 0.06));
             this._bodyGrad.addColorStop(0.45, this.skinColor);
-            this._bodyGrad.addColorStop(1, FrogKingEnemy.darkenColor(this.skinColor, 0.28));
+            this._bodyGrad.addColorStop(1, darkenColor(this.skinColor, 0.28));
         }
         
         ctx.fillStyle = this._bodyGrad;
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.1, baseSize * 0.52, baseSize * 0.48, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, baseSize * 0.1, baseSize * 0.52 * bodyScaleX, baseSize * 0.48 * bodyScaleY, 0, 0, Math.PI * 2);
         ctx.fill();
-        
-        ctx.strokeStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.4);
+
+        ctx.strokeStyle = darkenColor(this.skinColor, 0.4);
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.1, baseSize * 0.52, baseSize * 0.48, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, baseSize * 0.1, baseSize * 0.52 * bodyScaleX, baseSize * 0.48 * bodyScaleY, 0, 0, Math.PI * 2);
         ctx.stroke();
         
         // Royal armor breastplate (angular shield shape)
@@ -551,26 +576,26 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.ellipse(0, -baseSize * 0.48, baseSize * 0.5, baseSize * 0.48, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.strokeStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.4);
+        ctx.strokeStyle = darkenColor(this.skinColor, 0.4);
         ctx.lineWidth = 1.3;
         ctx.beginPath();
         ctx.ellipse(0, -baseSize * 0.48, baseSize * 0.5, baseSize * 0.48, 0, 0, Math.PI * 2);
         ctx.stroke();
         
         // Snout bulge (frog-like)
-        ctx.fillStyle = FrogKingEnemy.lightenColor(this.skinColor, 0.1);
+        ctx.fillStyle = lightenColor(this.skinColor, 0.1);
         ctx.beginPath();
         ctx.ellipse(0, -baseSize * 0.28, baseSize * 0.35, baseSize * 0.22, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.strokeStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.3);
+        ctx.strokeStyle = darkenColor(this.skinColor, 0.3);
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.ellipse(0, -baseSize * 0.28, baseSize * 0.35, baseSize * 0.22, 0, 0, Math.PI * 2);
         ctx.stroke();
 
         // Nostril slits
-        ctx.fillStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.45);
+        ctx.fillStyle = darkenColor(this.skinColor, 0.45);
         ctx.beginPath();
         ctx.ellipse(-baseSize * 0.1, -baseSize * 0.19, baseSize * 0.04, baseSize * 0.025, 0.2, 0, Math.PI * 2);
         ctx.fill();
@@ -652,7 +677,7 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.fill();
         
         // Eyebrow ridges (menacing)
-        ctx.strokeStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.5);
+        ctx.strokeStyle = darkenColor(this.skinColor, 0.5);
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(-baseSize * 0.22, -baseSize * 0.75, baseSize * 0.14, Math.PI * 0.2, Math.PI * 0.8);
@@ -664,7 +689,7 @@ export class FrogKingEnemy extends BaseEnemy {
         
         // --- MOUTH (menacing, wide grin with teeth) ---
         // Mouth line - wide, threatening
-        ctx.fillStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.6);
+        ctx.fillStyle = darkenColor(this.skinColor, 0.6);
         ctx.beginPath();
         ctx.moveTo(-baseSize * 0.25, -baseSize * 0.18);
         ctx.quadraticCurveTo(0, -baseSize * 0.08, baseSize * 0.25, -baseSize * 0.18);
@@ -757,33 +782,91 @@ export class FrogKingEnemy extends BaseEnemy {
             ctx.fill();
         }
 
-        // Health bar
-        const barWidth = baseSize * 3.2;
-        const barHeight = Math.max(2, baseSize * 0.42);
-        const barY = this.y - baseSize * 2.4;
-        
-        ctx.fillStyle = '#000';
-        ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
-        
-        const healthPercent = this.health / this.maxHealth;
-        ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
-        ctx.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
-        
-        ctx.strokeStyle = '#2F2F2F';
+        this.renderHealthBar(ctx, baseSize, { widthMul: 3.2, heightMul: 0.42, yOffsetMul: -2.4 });
+    }
+
+    drawRoyalCape(ctx, baseSize) {
+        const sway = Math.sin(this.animationTime * 1.1 + this.animationPhaseOffset) * baseSize * 0.06;
+        const capeTop = -baseSize * 0.5;
+        const capeMidY = baseSize * 0.05;
+        const capeBottom = baseSize * 0.7;
+        // Widest point of the flare, well beyond the body ellipse's ~0.52*baseSize
+        // half-width and the tabard's ~0.34-0.52 - these are used as actual on-curve
+        // anchor points (not bezier control points, which a quadratic curve only
+        // approaches rather than reaches) so the cape reliably peeks out past the body.
+        const flareX = baseSize * 0.72;
+        const hemX = baseSize * 0.56;
+
+        if (!this._capeGrad || this._capeGradBaseSize !== baseSize || this._capeGradCtx !== ctx) {
+            this._capeGradCtx = ctx;
+            this._capeGradBaseSize = baseSize;
+            this._capeGrad = ctx.createLinearGradient(0, capeTop, 0, capeBottom);
+            this._capeGrad.addColorStop(0, '#7a3a8a');
+            this._capeGrad.addColorStop(1, '#2a0a3a');
+        }
+
+        ctx.fillStyle = this._capeGrad;
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.4, capeTop);
+        ctx.quadraticCurveTo(-baseSize * 0.55, -baseSize * 0.15, -flareX + sway, capeMidY);
+        ctx.quadraticCurveTo(-flareX + sway * 1.3, baseSize * 0.4, -hemX + sway * 1.4, capeBottom);
+        ctx.quadraticCurveTo(0, capeBottom + baseSize * 0.12, hemX + sway * 1.4, capeBottom);
+        ctx.quadraticCurveTo(flareX + sway * 1.3, baseSize * 0.4, flareX + sway, capeMidY);
+        ctx.quadraticCurveTo(baseSize * 0.55, -baseSize * 0.15, baseSize * 0.4, capeTop);
+        ctx.closePath();
+        ctx.fill();
+
+        // Gold trim along the cape edge
+        ctx.strokeStyle = '#D4AF37';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(-hemX + sway * 1.4, capeBottom);
+        ctx.quadraticCurveTo(0, capeBottom + baseSize * 0.12, hemX + sway * 1.4, capeBottom);
+        ctx.stroke();
+
+        // Inner shading fold for depth
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
         ctx.lineWidth = 1;
-        ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.2, capeTop + baseSize * 0.15);
+        ctx.quadraticCurveTo(-baseSize * 0.3 + sway * 0.6, baseSize * 0.3, -baseSize * 0.25 + sway, capeBottom - baseSize * 0.1);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(baseSize * 0.2, capeTop + baseSize * 0.15);
+        ctx.quadraticCurveTo(baseSize * 0.3 + sway * 0.6, baseSize * 0.3, baseSize * 0.25 + sway, capeBottom - baseSize * 0.1);
+        ctx.stroke();
     }
 
     drawRoyalCrown(ctx, baseSize) {
         const crownY = -baseSize * 0.95;
         const crownWidth = baseSize * 0.65;
         const peakHeight = baseSize * 0.35;
-        
+
+        // Charge-up "tell": glow builds through the final 1.2s before the vulnerability
+        // rotates, then the transition burst/flash (see setVulnerability) takes over for
+        // an instant payoff - together these make the swap something a player can react
+        // to instead of a silent recolor.
+        const timeUntilRotation = this.vulnerabilityRotationInterval - this.vulnerabilityRotationTimer;
+        const chargeGlow = timeUntilRotation < 1.2 ? 1 - (timeUntilRotation / 1.2) : 0;
+        const glowIntensity = Math.max(chargeGlow * 0.6, this._transitionFlash);
+        // Stashed so drawScepter (called earlier in renderDynamicParts, so it sees last
+        // frame's value - imperceptible at this throttled redraw rate) can echo the same
+        // build-up/flash in the crystal orb, tying the whole regalia together.
+        this._crownGlowIntensity = glowIntensity;
+
         ctx.save();
         // Add slight dainty bob offset instead of rotation
         const bobOffset = Math.sin(this.crownRotation * 2) * baseSize * 0.03;
         ctx.translate(bobOffset, crownY);
-        
+
+        // Outer glow halo - grows with chargeGlow, flashes bright white on the swap itself
+        if (glowIntensity > 0.02) {
+            ctx.fillStyle = `rgba(255, 255, 255, ${glowIntensity * 0.5})`;
+            ctx.beginPath();
+            ctx.arc(0, -peakHeight * 0.6, baseSize * (0.55 + glowIntensity * 0.35), 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         // Crown base band
         ctx.fillStyle = '#FFD700';
         ctx.beginPath();
@@ -963,17 +1046,18 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.arc(-baseSize * 0.06, -baseSize * 0.5, baseSize * 0.06, 0, Math.PI * 2);
         ctx.fill();
         
-        // Magical glow aura
-        ctx.strokeStyle = 'rgba(255, 255, 100, 0.3)';
+        // Magical glow aura - echoes the crown's charge-up/transition-flash tell
+        const scepterGlow = this._crownGlowIntensity || 0;
+        ctx.strokeStyle = `rgba(255, 255, 100, ${0.3 + scepterGlow * 0.5})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(0, -baseSize * 0.42, baseSize * 0.22, 0, Math.PI * 2);
         ctx.stroke();
-        
-        ctx.strokeStyle = 'rgba(255, 255, 100, 0.15)';
+
+        ctx.strokeStyle = `rgba(255, 255, 100, ${0.15 + scepterGlow * 0.35})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(0, -baseSize * 0.42, baseSize * 0.28, 0, Math.PI * 2);
+        ctx.arc(0, -baseSize * 0.42, baseSize * (0.28 + scepterGlow * 0.15), 0, Math.PI * 2);
         ctx.stroke();
         
         // Floating sparkles around orb
@@ -996,57 +1080,53 @@ export class FrogKingEnemy extends BaseEnemy {
     drawBattleLeg(ctx, hipX, hipY, baseSize, isRight, isBackLeg) {
         const side = isRight ? 1 : -1;
         const jumpPhase = Math.min(1, this.jumpCycleTimer / this.jumpAnimationDuration);
-        
-        // Reverse compression: start extended, compress when jumping, extend after
-        let compression = 0;
-        if (jumpPhase < 0.5) {
-            compression = jumpPhase * 2 * -1; // 0 to -1 (normal to extended downward)
-        } else {
-            compression = (1 - jumpPhase) * 2 * -1; // -1 to 0 (extended to normal)
-        }
-        
-        const thighLength = baseSize * (0.28 + compression * 0.06);
-        const calfLength = baseSize * (0.26 + compression * 0.04);
-        
-        // Thigh - starts at hip and extends downward
-        ctx.fillStyle = this.skinColor;
-        ctx.beginPath();
-        ctx.ellipse(hipX, hipY + thighLength * 0.5, baseSize * 0.11, thighLength * 0.55, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.strokeStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.3);
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        
-        // Calf/Shin - continues from thigh
-        ctx.fillStyle = this.skinColor;
-        const calfStartY = hipY + thighLength;
-        const calfY = calfStartY + calfLength * 0.5;
-        ctx.beginPath();
-        ctx.ellipse(hipX, calfY, baseSize * 0.1, calfLength * 0.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.stroke();
-        
-        // Foot - webbed frog foot
-        ctx.fillStyle = this.skinColor;
-        const footY = calfStartY + calfLength + baseSize * 0.08;
-        ctx.beginPath();
-        ctx.ellipse(hipX + side * baseSize * 0.12, footY, baseSize * 0.15, baseSize * 0.09, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.stroke();
-        
-        // Foot toes (webbed details)
-        ctx.strokeStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.4);
-        ctx.lineWidth = 0.8;
-        for (let i = -1; i <= 1; i++) {
-            const toeX = hipX + side * (baseSize * 0.08 + i * baseSize * 0.06);
-            ctx.beginPath();
-            ctx.moveTo(toeX, footY - baseSize * 0.06);
-            ctx.lineTo(toeX, footY + baseSize * 0.06);
-            ctx.stroke();
-        }
+
+        // Push-off extension: 0 = grounded/folded crouch (the resting pose for most of
+        // the jump cycle), 1 = fully extended mid-leap. The previous version stacked
+        // thigh/calf/foot as vertical ellipses straight down from the hip - a uniform,
+        // straight, rounded-end column that read as phallic rather than a leg. Angling
+        // the thigh outward and folding the calf back (matching the fix applied to the
+        // elemental frogs' shared leg code) gives an actual bent, tapered limb instead.
+        let extension = 0;
+        if (jumpPhase < 0.5) extension = jumpPhase * 2;
+        else extension = Math.max(0, (1 - jumpPhase) * 2);
+
+        const thighLength = baseSize * 0.3;
+        const calfLength = baseSize * 0.28;
+
+        const baseThighAngle = side > 0 ? Math.PI / 3.2 : Math.PI - Math.PI / 3.2;
+        const thighAngle = baseThighAngle - side * extension * 0.2;
+        const kneeX = hipX + Math.cos(thighAngle) * thighLength;
+        const kneeY = hipY + Math.sin(thighAngle) * thighLength;
+
+        const calfAngle = thighAngle + side * 1.05 * (1 - extension * 0.7);
+        const footX = kneeX + Math.cos(calfAngle) * calfLength;
+        const footY = kneeY + Math.sin(calfAngle) * calfLength;
+
+        // Leg (hip -> knee -> ankle) as ONE continuous tapered shape instead of two
+        // separate filled ellipses plus a knee-joint circle - stacking three
+        // independent round shapes at the joint is what read as "too many joints and
+        // circles" rather than a single natural limb. drawTaperedPath builds one
+        // outline through all three points with a smooth direction-averaged bend at
+        // the knee, so the taper from thigh to ankle is continuous.
+        drawTaperedPath(
+            ctx,
+            [{ x: hipX, y: hipY }, { x: kneeX, y: kneeY }, { x: footX, y: footY }],
+            [baseSize * 0.3, baseSize * 0.22, baseSize * 0.16],
+            this.skinColor,
+            darkenColor(this.skinColor, 0.3),
+            1
+        );
+
+        // Flipper - an actual paddle/fin outline (narrow ankle, wide belly, rounded
+        // tip), not a slightly-elongated ellipse - shared with the elemental frogs'
+        // identical fix, see FrogFlipperRenderer.js.
+        drawFlipperFoot(
+            ctx, footX, footY, calfAngle,
+            baseSize * 0.56, baseSize * 0.28,
+            this.skinColor,
+            darkenColor(this.skinColor, 0.4)
+        );
     }
 
     drawBattleArm(ctx, hipX, hipY, baseSize, isRight) {
@@ -1058,7 +1138,7 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.ellipse(hipX, hipY, baseSize * 0.1, baseSize * 0.24, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        ctx.strokeStyle = FrogKingEnemy.darkenColor(this.skinColor, 0.3);
+        ctx.strokeStyle = darkenColor(this.skinColor, 0.3);
         ctx.lineWidth = 1;
         ctx.stroke();
         

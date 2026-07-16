@@ -329,20 +329,33 @@ export class BaseEnemy {
         return 0;
     }
     
-    renderHealthBar(ctx, baseSize) {
-        const barWidth = baseSize * 3;
-        const barHeight = Math.max(2, baseSize * 0.4);
-        const barY = this.y - baseSize * 2.2;
-        
+    /**
+     * Shared health bar renderer. Options let each subclass keep its historical
+     * bar proportions/position (they varied slightly per type before this was
+     * consolidated) while removing ~13 copies of this same fill/fill/stroke code.
+     */
+    renderHealthBar(ctx, baseSize, opts = {}) {
+        const {
+            widthMul = 3.0,
+            heightMul = 0.4,
+            minHeight = 2,
+            yOffsetMul = -2.2,
+            strokeWidth = 1,
+        } = opts;
+
+        const barWidth = baseSize * widthMul;
+        const barHeight = Math.max(minHeight, baseSize * heightMul);
+        const barY = this.y + baseSize * yOffsetMul;
+
         ctx.fillStyle = '#000';
         ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
-        
+
         const healthPercent = this.health / this.maxHealth;
         ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
         ctx.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
-        
+
         ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = strokeWidth;
         ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
     }
     

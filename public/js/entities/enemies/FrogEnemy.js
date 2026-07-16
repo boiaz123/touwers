@@ -1,8 +1,9 @@
 import { BaseEnemy } from './BaseEnemy.js';
+import { EnemyColorCache, FROG_COLOR_VARIANTS } from '../../utils/EnemyColorCache.js';
 
 export class FrogEnemy extends BaseEnemy {
-    // Static color cache to avoid recalculation
-    static colorCache = new Map();
+    // Shared cached color-variant lookup (skinColor -> lighten/darken variants).
+    static _colors = new EnemyColorCache(FROG_COLOR_VARIANTS);
 
     // Pre-built particle color strings: 3 colors × 101 alpha levels (0.00–1.00)
     // Eliminates per-particle per-frame string concatenation (up to 8 particles/frog × N frogs).
@@ -223,68 +224,6 @@ export class FrogEnemy extends BaseEnemy {
         return colors[Math.floor(Math.random() * colors.length)];
     }
     
-    // Static method for getting cached color variations
-    static getCachedColor(baseColor, type) {
-        const key = `${baseColor}_${type}`;
-        if (!FrogEnemy.colorCache.has(key)) {
-            let color;
-            if (type === 'lighten') {
-                color = FrogEnemy.lightenColorStatic(baseColor, 0.2);
-            } else if (type === 'lighten_body') {
-                color = FrogEnemy.lightenColorStatic(baseColor, 0.4);
-            } else if (type === 'darken') {
-                color = FrogEnemy.darkenColorStatic(baseColor, 0.25);
-            } else if (type === 'darken_body') {
-                color = FrogEnemy.darkenColorStatic(baseColor, 0.35);
-            } else if (type === 'darken_leg') {
-                color = FrogEnemy.darkenColorStatic(baseColor, 0.05);
-            } else if (type === 'darken_detail') {
-                color = FrogEnemy.darkenColorStatic(baseColor, 0.3);
-            } else if (type === 'darken_mouth') {
-                color = FrogEnemy.darkenColorStatic(baseColor, 0.4);
-            } else if (type === 'darken_eye') {
-                color = FrogEnemy.darkenColorStatic(baseColor, 0.15);
-            } else if (type === 'lighten_foot') {
-                color = FrogEnemy.lightenColorStatic(baseColor, 0.15);
-            }
-            FrogEnemy.colorCache.set(key, color);
-        }
-        return FrogEnemy.colorCache.get(key);
-    }
-    
-    // Static version of color manipulation to use caching
-    static lightenColorStatic(color, factor) {
-        if (color.startsWith('#')) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            
-            const newR = Math.min(255, Math.floor(r + (255 - r) * factor));
-            const newG = Math.min(255, Math.floor(g + (255 - g) * factor));
-            const newB = Math.min(255, Math.floor(b + (255 - b) * factor));
-            
-            return `rgb(${newR}, ${newG}, ${newB})`;
-        }
-        return color;
-    }
-    
-    static darkenColorStatic(color, factor) {
-        if (color.startsWith('#')) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            
-            const newR = Math.max(0, Math.floor(r * (1 - factor)));
-            const newG = Math.max(0, Math.floor(g * (1 - factor)));
-            const newB = Math.max(0, Math.floor(b * (1 - factor)));
-            
-            return `rgb(${newR}, ${newG}, ${newB})`;
-        }
-        return color;
-    }
-    
     takeDamage(amount, armorPiercingPercent = 0, damageType = 'physical', followTarget = false) {
         super.takeDamage(amount, armorPiercingPercent, damageType, followTarget);
     }
@@ -329,20 +268,30 @@ export class FrogEnemy extends BaseEnemy {
         ctx.fill();
 
         ctx.save();
-        
+
         // Calculate jump arc for visual effect only
         const jumpProgress = this.jumpAnimationTimer / this.jumpAnimationDuration;
         const jumpArc = 4 * this.jumpHeight * jumpProgress * (1 - jumpProgress);
-        
+
         ctx.translate(this.x, this.y - jumpArc);
-        
+
+        // Squash-and-stretch: compressed+wide right at takeoff/landing, elongated+narrow
+        // at the jump apex. Applied directly to the body ellipse's rx/ry (not via
+        // ctx.scale) because CanvasGraphicsShim's arc()/ellipse() only honors a single
+        // uniform scale factor - a non-uniform ctx.scale(sx, sy) would silently render
+        // wrong under the Pixi (Mode B) path this entity actually uses at runtime.
+        const squashAmount = Math.pow(Math.max(0, 1 - Math.sin(jumpProgress * Math.PI)), 3);
+        const stretchAmount = Math.sin(jumpProgress * Math.PI);
+        const bodyScaleX = 1 + squashAmount * 0.15 - stretchAmount * 0.08;
+        const bodyScaleY = 1 - squashAmount * 0.15 + stretchAmount * 0.12;
+
         // Cache colors for this render - only calculate once per frame
         if (!this.cachedLightenColor) {
-            this.cachedLightenColor = FrogEnemy.getCachedColor(this.skinColor, 'lighten');
-            this.cachedDarkenColor = FrogEnemy.getCachedColor(this.skinColor, 'darken');
-            this.cachedDarken2Color = FrogEnemy.getCachedColor(this.skinColor, 'darken_body');
+            this.cachedLightenColor = FrogEnemy._colors.get(this.skinColor, 'lighten');
+            this.cachedDarkenColor = FrogEnemy._colors.get(this.skinColor, 'darken');
+            this.cachedDarken2Color = FrogEnemy._colors.get(this.skinColor, 'darken_body');
         }
-        
+
         // --- FROG BODY ---
         
         // Back legs (lower) - more prominent and frog-like
@@ -354,26 +303,26 @@ export class FrogEnemy extends BaseEnemy {
             this._gradCtx = ctx;
             this._gradBaseSize = baseSize;
             this._bodyGradient = ctx.createRadialGradient(-baseSize * 0.12, -baseSize * 0.1, baseSize * 0.15, 0, 0, baseSize * 0.5);
-            this._bodyGradient.addColorStop(0, FrogEnemy.getCachedColor(this.skinColor, 'lighten'));
+            this._bodyGradient.addColorStop(0, FrogEnemy._colors.get(this.skinColor, 'lighten'));
             this._bodyGradient.addColorStop(0.6, this.skinColor);
             this._bodyGradient.addColorStop(1, this.cachedDarken2Color);
         }
         
         ctx.fillStyle = this._bodyGradient;
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.08, baseSize * 0.5, baseSize * 0.58, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, baseSize * 0.08, baseSize * 0.5 * bodyScaleX, baseSize * 0.58 * bodyScaleY, 0, 0, Math.PI * 2);
         ctx.fill();
-        
+
         ctx.strokeStyle = this.cachedDarken2Color;
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.08, baseSize * 0.5, baseSize * 0.58, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, baseSize * 0.08, baseSize * 0.5 * bodyScaleX, baseSize * 0.58 * bodyScaleY, 0, 0, Math.PI * 2);
         ctx.stroke();
-        
+
         // Belly (lighter color)
-        ctx.fillStyle = FrogEnemy.getCachedColor(this.skinColor, 'lighten_body');
+        ctx.fillStyle = FrogEnemy._colors.get(this.skinColor, 'lighten_body');
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.15, baseSize * 0.38, baseSize * 0.42, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, baseSize * 0.15, baseSize * 0.38 * bodyScaleX, baseSize * 0.42 * bodyScaleY, 0, 0, Math.PI * 2);
         ctx.fill();
         
         // Front legs (upper)
@@ -397,7 +346,7 @@ export class FrogEnemy extends BaseEnemy {
         // --- EYES (LARGE BULGING, FROG-LIKE) ---
         
         // Left eye socket
-        ctx.fillStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_eye');
+        ctx.fillStyle = FrogEnemy._colors.get(this.skinColor, 'darken_eye');
         ctx.beginPath();
         ctx.arc(-baseSize * 0.22, -baseSize * 0.58, baseSize * 0.18, 0, Math.PI * 2);
         ctx.fill();
@@ -426,7 +375,7 @@ export class FrogEnemy extends BaseEnemy {
         ctx.fill();
         
         // Right eye socket
-        ctx.fillStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_eye');
+        ctx.fillStyle = FrogEnemy._colors.get(this.skinColor, 'darken_eye');
         ctx.beginPath();
         ctx.arc(baseSize * 0.22, -baseSize * 0.58, baseSize * 0.18, 0, Math.PI * 2);
         ctx.fill();
@@ -453,11 +402,34 @@ export class FrogEnemy extends BaseEnemy {
         ctx.beginPath();
         ctx.arc(baseSize * 0.16, -baseSize * 0.62, baseSize * 0.025, 0, Math.PI * 2);
         ctx.fill();
-        
+
+        // --- BLINK (periodic, per-instance phase so frogs don't blink in lockstep) ---
+        const blinkT = (this.animationTime + this.animationPhaseOffset * 2.3) % 3.4;
+        if (blinkT < 0.16) {
+            const eyeOpen = Math.abs(Math.cos((blinkT / 0.16) * Math.PI));
+            const prevAlpha = ctx.globalAlpha;
+            ctx.globalAlpha = prevAlpha * (1 - eyeOpen);
+            ctx.fillStyle = this.skinColor;
+            ctx.beginPath();
+            ctx.arc(-baseSize * 0.22, -baseSize * 0.58, baseSize * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(baseSize * 0.22, -baseSize * 0.58, baseSize * 0.18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = prevAlpha;
+        }
+
+        // --- THROAT PULSE (subtle breathing detail below the mouth) ---
+        const throatPulse = 0.6 + 0.4 * Math.sin(this.animationTime * 2.2 + this.animationPhaseOffset);
+        ctx.fillStyle = FrogEnemy._colors.get(this.skinColor, 'lighten_body');
+        ctx.beginPath();
+        ctx.ellipse(0, -baseSize * 0.12, baseSize * 0.13, baseSize * 0.1 * throatPulse, 0, 0, Math.PI * 2);
+        ctx.fill();
+
         // --- MOUTH ---
         
         // Wide frog mouth
-        ctx.strokeStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_mouth');
+        ctx.strokeStyle = FrogEnemy._colors.get(this.skinColor, 'darken_mouth');
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.arc(0, -baseSize * 0.25, baseSize * 0.22, 0, Math.PI);
@@ -472,14 +444,34 @@ export class FrogEnemy extends BaseEnemy {
         ctx.stroke();
         
         // Nostril details
-        ctx.fillStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_detail');
+        ctx.fillStyle = FrogEnemy._colors.get(this.skinColor, 'darken_detail');
         ctx.beginPath();
         ctx.arc(-baseSize * 0.1, -baseSize * 0.48, baseSize * 0.05, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
         ctx.arc(baseSize * 0.1, -baseSize * 0.48, baseSize * 0.05, 0, Math.PI * 2);
         ctx.fill();
-        
+
+        // --- TONGUE FLICK (occasional quick snap, per-instance phase) ---
+        const tongueCycle = (this.animationTime + this.animationPhaseOffset * 3.7) % 5.0;
+        if (tongueCycle < 0.35) {
+            const tp = tongueCycle / 0.35;
+            const extend = tp < 0.4 ? tp / 0.4 : 1 - (tp - 0.4) / 0.6;
+            const tongueLen = baseSize * 0.55 * Math.max(0, extend);
+            const tongueStartY = -baseSize * 0.16;
+            ctx.strokeStyle = '#D8546A';
+            ctx.lineWidth = baseSize * 0.06;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(0, tongueStartY);
+            ctx.lineTo(0, tongueStartY + tongueLen);
+            ctx.stroke();
+            ctx.fillStyle = '#D8546A';
+            ctx.beginPath();
+            ctx.arc(0, tongueStartY + tongueLen, baseSize * 0.05, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         // --- WIZARD HAT ---
         
         this.drawWizardHat(ctx, baseSize);
@@ -497,22 +489,8 @@ export class FrogEnemy extends BaseEnemy {
         }
         
         ctx.restore();
-        
-        // Health bar
-        const barWidth = baseSize * 2.8;
-        const barHeight = Math.max(2, baseSize * 0.38);
-        const barY = this.y - baseSize * 2.1;
-        
-        ctx.fillStyle = '#000';
-        ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
-        
-        const healthPercent = this.health / this.maxHealth;
-        ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
-        ctx.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
-        
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+
+        this.renderHealthBar(ctx, baseSize, { widthMul: 2.8, heightMul: 0.38, yOffsetMul: -2.1 });
     }
 
     drawFrogBackLeg(ctx, hipX, hipY, baseSize, isRight) {
@@ -542,7 +520,7 @@ export class FrogEnemy extends BaseEnemy {
         ctx.stroke();
         
         // Draw leg - thicker for muscular appearance
-        ctx.strokeStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_leg');
+        ctx.strokeStyle = FrogEnemy._colors.get(this.skinColor, 'darken_leg');
         ctx.lineWidth = baseSize * 0.2;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -553,13 +531,13 @@ export class FrogEnemy extends BaseEnemy {
         ctx.stroke();
         
         // Foot pads - webbed appearance
-        ctx.fillStyle = FrogEnemy.getCachedColor(this.skinColor, 'lighten_foot');
+        ctx.fillStyle = FrogEnemy._colors.get(this.skinColor, 'lighten_foot');
         ctx.beginPath();
         ctx.ellipse(footX, footY, baseSize * 0.16, baseSize * 0.18, calfAngle, 0, Math.PI * 2);
         ctx.fill();
         
         // Toe details - webbing
-        ctx.strokeStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_detail');
+        ctx.strokeStyle = FrogEnemy._colors.get(this.skinColor, 'darken_detail');
         ctx.lineWidth = 0.8;
         for (let i = -1; i <= 1; i++) {
             const toeAngle = calfAngle + (i * 0.3);
@@ -599,7 +577,7 @@ export class FrogEnemy extends BaseEnemy {
         ctx.stroke();
         
         // Draw leg
-        ctx.strokeStyle = FrogEnemy.getCachedColor(this.skinColor, 'darken_leg');
+        ctx.strokeStyle = FrogEnemy._colors.get(this.skinColor, 'darken_leg');
         ctx.lineWidth = baseSize * 0.15;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -610,7 +588,7 @@ export class FrogEnemy extends BaseEnemy {
         ctx.stroke();
         
         // Hand pads
-        ctx.fillStyle = FrogEnemy.getCachedColor(this.skinColor, 'lighten_foot');
+        ctx.fillStyle = FrogEnemy._colors.get(this.skinColor, 'lighten_foot');
         ctx.beginPath();
         ctx.ellipse(handX, handY, baseSize * 0.11, baseSize * 0.13, lowerAngle, 0, Math.PI * 2);
         ctx.fill();
@@ -677,11 +655,4 @@ export class FrogEnemy extends BaseEnemy {
         ctx.fillText('★', baseSize * 0.08, -baseSize * 1.44);
     }
     
-    lightenColor(color, factor) {
-        return FrogEnemy.lightenColorStatic(color, factor);
-    }
-    
-    darkenColor(color, factor) {
-        return FrogEnemy.darkenColorStatic(color, factor);
-    }
 }
