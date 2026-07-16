@@ -1,6 +1,17 @@
 import { Building } from './Building.js';
 
 export class TowerForge extends Building {
+    /** The building's natural proportions (walls+roof+chimney) run a bit wider/taller than
+     *  its 4x4 placement grid cell. Every render entry point (renderStaticBack,
+     *  renderDynamicParts) scales its whole drawing down by this factor around the (this.x,
+     *  this.y) anchor so the structure - and the yard clutter/vegetation around it - stays
+     *  within the grid cell instead of spilling into neighboring tiles. update()'s particle
+     *  spawn math (sparks/smoke, drawn later with no transform) applies the same factor to
+     *  its own position offsets so effects still originate from the visually-shrunk opening
+     *  and chimney instead of the old, larger positions.
+     */
+    static STRUCTURE_SCALE = 0.78;
+
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
         this.sparks = [];
@@ -49,23 +60,28 @@ export class TowerForge extends Building {
             'cannon': { level: 0, baseCost: 120, damageEffect: 25, radiusEffect: 5 }
         };
         
-        // Pre-computed grass blade positions to prevent per-frame flickering
+        // Pre-computed grass blade positions to prevent per-frame flickering. Positioned
+        // along the yard's front edge, clear of the flagstone work floor (renderWorkFloor,
+        // y up to ~44) - actual blade strokes instead of a flat green gradient blob read as
+        // real grass encroaching from the surrounding field rather than a painted-on patch.
         this.grassBlades = [
-            { cx: -12, cy: 42, blades: [] },
-            { cx: 18,  cy: 38, blades: [] },
-            { cx: -28, cy: 30, blades: [] },
-            { cx: 32,  cy: 45, blades: [] }
+            { cx: -50, cy: 50, blades: [] },
+            { cx: -24, cy: 56, blades: [] },
+            { cx: -8,  cy: 50, blades: [] },
+            { cx: 4,   cy: 58, blades: [] },
+            { cx: 28,  cy: 55, blades: [] },
+            { cx: 50,  cy: 49, blades: [] }
         ].map(clump => {
-            const count = 3 + Math.floor(clump.cx * 0.7 % 2) + 1; // 3-4 blades, deterministic
+            const count = 4 + Math.floor(clump.cx * 0.7 % 2) + 1; // 4-5 blades, deterministic
             const blades = [];
             for (let i = 0; i < count; i++) {
                 const angle = (i / count) * Math.PI * 2 + clump.cy * 0.08;
-                const dist = (clump.cx * 0.03 + i * 0.7) % 2.5;
+                const dist = (clump.cx * 0.03 + i * 0.7) % 3.2;
                 blades.push({
                     dx: Math.cos(angle) * dist,
                     dy: Math.sin(angle) * dist,
-                    tipDx: (i % 3 - 1) * 0.6,
-                    height: 3 + (i * 0.9 % 2.5)
+                    tipDx: (i % 3 - 1) * 0.7,
+                    height: 3.5 + (i * 0.9 % 3)
                 });
             }
             return { cx: clump.cx, cy: clump.cy, blades };
@@ -85,6 +101,10 @@ export class TowerForge extends Building {
         // Update workers
         const renderSize = this._lastRenderSize || 128;
         const sizeScale = renderSize / 128;
+        const S = TowerForge.STRUCTURE_SCALE; // sparks/smoke are stored in world space and
+        // drawn later with no transform, so their spawn offsets must apply the same shrink
+        // renderStaticBack/renderDynamicParts apply visually, or effects drift off the
+        // now-smaller opening/chimney/worker positions.
         this.workers.forEach(worker => {
             worker.workCooldown -= deltaTime;
             worker.hammerRaised = Math.max(0, worker.hammerRaised - deltaTime * 3);
@@ -97,8 +117,8 @@ export class TowerForge extends Building {
                 if (worker.type === 'blacksmith') {
                     for (let i = 0; i < 3; i++) {
                         this.sparks.push({
-                            x: this.x + worker.x * sizeScale + (Math.random() - 0.5) * 5 * sizeScale,
-                            y: this.y + worker.y * sizeScale + (Math.random() - 0.5) * 5 * sizeScale,
+                            x: this.x + (worker.x * sizeScale + (Math.random() - 0.5) * 5 * sizeScale) * S,
+                            y: this.y + (worker.y * sizeScale + (Math.random() - 0.5) * 5 * sizeScale) * S,
                             vx: (Math.random() - 0.5) * 40 * sizeScale,
                             vy: (-Math.random() * 60 - 20) * sizeScale,
                             life: 0.8,
@@ -119,8 +139,8 @@ export class TowerForge extends Building {
             const sparkCount = this.isSelected ? 8 : 5;
             for (let i = 0; i < sparkCount; i++) {
                 this.sparks.push({
-                    x: this.x - 15 + (Math.random() - 0.5) * 25 * sizeScale,
-                    y: this.y - 5 + (Math.random() - 0.5) * 15 * sizeScale,
+                    x: this.x + (-15 + (Math.random() - 0.5) * 25 * sizeScale) * S,
+                    y: this.y + (-5 + (Math.random() - 0.5) * 15 * sizeScale) * S,
                     vx: (Math.random() - 0.5) * 60 * sizeScale,
                     vy: (-Math.random() * 80 - 30) * sizeScale,
                     life: 1.2,
@@ -131,7 +151,7 @@ export class TowerForge extends Building {
             }
             this.nextSparkTime = 0.1 + Math.random() * 0.2;
         }
-        
+
         // Generate chimney smoke - FROM TOP OF INTEGRATED CHIMNEY
         this.nextSmokeTime -= deltaTime;
         if (this.nextSmokeTime <= 0) {
@@ -142,13 +162,13 @@ export class TowerForge extends Building {
             const chimneyWidth = size * 0.16;
             const chimneyHeight = size * 0.7;
             const wallHeight = size * 0.5;
-            
-            const chimneyX = this.x + buildingWidth/2; // Right edge of building
+
+            const chimneyX = this.x + (buildingWidth/2) * S; // Right edge of building
             const shaftHeight = chimneyHeight - wallHeight;
-            const chimneyTopY = this.y - wallHeight - shaftHeight; // Top of chimney shaft (= this.y - size * 0.7)
-            
+            const chimneyTopY = this.y - (wallHeight + shaftHeight) * S; // Top of chimney shaft
+
             this.smokeParticles.push({
-                x: chimneyX + chimneyWidth/2 + (Math.random() - 0.5) * 10, // From chimney opening
+                x: chimneyX + (chimneyWidth/2) * S + (Math.random() - 0.5) * 10, // From chimney opening
                 y: chimneyTopY,
                 vx: (Math.random() - 0.5) * 20,
                 vy: -30 - Math.random() * 20,
@@ -218,6 +238,21 @@ export class TowerForge extends Building {
         const buildingHeight = size * 0.6;
         const wallHeight = size * 0.5;
 
+        // Back vegetation - drawn BEFORE the wall/chimney/roof (and before the shrink
+        // transform below, so it's at true scale like TrainingGrounds/BasicTower's corner
+        // trees) so the building's opaque shapes naturally occlude any overlapping canopy.
+        // This is what was making a tree beside the chimney read as "floating in front of
+        // it" - it was drawn last, on top of everything, instead of behind the structure it
+        // stands beside.
+        this.renderBackVegetation(ctx, size);
+
+        // Shrink the whole structure around its anchor point so it fits its grid cell -
+        // see STRUCTURE_SCALE's doc comment.
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.scale(TowerForge.STRUCTURE_SCALE, TowerForge.STRUCTURE_SCALE);
+        ctx.translate(-this.x, -this.y);
+
         // Building shadow - FIXED: Only for the actual building, not full 4x4 grid
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.fillRect(this.x - buildingWidth/2 + 4, this.y - wallHeight + 4, buildingWidth, wallHeight);
@@ -239,14 +274,32 @@ export class TowerForge extends Building {
 
         // Forge interior props (coal/anvil/hammer - static part, fire flicker is dynamic)
         this.renderForgeInterior(ctx, size);
+
+        ctx.restore();
+
+        // Front vegetation - drawn AFTER everything else (front-yard props included), at
+        // true scale. These trees stand at a larger y (further forward/closer to the viewer)
+        // than the log pile/grindstone/barrels in the yard, so painter's-algorithm depth
+        // requires them on top of those props, not underneath - drawing them earlier (with
+        // the back trees) was letting the log pile paint over the tree trunks in front of it.
+        this.renderFrontVegetation(ctx, size);
     }
 
     /** Strategy B (per-instance Graphics, redrawn every frame): fire-glow effects (fireIntensity flicker) + workers (hammer-swing animation) - all continuous per-instance state. */
     renderDynamicParts(ctx, size) {
+        // Same anchor-scale as renderStaticBack, so glow/fire/workers line up with the
+        // shrunk opening/chimney/worker-footprint instead of the old unshrunk geometry.
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.scale(TowerForge.STRUCTURE_SCALE, TowerForge.STRUCTURE_SCALE);
+        ctx.translate(-this.x, -this.y);
+
         this.renderForgeOpeningGlow(ctx, size);
         this.renderChimneyGlow(ctx, size);
         this.renderForgeFire(ctx, size);
         this.renderWorkers(ctx, size);
+
+        ctx.restore();
     }
 
     renderFrontAreaItems(ctx, size) {
@@ -486,8 +539,465 @@ export class TowerForge extends Building {
             ctx.arc(coal.x, coal.y, coal.size, 0, Math.PI * 2);
             ctx.fill();
         });
-        
+
         ctx.restore();
+
+        // Dedicated workstation props - anvil, quench barrel, fuel logs, wall tool rack, grindstone
+        this.renderWorkstationProps(ctx, size);
+    }
+
+    /** A pair of trees on each side (a back accent + a front corner tree), sized the way
+     *  TrainingGrounds' fenceDecorations and BasicTower's drawEnvironmentBack/Front corner
+     *  trees are - proportionally large relative to the 4x4 grid cell (and the workers
+     *  standing next to them), spread around the building rather than tucked behind it, so
+     *  the structure reads as standing in a clearing surrounded by trees. No bushes - the
+     *  fallback bush shape (a flat 3-circle green blob) never looked like real foliage, just
+     *  an odd smudge, so it's gone rather than reworked. Rendered at true scale (outside the
+     *  structure's own shrink transform - see the call sites in renderStaticBack). Split into
+     *  two passes by depth, painter's-algorithm style, rather than one "all vegetation" call:
+     *  the back accents (negative y) are drawn behind the wall/chimney so those opaque shapes
+     *  correctly occlude any overlapping canopy instead of the plant floating on top of them;
+     *  the front corner trees (positive y - further forward/closer to the viewer than
+     *  anything in the yard) are drawn LAST, after the log pile/grindstone/barrels/etc., so
+     *  those props don't incorrectly poke through the tree trunks in front of them. Uses the
+     *  level's own campaign-themed vegetation renderer when available (gameplay - forest/
+     *  desert/mountain/space, matching GoldMine/TrainingGrounds/MagicAcademy's convention);
+     *  ctx.level is never set for TowerForge in the Settlement Hub (see
+     *  SettlementBuildingVisuals), so the fallback naturally gives the Hub the same forest
+     *  look gameplay gets, instead of a cruder placeholder shape. */
+    renderBackVegetation(ctx, size) {
+        this._renderVegetationPlants(ctx, [
+            { x: -56, y: -16, scale: 46, variant: 0, kind: 'tree' },
+            { x: 50,  y: -14, scale: 30, variant: 1, kind: 'tree' }
+        ]);
+    }
+
+    renderFrontVegetation(ctx, size) {
+        this._renderVegetationPlants(ctx, [
+            { x: -58, y: 38, scale: 44, variant: 2, kind: 'tree' },
+            { x: 56,  y: 40, scale: 44, variant: 3, kind: 'tree' }
+        ]);
+    }
+
+    _renderVegetationPlants(ctx, plants) {
+        plants.forEach(p => {
+            const px = this.x + p.x;
+            const py = this.y + p.y;
+            if (ctx.level) {
+                ctx.level.renderVegetation(ctx, px, py, p.scale, 0, 0, p.variant);
+            } else {
+                this.renderFallbackForestTree(ctx, px, py, p.scale, p.variant);
+            }
+        });
+    }
+
+    /** Forest tree used only when ctx.level isn't set (Settlement Hub). Four distinct
+     *  variants copied from TrainingGrounds'/LevelBase's own forest tree renderer (not the
+     *  old single round-blob shape) so the Hub's forge yard matches the same forest look
+     *  gameplay gets via ctx.level.renderVegetation, instead of reading as a different,
+     *  cruder style. */
+    renderFallbackForestTree(ctx, x, y, size, variant = 0) {
+        switch (((variant % 4) + 4) % 4) {
+            case 0: this.renderFallbackTreeType1(ctx, x, y, size); break;
+            case 1: this.renderFallbackTreeType2(ctx, x, y, size); break;
+            case 2: this.renderFallbackTreeType3(ctx, x, y, size); break;
+            default: this.renderFallbackTreeType4(ctx, x, y, size);
+        }
+    }
+
+    renderFallbackTreeType1(ctx, x, y, size) {
+        const trunkWidth = size * 0.25;
+        const trunkHeight = size * 0.5;
+        ctx.fillStyle = '#5D4037';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#3E2723';
+        ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.6);
+        ctx.lineTo(x + size * 0.35, y - size * 0.1);
+        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(6, 26, 10, 0.4)';
+        ctx.lineWidth = size * 0.02;
+        ctx.stroke();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.35);
+        ctx.lineTo(x + size * 0.3, y + size * 0.05);
+        ctx.lineTo(x - size * 0.3, y + size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.15);
+        ctx.lineTo(x + size * 0.25, y + size * 0.2);
+        ctx.lineTo(x - size * 0.25, y + size * 0.2);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    renderFallbackTreeType2(ctx, x, y, size) {
+        const trunkWidth = size * 0.2;
+        const trunkHeight = size * 0.4;
+        ctx.fillStyle = '#6B4423';
+        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
+        ctx.fillStyle = '#8B5A3C';
+        ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(6, 26, 10, 0.4)';
+        ctx.lineWidth = size * 0.02;
+        ctx.stroke();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.35, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderFallbackTreeType3(ctx, x, y, size) {
+        // Sparse tree with distinct branches
+        const trunkWidth = size * 0.22;
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
+        ctx.fillStyle = '#4E342E';
+        ctx.beginPath();
+        ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1B5E20';
+        ctx.strokeStyle = 'rgba(6, 26, 10, 0.4)';
+        ctx.lineWidth = size * 0.02;
+        ctx.beginPath();
+        ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x + size * 0.28, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    renderFallbackTreeType4(ctx, x, y, size) {
+        // Pine/Spruce style with layered triangles
+        const trunkWidth = size * 0.18;
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
+        ctx.fillStyle = '#0D3817';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.05);
+        ctx.lineTo(x + size * 0.38, y + size * 0.15);
+        ctx.lineTo(x - size * 0.38, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(6, 26, 10, 0.4)';
+        ctx.lineWidth = size * 0.02;
+        ctx.stroke();
+        ctx.fillStyle = '#1B5E20';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.25);
+        ctx.lineTo(x + size * 0.3, y);
+        ctx.lineTo(x - size * 0.3, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.45);
+        ctx.lineTo(x + size * 0.2, y - size * 0.15);
+        ctx.lineTo(x - size * 0.2, y - size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#43A047';
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 0.65);
+        ctx.lineTo(x + size * 0.12, y - size * 0.35);
+        ctx.lineTo(x - size * 0.12, y - size * 0.35);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    /** Exterior blacksmith workstation - anvil the blacksmith worker actually strikes, a
+     *  quench barrel, a fuel log pile, a wall-mounted tool rack and a grindstone. Turns the
+     *  yard from generic storage clutter into a working forge station. */
+    renderWorkstationProps(ctx, size) {
+        // Anvil on a tree-stump base, positioned right at the blacksmith worker's feet
+        // so the hammer-swing animation reads as striking it.
+        ctx.save();
+        ctx.translate(this.x + 15, this.y + 24);
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(1, 2, 7, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Stump
+        ctx.fillStyle = '#6B4423';
+        ctx.strokeStyle = '#4A2E15';
+        ctx.lineWidth = 1;
+        ctx.fillRect(-5, -6, 10, 8);
+        ctx.strokeRect(-5, -6, 10, 8);
+        ctx.fillStyle = '#7C5233';
+        ctx.beginPath();
+        ctx.ellipse(0, -6, 5, 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#4A2E15';
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(74, 46, 21, 0.6)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.ellipse(0, -6, 3, 1.2, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Anvil body
+        ctx.fillStyle = '#2A2A2A';
+        ctx.strokeStyle = '#0F0F0F';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-6, -8);
+        ctx.lineTo(6, -8);
+        ctx.lineTo(7, -11);
+        ctx.lineTo(-4, -11);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Anvil horn
+        ctx.beginPath();
+        ctx.moveTo(-4, -11);
+        ctx.lineTo(-9, -12);
+        ctx.lineTo(-8, -10);
+        ctx.lineTo(-4, -9.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        // Anvil top highlight (polished from striking)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.fillRect(-4, -11, 8, 1.5);
+        ctx.restore();
+
+        // Quench barrel - water tub for cooling hot metal
+        ctx.save();
+        ctx.translate(this.x + 40, this.y + 15);
+        const qSize = 9;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(-qSize/2 + 2, -qSize + 2, qSize, qSize);
+        ctx.fillStyle = '#5C3A21';
+        ctx.strokeStyle = '#3B2414';
+        ctx.lineWidth = 2;
+        ctx.fillRect(-qSize/2, -qSize, qSize, qSize);
+        ctx.strokeRect(-qSize/2, -qSize, qSize, qSize);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-qSize/2, -qSize * 0.65);
+        ctx.lineTo(qSize/2, -qSize * 0.65);
+        ctx.moveTo(-qSize/2, -qSize * 0.25);
+        ctx.lineTo(qSize/2, -qSize * 0.25);
+        ctx.stroke();
+        // Water surface
+        ctx.fillStyle = '#3B6EA5';
+        ctx.beginPath();
+        ctx.ellipse(0, -qSize, qSize/2 - 0.5, qSize * 0.16, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#274766';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(-1.5, -qSize - 0.5, 1.6, 0.6, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        // Faint steam wisp
+        ctx.strokeStyle = 'rgba(220, 220, 220, 0.25)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-1, -qSize - 1);
+        ctx.quadraticCurveTo(-3, -qSize - 6, -1, -qSize - 11);
+        ctx.stroke();
+        ctx.restore();
+
+        // Fuel log pile
+        ctx.save();
+        ctx.translate(this.x - 50, this.y + 20);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(-9, -1, 18, 5);
+        const logs = [
+            { x: -8, y: 1, len: 14 },
+            { x: 6, y: 1.5, len: 13 },
+            { x: -1, y: -3.5, len: 15 }
+        ];
+        logs.forEach(log => {
+            ctx.save();
+            ctx.translate(log.x, log.y);
+            ctx.fillStyle = '#6E4223';
+            ctx.strokeStyle = '#432912';
+            ctx.lineWidth = 1;
+            ctx.fillRect(-log.len/2, -2.4, log.len, 4.8);
+            ctx.strokeRect(-log.len/2, -2.4, log.len, 4.8);
+            ctx.fillStyle = '#C9A06A';
+            ctx.beginPath();
+            ctx.ellipse(-log.len/2, 0, 2.4, 2.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#432912';
+            ctx.stroke();
+            ctx.strokeStyle = 'rgba(67, 41, 18, 0.6)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.arc(-log.len/2, 0, 1.2, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        });
+        ctx.restore();
+
+        // Wall-mounted tool rack - hanging hammer, saw and tongs
+        ctx.save();
+        ctx.translate(this.x + 32, this.y - 32);
+        ctx.fillStyle = '#5A3A20';
+        ctx.strokeStyle = '#3A2410';
+        ctx.lineWidth = 1;
+        ctx.fillRect(-14, -1.5, 28, 3);
+        ctx.strokeRect(-14, -1.5, 28, 3);
+        ctx.fillStyle = '#2F2F2F';
+        [-9, 0, 9].forEach(px => {
+            ctx.beginPath();
+            ctx.arc(px, 1.5, 1, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        // Hanging hammer
+        ctx.strokeStyle = '#8B4513';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-9, 1.5);
+        ctx.lineTo(-9, 9);
+        ctx.stroke();
+        ctx.fillStyle = '#2F2F2F';
+        ctx.fillRect(-12, 9, 6, 2.5);
+        // Hanging saw
+        ctx.strokeStyle = '#B0B0B0';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, 1.5);
+        ctx.lineTo(3, 10);
+        ctx.lineTo(-3, 10);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(192, 192, 192, 0.4)';
+        ctx.fill();
+        // Hanging tongs
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(9, 1.5);
+        ctx.lineTo(7, 10);
+        ctx.moveTo(9, 1.5);
+        ctx.lineTo(11, 10);
+        ctx.stroke();
+        ctx.restore();
+
+        // Grindstone - sharpening wheel on a wooden A-frame with a water trough
+        ctx.save();
+        ctx.translate(this.x + 46, this.y + 40);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(1, 2, 9, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#5A3A20';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(-6, 2); ctx.lineTo(-2, -10);
+        ctx.moveTo(6, 2); ctx.lineTo(2, -10);
+        ctx.moveTo(-2, -10); ctx.lineTo(2, -10);
+        ctx.stroke();
+        const wheelGradient = ctx.createRadialGradient(-1, -11, 1, 0, -10, 7);
+        wheelGradient.addColorStop(0, '#B8AFA0');
+        wheelGradient.addColorStop(1, '#8A8072');
+        ctx.fillStyle = wheelGradient;
+        ctx.beginPath();
+        ctx.arc(0, -10, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#5A5147';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = '#2F2F2F';
+        ctx.beginPath();
+        ctx.arc(0, -10, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.lineTo(6, -7);
+        ctx.stroke();
+        ctx.fillStyle = '#1C1C1C';
+        ctx.beginPath();
+        ctx.arc(6, -7, 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#4A6B8A';
+        ctx.fillRect(-4, -3, 8, 2.5);
+        ctx.strokeStyle = '#2F4256';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-4, -3, 8, 2.5);
+        ctx.restore();
+    }
+
+    /** Paved courtyard in front of the forge door/anvil - fixed flagstone layout, deterministic shading (matches the wall's stone-hash technique) so nothing flickers frame to frame. */
+    renderWorkFloor(ctx, size) {
+        const scale = size / 128;
+        const flagstones = [
+            { x: -38, y: 18, w: 16, h: 11, rot: -0.05 },
+            { x: -21, y: 14, w: 15, h: 10, rot: 0.04 },
+            { x: -5,  y: 16, w: 17, h: 11, rot: -0.03 },
+            { x: 13,  y: 13, w: 15, h: 10, rot: 0.05 },
+            { x: 29,  y: 17, w: 16, h: 11, rot: -0.04 },
+            { x: -43, y: 30, w: 15, h: 11, rot: 0.03 },
+            { x: -26, y: 28, w: 16, h: 11, rot: -0.02 },
+            { x: -8,  y: 30, w: 17, h: 12, rot: 0.02 },
+            { x: 11,  y: 29, w: 16, h: 11, rot: -0.05 },
+            { x: 28,  y: 32, w: 15, h: 11, rot: 0.04 },
+            { x: -18, y: 42, w: 16, h: 11, rot: -0.03 },
+            { x: 1,   y: 44, w: 17, h: 11, rot: 0.03 },
+            { x: 19,  y: 43, w: 15, h: 10, rot: -0.04 }
+        ];
+
+        flagstones.forEach((f, i) => {
+            ctx.save();
+            ctx.translate(this.x + f.x * scale, this.y + f.y * scale);
+            ctx.rotate(f.rot);
+            const w = f.w * scale, h = f.h * scale;
+
+            // Mortar/gap shadow, slightly larger than the stone, sold the "paved" seams
+            ctx.fillStyle = 'rgba(30, 26, 22, 0.4)';
+            ctx.fillRect(-w/2 - 1, -h/2 - 1, w + 2, h + 2);
+
+            const hashVal = ((i * 17 + 5) % 11) / 11;
+            const shade = 0.72 + hashVal * 0.28;
+            ctx.fillStyle = `rgb(${Math.floor(142 * shade)}, ${Math.floor(136 * shade)}, ${Math.floor(126 * shade)})`;
+            ctx.strokeStyle = 'rgba(40, 34, 28, 0.7)';
+            ctx.lineWidth = 1;
+            ctx.fillRect(-w/2, -h/2, w, h);
+            ctx.strokeRect(-w/2, -h/2, w, h);
+
+            // Worn highlight, top-left
+            ctx.fillStyle = `rgba(255, 255, 245, ${0.12 * shade})`;
+            ctx.fillRect(-w/2, -h/2, w * 0.45, h * 0.35);
+
+            // Scuff/crack detail
+            ctx.strokeStyle = 'rgba(40, 34, 28, 0.35)';
+            ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(-w * 0.2, -h * 0.3);
+            ctx.lineTo(w * 0.1, h * 0.25);
+            ctx.stroke();
+
+            ctx.restore();
+        });
     }
 
     renderNaturalGroundDetails(ctx, size) {
@@ -509,38 +1019,17 @@ export class TowerForge extends Building {
             dirtGradient.addColorStop(0, `rgba(139, 69, 19, ${patch.intensity})`);
             dirtGradient.addColorStop(0.6, `rgba(160, 82, 45, ${patch.intensity * 0.7})`);
             dirtGradient.addColorStop(1, `rgba(139, 69, 19, 0)`);
-            
+
             ctx.fillStyle = dirtGradient;
             ctx.beginPath();
             ctx.arc(this.x + patch.x, this.y + patch.y, patch.radius, 0, Math.PI * 2);
             ctx.fill();
         });
-        
-        // Grass patches
-        const grassPatches = [
-            { x: -35, y: 40, radius: 10, intensity: 0.8 },
-            { x: -15, y: 45, radius: 8, intensity: 0.7 },
-            { x: 20, y: 45, radius: 12, intensity: 0.9 },
-            { x: 35, y: 40, radius: 9, intensity: 0.6 },
-            { x: 0, y: 50, radius: 7, intensity: 0.8 },
-            { x: -25, y: 20, radius: 6, intensity: 0.5 }
-        ];
-        
-        grassPatches.forEach(patch => {
-            const grassGradient = ctx.createRadialGradient(
-                this.x + patch.x, this.y + patch.y, 0,
-                this.x + patch.x, this.y + patch.y, patch.radius
-            );
-            grassGradient.addColorStop(0, `rgba(34, 139, 34, ${patch.intensity})`);
-            grassGradient.addColorStop(0.6, `rgba(107, 142, 35, ${patch.intensity * 0.8})`);
-            grassGradient.addColorStop(1, `rgba(34, 139, 34, 0)`);
-            
-            ctx.fillStyle = grassGradient;
-            ctx.beginPath();
-            ctx.arc(this.x + patch.x, this.y + patch.y, patch.radius, 0, Math.PI * 2);
-            ctx.fill();
-        });
-        
+
+        // Paved work floor - a trampled flagstone courtyard right in front of the door
+        // and anvil, so the busy part of the yard reads as a worksite rather than lawn.
+        this.renderWorkFloor(ctx, size);
+
         // Scattered small rocks
         const scatteredRocks = [
             { x: -30, y: 35, size: 2 },
@@ -562,9 +1051,21 @@ export class TowerForge extends Building {
             ctx.stroke();
         });
         
-        // Small grass clumps - pre-computed positions to prevent flickering
+        // Small grass clumps - pre-computed positions to prevent flickering. A faint moss
+        // tint grounds each clump into the dirt (instead of the old bright, oversized radial
+        // "grass patch" glow) before the individual blade strokes are drawn on top.
         this.grassBlades.forEach(clump => {
-            ctx.strokeStyle = '#228B22';
+            const tintX = this.x + clump.cx;
+            const tintY = this.y + clump.cy;
+            const tintGradient = ctx.createRadialGradient(tintX, tintY, 0, tintX, tintY, 6);
+            tintGradient.addColorStop(0, 'rgba(60, 100, 40, 0.22)');
+            tintGradient.addColorStop(1, 'rgba(60, 100, 40, 0)');
+            ctx.fillStyle = tintGradient;
+            ctx.beginPath();
+            ctx.arc(tintX, tintY, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#2E7D32';
             ctx.lineWidth = 1;
             clump.blades.forEach(blade => {
                 const bladeX = this.x + clump.cx + blade.dx;
@@ -594,99 +1095,154 @@ export class TowerForge extends Building {
     }
     
     renderWorkers(ctx, size) {
-        const scale = size / 128;
+        const posScale = size / 128;
+        const bodyScale = 1.45; // enlarges the worker figures (fixed-pixel body units) for visible detail
         this.workers.forEach(worker => {
             ctx.save();
-            ctx.translate(this.x + worker.x * scale, this.y + worker.y * scale);
-            
+            ctx.translate(this.x + worker.x * posScale, this.y + worker.y * posScale);
+            ctx.scale(bodyScale, bodyScale);
+
             // Worker shadow
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
             ctx.beginPath();
-            ctx.ellipse(1, 1, 3, 1, 0, 0, Math.PI * 2);
+            ctx.ellipse(0.5, 0.5, 4, 1.4, 0, 0, Math.PI * 2);
             ctx.fill();
-            
+
+            // Boots
+            ctx.fillStyle = '#3B2A1A';
+            ctx.fillRect(-3.5, -3, 3, 3);
+            ctx.fillRect(0.5, -3, 3, 3);
+
+            // Legs (trousers)
+            ctx.fillStyle = worker.type === 'blacksmith' ? '#4A4A4A' : '#3A5A8A';
+            ctx.fillRect(-3, -9, 2.6, 6.5);
+            ctx.fillRect(0.4, -9, 2.6, 6.5);
+
+            // Belt
+            ctx.fillStyle = '#2A1A0E';
+            ctx.fillRect(-3.2, -9.5, 6.4, 1.4);
+
             if (worker.type === 'blacksmith') {
-                // Blacksmith - wearing leather apron
-                ctx.fillStyle = '#654321'; // Brown leather apron
-                ctx.fillRect(-3, -8, 6, 12);
-                
-                // Apron straps
+                // Shirt beneath the apron
+                ctx.fillStyle = '#8A7052';
+                ctx.fillRect(-3.2, -17, 6.4, 8);
+
+                // Leather apron
+                ctx.fillStyle = '#654321';
+                ctx.beginPath();
+                ctx.moveTo(-3.6, -16.5);
+                ctx.lineTo(3.6, -16.5);
+                ctx.lineTo(3, -9);
+                ctx.lineTo(-3, -9);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#3E2A14';
+                ctx.lineWidth = 0.4;
+                ctx.stroke();
+
+                // Apron pocket
+                ctx.fillStyle = '#4A2E15';
+                ctx.fillRect(-2, -12, 4, 2.4);
+
+                // Apron straps over the shoulders
                 ctx.strokeStyle = '#8B4513';
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.moveTo(-2, -8);
-                ctx.lineTo(0, -12);
-                ctx.lineTo(2, -8);
+                ctx.moveTo(-2.4, -17);
+                ctx.lineTo(0, -20.5);
+                ctx.lineTo(2.4, -17);
                 ctx.stroke();
             } else {
-                // Helper - blue work shirt
+                // Helper - blue work shirt with a rolled-sleeve trim
                 ctx.fillStyle = '#4169E1';
-                ctx.fillRect(-2, -6, 4, 10);
+                ctx.fillRect(-3, -17, 6, 8.5);
+                ctx.fillStyle = '#2E4E9E';
+                ctx.fillRect(-3, -17, 6, 1.5);
             }
-            
-            // Worker head
+
+            // Head
             ctx.fillStyle = '#DDBEA9';
             ctx.beginPath();
-            ctx.arc(0, -12, 2.5, 0, Math.PI * 2);
+            ctx.arc(0, -19.5, 3, 0, Math.PI * 2);
             ctx.fill();
-            
-            // Worker hair/hat
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+            ctx.beginPath();
+            ctx.arc(0.9, -19.3, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Hair/hat
             if (worker.type === 'blacksmith') {
                 // Leather cap
                 ctx.fillStyle = '#8B4513';
                 ctx.beginPath();
-                ctx.arc(0, -12, 3, Math.PI, Math.PI * 2);
+                ctx.arc(0, -19.5, 3.4, Math.PI, Math.PI * 2);
                 ctx.fill();
             } else {
                 // Simple hair
                 ctx.fillStyle = '#654321';
                 ctx.beginPath();
-                ctx.arc(0, -13, 2, Math.PI, Math.PI * 2);
+                ctx.arc(0, -20.2, 2.4, Math.PI, Math.PI * 2);
                 ctx.fill();
             }
-            
-            // Arms with tools
-            const armAngle = worker.hammerRaised > 0 ? -Math.PI/2 : Math.PI/6;
-            
+
+            // Arms with tools - smoothstep-eased interpolation instead of a binary snap, so
+            // the arm swings continuously between raised and resting instead of holding the
+            // fully-raised pose for the whole decay window then popping to resting in one frame.
+            // Rest angle points the arm down toward the hip (not out to the side at a shallow
+            // 30° reach) so the idle pose reads as a clearly relaxed, lowered arm instead of
+            // looking perpetually half-raised.
+            const REST_ARM_ANGLE = Math.PI * 0.58;
+            const RAISED_ARM_ANGLE = -Math.PI / 2;
+            const liftT = worker.hammerRaised;
+            const liftEased = liftT * liftT * (3 - 2 * liftT);
+            const armAngle = REST_ARM_ANGLE + (RAISED_ARM_ANGLE - REST_ARM_ANGLE) * liftEased;
+
             ctx.strokeStyle = '#DDBEA9';
-            ctx.lineWidth = 2;
-            
+            ctx.lineWidth = 2.4;
+            ctx.lineCap = 'round';
+
             // Working arm
             ctx.beginPath();
-            ctx.moveTo(0, -6);
-            ctx.lineTo(Math.cos(armAngle) * 6, -6 + Math.sin(armAngle) * 6);
+            ctx.moveTo(0, -16.5);
+            ctx.lineTo(Math.cos(armAngle) * 7.5, -16.5 + Math.sin(armAngle) * 7.5);
             ctx.stroke();
-            
-            // Other arm
+
+            // Other arm - braced, steadying stance
             ctx.beginPath();
-            ctx.moveTo(0, -4);
-            ctx.lineTo(-3, -1);
+            ctx.moveTo(0, -15);
+            ctx.lineTo(-4, -11);
             ctx.stroke();
-            
-            // Tool in hand
-            if (worker.hammerRaised > 0.2) {
-                const toolX = Math.cos(armAngle) * 8;
-                const toolY = -6 + Math.sin(armAngle) * 8;
-                
+            ctx.lineCap = 'butt';
+
+            // Tool in hand - held continuously (not just above a hammerRaised threshold) so it
+            // tracks the now-smoothly-interpolated arm instead of popping in/out each cycle.
+            {
+                const toolX = Math.cos(armAngle) * 9.5;
+                const toolY = -16.5 + Math.sin(armAngle) * 9.5;
+
                 if (worker.type === 'blacksmith') {
-                    // Hammer
+                    // Hammer, oriented along the swing direction
+                    ctx.save();
+                    ctx.translate(toolX, toolY);
+                    ctx.rotate(armAngle + Math.PI / 2);
                     ctx.fillStyle = '#2F2F2F';
-                    ctx.fillRect(toolX - 2, toolY, 4, 2);
+                    ctx.fillRect(-2.6, -1.2, 5.2, 2.4);
                     ctx.fillStyle = '#8B4513';
-                    ctx.fillRect(toolX - 1, toolY + 2, 2, 6);
+                    ctx.fillRect(-1, 1.2, 2, 6.5);
+                    ctx.restore();
                 } else {
                     // Tongs
                     ctx.strokeStyle = '#2F2F2F';
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = 1.6;
                     ctx.beginPath();
-                    ctx.moveTo(toolX - 1, toolY);
-                    ctx.lineTo(toolX - 2, toolY + 4);
-                    ctx.moveTo(toolX + 1, toolY);
-                    ctx.lineTo(toolX + 2, toolY + 4);
+                    ctx.moveTo(toolX - 1.2, toolY);
+                    ctx.lineTo(toolX - 2.4, toolY + 4.5);
+                    ctx.moveTo(toolX + 1.2, toolY);
+                    ctx.lineTo(toolX + 2.4, toolY + 4.5);
                     ctx.stroke();
                 }
             }
-            
+
             ctx.restore();
         });
     }
@@ -700,65 +1256,101 @@ export class TowerForge extends Building {
         wallGradient.addColorStop(0, '#A9A9A9');
         wallGradient.addColorStop(0.5, '#808080');
         wallGradient.addColorStop(1, '#696969');
-        
+
         // Main wall structure - straight walls on both sides
         ctx.fillStyle = wallGradient;
         ctx.fillRect(this.x - buildingWidth/2, this.y - wallHeight, buildingWidth, wallHeight);
-        
+
         // Individual cobblestones
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1;
-        
+
         const stoneWidth = buildingWidth / 8;
         const stoneHeight = wallHeight / 6;
-        
+
+        // Forge opening bounding box, in the exact same coordinate space renderForgeOpening()
+        // uses (including its own +5 arch-surround padding) - stones are skipped by true pixel
+        // overlap against this box rather than a fixed row/col window, so the staggered brick
+        // offset (below) can never leave a sliver that's neither stone nor opening frame.
+        const size = buildingWidth / 0.9;
+        const openingWidth = size * 0.25;
+        const openingHeight = size * 0.2;
+        const openingX = this.x - openingWidth / 2 - 15;
+        const openingY = this.y - openingHeight / 2 - 5;
+        const archRadius = openingWidth / 2;
+        const openingBoundLeft = openingX - 5;
+        const openingBoundRight = openingX + openingWidth + 5;
+        const openingBoundTop = openingY - archRadius - 8;
+        const openingBoundBottom = openingY + openingHeight;
+
         // Draw cobblestone pattern for main wall
         for (let row = 0; row < 6; row++) {
             const offsetX = (row % 2) * stoneWidth/2; // Staggered pattern
             const rowY = this.y - wallHeight + (row * stoneHeight);
-            
+
             for (let col = 0; col < 8; col++) { // Only 8 columns for main wall
                 const stoneX = this.x - buildingWidth/2 + offsetX + (col * stoneWidth);
-                
-                // Skip stones where forge opening will be
-                if (row >= 2 && row <= 4 && col >= 1 && col <= 3) {
+
+                // Skip stones that actually overlap the forge opening + arch surround
+                if (stoneX + stoneWidth - 1 > openingBoundLeft && stoneX < openingBoundRight &&
+                    rowY + stoneHeight - 1 > openingBoundTop && rowY < openingBoundBottom) {
                     continue;
                 }
-                
+
                 // Individual stone color variation - deterministic hash for consistent look
                 const hashVal = ((row * 11 + col * 7) % 13) / 13;
                 const stoneShade = 0.78 + hashVal * 0.2;
                 ctx.fillStyle = `rgb(${Math.floor(169 * stoneShade)}, ${Math.floor(169 * stoneShade)}, ${Math.floor(169 * stoneShade)})`;
-                
+
                 // Draw stone
                 ctx.fillRect(stoneX, rowY, stoneWidth - 1, stoneHeight - 1);
                 ctx.strokeRect(stoneX, rowY, stoneWidth - 1, stoneHeight - 1);
-                
-                // Stone highlight for 3D effect
-                ctx.fillStyle = `rgba(200, 200, 200, ${0.3 * stoneShade})`;
-                ctx.fillRect(stoneX, rowY, stoneWidth/3, stoneHeight/3);
+
+                // Stone highlight for 3D bevel (raised top-left edge)
+                ctx.fillStyle = `rgba(220, 220, 220, ${0.35 * stoneShade})`;
+                ctx.fillRect(stoneX, rowY, stoneWidth - 1, stoneHeight/4);
+                ctx.fillRect(stoneX, rowY, stoneWidth/4, stoneHeight - 1);
+
+                // Stone shadow for 3D bevel (recessed bottom-right edge)
+                ctx.fillStyle = `rgba(0, 0, 0, ${0.28 * stoneShade})`;
+                ctx.fillRect(stoneX, rowY + stoneHeight - 1 - stoneHeight/4, stoneWidth - 1, stoneHeight/4);
+                ctx.fillRect(stoneX + stoneWidth - 1 - stoneWidth/4, rowY, stoneWidth/4, stoneHeight - 1);
             }
         }
-        
-        // Wall top edge
-        ctx.fillStyle = '#DCDCDC';
-        ctx.fillRect(this.x - buildingWidth/2, this.y - wallHeight, buildingWidth, 3);
-        
-        // STRAIGHT RIGHT SIDE WALL - no protruding bricks
-        ctx.fillStyle = '#696969';
-        ctx.fillRect(this.x + buildingWidth/2, this.y - wallHeight, 3, wallHeight);
-        
-        // Right wall top edge
-        ctx.fillStyle = '#808080';
-        ctx.fillRect(this.x + buildingWidth/2, this.y - wallHeight, 3, 3);
-        
-        // Right wall stone pattern - straight vertical line
+
+        // Foundation plinth - darker stone footer that grounds the building
+        const plinthHeight = wallHeight * 0.1;
+        const plinthGradient = ctx.createLinearGradient(0, this.y - plinthHeight, 0, this.y);
+        plinthGradient.addColorStop(0, '#4A4A4A');
+        plinthGradient.addColorStop(1, '#2F2F2F');
+        ctx.fillStyle = plinthGradient;
+        ctx.fillRect(this.x - buildingWidth/2 - 3, this.y - plinthHeight, buildingWidth + 6, plinthHeight);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(this.x - buildingWidth/2 - 3, this.y - plinthHeight, buildingWidth + 6, 2);
+
+        // Corner pilaster - reinforced stone column bookending the left edge
+        const pilasterWidth = stoneWidth * 0.55;
+        ctx.fillStyle = '#8C8C8C';
+        ctx.fillRect(this.x - buildingWidth/2 - 2, this.y - wallHeight, pilasterWidth, wallHeight - plinthHeight);
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1;
         for (let row = 0; row < 6; row++) {
-            const rowY = this.y - wallHeight + (row * stoneHeight);
-            ctx.strokeRect(this.x + buildingWidth/2, rowY, 3, stoneHeight - 1);
+            const rowY = this.y - wallHeight + row * stoneHeight;
+            ctx.strokeRect(this.x - buildingWidth/2 - 2, rowY, pilasterWidth, stoneHeight - 1);
+            ctx.fillStyle = 'rgba(230, 230, 230, 0.3)';
+            ctx.fillRect(this.x - buildingWidth/2 - 2, rowY, pilasterWidth/3, stoneHeight/3);
+            ctx.fillStyle = '#8C8C8C';
         }
+
+        // Wall top edge
+        ctx.fillStyle = '#DCDCDC';
+        ctx.fillRect(this.x - buildingWidth/2, this.y - wallHeight, buildingWidth, 3);
+
+        // Right edge of the main wall is entirely overlapped by the chimney foundation
+        // (rendered next, starting at this exact x with a greater width) - a thin cap here
+        // just prevents a 1px gap from showing before the chimney draws over it.
+        ctx.fillStyle = '#3E3E3E';
+        ctx.fillRect(this.x + buildingWidth/2, this.y - wallHeight, 3, wallHeight);
     }
     
     renderChimney(ctx, size) {
@@ -890,50 +1482,143 @@ export class TowerForge extends Building {
     
     renderRoof(ctx, buildingWidth, buildingHeight, wallHeight) {
         const size = buildingWidth / 0.9; // Reverse calculate size
-        
-        // Main roof structure
-        ctx.fillStyle = '#8B4513';
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 2;
-        
+
         // Calculate roof points with chimney integration
         const chimneyWidth = size * 0.16;
         const roofPeakX = this.x;
         const roofPeakY = this.y - wallHeight - buildingHeight * 0.2;
         const leftRoofX = this.x - buildingWidth/2 - 5;
         const rightRoofX = this.x + buildingWidth/2; // Ends at main building edge
-        
-        // Main roof (no right overhang since chimney continues the structure)
-        ctx.beginPath();
-        ctx.moveTo(leftRoofX, this.y - wallHeight);
-        ctx.lineTo(roofPeakX, roofPeakY);
-        ctx.lineTo(rightRoofX, this.y - wallHeight);
-        ctx.lineTo(leftRoofX, this.y - wallHeight + 3);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        
-        // Roof tiles
-        ctx.strokeStyle = '#5D4E37';
+        const baseY = this.y - wallHeight;
+
+        // Stone cornice - the ledge the roof rests on, in the same gray as the wall below it,
+        // so the roof reads as sitting ON the building rather than a separate piece dropped on
+        // top. Dentil ticks echo the wall's own stone-column rhythm for a tighter tie-in.
+        const corniceWidth = (rightRoofX - leftRoofX) + 4;
+        const corniceGradient = ctx.createLinearGradient(0, baseY - 1, 0, baseY + 4);
+        corniceGradient.addColorStop(0, '#E8E8E8');
+        corniceGradient.addColorStop(1, '#7C7C7C');
+        ctx.fillStyle = corniceGradient;
+        ctx.fillRect(leftRoofX - 2, baseY - 1, corniceWidth, 4);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.lineWidth = 1;
-        for (let i = 1; i < 4; i++) {
-            const tileY = this.y - wallHeight + (3 * i / 4);
-            const tileStartX = leftRoofX + (i * 8);
-            const tileEndX = rightRoofX - (i * 8);
-            
+        ctx.strokeRect(leftRoofX - 2, baseY - 1, corniceWidth, 4);
+
+        const stoneWidth = buildingWidth / 8;
+        ctx.strokeStyle = 'rgba(60, 60, 60, 0.5)';
+        ctx.lineWidth = 0.75;
+        for (let tickX = leftRoofX - 2 + stoneWidth; tickX < rightRoofX + 2; tickX += stoneWidth) {
             ctx.beginPath();
-            ctx.moveTo(tileStartX, tileY);
-            ctx.lineTo(tileEndX, tileY);
+            ctx.moveTo(tickX, baseY - 1);
+            ctx.lineTo(tickX, baseY + 3);
             ctx.stroke();
         }
-        
+
+        // Roof silhouette - a single simple gable so the tiles below read as one connected
+        // roof instead of two differently-shaded halves competing for attention.
+        ctx.beginPath();
+        ctx.moveTo(leftRoofX, baseY);
+        ctx.lineTo(roofPeakX, roofPeakY);
+        ctx.lineTo(rightRoofX, baseY);
+        ctx.closePath();
+        ctx.fillStyle = '#B8602E';
+        ctx.fill();
+        ctx.strokeStyle = '#5C2A12';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Orange clay tile texture - rounded barrel tiles running eave to ridge. Each tile is
+        // shaded shadow-highlight-shadow across its own width to read as a convex clay
+        // cylinder rather than a flat painted stripe, which is what was making the roof look
+        // pasted-on rather than built from real tile.
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(leftRoofX, baseY);
+        ctx.lineTo(roofPeakX, roofPeakY);
+        ctx.lineTo(rightRoofX, baseY);
+        ctx.closePath();
+        ctx.clip();
+
+        const tileCount = 9;
+        const roofWidth = rightRoofX - leftRoofX;
+        const tileWidth = roofWidth / tileCount;
+        const roofTop = roofPeakY - 4;
+        const tileEdgeShade = '#9C4E26';
+        const tilePeakShades = ['#E0894C', '#D97D40', '#DD8446'];
+
+        for (let i = 0; i < tileCount; i++) {
+            const tileX = leftRoofX + i * tileWidth;
+            const cx = tileX + tileWidth / 2;
+
+            const bodyGradient = ctx.createLinearGradient(tileX, 0, tileX + tileWidth, 0);
+            bodyGradient.addColorStop(0, tileEdgeShade);
+            bodyGradient.addColorStop(0.5, tilePeakShades[i % tilePeakShades.length]);
+            bodyGradient.addColorStop(1, tileEdgeShade);
+            ctx.fillStyle = bodyGradient;
+            ctx.fillRect(tileX, roofTop, tileWidth, baseY - roofTop);
+
+            // Groove between tiles
+            ctx.strokeStyle = 'rgba(80, 40, 18, 0.4)';
+            ctx.lineWidth = 0.75;
+            ctx.beginPath();
+            ctx.moveTo(tileX, roofTop);
+            ctx.lineTo(tileX, baseY);
+            ctx.stroke();
+
+            // Barrel-tile roll end poking out over the eave - radial highlight top-left to
+            // sell the cylindrical cross-section
+            const rollRadius = tileWidth * 0.44;
+            const rollGradient = ctx.createRadialGradient(cx - rollRadius * 0.3, baseY - rollRadius * 0.3, rollRadius * 0.2, cx, baseY, rollRadius);
+            rollGradient.addColorStop(0, '#E89760');
+            rollGradient.addColorStop(1, '#9C4E26');
+            ctx.fillStyle = rollGradient;
+            ctx.beginPath();
+            ctx.arc(cx, baseY, rollRadius, 0, Math.PI);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(60, 30, 15, 0.45)';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        }
+
+        // Gentle overall light wash from ridge to eave - a soft depth cue on top of the
+        // per-tile shading, without the old two-slope-color split that read as disjointed.
+        const washGradient = ctx.createLinearGradient(0, roofPeakY, 0, baseY);
+        washGradient.addColorStop(0, 'rgba(255, 235, 210, 0.16)');
+        washGradient.addColorStop(0.4, 'rgba(255, 235, 210, 0)');
+        ctx.fillStyle = washGradient;
+        ctx.fillRect(leftRoofX, roofTop, roofWidth, baseY - roofTop);
+
+        ctx.restore();
+
+        // Ridge cap - a short capped ridge tile bridging the two slopes at the apex, matching
+        // the tile material instead of standing out as a separate wood beam
+        const ridgeGradient = ctx.createLinearGradient(roofPeakX - 8, 0, roofPeakX + 8, 0);
+        ridgeGradient.addColorStop(0, '#7A3A1C');
+        ridgeGradient.addColorStop(0.5, '#A85D30');
+        ridgeGradient.addColorStop(1, '#7A3A1C');
+        ctx.fillStyle = ridgeGradient;
+        ctx.beginPath();
+        ctx.arc(roofPeakX, roofPeakY + 3, 6, Math.PI, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#4A2410';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // Small end caps so the ridge reads as a capped tile resting across the seam, not a dome
+        ctx.fillStyle = '#8F4420';
+        ctx.beginPath();
+        ctx.arc(roofPeakX - 6, roofPeakY + 4, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(roofPeakX + 6, roofPeakY + 4, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
         // Roof flashing where it meets chimney
         ctx.fillStyle = '#2F2F2F';
-        ctx.fillRect(rightRoofX - 2, this.y - wallHeight - 3, chimneyWidth + 4, 6);
-        
+        ctx.fillRect(rightRoofX - 2, baseY - 3, chimneyWidth + 4, 6);
+
         ctx.strokeStyle = '#1C1C1C';
         ctx.lineWidth = 1;
-        ctx.strokeRect(rightRoofX - 2, this.y - wallHeight - 3, chimneyWidth + 4, 6);
+        ctx.strokeRect(rightRoofX - 2, baseY - 3, chimneyWidth + 4, 6);
     }
 
     renderForgeOpening(ctx, size) {
@@ -944,13 +1629,36 @@ export class TowerForge extends Building {
         const openingY = this.y - openingHeight / 2 - 5;
         const archCX = openingX + openingWidth / 2;
         const archRadius = openingWidth / 2;
-        
+
         // Stone arch surround (keystone)
         ctx.fillStyle = '#888888';
         ctx.beginPath();
         ctx.arc(archCX, openingY, archRadius + 5, Math.PI, 0);
         ctx.fill();
-        
+
+        // Solid stone jambs down both sides of the rectangular part of the opening - fills
+        // the same +5 padding the arch above uses, so the frame reads as one continuous ring
+        // of stone around the opening instead of thin lines with wall/background showing
+        // through the gap between the door and the (wider) skipped brick area.
+        ctx.fillStyle = '#888888';
+        ctx.fillRect(openingX - 5, openingY, 5, openingHeight);
+        ctx.fillRect(openingX + openingWidth, openingY, 5, openingHeight);
+        ctx.strokeStyle = '#555555';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(openingX - 5, openingY, 5, openingHeight);
+        ctx.strokeRect(openingX + openingWidth, openingY, 5, openingHeight);
+        // A couple of mortar lines on each jamb so it reads as stacked stone, not a flat slab
+        ctx.beginPath();
+        ctx.moveTo(openingX - 5, openingY + openingHeight * 0.33);
+        ctx.lineTo(openingX, openingY + openingHeight * 0.33);
+        ctx.moveTo(openingX - 5, openingY + openingHeight * 0.66);
+        ctx.lineTo(openingX, openingY + openingHeight * 0.66);
+        ctx.moveTo(openingX + openingWidth, openingY + openingHeight * 0.33);
+        ctx.lineTo(openingX + openingWidth + 5, openingY + openingHeight * 0.33);
+        ctx.moveTo(openingX + openingWidth, openingY + openingHeight * 0.66);
+        ctx.lineTo(openingX + openingWidth + 5, openingY + openingHeight * 0.66);
+        ctx.stroke();
+
         // Opening shadow/depth
         ctx.fillStyle = '#050505';
         ctx.fillRect(openingX, openingY, openingWidth, openingHeight);
@@ -958,19 +1666,19 @@ export class TowerForge extends Building {
         ctx.beginPath();
         ctx.arc(archCX, openingY, archRadius, Math.PI, 0);
         ctx.fill();
-        
+
         // Stone frame border
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
         ctx.strokeRect(openingX, openingY, openingWidth, openingHeight);
-        
+
         // Arch outline
         ctx.beginPath();
         ctx.arc(archCX, openingY, archRadius + 5, Math.PI, 0);
         ctx.strokeStyle = '#555555';
         ctx.lineWidth = 1.5;
         ctx.stroke();
-        
+
         // Keystone at top of arch
         ctx.fillStyle = '#999999';
         ctx.beginPath();
