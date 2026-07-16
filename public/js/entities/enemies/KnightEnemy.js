@@ -5,7 +5,7 @@ export class KnightEnemy extends BaseEnemy {
     static BASE_STATS = {
         health: 2000,
         speed: 35,
-        armour: 65,
+        armour: 75,
         magicResistance: -0.2
     };
 
