@@ -160,7 +160,7 @@ export class ArcherEnemy extends BaseEnemy {
         drawTwoSegmentLimb(
             ctx, -baseSize * 0.5, -baseSize * 0.35,
             leftArmAngle, baseSize * 0.42,
-            leftArmAngle + 0.1, baseSize * 0.4,
+            leftArmAngle - 0.1, baseSize * 0.4,
             { limbColor: '#D5C0A0', padColor: '#DDBEA9', limbWidth: baseSize * 0.3, padRadius: baseSize * 0.16 }
         );
 

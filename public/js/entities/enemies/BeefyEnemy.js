@@ -3,7 +3,7 @@ import { drawTwoSegmentLimb, computeWalkCycle, mirroredLimbAngle, kneeFlex } fro
 
 export class BeefyEnemy extends BaseEnemy {
     static BASE_STATS = {
-        health: 200,
+        health: 400,
         speed: 40,
         armour: 45,
         magicResistance: 0
@@ -29,9 +29,6 @@ export class BeefyEnemy extends BaseEnemy {
         // Pre-calculate colors to avoid repeated color manipulation
         this.darkenedTunic = this.darkenColor(this.tunicColor, 0.25);
         this.lightenedTunic = this.lightenColor(this.tunicColor, 0.25);
-        // Cap is dyed leather matching the tunic, not an unrelated fixed brown, so it
-        // reads as part of the same outfit instead of a mismatched add-on.
-        this.capColorDeepDark = this.darkenColor(this.tunicColor, 0.55);
 
         // Cache for armor rivets positions (relative to baseSize)
         this.rivetPositions = [];
@@ -177,10 +174,10 @@ export class BeefyEnemy extends BaseEnemy {
 
         ctx.fillStyle = this._tunicGrad;
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.62, -baseSize * 0.88);
-        ctx.lineTo(baseSize * 0.62, -baseSize * 0.88);
-        ctx.lineTo(baseSize * 0.7, baseSize * 0.44);
-        ctx.lineTo(-baseSize * 0.7, baseSize * 0.44);
+        ctx.moveTo(-baseSize * 0.6, -baseSize * 0.88);
+        ctx.lineTo(baseSize * 0.6, -baseSize * 0.88);
+        ctx.lineTo(baseSize * 0.62, baseSize * 0.44);
+        ctx.lineTo(-baseSize * 0.62, baseSize * 0.44);
         ctx.closePath();
         ctx.fill();
         ctx.strokeStyle = '#1a1a1a';
@@ -228,40 +225,43 @@ export class BeefyEnemy extends BaseEnemy {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.fillRect(-baseSize * 0.62, -baseSize * 0.8, baseSize * 0.25, baseSize * 0.95);
 
-        // --- LEFT ARM --- Elbow bends *further inward* (toward the body's centerline,
-        // like a hand resting near the belt) continuing the same rotational direction
-        // as the upper arm's inward lean, rather than swinging back outward past it -
-        // swinging outward past the upper arm's lean is what read as the elbow bending
-        // "the wrong way". The bend is also much more pronounced now (0.28 vs 0.12 rad)
-        // with a visible elbow joint bump, so it reads as a joint, not an ambiguous kink.
-        const leftArmAngle = mirroredLimbAngle(0.205, anim.legSwing, 0.2, false);
-        const leftElbowBend = 0.28;
+        // Belt (just below the chest plate at y=0.2)
+        ctx.fillStyle = '#1E1008';
+        ctx.fillRect(-baseSize * 0.62, baseSize * 0.2, baseSize * 1.24, baseSize * 0.14);
+        ctx.strokeStyle = '#0a0a0a';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(-baseSize * 0.62, baseSize * 0.2, baseSize * 1.24, baseSize * 0.14);
+        ctx.fillStyle = '#D4AF37';
+        ctx.fillRect(-baseSize * 0.09, baseSize * 0.21, baseSize * 0.18, baseSize * 0.10);
+        ctx.strokeStyle = '#8B7500';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(-baseSize * 0.09, baseSize * 0.21, baseSize * 0.18, baseSize * 0.10);
+
+        // --- LEFT ARM --- Elbow bends slightly outward/backward so the forearm hangs
+        // naturally at the side rather than curling toward the centerline.
+        const leftArmAngle = mirroredLimbAngle(0.18, anim.legSwing, 0.28, false);
         const leftArm = drawTwoSegmentLimb(
-            ctx, -baseSize * 0.56, -baseSize * 0.4,
-            leftArmAngle, baseSize * 0.5,
-            leftArmAngle - leftElbowBend, baseSize * 0.48,
-            { limbColor: v.skinTone, padColor: 'rgba(221, 190, 169, 0.95)', limbWidth: baseSize * 0.3, padRadius: baseSize * 0.16 }
+            ctx, -baseSize * 0.6, -baseSize * 0.55,
+            leftArmAngle, baseSize * 0.42,
+            leftArmAngle - 0.16, baseSize * 0.36,
+            { limbColor: v.skinTone, padColor: 'rgba(221, 190, 169, 0.95)', limbWidth: baseSize * 0.26, padRadius: baseSize * 0.13 }
         );
         ctx.fillStyle = v.skinTone;
         ctx.beginPath();
-        ctx.arc(leftArm.elbowX, leftArm.elbowY, baseSize * 0.14, 0, Math.PI * 2);
+        ctx.arc(leftArm.elbowX, leftArm.elbowY, baseSize * 0.12, 0, Math.PI * 2);
         ctx.fill();
 
-        // --- RIGHT ARM WITH SWORD (held steady, not swinging with the full stride -
-        // a carried weapon swinging at the same amplitude as a bare arm is what read
-        // as unnatural; every other weapon-holder here - Villager, ShieldKnight - keeps
-        // its weapon arm close to fixed with only a slight idle sway). ---
-        const rightArmAngle = mirroredLimbAngle(0.205, anim.legSwing, 0.03, true);
-        const rightElbowBend = 0.28;
+        // --- RIGHT ARM WITH SWORD --- Minimal swing; elbow mirrors left (bends outward).
+        const rightArmAngle = mirroredLimbAngle(0.18, anim.legSwing, 0.05, true);
         const rightHand = drawTwoSegmentLimb(
-            ctx, baseSize * 0.56, -baseSize * 0.4,
-            rightArmAngle, baseSize * 0.5,
-            rightArmAngle + rightElbowBend, baseSize * 0.48,
-            { limbColor: v.skinTone, padColor: v.gauntlet, limbWidth: baseSize * 0.3, padRadius: baseSize * 0.18 }
+            ctx, baseSize * 0.6, -baseSize * 0.55,
+            rightArmAngle, baseSize * 0.42,
+            rightArmAngle + 0.16, baseSize * 0.36,
+            { limbColor: v.skinTone, padColor: v.gauntlet, limbWidth: baseSize * 0.26, padRadius: baseSize * 0.13 }
         );
         ctx.fillStyle = v.skinTone;
         ctx.beginPath();
-        ctx.arc(rightHand.elbowX, rightHand.elbowY, baseSize * 0.14, 0, Math.PI * 2);
+        ctx.arc(rightHand.elbowX, rightHand.elbowY, baseSize * 0.12, 0, Math.PI * 2);
         ctx.fill();
 
         // --- SWORD ---
@@ -323,56 +323,55 @@ export class BeefyEnemy extends BaseEnemy {
         ctx.lineWidth = 0.5;
         ctx.stroke();
 
-        // --- LEATHER CAP + BEARD (bare-headed brute, not another metal helm) - reads
-        // as a distinct "brawler" silhouette instead of the same soldier's helmet as
-        // BasicEnemy/KnightEnemy/ShieldKnightEnemy just scaled up. Dyed to match the
-        // tunic (instead of a fixed brown unrelated to whatever tunic color this
-        // instance rolled) so it reads as part of the same outfit. ---
-        if (!this._capGrad || this._capGradBaseSize !== baseSize || this._capGradCtx !== ctx) {
-            this._capGradCtx = ctx;
-            this._capGradBaseSize = baseSize;
-            this._capGrad = ctx.createLinearGradient(-baseSize * 0.6, -baseSize * 1.85, baseSize * 0.6, -baseSize * 1.3);
-            this._capGrad.addColorStop(0, this.lightenedTunic);
-            this._capGrad.addColorStop(0.6, this.tunicColor);
-            this._capGrad.addColorStop(1, this.capColorDeepDark);
+        // --- BRONZE NASAL HELMET (fixed color - all beefy enemies wear the same) ---
+        if (!this._helmetCapGrad || this._helmetCapGradSize !== baseSize || this._helmetCapGradCtx !== ctx) {
+            this._helmetCapGradCtx = ctx;
+            this._helmetCapGradSize = baseSize;
+            this._helmetCapGrad = ctx.createLinearGradient(-baseSize * 0.5, -baseSize * 1.9, baseSize * 0.3, -baseSize * 1.3);
+            this._helmetCapGrad.addColorStop(0, '#C8922A');
+            this._helmetCapGrad.addColorStop(0.5, '#8B6520');
+            this._helmetCapGrad.addColorStop(1, '#4A3010');
         }
-        // Cap dome - sized to sit snugly ON the head (same radius as the head circle,
-        // not larger), covering exactly the top half so it reads as a fitted cap
-        // rather than an oversized dome floating above the face.
-        const capRadius = baseSize * 0.6;
-        ctx.fillStyle = this._capGrad;
+
+        // Dome - slightly proud of the head for a proper metal helmet fit
+        ctx.fillStyle = this._helmetCapGrad;
         ctx.beginPath();
-        ctx.arc(0, -baseSize * 1.35, capRadius, Math.PI, Math.PI * 2);
+        ctx.arc(0, -baseSize * 1.35, baseSize * 0.64, Math.PI, Math.PI * 2);
         ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = this.capColorDeepDark;
-        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = '#3A2508';
+        ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Brim - a thin flattened rim at the base of the dome, the detail that makes
-        // it read as "a cap" rather than a plain half-circle painted on the head.
-        ctx.fillStyle = this.capColorDeepDark;
+        // Brow rim
+        ctx.fillStyle = '#5C3D0A';
         ctx.beginPath();
-        ctx.ellipse(0, -baseSize * 1.35, capRadius + baseSize * 0.03, baseSize * 0.09, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, -baseSize * 1.35, baseSize * 0.68, baseSize * 0.1, 0, 0, Math.PI * 2);
         ctx.fill();
-
-        // Cap stitching detail
-        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.strokeStyle = '#3A2508';
         ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.arc(0, -baseSize * 1.35, capRadius * 0.8, Math.PI * 1.08, Math.PI * 1.92);
         ctx.stroke();
 
-        // Cap highlight
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        // Nose guard (tapers toward the bottom)
+        ctx.fillStyle = '#8B6520';
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.2, -baseSize * 1.5, baseSize * 0.12, 0, Math.PI * 2);
+        ctx.moveTo(-baseSize * 0.05, -baseSize * 1.35);
+        ctx.lineTo(baseSize * 0.05, -baseSize * 1.35);
+        ctx.lineTo(baseSize * 0.035, -baseSize * 1.05);
+        ctx.lineTo(-baseSize * 0.035, -baseSize * 1.05);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#3A2508';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        // Specular highlight
+        ctx.fillStyle = 'rgba(255, 200, 80, 0.18)';
+        ctx.beginPath();
+        ctx.arc(-baseSize * 0.22, -baseSize * 1.6, baseSize * 0.14, 0, Math.PI * 2);
         ctx.fill();
 
-        // Thick beard covering the lower face - the defining "brute" silhouette
-        // element. Closes with a single straight line across the top (hidden under
-        // the cap brim) instead of a third curve, which previously bulged into an
-        // extra flap between the two sides instead of a clean jawline.
+        // Thick beard covering the lower face - the defining "brute" silhouette element.
         ctx.fillStyle = '#4a3220';
         ctx.beginPath();
         ctx.moveTo(-baseSize * 0.44, -baseSize * 1.28);

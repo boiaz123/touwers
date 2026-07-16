@@ -178,7 +178,7 @@ export class BasicEnemy extends BaseEnemy {
         drawTwoSegmentLimb(
             ctx, -baseSize * 0.52, -baseSize * 0.4,
             leftArmAngle, baseSize * 0.42,
-            leftArmAngle + 0.15, baseSize * 0.4,
+            leftArmAngle - 0.15, baseSize * 0.4,
             { limbColor: '#D9C4A8', padColor: '#DDD4B8', limbWidth: baseSize * 0.26, padRadius: baseSize * 0.14, shadowColor: 'rgba(0,0,0,0.1)' }
         );
 

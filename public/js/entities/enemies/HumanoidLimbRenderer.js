@@ -135,8 +135,8 @@ export function kneeFlex(anim, isRight) {
  * swings in alternating (opposite) phase between left and right during the gait.
  *
  * `lean` is how far the LEFT limb's rest pose tilts from straight-down (Math.PI/2)
- * toward the body center: 0 for legs (hang straight down), positive for arms
- * (rest angle tucked in against the torso rather than dangling straight out).
+ * away from the body center: 0 for legs (hang straight down), positive for arms
+ * (rest angle flaring slightly outward so the elbow protrudes away from the torso).
  *
  * The previous approach computed each side's angle independently (a separately
  * negated "rightSwing" value, then ALSO geometrically mirrored via `Math.PI - x`
@@ -151,6 +151,6 @@ export function kneeFlex(anim, isRight) {
  * @param {boolean} isRight
  */
 export function mirroredLimbAngle(lean, swing, amplitude, isRight) {
-    const leftAngle = (Math.PI / 2 - lean) + swing * amplitude;
+    const leftAngle = (Math.PI / 2 + lean) + swing * amplitude;
     return isRight ? Math.PI - leftAngle : leftAngle;
 }

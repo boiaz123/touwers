@@ -316,7 +316,7 @@ export class VillagerEnemy extends BaseEnemy {
         drawTwoSegmentLimb(
             ctx, -baseSize * 0.5, -baseSize * 0.35,
             leftArmAngle, baseSize * 0.4,
-            leftArmAngle + 0.15, baseSize * 0.35,
+            leftArmAngle - 0.15, baseSize * 0.35,
             { limbColor: '#E8D4B8', padColor: 'rgba(221, 190, 169, 0.9)', limbWidth: baseSize * 0.3, padRadius: baseSize * 0.16, shadowColor: 'rgba(0,0,0,0.15)' }
         );
 

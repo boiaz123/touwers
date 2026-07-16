@@ -280,7 +280,7 @@ export class MountainLevel3 extends LevelBase {
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 4, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 0.75, 
             spawnInterval: 0.7, 
             pattern: [{ type: 'beefyenemy', count: 12 }] 
@@ -294,7 +294,7 @@ export class MountainLevel3 extends LevelBase {
         }
         // Wave 5
         , { 
-            enemyHealth_multiplier: 6, 
+            enemyHealth_multiplier: 12, 
             speedMultiplier: 1.29, 
             spawnInterval: 0.8, 
             pattern: [{ type: 'shieldknight', count: 1 }] 
