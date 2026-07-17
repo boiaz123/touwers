@@ -284,7 +284,7 @@ export class MountainLevel6 extends LevelBase {
             enemyHealth_multiplier: 1, 
             speedMultiplier: 0.90, 
             spawnInterval: 0.8, 
-            pattern: [{ type: 'archer', count: 3 }, { type: 'villager', count: 3 }, { type: 'basic', count: 3 }, { type: 'frog', count: 3 }, { type: 'beefyenemy', count: 1 }, { type: 'knight', count: 1 }, { type: 'shieldknight', count: 1 }, { type: 'mage', count: 1 }, { type: 'earthfrog', count: 1 }, { type: 'waterfrog', count: 1 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }, { type: 'frogking', count: 1 }] 
+            pattern: [{ type: 'basic', count: 27 }, { type: 'villager', count: 18 }]  
         }
         // Wave 2
         , { 
