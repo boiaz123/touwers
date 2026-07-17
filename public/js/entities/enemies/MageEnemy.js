@@ -25,7 +25,7 @@ export class MageEnemy extends BaseEnemy {
         const actualMagicResistance = magicResistance !== null ? magicResistance : baseStats.magicResistance;
         
         super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
-        this.robeColor = '#1A3A7A';
+        this.robeColor = '#0f1e5a';
         this.sizeMultiplier = 1.1;
         
         this.attackDamage = 20;
@@ -245,406 +245,767 @@ export class MageEnemy extends BaseEnemy {
         const bobAnimation = Math.sin(animTime) * 0.3;
         const armSwingFreq = animTime * 0.25;
 
-        // Shadow
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+        // Shadow (larger, ominous)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
         ctx.beginPath();
-        ctx.ellipse(this.x, this.y + baseSize * 1.85, baseSize * 1.05, baseSize * 0.3, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x, this.y + baseSize * 1.88, baseSize * 1.2, baseSize * 0.28, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Full-body arcane aura on ground (outer haze)
+        ctx.fillStyle = `rgba(80, 0, 160, ${0.06 + 0.04 * this.staffGlow})`;
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y + baseSize * 1.0, baseSize * 1.3, baseSize * 2.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.save();
         ctx.translate(this.x, this.y + bobAnimation);
 
-        // === LEGS (drawn first so robe covers the upper portion) ===
-        const leftHipX = -baseSize * 0.28;
-        const leftHipY = baseSize * 0.38;
+        // === LEGS ===
+        const leftHipX = -baseSize * 0.24;
+        const leftHipY = baseSize * 0.5;
         const leftLegAngle = walkCycle * 0.3;
-        const leftFootX = leftHipX + Math.sin(leftLegAngle) * baseSize * 0.75;
-        const leftFootY = leftHipY + Math.cos(leftLegAngle) * baseSize * 0.85;
+        const leftFootX = leftHipX + Math.sin(leftLegAngle) * baseSize * 0.7;
+        const leftFootY = leftHipY + Math.cos(leftLegAngle) * baseSize * 0.88;
 
-        ctx.strokeStyle = '#0A1840';
-        ctx.lineWidth = baseSize * 0.27;
+        ctx.strokeStyle = '#080e28';
+        ctx.lineWidth = baseSize * 0.26;
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(leftHipX, leftHipY);
         ctx.lineTo(leftFootX, leftFootY);
         ctx.stroke();
 
-        const rightHipX = baseSize * 0.28;
-        const rightHipY = baseSize * 0.38;
+        const rightHipX = baseSize * 0.24;
+        const rightHipY = baseSize * 0.5;
         const rightLegAngle = -walkCycle * 0.3;
-        const rightFootX = rightHipX + Math.sin(rightLegAngle) * baseSize * 0.75;
-        const rightFootY = rightHipY + Math.cos(rightLegAngle) * baseSize * 0.85;
+        const rightFootX = rightHipX + Math.sin(rightLegAngle) * baseSize * 0.7;
+        const rightFootY = rightHipY + Math.cos(rightLegAngle) * baseSize * 0.88;
 
-        ctx.strokeStyle = '#0A1840';
-        ctx.lineWidth = baseSize * 0.27;
-        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#080e28';
+        ctx.lineWidth = baseSize * 0.26;
         ctx.beginPath();
         ctx.moveTo(rightHipX, rightHipY);
         ctx.lineTo(rightFootX, rightFootY);
         ctx.stroke();
 
-        // === WIZARD BOOTS (drawn first so robe hem covers boot tops) ===
-        ctx.fillStyle = '#1C1430';
+        // === BOOTS — pointed, dark, with purple sheen ===
+        ctx.fillStyle = '#0d0820';
         ctx.beginPath();
-        ctx.ellipse(leftFootX + baseSize * 0.1, leftFootY + baseSize * 0.15, baseSize * 0.3, baseSize * 0.15, walkCycle * 0.28 - 0.14, 0, Math.PI * 2);
+        ctx.ellipse(leftFootX, leftFootY + baseSize * 0.12, baseSize * 0.32, baseSize * 0.14, walkCycle * 0.25 - 0.12, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#3D2B5E';
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-
-        ctx.fillStyle = '#1C1430';
+        // Boot pointed toe
+        ctx.fillStyle = '#1a0f35';
         ctx.beginPath();
-        ctx.ellipse(rightFootX - baseSize * 0.1, rightFootY + baseSize * 0.15, baseSize * 0.3, baseSize * 0.15, -walkCycle * 0.28 + 0.14, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#3D2B5E';
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-
-        // === OUTER CLOAK (back layer, wider and darker) ===
-        ctx.fillStyle = '#0B1A50';
-        ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.7, -baseSize * 0.55);
-        ctx.quadraticCurveTo(-baseSize * 1.12, baseSize * 0.65, -baseSize * 1.06, baseSize * 1.78);
-        ctx.lineTo(baseSize * 1.06, baseSize * 1.78);
-        ctx.quadraticCurveTo(baseSize * 1.12, baseSize * 0.65, baseSize * 0.7, -baseSize * 0.55);
+        ctx.moveTo(leftFootX - baseSize * 0.18, leftFootY + baseSize * 0.06);
+        ctx.quadraticCurveTo(leftFootX + baseSize * 0.2, leftFootY + baseSize * 0.22, leftFootX + baseSize * 0.46, leftFootY + baseSize * 0.04);
+        ctx.quadraticCurveTo(leftFootX + baseSize * 0.2, leftFootY + baseSize * 0.28, leftFootX - baseSize * 0.18, leftFootY + baseSize * 0.2);
         ctx.closePath();
         ctx.fill();
-
-        // === MAIN ROBE ===
-        ctx.fillStyle = this.robeColor;
-        ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.66, -baseSize * 0.55);
-        ctx.quadraticCurveTo(-baseSize * 0.92, baseSize * 0.55, -baseSize * 0.88, baseSize * 1.68);
-        ctx.lineTo(baseSize * 0.88, baseSize * 1.68);
-        ctx.quadraticCurveTo(baseSize * 0.92, baseSize * 0.55, baseSize * 0.66, -baseSize * 0.55);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.strokeStyle = '#0D2060';
-        ctx.lineWidth = 1.0;
-        ctx.stroke();
-
-        // Center front panel - lighter stripe for depth
-        ctx.fillStyle = '#214898';
-        ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.22, -baseSize * 0.55);
-        ctx.quadraticCurveTo(-baseSize * 0.28, baseSize * 0.55, -baseSize * 0.24, baseSize * 1.68);
-        ctx.lineTo(baseSize * 0.24, baseSize * 1.68);
-        ctx.quadraticCurveTo(baseSize * 0.28, baseSize * 0.55, baseSize * 0.22, -baseSize * 0.55);
-        ctx.closePath();
-        ctx.fill();
-
-        // Robe side fold lines
-        ctx.strokeStyle = '#0F2870';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.44, -baseSize * 0.42);
-        ctx.quadraticCurveTo(-baseSize * 0.6, baseSize * 0.55, -baseSize * 0.72, baseSize * 1.6);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(baseSize * 0.44, -baseSize * 0.42);
-        ctx.quadraticCurveTo(baseSize * 0.6, baseSize * 0.55, baseSize * 0.72, baseSize * 1.6);
-        ctx.stroke();
-
-        // Gold hem trim at robe bottom
-        ctx.fillStyle = '#C9921E';
-        ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.88, baseSize * 1.58);
-        ctx.quadraticCurveTo(0, baseSize * 1.82, baseSize * 0.88, baseSize * 1.58);
-        ctx.lineTo(baseSize * 0.88, baseSize * 1.68);
-        ctx.quadraticCurveTo(0, baseSize * 1.9, -baseSize * 0.88, baseSize * 1.68);
-        ctx.closePath();
-        ctx.fill();
-
-        // === BELT / SASH ===
-        ctx.fillStyle = '#7A5A10';
-        ctx.fillRect(-baseSize * 0.78, baseSize * 0.25, baseSize * 1.56, baseSize * 0.22);
-        ctx.strokeStyle = '#4A3008';
+        ctx.strokeStyle = '#4a1e7a';
         ctx.lineWidth = 0.7;
-        ctx.strokeRect(-baseSize * 0.78, baseSize * 0.25, baseSize * 1.56, baseSize * 0.22);
-
-        // Belt central gem buckle
-        ctx.fillStyle = '#D4AF37';
-        ctx.beginPath();
-        ctx.arc(0, baseSize * 0.36, baseSize * 0.18, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#8B7500';
-        ctx.lineWidth = 0.8;
         ctx.stroke();
-        ctx.fillStyle = `rgba(100, 149, 237, ${0.55 + 0.35 * this.staffGlow})`;
+
+        ctx.fillStyle = '#0d0820';
         ctx.beginPath();
-        ctx.arc(0, baseSize * 0.36, baseSize * 0.1, 0, Math.PI * 2);
+        ctx.ellipse(rightFootX, rightFootY + baseSize * 0.12, baseSize * 0.32, baseSize * 0.14, -walkCycle * 0.25 + 0.12, 0, Math.PI * 2);
         ctx.fill();
-
-        // Belt side rivets
-        ctx.fillStyle = '#C9921E';
-        const rivetX = [-baseSize * 0.42, baseSize * 0.42];
-        for (let j = 0; j < 2; j++) {
-            ctx.beginPath();
-            ctx.arc(rivetX[j], baseSize * 0.36, baseSize * 0.055, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        // === COLLAR / NECKPIECE ===
-        ctx.fillStyle = '#244C96';
+        ctx.fillStyle = '#1a0f35';
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.44, -baseSize * 0.55);
-        ctx.lineTo(-baseSize * 0.26, -baseSize * 0.8);
-        ctx.lineTo(0, -baseSize * 0.72);
-        ctx.lineTo(baseSize * 0.26, -baseSize * 0.8);
-        ctx.lineTo(baseSize * 0.44, -baseSize * 0.55);
+        ctx.moveTo(rightFootX + baseSize * 0.18, rightFootY + baseSize * 0.06);
+        ctx.quadraticCurveTo(rightFootX - baseSize * 0.2, rightFootY + baseSize * 0.22, rightFootX - baseSize * 0.46, rightFootY + baseSize * 0.04);
+        ctx.quadraticCurveTo(rightFootX - baseSize * 0.2, rightFootY + baseSize * 0.28, rightFootX + baseSize * 0.18, rightFootY + baseSize * 0.2);
         ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = '#D4AF37';
-        ctx.lineWidth = 0.9;
+        ctx.strokeStyle = '#4a1e7a';
+        ctx.lineWidth = 0.7;
         ctx.stroke();
 
-        // Collar throat gem
-        ctx.fillStyle = '#FFD700';
+        // === OUTER CLOAK — dark navy, full flowing silhouette ===
+        ctx.fillStyle = '#060e2e';
         ctx.beginPath();
-        ctx.arc(0, -baseSize * 0.7, baseSize * 0.09, 0, Math.PI * 2);
+        ctx.moveTo(-baseSize * 0.62, -baseSize * 0.72);
+        ctx.bezierCurveTo(-baseSize * 1.05, baseSize * 0.1, -baseSize * 1.22, baseSize * 0.9, -baseSize * 1.14, baseSize * 1.82);
+        ctx.lineTo(baseSize * 1.14, baseSize * 1.82);
+        ctx.bezierCurveTo(baseSize * 1.22, baseSize * 0.9, baseSize * 1.05, baseSize * 0.1, baseSize * 0.62, -baseSize * 0.72);
+        ctx.closePath();
         ctx.fill();
 
-        // === HEAD ===
-        ctx.fillStyle = '#B8956A';
+        // === MAIN ROBE — deep midnight blue with gradient-like layering ===
+        ctx.fillStyle = '#0f1e5a';
         ctx.beginPath();
-        ctx.arc(baseSize * 0.05, -baseSize * 1.33, baseSize * 0.58, 0, Math.PI * 2);
+        ctx.moveTo(-baseSize * 0.56, -baseSize * 0.72);
+        ctx.bezierCurveTo(-baseSize * 0.9, baseSize * 0.1, -baseSize * 1.05, baseSize * 0.85, -baseSize * 0.98, baseSize * 1.72);
+        ctx.lineTo(baseSize * 0.98, baseSize * 1.72);
+        ctx.bezierCurveTo(baseSize * 1.05, baseSize * 0.85, baseSize * 0.9, baseSize * 0.1, baseSize * 0.56, -baseSize * 0.72);
+        ctx.closePath();
         ctx.fill();
-
-        ctx.fillStyle = '#D8C8A8';
-        ctx.beginPath();
-        ctx.arc(0, -baseSize * 1.36, baseSize * 0.54, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#B5926A';
-        ctx.lineWidth = 0.6;
+        ctx.strokeStyle = '#07122e';
+        ctx.lineWidth = 1.1;
         ctx.stroke();
 
-        // Eyes with magical glow
-        const eyeY = -baseSize * 1.4;
-        ctx.fillStyle = '#1A1A2E';
+        // Center front panel — lighter royal blue
+        ctx.fillStyle = '#1a2f82';
         ctx.beginPath();
-        ctx.ellipse(-baseSize * 0.18, eyeY, baseSize * 0.1, baseSize * 0.08, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = `rgba(100, 149, 237, ${0.75 * this.staffGlow})`;
-        ctx.beginPath();
-        ctx.ellipse(-baseSize * 0.18, eyeY, baseSize * 0.055, baseSize * 0.042, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#1A1A2E';
-        ctx.beginPath();
-        ctx.ellipse(baseSize * 0.18, eyeY, baseSize * 0.1, baseSize * 0.08, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = `rgba(100, 149, 237, ${0.75 * this.staffGlow})`;
-        ctx.beginPath();
-        ctx.ellipse(baseSize * 0.18, eyeY, baseSize * 0.055, baseSize * 0.042, 0, 0, Math.PI * 2);
+        ctx.moveTo(-baseSize * 0.2, -baseSize * 0.72);
+        ctx.bezierCurveTo(-baseSize * 0.28, baseSize * 0.3, -baseSize * 0.3, baseSize * 0.9, -baseSize * 0.26, baseSize * 1.72);
+        ctx.lineTo(baseSize * 0.26, baseSize * 1.72);
+        ctx.bezierCurveTo(baseSize * 0.3, baseSize * 0.9, baseSize * 0.28, baseSize * 0.3, baseSize * 0.2, -baseSize * 0.72);
+        ctx.closePath();
         ctx.fill();
 
-        // Eyebrows
-        ctx.strokeStyle = '#5A3E1B';
-        ctx.lineWidth = baseSize * 0.09;
+        // Robe deep fold lines (left and right, curving outward)
+        ctx.strokeStyle = '#07122e';
+        ctx.lineWidth = 1.0;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.3, eyeY - baseSize * 0.14);
-        ctx.quadraticCurveTo(-baseSize * 0.18, eyeY - baseSize * 0.2, -baseSize * 0.07, eyeY - baseSize * 0.12);
+        ctx.moveTo(-baseSize * 0.4, -baseSize * 0.6);
+        ctx.bezierCurveTo(-baseSize * 0.58, baseSize * 0.3, -baseSize * 0.75, baseSize * 1.0, -baseSize * 0.82, baseSize * 1.65);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(baseSize * 0.3, eyeY - baseSize * 0.14);
-        ctx.quadraticCurveTo(baseSize * 0.18, eyeY - baseSize * 0.2, baseSize * 0.07, eyeY - baseSize * 0.12);
+        ctx.moveTo(baseSize * 0.4, -baseSize * 0.6);
+        ctx.bezierCurveTo(baseSize * 0.58, baseSize * 0.3, baseSize * 0.75, baseSize * 1.0, baseSize * 0.82, baseSize * 1.65);
+        ctx.stroke();
+        // Secondary inner fold lines
+        ctx.strokeStyle = '#0d1a60';
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.58, baseSize * 0.2);
+        ctx.bezierCurveTo(-baseSize * 0.7, baseSize * 0.7, -baseSize * 0.78, baseSize * 1.2, -baseSize * 0.74, baseSize * 1.7);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(baseSize * 0.58, baseSize * 0.2);
+        ctx.bezierCurveTo(baseSize * 0.7, baseSize * 0.7, baseSize * 0.78, baseSize * 1.2, baseSize * 0.74, baseSize * 1.7);
         ctx.stroke();
 
-        // Nose
-        ctx.fillStyle = '#B8956A';
+        // === ARCANE RUNES on robe — glowing softly ===
+        const runeAlpha = 0.28 + 0.18 * Math.sin(this.animationTime * 1.8);
+        ctx.strokeStyle = `rgba(120, 160, 255, ${runeAlpha})`;
+        ctx.lineWidth = 0.9;
+        ctx.lineCap = 'round';
+        // Rune 1 — upper chest (simple angular sigil)
         ctx.beginPath();
-        ctx.arc(0, -baseSize * 1.26, baseSize * 0.055, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(-baseSize * 0.09, -baseSize * 0.28);
+        ctx.lineTo(baseSize * 0.09, -baseSize * 0.28);
+        ctx.moveTo(0, -baseSize * 0.38);
+        ctx.lineTo(0, -baseSize * 0.18);
+        ctx.moveTo(-baseSize * 0.07, -baseSize * 0.18);
+        ctx.lineTo(baseSize * 0.07, -baseSize * 0.18);
+        ctx.stroke();
+        // Rune 2 — lower panel
+        const runeAlpha2 = 0.22 + 0.16 * Math.sin(this.animationTime * 2.2 + 1.2);
+        ctx.strokeStyle = `rgba(140, 100, 255, ${runeAlpha2})`;
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.1, baseSize * 0.9);
+        ctx.lineTo(0, baseSize * 0.72);
+        ctx.lineTo(baseSize * 0.1, baseSize * 0.9);
+        ctx.moveTo(-baseSize * 0.08, baseSize * 1.04);
+        ctx.lineTo(baseSize * 0.08, baseSize * 1.04);
+        ctx.stroke();
 
-        // White pointed beard
-        ctx.fillStyle = '#E8E0D0';
+        // === GOLD HEM TRIM — scalloped arc at bottom ===
+        ctx.fillStyle = '#8a6010';
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.2, -baseSize * 0.9);
-        ctx.lineTo(baseSize * 0.2, -baseSize * 0.9);
-        ctx.lineTo(0, -baseSize * 0.67);
+        ctx.moveTo(-baseSize * 0.98, baseSize * 1.62);
+        ctx.bezierCurveTo(-baseSize * 0.5, baseSize * 1.88, baseSize * 0.5, baseSize * 1.88, baseSize * 0.98, baseSize * 1.62);
+        ctx.lineTo(baseSize * 0.98, baseSize * 1.72);
+        ctx.bezierCurveTo(baseSize * 0.5, baseSize * 1.96, -baseSize * 0.5, baseSize * 1.96, -baseSize * 0.98, baseSize * 1.72);
         ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = '#C5BDB0';
-        ctx.lineWidth = 0.5;
+        // Gold top highlight on hem
+        ctx.fillStyle = '#d4a820';
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.98, baseSize * 1.62);
+        ctx.bezierCurveTo(-baseSize * 0.5, baseSize * 1.84, baseSize * 0.5, baseSize * 1.84, baseSize * 0.98, baseSize * 1.62);
+        ctx.lineTo(baseSize * 0.86, baseSize * 1.65);
+        ctx.bezierCurveTo(baseSize * 0.45, baseSize * 1.78, -baseSize * 0.45, baseSize * 1.78, -baseSize * 0.86, baseSize * 1.65);
+        ctx.closePath();
+        ctx.fill();
+
+        // === BELT / SASH — wide dark leather ===
+        ctx.fillStyle = '#2a1800';
+        ctx.fillRect(-baseSize * 0.82, baseSize * 0.28, baseSize * 1.64, baseSize * 0.26);
+        ctx.strokeStyle = '#1a0e00';
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(-baseSize * 0.82, baseSize * 0.28, baseSize * 1.64, baseSize * 0.26);
+        // Belt highlight stripe
+        ctx.fillStyle = '#3d2200';
+        ctx.fillRect(-baseSize * 0.82, baseSize * 0.28, baseSize * 1.64, baseSize * 0.07);
+
+        // Belt central skull buckle
+        ctx.fillStyle = '#c8a028';
+        ctx.beginPath();
+        ctx.arc(0, baseSize * 0.41, baseSize * 0.21, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#6b5500';
+        ctx.lineWidth = 0.9;
+        ctx.stroke();
+        // Skull shape inside buckle
+        ctx.fillStyle = '#1a1a2e';
+        ctx.beginPath();
+        ctx.arc(0, baseSize * 0.39, baseSize * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+        // Skull eye sockets
+        ctx.fillStyle = `rgba(120, 80, 220, ${0.7 + 0.3 * this.staffGlow})`;
+        ctx.beginPath();
+        ctx.arc(-baseSize * 0.055, baseSize * 0.375, baseSize * 0.038, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(baseSize * 0.055, baseSize * 0.375, baseSize * 0.038, 0, Math.PI * 2);
+        ctx.fill();
+
+        // === SHOULDER PAULDRONS — dark, angular, arcane ===
+        // Left pauldron
+        ctx.fillStyle = '#0a1540';
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.44, -baseSize * 0.68);
+        ctx.bezierCurveTo(-baseSize * 0.78, -baseSize * 0.72, -baseSize * 0.95, -baseSize * 0.42, -baseSize * 0.78, -baseSize * 0.1);
+        ctx.lineTo(-baseSize * 0.56, -baseSize * 0.08);
+        ctx.bezierCurveTo(-baseSize * 0.5, -baseSize * 0.38, -baseSize * 0.44, -baseSize * 0.52, -baseSize * 0.38, -baseSize * 0.68);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#1e3080';
+        ctx.lineWidth = 0.9;
+        ctx.stroke();
+        // Pauldron gold trim
+        ctx.strokeStyle = '#8a6010';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.44, -baseSize * 0.68);
+        ctx.bezierCurveTo(-baseSize * 0.78, -baseSize * 0.72, -baseSize * 0.95, -baseSize * 0.42, -baseSize * 0.78, -baseSize * 0.1);
         ctx.stroke();
 
-        // === WIZARD HAT ===
-        // Brim (ellipse)
-        ctx.fillStyle = '#152E6A';
+        // Right pauldron
+        ctx.fillStyle = '#0a1540';
         ctx.beginPath();
-        ctx.ellipse(0, -baseSize * 1.6, baseSize * 0.84, baseSize * 0.15, 0, 0, Math.PI * 2);
+        ctx.moveTo(baseSize * 0.44, -baseSize * 0.68);
+        ctx.bezierCurveTo(baseSize * 0.78, -baseSize * 0.72, baseSize * 0.95, -baseSize * 0.42, baseSize * 0.78, -baseSize * 0.1);
+        ctx.lineTo(baseSize * 0.56, -baseSize * 0.08);
+        ctx.bezierCurveTo(baseSize * 0.5, -baseSize * 0.38, baseSize * 0.44, -baseSize * 0.52, baseSize * 0.38, -baseSize * 0.68);
+        ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = '#0A1840';
+        ctx.strokeStyle = '#1e3080';
+        ctx.lineWidth = 0.9;
+        ctx.stroke();
+        ctx.strokeStyle = '#8a6010';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(baseSize * 0.44, -baseSize * 0.68);
+        ctx.bezierCurveTo(baseSize * 0.78, -baseSize * 0.72, baseSize * 0.95, -baseSize * 0.42, baseSize * 0.78, -baseSize * 0.1);
+        ctx.stroke();
+
+        // === COLLAR / NECKPIECE — high standing collar ===
+        ctx.fillStyle = '#111f60';
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.42, -baseSize * 0.68);
+        ctx.lineTo(-baseSize * 0.28, -baseSize * 1.0);
+        ctx.lineTo(0, -baseSize * 0.9);
+        ctx.lineTo(baseSize * 0.28, -baseSize * 1.0);
+        ctx.lineTo(baseSize * 0.42, -baseSize * 0.68);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#c8a028';
+        ctx.lineWidth = 0.9;
+        ctx.stroke();
+        // Collar inner lining
+        ctx.fillStyle = '#0a1438';
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.28, -baseSize * 0.7);
+        ctx.lineTo(-baseSize * 0.18, -baseSize * 0.94);
+        ctx.lineTo(0, -baseSize * 0.86);
+        ctx.lineTo(baseSize * 0.18, -baseSize * 0.94);
+        ctx.lineTo(baseSize * 0.28, -baseSize * 0.7);
+        ctx.closePath();
+        ctx.fill();
+
+        // Collar throat gem — amethyst
+        const gemGlow = 0.7 + 0.3 * this.staffGlow;
+        ctx.fillStyle = `rgba(160, 80, 240, ${gemGlow})`;
+        ctx.beginPath();
+        // Diamond shape gem
+        ctx.moveTo(0, -baseSize * 0.78);
+        ctx.lineTo(baseSize * 0.07, -baseSize * 0.86);
+        ctx.lineTo(0, -baseSize * 0.94);
+        ctx.lineTo(-baseSize * 0.07, -baseSize * 0.86);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#c87aff';
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+
+        // === NECK — gaunt, pale, visible above collar ===
+        ctx.fillStyle = '#8a7060';
+        ctx.fillRect(-baseSize * 0.14, -baseSize * 1.12, baseSize * 0.28, baseSize * 0.22);
+        // Neck shadow sides
+        ctx.fillStyle = 'rgba(0,0,0,0.28)';
+        ctx.fillRect(-baseSize * 0.14, -baseSize * 1.12, baseSize * 0.06, baseSize * 0.22);
+        ctx.fillRect(baseSize * 0.08, -baseSize * 1.12, baseSize * 0.06, baseSize * 0.22);
+        // Adam's apple suggestion
+        ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.arc(0, -baseSize * 1.04, baseSize * 0.055, Math.PI * 0.1, Math.PI * 0.9);
+        ctx.stroke();
+
+        // === HEAD — angular, gaunt, threatening ===
+        // Head base (slightly angular skull shape)
+        ctx.fillStyle = '#8a7060';
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.44, -baseSize * 1.22);
+        ctx.bezierCurveTo(-baseSize * 0.52, -baseSize * 1.52, -baseSize * 0.4, -baseSize * 1.82, 0, -baseSize * 1.88);
+        ctx.bezierCurveTo(baseSize * 0.4, -baseSize * 1.82, baseSize * 0.52, -baseSize * 1.52, baseSize * 0.44, -baseSize * 1.22);
+        ctx.bezierCurveTo(baseSize * 0.38, -baseSize * 1.06, -baseSize * 0.38, -baseSize * 1.06, -baseSize * 0.44, -baseSize * 1.22);
+        ctx.closePath();
+        ctx.fill();
+
+        // Face skin — slightly paler center
+        ctx.fillStyle = '#c8b090';
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.38, -baseSize * 1.24);
+        ctx.bezierCurveTo(-baseSize * 0.46, -baseSize * 1.5, -baseSize * 0.34, -baseSize * 1.8, 0, -baseSize * 1.86);
+        ctx.bezierCurveTo(baseSize * 0.34, -baseSize * 1.8, baseSize * 0.46, -baseSize * 1.5, baseSize * 0.38, -baseSize * 1.24);
+        ctx.bezierCurveTo(baseSize * 0.32, -baseSize * 1.1, -baseSize * 0.32, -baseSize * 1.1, -baseSize * 0.38, -baseSize * 1.24);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#7a6050';
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+
+        // Cheekbone shadows — gaunt, sunken
+        ctx.fillStyle = 'rgba(80, 50, 30, 0.22)';
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.28, -baseSize * 1.28, baseSize * 0.14, baseSize * 0.09, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(baseSize * 0.28, -baseSize * 1.28, baseSize * 0.14, baseSize * 0.09, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Temple shadows
+        ctx.fillStyle = 'rgba(60, 40, 20, 0.18)';
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.38, -baseSize * 1.54, baseSize * 0.1, baseSize * 0.18, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(baseSize * 0.38, -baseSize * 1.54, baseSize * 0.1, baseSize * 0.18, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // === EYES — deep-set, glowing with dark arcane power ===
+        const eyeY = -baseSize * 1.46;
+        // Eye socket shadows (deeply recessed)
+        ctx.fillStyle = 'rgba(20, 10, 40, 0.55)';
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.19, eyeY, baseSize * 0.155, baseSize * 0.11, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(baseSize * 0.19, eyeY, baseSize * 0.155, baseSize * 0.11, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eyeball whites (dim, slightly yellow — no innocence here)
+        ctx.fillStyle = '#d8c888';
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.19, eyeY, baseSize * 0.12, baseSize * 0.085, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(baseSize * 0.19, eyeY, baseSize * 0.12, baseSize * 0.085, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Irises — glowing violet-white, arcane
+        const irisGlow = 0.8 + 0.2 * this.staffGlow;
+        ctx.fillStyle = `rgba(80, 0, 180, ${irisGlow})`;
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.19, eyeY, baseSize * 0.075, baseSize * 0.065, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(baseSize * 0.19, eyeY, baseSize * 0.075, baseSize * 0.065, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pupil glow — bright arcane core
+        ctx.fillStyle = `rgba(200, 160, 255, ${irisGlow})`;
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.19, eyeY, baseSize * 0.042, baseSize * 0.036, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(baseSize * 0.19, eyeY, baseSize * 0.042, baseSize * 0.036, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eye glow halo (soft outer bloom)
+        ctx.fillStyle = `rgba(140, 60, 255, ${0.18 * this.staffGlow})`;
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.19, eyeY, baseSize * 0.22, baseSize * 0.16, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(baseSize * 0.19, eyeY, baseSize * 0.22, baseSize * 0.16, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // === EYEBROWS — severe, angular, heavy ===
+        ctx.strokeStyle = '#3a2810';
+        ctx.lineWidth = baseSize * 0.1;
+        ctx.lineCap = 'round';
+        // Left brow: angled inward and down (menacing V shape)
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.34, eyeY - baseSize * 0.17);
+        ctx.lineTo(-baseSize * 0.19, eyeY - baseSize * 0.22);
+        ctx.lineTo(-baseSize * 0.06, eyeY - baseSize * 0.14);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(baseSize * 0.34, eyeY - baseSize * 0.17);
+        ctx.lineTo(baseSize * 0.19, eyeY - baseSize * 0.22);
+        ctx.lineTo(baseSize * 0.06, eyeY - baseSize * 0.14);
+        ctx.stroke();
+
+        // === NOSE — prominent, hooked, angular ===
+        ctx.fillStyle = '#a08060';
+        ctx.beginPath();
+        // Nose bridge to tip — slightly hooked
+        ctx.moveTo(-baseSize * 0.04, eyeY - baseSize * 0.04);
+        ctx.bezierCurveTo(-baseSize * 0.04, -baseSize * 1.26, -baseSize * 0.06, -baseSize * 1.2, -baseSize * 0.1, -baseSize * 1.16);
+        ctx.lineTo(-baseSize * 0.08, -baseSize * 1.14);
+        ctx.bezierCurveTo(-baseSize * 0.04, -baseSize * 1.19, -baseSize * 0.01, -baseSize * 1.25, 0, eyeY - baseSize * 0.04);
+        ctx.closePath();
+        ctx.fill();
+        // Nose tip and nostrils
+        ctx.fillStyle = '#8a6850';
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.04, -baseSize * 1.16, baseSize * 0.07, baseSize * 0.045, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(50,30,10,0.35)';
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.075, -baseSize * 1.17, baseSize * 0.028, baseSize * 0.022, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.005, -baseSize * 1.17, baseSize * 0.022, baseSize * 0.018, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // === MOUTH — thin, tight, grim ===
+        ctx.strokeStyle = '#6a4030';
+        ctx.lineWidth = baseSize * 0.06;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.18, -baseSize * 1.08);
+        ctx.quadraticCurveTo(0, -baseSize * 1.05, baseSize * 0.18, -baseSize * 1.08);
+        ctx.stroke();
+        // Mouth shadow crease
+        ctx.strokeStyle = 'rgba(60,30,10,0.3)';
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.14, -baseSize * 1.06);
+        ctx.lineTo(baseSize * 0.14, -baseSize * 1.06);
+        ctx.stroke();
+
+        // === BEARD — long, wispy, silver-white with strands ===
+        ctx.fillStyle = '#d8d4cc';
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.22, -baseSize * 1.06);
+        ctx.bezierCurveTo(-baseSize * 0.3, -baseSize * 0.9, -baseSize * 0.14, -baseSize * 0.7, -baseSize * 0.05, -baseSize * 0.54);
+        ctx.lineTo(baseSize * 0.05, -baseSize * 0.54);
+        ctx.bezierCurveTo(baseSize * 0.14, -baseSize * 0.7, baseSize * 0.3, -baseSize * 0.9, baseSize * 0.22, -baseSize * 1.06);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#b8b4ac';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+        // Beard strand lines
+        ctx.strokeStyle = 'rgba(160, 155, 150, 0.6)';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.06, -baseSize * 1.04);
+        ctx.bezierCurveTo(-baseSize * 0.12, -baseSize * 0.82, -baseSize * 0.08, -baseSize * 0.66, -baseSize * 0.04, -baseSize * 0.55);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(baseSize * 0.06, -baseSize * 1.04);
+        ctx.bezierCurveTo(baseSize * 0.12, -baseSize * 0.82, baseSize * 0.08, -baseSize * 0.66, baseSize * 0.04, -baseSize * 0.55);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, -baseSize * 1.05);
+        ctx.bezierCurveTo(0, -baseSize * 0.84, 0, -baseSize * 0.68, 0, -baseSize * 0.54);
+        ctx.stroke();
+
+        // === WIZARD HAT — Gandalf-style: wide brim, narrow-base tall cone ===
+        // Brim sits partway down the skull so the hat looks worn, not balanced on top.
+        // The cone base is much narrower than the brim — that is what distinguishes a
+        // wizard hat from a party/traffic cone.
+        const hatTilt = -0.05;
+        ctx.save();
+        // Brim sits at ~upper-third of head (not the skull crown)
+        ctx.translate(0, -baseSize * 1.7);
+        ctx.rotate(hatTilt);
+
+        // --- Cone (drawn first, brim overlaps base) ---
+        // Cone base width ±0.42 vs brim ±0.88 — brim extends way beyond cone sides
+        const coneBaseL = -baseSize * 0.42;
+        const coneBaseR =  baseSize * 0.42;
+        const tipX      =  baseSize * 0.06;  // slight forward lean
+        const tipY      = -baseSize * 1.5;   // tall cone
+
+        ctx.fillStyle = '#08102a';
+        ctx.beginPath();
+        ctx.moveTo(coneBaseL, 0);
+        // Left edge: curves inward then up — gives the hat a slightly bulging mid-section
+        ctx.bezierCurveTo(-baseSize * 0.38, -baseSize * 0.5, -baseSize * 0.18, -baseSize * 1.0, tipX, tipY);
+        // Right edge: mirrors but leans the same direction (forward droop)
+        ctx.bezierCurveTo( baseSize * 0.22, -baseSize * 1.0,  baseSize * 0.38, -baseSize * 0.5, coneBaseR, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#0a1535';
         ctx.lineWidth = 1.2;
         ctx.stroke();
 
-        // Brim gold edge
-        ctx.strokeStyle = '#D4AF37';
+        // Cone left-face highlight (catches ambient light)
+        ctx.fillStyle = 'rgba(25, 45, 110, 0.5)';
+        ctx.beginPath();
+        ctx.moveTo(coneBaseL, 0);
+        ctx.bezierCurveTo(-baseSize * 0.38, -baseSize * 0.5, -baseSize * 0.18, -baseSize * 1.0, tipX, tipY);
+        ctx.lineTo(tipX - baseSize * 0.06, tipY);
+        ctx.bezierCurveTo(-baseSize * 0.24, -baseSize * 1.0, -baseSize * 0.44, -baseSize * 0.5, coneBaseL + baseSize * 0.08, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Cone right-face shadow
+        ctx.fillStyle = 'rgba(0, 0, 10, 0.3)';
+        ctx.beginPath();
+        ctx.moveTo(coneBaseR, 0);
+        ctx.bezierCurveTo( baseSize * 0.38, -baseSize * 0.5,  baseSize * 0.22, -baseSize * 1.0, tipX, tipY);
+        ctx.lineTo(tipX + baseSize * 0.04, tipY);
+        ctx.bezierCurveTo( baseSize * 0.26, -baseSize * 1.0,  baseSize * 0.44, -baseSize * 0.5, coneBaseR - baseSize * 0.06, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // --- Hat band — just above the brim line ---
+        const bandTop = -baseSize * 0.22;
+        ctx.fillStyle = '#5a3c08';
+        ctx.beginPath();
+        ctx.moveTo(coneBaseL, 0);
+        ctx.lineTo(coneBaseR, 0);
+        ctx.lineTo(coneBaseR - baseSize * 0.04, bandTop);
+        ctx.lineTo(coneBaseL + baseSize * 0.04, bandTop);
+        ctx.closePath();
+        ctx.fill();
+        // Gold top stripe of band
+        ctx.fillStyle = '#c8a020';
+        ctx.beginPath();
+        ctx.moveTo(coneBaseL + baseSize * 0.02, bandTop + baseSize * 0.04);
+        ctx.lineTo(coneBaseR - baseSize * 0.02, bandTop + baseSize * 0.04);
+        ctx.lineTo(coneBaseR - baseSize * 0.04, bandTop);
+        ctx.lineTo(coneBaseL + baseSize * 0.04, bandTop);
+        ctx.closePath();
+        ctx.fill();
+        // Band gem — amethyst
+        ctx.fillStyle = '#1a1030';
+        ctx.beginPath();
+        ctx.arc(0, bandTop + baseSize * 0.1, baseSize * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = `rgba(160, 60, 240, ${0.65 + 0.35 * this.staffGlow})`;
+        ctx.beginPath();
+        ctx.arc(0, bandTop + baseSize * 0.1, baseSize * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#d0a0ff';
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+
+        // --- Brim — wide, flat, 3-D with top and underside ---
+        const brimRX = baseSize * 0.88;
+        const brimRY = baseSize * 0.1;
+
+        // Brim underside (slightly darker)
+        ctx.fillStyle = '#040c20';
+        ctx.beginPath();
+        ctx.ellipse(0, baseSize * 0.04, brimRX, brimRY + baseSize * 0.04, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Brim top face
+        ctx.fillStyle = '#0a1430';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, brimRX, brimRY, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#06102a';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+
+        // Brim gold edge ring
+        ctx.strokeStyle = '#b89018';
+        ctx.lineWidth = baseSize * 0.055;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, brimRX, brimRY, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Brim highlight — lighter arc on top-left (ambient light catch)
+        ctx.strokeStyle = 'rgba(30, 55, 120, 0.55)';
         ctx.lineWidth = baseSize * 0.07;
         ctx.beginPath();
-        ctx.ellipse(0, -baseSize * 1.6, baseSize * 0.84, baseSize * 0.15, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, brimRX * 0.92, brimRY * 0.78, 0, Math.PI * 1.1, Math.PI * 1.85);
         ctx.stroke();
 
-        // Hat cone
-        ctx.fillStyle = '#1A3A7A';
+        // --- Arcane rune on lower cone ---
+        const hatRuneA = 0.28 + 0.22 * Math.sin(this.animationTime * 2.4 + 0.7);
+        ctx.strokeStyle = `rgba(140, 80, 255, ${hatRuneA})`;
+        ctx.lineWidth = 0.8;
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.82, -baseSize * 1.6);
-        ctx.lineTo(baseSize * 0.82, -baseSize * 1.6);
-        ctx.lineTo(baseSize * 0.14, -baseSize * 2.68);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = '#0A1840';
-        ctx.lineWidth = 1.5;
+        ctx.moveTo(-baseSize * 0.1, -baseSize * 0.48);
+        ctx.lineTo(0, -baseSize * 0.66);
+        ctx.lineTo(baseSize * 0.1, -baseSize * 0.48);
+        ctx.moveTo(-baseSize * 0.12, -baseSize * 0.57);
+        ctx.lineTo(baseSize * 0.12, -baseSize * 0.57);
         ctx.stroke();
 
-        // Hat band (gold strip above brim)
-        ctx.fillStyle = '#D4AF37';
+        // Stars on cone — twinkle
+        const hatStarAlpha = 0.5 + 0.5 * Math.sin(this.animationTime * 1.5);
+        ctx.fillStyle = `rgba(200, 170, 255, ${hatStarAlpha})`;
+        this.drawStarShape(ctx, -baseSize * 0.22, -baseSize * 0.86, baseSize * 0.08);
+        ctx.fillStyle = `rgba(255, 215, 80, ${hatStarAlpha * 0.85})`;
+        this.drawStarShape(ctx, baseSize * 0.18, -baseSize * 0.62, baseSize * 0.065);
+
+        // Hat tip glow — purple arcane wisp
+        ctx.fillStyle = `rgba(80, 0, 180, ${this.staffGlow * 0.45})`;
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.82, -baseSize * 1.6);
-        ctx.lineTo(baseSize * 0.82, -baseSize * 1.6);
-        ctx.lineTo(baseSize * 0.72, -baseSize * 1.76);
-        ctx.lineTo(-baseSize * 0.72, -baseSize * 1.76);
-        ctx.closePath();
+        ctx.arc(tipX, tipY, baseSize * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = `rgba(190, 90, 255, ${this.staffGlow * 0.9})`;
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, baseSize * 0.11, 0, Math.PI * 2);
         ctx.fill();
 
-        // Hat band centre gem
-        ctx.fillStyle = '#6495ED';
-        ctx.beginPath();
-        ctx.arc(0, -baseSize * 1.675, baseSize * 0.1, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#4169E1';
-        ctx.lineWidth = 0.7;
-        ctx.stroke();
+        ctx.restore(); // hat tilt
 
-        // Stars on hat with animated twinkle
-        const hatStarAlpha = 0.6 + 0.4 * Math.sin(this.animationTime * 1.5);
-        ctx.fillStyle = `rgba(255, 215, 0, ${hatStarAlpha})`;
-        this.drawStarShape(ctx, -baseSize * 0.38, -baseSize * 2.12, baseSize * 0.13);
-        this.drawStarShape(ctx, baseSize * 0.3, -baseSize * 1.96, baseSize * 0.1);
-
-        // Hat tip glow
-        ctx.fillStyle = `rgba(255, 215, 0, ${this.staffGlow * 0.35})`;
-        ctx.beginPath();
-        ctx.arc(baseSize * 0.14, -baseSize * 2.68, baseSize * 0.32, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = `rgba(255, 215, 0, ${this.staffGlow})`;
-        ctx.beginPath();
-        ctx.arc(baseSize * 0.14, -baseSize * 2.68, baseSize * 0.14, 0, Math.PI * 2);
-        ctx.fill();
-
-        // === LEFT ARM WITH STAFF ===
-        const leftShoulderX = -baseSize * 0.55;
-        const leftShoulderY = -baseSize * 0.3;
-        // Walking swing using same pattern as other enemies
+        // === LEFT ARM WITH STAFF — wide bell sleeve ===
+        const leftShoulderX = -baseSize * 0.52;
+        const leftShoulderY = -baseSize * 0.38;
         const leftSwingForward = Math.sin(armSwingFreq) * 0.4;
-        const leftElbowX = leftShoulderX - baseSize * 0.18 + leftSwingForward * baseSize * 0.15;
-        const leftElbowY = leftShoulderY + baseSize * 0.38;
-        const leftWristX = leftElbowX - baseSize * 0.1 + leftSwingForward * baseSize * 0.12;
-        const leftWristY = leftElbowY + baseSize * 0.35;
+        const leftElbowX = leftShoulderX - baseSize * 0.2 + leftSwingForward * baseSize * 0.14;
+        const leftElbowY = leftShoulderY + baseSize * 0.42;
+        const leftWristX = leftElbowX - baseSize * 0.12 + leftSwingForward * baseSize * 0.1;
+        const leftWristY = leftElbowY + baseSize * 0.36;
 
-        // Sleeve shadow
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
-        ctx.lineWidth = baseSize * 0.46;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        // Sleeve — filled bell shape, not just a stroke
+        ctx.fillStyle = '#0c1848';
         ctx.beginPath();
-        ctx.moveTo(leftShoulderX + 0.5, leftShoulderY + 0.5);
-        ctx.lineTo(leftElbowX + 0.5, leftElbowY + 0.5);
-        ctx.lineTo(leftWristX + 0.5, leftWristY + 0.5);
+        ctx.moveTo(leftShoulderX + baseSize * 0.28, leftShoulderY);
+        ctx.bezierCurveTo(leftShoulderX + baseSize * 0.1, leftElbowY - baseSize * 0.1, leftWristX + baseSize * 0.26, leftWristY - baseSize * 0.1, leftWristX + baseSize * 0.22, leftWristY + baseSize * 0.06);
+        ctx.lineTo(leftWristX - baseSize * 0.22, leftWristY + baseSize * 0.06);
+        ctx.bezierCurveTo(leftWristX - baseSize * 0.24, leftWristY - baseSize * 0.1, leftShoulderX - baseSize * 0.1, leftElbowY - baseSize * 0.1, leftShoulderX - baseSize * 0.28, leftShoulderY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#07102a';
+        ctx.lineWidth = 0.8;
         ctx.stroke();
-
-        // Upper sleeve (robe colour, wide bell shape)
-        ctx.strokeStyle = this.robeColor;
-        ctx.lineWidth = baseSize * 0.46;
+        // Sleeve highlight
+        ctx.fillStyle = 'rgba(30, 60, 140, 0.35)';
         ctx.beginPath();
-        ctx.moveTo(leftShoulderX, leftShoulderY);
-        ctx.lineTo(leftElbowX, leftElbowY);
-        ctx.stroke();
-
-        // Lower sleeve
-        ctx.strokeStyle = '#1A3A7A';
-        ctx.lineWidth = baseSize * 0.34;
-        ctx.beginPath();
-        ctx.moveTo(leftElbowX, leftElbowY);
-        ctx.lineTo(leftWristX, leftWristY);
-        ctx.stroke();
-
-        // Gold cuff
-        ctx.strokeStyle = '#D4AF37';
-        ctx.lineWidth = baseSize * 0.13;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(leftWristX - baseSize * 0.2, leftWristY + baseSize * 0.02);
-        ctx.lineTo(leftWristX + baseSize * 0.2, leftWristY - baseSize * 0.02);
-        ctx.stroke();
-
-        // Left hand
-        ctx.fillStyle = '#D8C8A8';
-        ctx.beginPath();
-        ctx.arc(leftWristX, leftWristY, baseSize * 0.17, 0, Math.PI * 2);
+        ctx.moveTo(leftShoulderX + baseSize * 0.08, leftShoulderY);
+        ctx.bezierCurveTo(leftShoulderX, leftElbowY - baseSize * 0.12, leftWristX + baseSize * 0.05, leftWristY - baseSize * 0.12, leftWristX + baseSize * 0.04, leftWristY);
+        ctx.lineTo(leftWristX - baseSize * 0.04, leftWristY);
+        ctx.bezierCurveTo(leftWristX - baseSize * 0.05, leftWristY - baseSize * 0.12, leftShoulderX - baseSize * 0.02, leftElbowY - baseSize * 0.14, leftShoulderX - baseSize * 0.08, leftShoulderY);
+        ctx.closePath();
         ctx.fill();
 
-        // Scepter from left hand - tilts with arm swing so it looks held, not floating
-        this.drawScepter(ctx, leftWristX, leftWristY, baseSize, leftSwingForward * 0.12);
+        // Gold cuff
+        ctx.strokeStyle = '#c8a020';
+        ctx.lineWidth = baseSize * 0.12;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(leftWristX - baseSize * 0.22, leftWristY + baseSize * 0.02);
+        ctx.lineTo(leftWristX + baseSize * 0.22, leftWristY - baseSize * 0.02);
+        ctx.stroke();
+        ctx.strokeStyle = '#8a6010';
+        ctx.lineWidth = baseSize * 0.06;
+        ctx.beginPath();
+        ctx.moveTo(leftWristX - baseSize * 0.22, leftWristY + baseSize * 0.1);
+        ctx.lineTo(leftWristX + baseSize * 0.22, leftWristY + baseSize * 0.06);
+        ctx.stroke();
 
-        // === RIGHT ARM ===
-        const rightShoulderX = baseSize * 0.55;
-        const rightShoulderY = -baseSize * 0.3;
+        // Left hand — bony, pale
+        ctx.fillStyle = '#c0a870';
+        ctx.beginPath();
+        ctx.ellipse(leftWristX, leftWristY + baseSize * 0.16, baseSize * 0.16, baseSize * 0.12, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#8a7050';
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+        // Bony knuckle hints
+        ctx.strokeStyle = 'rgba(80,55,25,0.3)';
+        ctx.lineWidth = 0.6;
+        for (let f = -1; f <= 1; f++) {
+            ctx.beginPath();
+            ctx.arc(leftWristX + f * baseSize * 0.07, leftWristY + baseSize * 0.12, baseSize * 0.03, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        this.drawScepter(ctx, leftWristX, leftWristY + baseSize * 0.16, baseSize, leftSwingForward * 0.12);
+
+        // === RIGHT ARM — raised, gesturing ===
+        const rightShoulderX = baseSize * 0.52;
+        const rightShoulderY = -baseSize * 0.38;
         const rightArmSwing = Math.sin(armSwingFreq + Math.PI) * 0.3;
-        const rightArmAngle = Math.PI / 2.15 + rightArmSwing;
-        const rightElbowX = rightShoulderX + Math.cos(rightArmAngle) * baseSize * 0.3;
-        const rightElbowY = rightShoulderY + Math.sin(rightArmAngle) * baseSize * 0.25;
-        const rightWristX = rightElbowX + Math.cos(rightArmAngle) * baseSize * 0.25;
-        const rightWristY = rightElbowY + Math.sin(rightArmAngle) * baseSize * 0.25;
+        const rightArmAngle = Math.PI / 2.2 + rightArmSwing;
+        const rightElbowX = rightShoulderX + Math.cos(rightArmAngle) * baseSize * 0.32;
+        const rightElbowY = rightShoulderY + Math.sin(rightArmAngle) * baseSize * 0.28;
+        const rightWristX = rightElbowX + Math.cos(rightArmAngle) * baseSize * 0.28;
+        const rightWristY = rightElbowY + Math.sin(rightArmAngle) * baseSize * 0.28;
 
-        // Right sleeve shadow
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
-        ctx.lineWidth = baseSize * 0.46;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        // Right sleeve — same filled bell approach
+        ctx.fillStyle = '#0c1848';
         ctx.beginPath();
-        ctx.moveTo(rightShoulderX + 0.5, rightShoulderY + 0.5);
-        ctx.lineTo(rightElbowX + 0.5, rightElbowY + 0.5);
-        ctx.lineTo(rightWristX + 0.5, rightWristY + 0.5);
+        ctx.moveTo(rightShoulderX - baseSize * 0.28, rightShoulderY);
+        ctx.bezierCurveTo(rightShoulderX - baseSize * 0.1, rightElbowY - baseSize * 0.1, rightWristX - baseSize * 0.24, rightWristY - baseSize * 0.1, rightWristX - baseSize * 0.2, rightWristY + baseSize * 0.06);
+        ctx.lineTo(rightWristX + baseSize * 0.2, rightWristY + baseSize * 0.06);
+        ctx.bezierCurveTo(rightWristX + baseSize * 0.22, rightWristY - baseSize * 0.1, rightShoulderX + baseSize * 0.1, rightElbowY - baseSize * 0.1, rightShoulderX + baseSize * 0.28, rightShoulderY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#07102a';
+        ctx.lineWidth = 0.8;
         ctx.stroke();
-
-        // Upper sleeve
-        ctx.strokeStyle = this.robeColor;
-        ctx.lineWidth = baseSize * 0.46;
+        ctx.fillStyle = 'rgba(30, 60, 140, 0.35)';
         ctx.beginPath();
-        ctx.moveTo(rightShoulderX, rightShoulderY);
-        ctx.lineTo(rightElbowX, rightElbowY);
-        ctx.stroke();
-
-        // Lower sleeve
-        ctx.strokeStyle = '#1A3A7A';
-        ctx.lineWidth = baseSize * 0.34;
-        ctx.beginPath();
-        ctx.moveTo(rightElbowX, rightElbowY);
-        ctx.lineTo(rightWristX, rightWristY);
-        ctx.stroke();
-
-        // Gold cuff
-        ctx.strokeStyle = '#D4AF37';
-        ctx.lineWidth = baseSize * 0.13;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(rightWristX - baseSize * 0.18, rightWristY + baseSize * 0.02);
-        ctx.lineTo(rightWristX + baseSize * 0.18, rightWristY - baseSize * 0.02);
-        ctx.stroke();
-
-        // Right hand
-        ctx.fillStyle = '#D8C8A8';
-        ctx.beginPath();
-        ctx.arc(rightWristX, rightWristY, baseSize * 0.17, 0, Math.PI * 2);
+        ctx.moveTo(rightShoulderX - baseSize * 0.08, rightShoulderY);
+        ctx.bezierCurveTo(rightShoulderX, rightElbowY - baseSize * 0.12, rightWristX - baseSize * 0.05, rightWristY - baseSize * 0.12, rightWristX - baseSize * 0.04, rightWristY);
+        ctx.lineTo(rightWristX + baseSize * 0.04, rightWristY);
+        ctx.bezierCurveTo(rightWristX + baseSize * 0.05, rightWristY - baseSize * 0.12, rightShoulderX + baseSize * 0.02, rightElbowY - baseSize * 0.14, rightShoulderX + baseSize * 0.08, rightShoulderY);
+        ctx.closePath();
         ctx.fill();
 
-        // Subtle full-body magic aura
-        ctx.fillStyle = `rgba(70, 120, 220, ${0.055 * this.staffGlow})`;
+        // Gold cuff
+        ctx.strokeStyle = '#c8a020';
+        ctx.lineWidth = baseSize * 0.12;
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.ellipse(0, 0, baseSize * 1.1, baseSize * 2.0, 0, 0, Math.PI * 2);
+        ctx.moveTo(rightWristX - baseSize * 0.2, rightWristY + baseSize * 0.02);
+        ctx.lineTo(rightWristX + baseSize * 0.2, rightWristY - baseSize * 0.02);
+        ctx.stroke();
+        ctx.strokeStyle = '#8a6010';
+        ctx.lineWidth = baseSize * 0.06;
+        ctx.beginPath();
+        ctx.moveTo(rightWristX - baseSize * 0.2, rightWristY + baseSize * 0.1);
+        ctx.lineTo(rightWristX + baseSize * 0.2, rightWristY + baseSize * 0.06);
+        ctx.stroke();
+
+        // Right hand — gesturing, bony
+        ctx.fillStyle = '#c0a870';
+        ctx.beginPath();
+        ctx.ellipse(rightWristX, rightWristY + baseSize * 0.14, baseSize * 0.16, baseSize * 0.12, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#8a7050';
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+        // Arcane energy crackling from right hand
+        const crackleA = 0.4 + 0.4 * Math.sin(this.animationTime * 7.5);
+        ctx.strokeStyle = `rgba(160, 80, 255, ${crackleA})`;
+        ctx.lineWidth = 0.8;
+        ctx.lineCap = 'round';
+        for (let c = 0; c < 3; c++) {
+            const ca = (this.animationTime * 4 + c * 2.1) % (Math.PI * 2);
+            ctx.beginPath();
+            ctx.moveTo(rightWristX, rightWristY + baseSize * 0.14);
+            ctx.lineTo(rightWristX + Math.cos(ca) * baseSize * 0.26, rightWristY + baseSize * 0.14 + Math.sin(ca) * baseSize * 0.22);
+            ctx.stroke();
+        }
+        ctx.fillStyle = `rgba(200, 120, 255, ${crackleA * 0.8})`;
+        ctx.beginPath();
+        ctx.arc(rightWristX, rightWristY + baseSize * 0.14, baseSize * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Full-body arcane aura pulse
+        ctx.fillStyle = `rgba(80, 0, 160, ${0.05 * this.staffGlow})`;
+        ctx.beginPath();
+        ctx.ellipse(0, -baseSize * 0.2, baseSize * 1.2, baseSize * 2.2, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Magic particles (local space)
@@ -701,7 +1062,7 @@ export class MageEnemy extends BaseEnemy {
         }
 
         // Health bar - positioned above hat tip
-        this.renderHealthBar(ctx, baseSize, { widthMul: 3.2, heightMul: 0.42, yOffsetMul: -3.1 });
+        this.renderHealthBar(ctx, baseSize, { widthMul: 3.2, heightMul: 0.42, yOffsetMul: -3.8 });
     }
 
     attackCastle(castle, deltaTime) {
@@ -724,177 +1085,201 @@ export class MageEnemy extends BaseEnemy {
         ctx.translate(handX, handY);
         if (tilt !== 0) ctx.rotate(tilt);
 
-        const shaftLength = baseSize * 2.0;
-        const shaftWidth = baseSize * 0.2;
+        const shaftLength = baseSize * 2.4;
+        const shaftWidth = baseSize * 0.22;
 
-        // === SHAFT ===
-        // Dark outline for depth
-        ctx.fillStyle = '#2A1505';
-        ctx.fillRect(-shaftWidth / 2 - 1, -shaftLength * 1.04, shaftWidth + 2, shaftLength);
+        // === SHAFT — dark gnarled wood ===
+        // Outer dark silhouette
+        ctx.fillStyle = '#12080a';
+        ctx.fillRect(-shaftWidth / 2 - 1.5, -shaftLength * 1.02, shaftWidth + 3, shaftLength);
 
-        // Main shaft body
-        ctx.fillStyle = '#6B4423';
+        // Main shaft body — dark reddish-brown
+        ctx.fillStyle = '#3a1c0e';
         ctx.fillRect(-shaftWidth / 2, -shaftLength, shaftWidth, shaftLength);
 
-        // Shaft highlight stripe
-        ctx.fillStyle = '#8C6030';
-        ctx.fillRect(-shaftWidth / 2 + 1, -shaftLength, shaftWidth * 0.35, shaftLength * 0.98);
+        // Shaft warm highlight stripe
+        ctx.fillStyle = '#5c2e18';
+        ctx.fillRect(-shaftWidth / 2 + 1, -shaftLength, shaftWidth * 0.38, shaftLength * 0.98);
 
-        // Shaft diagonal grain lines
-        ctx.strokeStyle = '#3D2010';
+        // Shaft grain lines — gnarled wood
+        ctx.strokeStyle = '#1e0c06';
         ctx.lineWidth = 0.6;
-        for (let i = 1; i <= 4; i++) {
-            const gy = -shaftLength + (shaftLength * i / 5);
+        for (let i = 1; i <= 6; i++) {
+            const gy = -shaftLength + (shaftLength * i / 7);
             ctx.beginPath();
             ctx.moveTo(-shaftWidth / 2 + 1, gy);
-            ctx.lineTo(shaftWidth / 2 - 1, gy + baseSize * 0.06);
+            ctx.lineTo(shaftWidth / 2 - 1, gy + baseSize * 0.08);
             ctx.stroke();
         }
 
-        // === GRIP SECTION ===
-        const gripY = -shaftLength * 0.52;
-        const gripH = baseSize * 0.44;
-        ctx.fillStyle = '#1E1000';
+        // Subtle arcane rune carved into shaft — glowing faintly
+        const shaftRuneA = 0.2 + 0.15 * Math.sin(this.animationTime * 3.1);
+        ctx.strokeStyle = `rgba(120, 60, 220, ${shaftRuneA})`;
+        ctx.lineWidth = 0.7;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-shaftWidth / 2 + 1, -shaftLength * 0.38);
+        ctx.lineTo(shaftWidth / 2 - 1, -shaftLength * 0.42);
+        ctx.moveTo(0, -shaftLength * 0.32);
+        ctx.lineTo(0, -shaftLength * 0.48);
+        ctx.stroke();
+
+        // === GRIP SECTION — wrapped dark leather ===
+        const gripY = -shaftLength * 0.55;
+        const gripH = baseSize * 0.52;
+        ctx.fillStyle = '#100808';
         ctx.fillRect(-shaftWidth / 2 - 2, gripY, shaftWidth + 4, gripH);
 
-        ctx.strokeStyle = '#C9A830';
+        ctx.strokeStyle = '#8a6010';
         ctx.lineWidth = 1.1;
-        for (let i = 0; i <= 4; i++) {
-            const wy = gripY + (gripH * i / 4);
+        for (let i = 0; i <= 5; i++) {
+            const wy = gripY + (gripH * i / 5);
             ctx.beginPath();
             ctx.moveTo(-shaftWidth / 2 - 2, wy);
             ctx.lineTo(shaftWidth / 2 + 2, wy + baseSize * 0.04);
             ctx.stroke();
         }
 
-        // Metal bands along shaft (3 evenly spaced)
-        for (let i = 0; i < 3; i++) {
-            const bY = -shaftLength * 0.2 - shaftLength * 0.22 * i;
-            ctx.fillStyle = '#D4AF37';
-            ctx.fillRect(-shaftWidth / 2 - 2, bY, shaftWidth + 4, baseSize * 0.1);
-            ctx.strokeStyle = '#8B7000';
-            ctx.lineWidth = 0.5;
-            ctx.strokeRect(-shaftWidth / 2 - 2, bY, shaftWidth + 4, baseSize * 0.1);
+        // Dark metal bands — 4 evenly spaced, more ornate
+        for (let i = 0; i < 4; i++) {
+            const bY = -shaftLength * 0.18 - shaftLength * 0.2 * i;
+            // Band shadow
+            ctx.fillStyle = '#2a1800';
+            ctx.fillRect(-shaftWidth / 2 - 2.5, bY, shaftWidth + 5, baseSize * 0.14);
+            // Band gold face
+            ctx.fillStyle = '#8a6010';
+            ctx.fillRect(-shaftWidth / 2 - 2, bY + 1, shaftWidth + 4, baseSize * 0.1);
+            // Band highlight
+            ctx.fillStyle = '#c8a020';
+            ctx.fillRect(-shaftWidth / 2 - 1, bY + 1, shaftWidth + 2, baseSize * 0.04);
         }
 
-        // === CROWN HEAD ===
-        const headCY = -shaftLength - baseSize * 0.2;
+        // === CROWN HEAD — 5-prong dark iron crown ===
+        const headCY = -shaftLength - baseSize * 0.26;
 
-        // Crown collar ring
-        ctx.fillStyle = '#D4AF37';
+        // Crown base collar
+        ctx.fillStyle = '#1a1000';
         ctx.beginPath();
-        ctx.arc(0, headCY + baseSize * 0.22, shaftWidth * 1.6, 0, Math.PI * 2);
+        ctx.arc(0, headCY + baseSize * 0.28, shaftWidth * 1.8, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = '#8B7500';
+        ctx.fillStyle = '#8a6010';
+        ctx.beginPath();
+        ctx.arc(0, headCY + baseSize * 0.28, shaftWidth * 1.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#4a3000';
         ctx.lineWidth = 0.8;
         ctx.stroke();
 
-        // Three prongs: centre, left, right
+        // 5 prongs — dark iron, pointed
         ctx.lineCap = 'round';
-
-        ctx.strokeStyle = '#D4AF37';
-        ctx.lineWidth = shaftWidth * 0.55;
-
-        // Centre prong (straight up)
-        ctx.beginPath();
-        ctx.moveTo(0, headCY + baseSize * 0.22);
-        ctx.lineTo(0, headCY - baseSize * 0.62);
-        ctx.stroke();
-
-        // Left prong (curves outward)
-        ctx.beginPath();
-        ctx.moveTo(0, headCY + baseSize * 0.22);
-        ctx.quadraticCurveTo(-shaftWidth * 1.8, headCY - baseSize * 0.05, -shaftWidth * 2.8, headCY - baseSize * 0.46);
-        ctx.stroke();
-
-        // Right prong (curves outward)
-        ctx.beginPath();
-        ctx.moveTo(0, headCY + baseSize * 0.22);
-        ctx.quadraticCurveTo(shaftWidth * 1.8, headCY - baseSize * 0.05, shaftWidth * 2.8, headCY - baseSize * 0.46);
-        ctx.stroke();
-
-        // Prong tip orbs
-        ctx.fillStyle = `rgba(150, 200, 255, ${this.staffPulse * 0.9})`;
-        const prongTips = [
-            [0, headCY - baseSize * 0.62],
-            [-shaftWidth * 2.8, headCY - baseSize * 0.46],
-            [shaftWidth * 2.8, headCY - baseSize * 0.46]
-        ];
-        for (let k = 0; k < 3; k++) {
+        const prongAngles = [-Math.PI / 2, -Math.PI / 2 - 0.55, -Math.PI / 2 + 0.55, -Math.PI / 2 - 1.1, -Math.PI / 2 + 1.1];
+        const prongLengths = [baseSize * 0.78, baseSize * 0.56, baseSize * 0.56, baseSize * 0.38, baseSize * 0.38];
+        for (let k = 0; k < 5; k++) {
+            const px = Math.cos(prongAngles[k]) * prongLengths[k];
+            const py = headCY + baseSize * 0.28 + Math.sin(prongAngles[k]) * prongLengths[k];
+            // Prong shadow
+            ctx.strokeStyle = '#0a0800';
+            ctx.lineWidth = shaftWidth * 0.7;
             ctx.beginPath();
-            ctx.arc(prongTips[k][0], prongTips[k][1], baseSize * 0.09, 0, Math.PI * 2);
+            ctx.moveTo(0.5, headCY + baseSize * 0.3);
+            ctx.lineTo(px + 0.5, py + 0.5);
+            ctx.stroke();
+            // Prong body
+            ctx.strokeStyle = '#6a5010';
+            ctx.lineWidth = shaftWidth * 0.55;
+            ctx.beginPath();
+            ctx.moveTo(0, headCY + baseSize * 0.28);
+            ctx.lineTo(px, py);
+            ctx.stroke();
+            // Prong tip glow
+            ctx.fillStyle = `rgba(160, 80, 255, ${this.staffPulse * 0.85})`;
+            ctx.beginPath();
+            ctx.arc(px, py, baseSize * 0.08, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // === CRYSTAL ORB ===
-        const orbY = headCY - baseSize * 0.08;
-        const orbR = baseSize * 0.33;
+        // === CRYSTAL ORB — dark amethyst, large and menacing ===
+        const orbY = headCY - baseSize * 0.1;
+        const orbR = baseSize * 0.42;
 
-        // Outer glow halo
-        // OPTIMIZATION: Cache the gradient by baseSize (its geometry and base
-        // colors never change) instead of recreating it every frame. The
-        // staffPulse-driven opacity is applied via globalAlpha at fill time
-        // instead of being baked into the gradient's color-stop alpha, so the
-        // animated pulsing looks identical while the gradient object itself
-        // is created once and reused.
+        // Outer glow halo — cached
         if (!this._crystalGlow || this._crystalGlowBaseSize !== baseSize || this._crystalGlowCtx !== ctx) {
             this._crystalGlowCtx = ctx;
             this._crystalGlowBaseSize = baseSize;
-            this._crystalGlow = ctx.createRadialGradient(0, orbY, orbR * 0.15, 0, orbY, orbR * 2.2);
-            this._crystalGlow.addColorStop(0, 'rgba(100, 149, 237, 0.55)');
-            this._crystalGlow.addColorStop(1, 'rgba(30, 144, 255, 0)');
+            this._crystalGlow = ctx.createRadialGradient(0, orbY, orbR * 0.1, 0, orbY, orbR * 2.6);
+            this._crystalGlow.addColorStop(0, 'rgba(140, 60, 255, 0.65)');
+            this._crystalGlow.addColorStop(0.5, 'rgba(80, 0, 180, 0.2)');
+            this._crystalGlow.addColorStop(1, 'rgba(30, 0, 80, 0)');
         }
         ctx.fillStyle = this._crystalGlow;
         const prevGlobalAlpha = ctx.globalAlpha;
         ctx.globalAlpha = prevGlobalAlpha * this.staffPulse;
         ctx.beginPath();
-        ctx.arc(0, orbY, orbR * 2.2, 0, Math.PI * 2);
+        ctx.arc(0, orbY, orbR * 2.6, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = prevGlobalAlpha;
 
-        // Main orb body
-        ctx.fillStyle = `rgba(65, 115, 205, ${0.78 + 0.15 * this.staffPulse})`;
+        // Main orb body — deep purple-black
+        ctx.fillStyle = `rgba(40, 0, 100, ${0.88 + 0.1 * this.staffPulse})`;
         ctx.beginPath();
         ctx.arc(0, orbY, orbR, 0, Math.PI * 2);
         ctx.fill();
 
-        // Orb rim
-        ctx.strokeStyle = `rgba(160, 195, 255, ${0.6 + 0.3 * this.staffPulse})`;
-        ctx.lineWidth = 1.0;
+        // Inner swirling purple layer
+        ctx.fillStyle = `rgba(100, 20, 200, ${0.55 + 0.3 * this.staffPulse})`;
+        ctx.beginPath();
+        ctx.arc(-orbR * 0.1, orbY + orbR * 0.05, orbR * 0.62, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Orb rim — violet
+        ctx.strokeStyle = `rgba(180, 80, 255, ${0.7 + 0.3 * this.staffPulse})`;
+        ctx.lineWidth = 1.2;
         ctx.stroke();
 
-        // Inner bright core
-        ctx.fillStyle = `rgba(200, 220, 255, ${0.45 + 0.4 * this.staffPulse})`;
+        // Inner bright arcane core
+        ctx.fillStyle = `rgba(220, 160, 255, ${0.4 + 0.45 * this.staffPulse})`;
         ctx.beginPath();
-        ctx.arc(-orbR * 0.12, orbY - orbR * 0.08, orbR * 0.48, 0, Math.PI * 2);
+        ctx.arc(-orbR * 0.14, orbY - orbR * 0.1, orbR * 0.38, 0, Math.PI * 2);
         ctx.fill();
 
         // Specular highlight
-        ctx.fillStyle = `rgba(255, 255, 255, ${0.55 + 0.35 * this.staffPulse})`;
+        ctx.fillStyle = `rgba(255, 230, 255, ${0.6 + 0.35 * this.staffPulse})`;
         ctx.beginPath();
-        ctx.arc(-orbR * 0.3, orbY - orbR * 0.32, orbR * 0.2, 0, Math.PI * 2);
+        ctx.arc(-orbR * 0.32, orbY - orbR * 0.34, orbR * 0.18, 0, Math.PI * 2);
         ctx.fill();
 
         // Secondary mini highlight
-        ctx.fillStyle = `rgba(255, 255, 255, ${0.22 * this.staffPulse})`;
+        ctx.fillStyle = `rgba(255, 200, 255, ${0.25 * this.staffPulse})`;
         ctx.beginPath();
-        ctx.arc(orbR * 0.18, orbY + orbR * 0.18, orbR * 0.1, 0, Math.PI * 2);
+        ctx.arc(orbR * 0.22, orbY + orbR * 0.22, orbR * 0.1, 0, Math.PI * 2);
         ctx.fill();
 
-        // Orbiting energy crystals (2)
-        for (let i = 0; i < 2; i++) {
-            const orbitAngle = (this.animationTime * 2.5) + (i * Math.PI);
-            const orbitX = Math.cos(orbitAngle) * orbR * 1.62;
-            const orbitOY = orbY + Math.sin(orbitAngle) * orbR * 1.62;
+        // Rune etched inside orb — visible through translucent crystal
+        const innerRuneA = 0.18 + 0.14 * Math.sin(this.animationTime * 2.8 + 1.6);
+        ctx.strokeStyle = `rgba(220, 180, 255, ${innerRuneA})`;
+        ctx.lineWidth = 0.8;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(0, orbY - orbR * 0.5);
+        ctx.lineTo(orbR * 0.4, orbY + orbR * 0.3);
+        ctx.lineTo(-orbR * 0.4, orbY + orbR * 0.3);
+        ctx.closePath();
+        ctx.stroke();
 
-            ctx.fillStyle = `rgba(72, 209, 204, ${this.staffPulse * 0.5})`;
+        // Orbiting energy shards — 3, faster and sharper
+        for (let i = 0; i < 3; i++) {
+            const orbitAngle = (this.animationTime * 3.2) + (i * Math.PI * 2 / 3);
+            const orbitX = Math.cos(orbitAngle) * orbR * 1.7;
+            const orbitOY = orbY + Math.sin(orbitAngle) * orbR * 1.7;
+
+            ctx.fillStyle = `rgba(160, 60, 255, ${this.staffPulse * 0.55})`;
             ctx.beginPath();
-            ctx.arc(orbitX, orbitOY, baseSize * 0.13, 0, Math.PI * 2);
+            ctx.arc(orbitX, orbitOY, baseSize * 0.12, 0, Math.PI * 2);
             ctx.fill();
 
-            ctx.fillStyle = `rgba(160, 240, 245, ${this.staffPulse * 0.75})`;
+            ctx.fillStyle = `rgba(220, 160, 255, ${this.staffPulse * 0.85})`;
             ctx.beginPath();
-            ctx.arc(orbitX, orbitOY, baseSize * 0.07, 0, Math.PI * 2);
+            ctx.arc(orbitX, orbitOY, baseSize * 0.065, 0, Math.PI * 2);
             ctx.fill();
         }
 
