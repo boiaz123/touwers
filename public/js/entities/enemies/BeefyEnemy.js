@@ -266,47 +266,7 @@ export class BeefyEnemy extends BaseEnemy {
         ctx.fill();
 
         // --- SWORD ---
-        const swordAngle = -Math.PI / 2 + 0.3;
-        const swordLength = baseSize * 1.5;
-        const swordTipX = rightHand.endX + Math.cos(swordAngle) * swordLength;
-        const swordTipY = rightHand.endY + Math.sin(swordAngle) * swordLength;
-
-        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-        ctx.lineWidth = baseSize * 0.22;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(rightHand.endX + 0.5, rightHand.endY + 0.5);
-        ctx.lineTo(swordTipX + 0.5, swordTipY + 0.5);
-        ctx.stroke();
-
-        ctx.strokeStyle = v.swordMid;
-        ctx.lineWidth = baseSize * 0.2;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(rightHand.endX, rightHand.endY);
-        ctx.lineTo(swordTipX, swordTipY);
-        ctx.stroke();
-
-        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-        ctx.lineWidth = baseSize * 0.06;
-        ctx.beginPath();
-        ctx.moveTo(rightHand.endX, rightHand.endY);
-        ctx.lineTo(swordTipX, swordTipY);
-        ctx.stroke();
-
-        // Sword guard (crossbar) + pommel
-        ctx.save();
-        ctx.translate(rightHand.endX, rightHand.endY);
-        ctx.rotate(swordAngle);
-        ctx.fillStyle = v.guardGold;
-        ctx.fillRect(-baseSize * 0.25, -baseSize * 0.07, baseSize * 0.5, baseSize * 0.14);
-        ctx.strokeStyle = v.guardGoldStroke;
-        ctx.lineWidth = 0.8;
-        ctx.strokeRect(-baseSize * 0.25, -baseSize * 0.07, baseSize * 0.5, baseSize * 0.14);
-        ctx.beginPath();
-        ctx.arc(0, baseSize * 0.15, baseSize * 0.1, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        this.drawSword(ctx, rightHand.endX, rightHand.endY, baseSize);
 
         // --- HEAD (soft gradient) ---
         if (!this._headGrad || this._headGradBaseSize !== baseSize || this._headGradCtx !== ctx) {
@@ -410,6 +370,111 @@ export class BeefyEnemy extends BaseEnemy {
         if (!this._baking) {
             this.renderHealthBar(ctx, baseSize, { widthMul: 3.6, heightMul: 0.4, yOffsetMul: -2.5, strokeWidth: 0.8 });
         }
+    }
+
+    /** A proper tapered-point blade (bigger and more detailed than the old
+     *  stroked-line sword) - matches KnightEnemy/ShieldKnightEnemy's approach of
+     *  building the blade as a filled polygon rather than a thick line, so it gets
+     *  an actual pointed tip, a center fuller groove, and a chunkier crossguard/
+     *  pommel to suit the beefy soldier's oversized weapon. */
+    drawSword(ctx, handX, handY, baseSize) {
+        const v = this.cachedColorVariants;
+        ctx.save();
+        ctx.translate(handX, handY);
+        const swordAngle = -Math.PI / 2 + 0.3;
+        ctx.rotate(swordAngle);
+
+        const swordLength = baseSize * 1.85;
+        const bladeWidth = baseSize * 0.3;
+        const tipWidth = baseSize * 0.12;
+
+        // Drop shadow silhouette for a bit of depth
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.moveTo(-bladeWidth / 2 + 0.6, 0.6);
+        ctx.lineTo(bladeWidth / 2 + 0.6, 0.6);
+        ctx.lineTo(tipWidth + 0.6, -swordLength + 0.6);
+        ctx.lineTo(-tipWidth + 0.6, -swordLength + 0.6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Blade body - gradient metal sheen, tapered to an actual point
+        if (!this._bladeGrad || this._bladeGradBaseSize !== baseSize || this._bladeGradCtx !== ctx) {
+            this._bladeGradCtx = ctx;
+            this._bladeGradBaseSize = baseSize;
+            this._bladeGrad = ctx.createLinearGradient(-bladeWidth / 2, 0, bladeWidth / 2, 0);
+            this._bladeGrad.addColorStop(0, v.swordDark);
+            this._bladeGrad.addColorStop(0.5, v.swordLight);
+            this._bladeGrad.addColorStop(1, v.swordDark);
+        }
+        ctx.fillStyle = this._bladeGrad;
+        ctx.beginPath();
+        ctx.moveTo(-bladeWidth / 2, 0);
+        ctx.lineTo(bladeWidth / 2, 0);
+        ctx.lineTo(tipWidth, -swordLength * 0.88);
+        ctx.lineTo(0, -swordLength);
+        ctx.lineTo(-tipWidth, -swordLength * 0.88);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#4a4a4a';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        // Center fuller (forged groove) running most of the blade's length
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = baseSize * 0.035;
+        ctx.beginPath();
+        ctx.moveTo(0, -baseSize * 0.05);
+        ctx.lineTo(0, -swordLength * 0.86);
+        ctx.stroke();
+
+        // Edge highlight
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.lineWidth = baseSize * 0.05;
+        ctx.beginPath();
+        ctx.moveTo(-bladeWidth * 0.28, 0);
+        ctx.lineTo(-tipWidth * 0.6, -swordLength * 0.9);
+        ctx.stroke();
+
+        // --- CROSSGUARD (bigger, with a center gem) ---
+        ctx.fillStyle = v.guardGold;
+        ctx.fillRect(-baseSize * 0.32, -baseSize * 0.09, baseSize * 0.64, baseSize * 0.18);
+        ctx.strokeStyle = v.guardGoldStroke;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-baseSize * 0.32, -baseSize * 0.09, baseSize * 0.64, baseSize * 0.18);
+        ctx.fillStyle = '#8B0000';
+        ctx.beginPath();
+        ctx.arc(0, 0, baseSize * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+
+        // --- GRIP (leather wrap bands) ---
+        const gripLength = baseSize * 0.32;
+        ctx.fillStyle = '#3a2415';
+        ctx.fillRect(-baseSize * 0.09, baseSize * 0.09, baseSize * 0.18, gripLength);
+        ctx.strokeStyle = '#1f130a';
+        ctx.lineWidth = 0.7;
+        for (let i = 1; i <= 3; i++) {
+            const gy = baseSize * 0.09 + gripLength * (i / 4);
+            ctx.beginPath();
+            ctx.moveTo(-baseSize * 0.09, gy);
+            ctx.lineTo(baseSize * 0.09, gy);
+            ctx.stroke();
+        }
+
+        // --- POMMEL (bigger) ---
+        ctx.fillStyle = v.guardGold;
+        ctx.beginPath();
+        ctx.arc(0, baseSize * 0.09 + gripLength + baseSize * 0.07, baseSize * 0.13, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = v.guardGoldStroke;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.beginPath();
+        ctx.arc(-baseSize * 0.03, baseSize * 0.09 + gripLength + baseSize * 0.04, baseSize * 0.04, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
     }
 
     takeDamage(amount, armorPiercingPercent = 0, damageType = 'physical', followTarget = false) {

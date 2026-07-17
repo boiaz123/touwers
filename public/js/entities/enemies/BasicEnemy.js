@@ -187,18 +187,25 @@ export class BasicEnemy extends BaseEnemy {
             { limbColor: '#D9C4A8', padColor: '#DDD4B8', limbWidth: baseSize * 0.26, padRadius: baseSize * 0.14, shadowColor: 'rgba(0,0,0,0.1)' }
         );
 
-        // --- RIGHT ARM WITH CLUB (fixed, raised grip - not animated with the gait,
-        // exactly like VillagerEnemy's torch/pitchfork arm) ---
-        const clubArmAngle = -Math.PI / 2 + 0.3;
+        // --- RIGHT ARM WITH CLUB --- Arm hangs naturally at the side with a bent
+        // elbow (nearly static, matching BeefyEnemy's sword-arm treatment) instead
+        // of being fully stretched straight up - the club itself, not the arm, does
+        // the reaching: it's gripped down near the hip and its own shaft carries on
+        // upward past the hand, exactly like BeefyEnemy's sword is held low and
+        // rests upright against the body rather than the arm being raised overhead.
+        const rightArmAngle = mirroredLimbAngle(0.2, anim.legSwing, 0.05, true);
         const rightHand = drawTwoSegmentLimb(
             ctx, baseSize * 0.52, -baseSize * 0.4,
-            clubArmAngle, baseSize * 0.45,
-            clubArmAngle, baseSize * 0.4,
+            rightArmAngle, baseSize * 0.42,
+            rightArmAngle + 0.16, baseSize * 0.36,
             { limbColor: '#D9C4A8', padColor: '#DDD4B8', limbWidth: baseSize * 0.26, padRadius: baseSize * 0.14, shadowColor: 'rgba(0,0,0,0.1)' }
         );
 
-        // --- CLUB ---
-        this.drawClub(ctx, rightHand.endX, rightHand.endY, baseSize, clubArmAngle);
+        // --- CLUB --- Held at a fixed upright angle independent of the arm's own
+        // pose (like BeefyEnemy's swordAngle), so it reads as gripped-and-resting
+        // rather than pivoting with the (now natural, low) arm.
+        const clubFacingAngle = -Math.PI / 2 + 0.25;
+        this.drawClub(ctx, rightHand.endX, rightHand.endY, baseSize, clubFacingAngle);
 
         // --- HEAD (soft gradient shading instead of flat fill) ---
         if (!this._headGrad || this._headGradBaseSize !== baseSize || this._headGradCtx !== ctx) {
@@ -281,29 +288,30 @@ export class BasicEnemy extends BaseEnemy {
 
     /** Heavy studded war club, held raised in a fixed grip - gives the plain soldier
      *  something to actually hold, matching VillagerEnemy's torch/pitchfork treatment.
-     *  Rotates by `armAngle + Math.PI/2` (matching VillagerEnemy.drawTorch/drawPitchfork's
-     *  convention exactly) since the club body is drawn growing along local +Y from the
-     *  grip - using the opposite sign here previously pointed the heavy head back down
-     *  behind the hand/torso instead of up and visible, which is why it was unrecognizable. */
+     *  The club body is drawn growing along local +Y from the grip, and rotating by
+     *  `armAngle - Math.PI/2` aligns local +Y with the arm's own pointing direction
+     *  (a local (0,L) point maps to global (-sin(rot), cos(rot))*L, which only lines
+     *  up with (cos(armAngle), sin(armAngle)) when rot = armAngle - Math.PI/2). Using
+     *  `+ Math.PI/2` instead - as this used to - points local +Y in the *opposite*
+     *  direction from the raised arm, so the club folded back down behind the hand
+     *  toward the torso with the heavy head ending up bunched near the hand instead
+     *  of extended up and visible above it (i.e. looked upside down). */
     drawClub(ctx, handX, handY, baseSize, armAngle) {
         ctx.save();
         ctx.translate(handX, handY);
-        ctx.rotate(armAngle + Math.PI / 2);
+        ctx.rotate(armAngle - Math.PI / 2);
 
-        // A blackjack/sap silhouette - a slender shaft for most of its length with a
-        // modest rounded bulge only near the very top, not a wide lumpy head starting
-        // a third of the way up (the previous version's headWidth was nearly as large
-        // as the club was long, which is what read as a shield rather than a club).
+        // Broad shaft with a big, heavy head at the top (far end from the grip).
         // Built as one continuous drawTaperedPath through hand->neck->bulb->tip so the
         // whole silhouette is a single smooth taper instead of a separate handle
         // polygon glued to a separate bulbous head shape.
         const clubLength = baseSize * 1.5;
-        const handleWidth = baseSize * 0.15;
-        const neckY = clubLength * 0.6;
-        const bulbY = clubLength * 0.85;
+        const handleWidth = baseSize * 0.22;
+        const neckY = clubLength * 0.55;
+        const bulbY = clubLength * 0.82;
         const tipY = clubLength;
-        const bulbWidth = baseSize * 0.37;
-        const tipWidth = baseSize * 0.22;
+        const bulbWidth = baseSize * 0.5;
+        const tipWidth = baseSize * 0.42;
 
         if (!this._clubGrad || this._clubGradBaseSize !== baseSize || this._clubGradCtx !== ctx) {
             this._clubGradCtx = ctx;

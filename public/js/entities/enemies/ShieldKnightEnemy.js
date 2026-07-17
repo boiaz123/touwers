@@ -334,8 +334,27 @@ export class ShieldKnightEnemy extends BaseEnemy {
         // Shield angle - protective position
         ctx.rotate(-0.25);
 
-        const shieldWidth = baseSize * 0.68;
-        const shieldHeight = baseSize * 1.05;
+        // Bigger and bulkier than before - a proper heater shield, not a buckler -
+        // so this reads as serious defensive gear rather than a small parry shield.
+        const shieldWidth = baseSize * 0.92;
+        const shieldHeight = baseSize * 1.35;
+        const pointDrop = baseSize * 0.22;
+
+        function shieldOutline(w, h, drop) {
+            ctx.beginPath();
+            ctx.moveTo(-w / 2, -h / 2);
+            ctx.lineTo(w / 2, -h / 2);
+            ctx.lineTo(w / 2, h / 2 - drop);
+            ctx.lineTo(0, h / 2 + drop);
+            ctx.lineTo(-w / 2, h / 2 - drop);
+            ctx.closePath();
+        }
+
+        // Dark rim layer drawn slightly larger and behind the face - gives the
+        // shield visible thickness/depth instead of reading as a flat plate.
+        ctx.fillStyle = '#2e2418';
+        shieldOutline(shieldWidth + baseSize * 0.14, shieldHeight + baseSize * 0.14, pointDrop);
+        ctx.fill();
 
         // Shield body - gradient for a subtle domed-metal look
         if (!this._shieldGrad || this._shieldGradBaseSize !== baseSize || this._shieldGradCtx !== ctx) {
@@ -348,34 +367,43 @@ export class ShieldKnightEnemy extends BaseEnemy {
         }
 
         ctx.fillStyle = this._shieldGrad;
-        ctx.beginPath();
-        ctx.moveTo(-shieldWidth / 2, -shieldHeight / 2);
-        ctx.lineTo(shieldWidth / 2, -shieldHeight / 2);
-        ctx.lineTo(shieldWidth / 2, shieldHeight / 2 - baseSize * 0.18);
-        ctx.lineTo(0, shieldHeight / 2 + baseSize * 0.18);
-        ctx.lineTo(-shieldWidth / 2, shieldHeight / 2 - baseSize * 0.18);
-        ctx.closePath();
+        shieldOutline(shieldWidth, shieldHeight, pointDrop);
         ctx.fill();
 
-        // Shield edge
+        // Shield edge - thicker stroke to match the heavier rim
         ctx.strokeStyle = '#4a3a2a';
-        ctx.lineWidth = 1.8;
+        ctx.lineWidth = baseSize * 0.09;
         ctx.stroke();
 
-        // Shield boss (raised center circle)
+        // Corner rivets along the rim - reinforces the "heavy war shield" read
+        ctx.fillStyle = '#3a2a1a';
+        const rivetR = baseSize * 0.055;
+        const rivetPositions = [
+            [-shieldWidth / 2 + rivetR * 1.4, -shieldHeight / 2 + rivetR * 1.4],
+            [shieldWidth / 2 - rivetR * 1.4, -shieldHeight / 2 + rivetR * 1.4],
+            [-shieldWidth * 0.32, shieldHeight * 0.28],
+            [shieldWidth * 0.32, shieldHeight * 0.28],
+        ];
+        for (const [rx, ry] of rivetPositions) {
+            ctx.beginPath();
+            ctx.arc(rx, ry, rivetR, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Shield boss (raised center circle) - bigger, to match the bulkier shield
         ctx.fillStyle = '#5a4a3a';
         ctx.beginPath();
-        ctx.arc(0, -baseSize * 0.1, baseSize * 0.18, 0, Math.PI * 2);
+        ctx.arc(0, -baseSize * 0.1, baseSize * 0.26, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.strokeStyle = '#3a2a1a';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = baseSize * 0.03;
         ctx.stroke();
 
         // Boss highlight
         ctx.fillStyle = 'rgba(255,255,255,0.2)';
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.05, -baseSize * 0.15, baseSize * 0.06, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.07, -baseSize * 0.18, baseSize * 0.08, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();

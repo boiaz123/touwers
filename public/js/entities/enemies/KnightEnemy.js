@@ -18,7 +18,9 @@ export class KnightEnemy extends BaseEnemy {
         super(path, baseStats.health * health_multiplier, actualSpeed, actualArmour, actualMagicResistance);
         this.lootDropChance = 0.1; // 10% chance to drop loot
         this.armorColor = '#4A5568';
-        this.sizeMultiplier = 1.15;
+        // Sized up relative to ShieldKnightEnemy (sizeMultiplier 1.05) so the
+        // heavy-melee Knight actually reads as bulkier/taller than it, not smaller.
+        this.sizeMultiplier = 1.3;
 
         this.attackDamage = 10;
         this.attackSpeed = 0.7;
@@ -150,42 +152,46 @@ export class KnightEnemy extends BaseEnemy {
         if (!this._plateGrad || this._plateGradBaseSize !== baseSize || this._plateGradCtx !== ctx) {
             this._plateGradCtx = ctx;
             this._plateGradBaseSize = baseSize;
-            this._plateGrad = ctx.createLinearGradient(-baseSize * 0.65, -baseSize * 0.7, baseSize * 0.65, baseSize * 0.35);
+            this._plateGrad = ctx.createLinearGradient(-baseSize * 0.72, -baseSize * 0.78, baseSize * 0.72, baseSize * 0.4);
             this._plateGrad.addColorStop(0, this.lightenColor(this.armorColor, 0.3));
             this._plateGrad.addColorStop(0.5, this.armorColor);
             this._plateGrad.addColorStop(1, this.darkenColor(this.armorColor, 0.3));
         }
+        // Torso plate is wider and taller than ShieldKnightEnemy's (same base
+        // proportions would read identically once both are scaled by their own
+        // sizeMultiplier) - the extra width/height here is what makes the Knight
+        // look bulkier rather than just uniformly bigger.
         ctx.fillStyle = this._plateGrad;
-        ctx.fillRect(-baseSize * 0.65, -baseSize * 0.7, baseSize * 1.3, baseSize * 1.05);
+        ctx.fillRect(-baseSize * 0.72, -baseSize * 0.78, baseSize * 1.44, baseSize * 1.18);
         ctx.strokeStyle = '#1a1a1a';
         ctx.lineWidth = 1.5;
-        ctx.strokeRect(-baseSize * 0.65, -baseSize * 0.7, baseSize * 1.3, baseSize * 1.05);
+        ctx.strokeRect(-baseSize * 0.72, -baseSize * 0.78, baseSize * 1.44, baseSize * 1.18);
 
         // --- SHOULDER PAULDRONS (Armor) ---
         ctx.fillStyle = '#5A6B7A';
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.7, -baseSize * 0.4, baseSize * 0.3, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.78, -baseSize * 0.44, baseSize * 0.34, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(baseSize * 0.7, -baseSize * 0.4, baseSize * 0.3, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.78, -baseSize * 0.44, baseSize * 0.34, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.7, -baseSize * 0.4, baseSize * 0.3, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.78, -baseSize * 0.44, baseSize * 0.34, 0, Math.PI * 2);
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(baseSize * 0.7, -baseSize * 0.4, baseSize * 0.3, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.78, -baseSize * 0.44, baseSize * 0.34, 0, Math.PI * 2);
         ctx.stroke();
 
         // Pauldron highlight
         ctx.fillStyle = 'rgba(255,255,255,0.15)';
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.78, -baseSize * 0.48, baseSize * 0.1, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.87, -baseSize * 0.53, baseSize * 0.11, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(baseSize * 0.62, -baseSize * 0.48, baseSize * 0.1, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.69, -baseSize * 0.53, baseSize * 0.11, 0, Math.PI * 2);
         ctx.fill();
 
         // --- ARMOR RIVETS AND DETAILS ---
@@ -255,8 +261,8 @@ export class KnightEnemy extends BaseEnemy {
         ctx.fillRect(-baseSize * 0.28, -baseSize * 1.3, baseSize * 0.56, baseSize * 0.08);
 
         // --- ARMS (converge on the two-handed sword grip) ---
-        const leftShoulderX = -baseSize * 0.65;
-        const leftShoulderY = -baseSize * 0.35;
+        const leftShoulderX = -baseSize * 0.72;
+        const leftShoulderY = -baseSize * 0.4;
         const leftArmAngle = -0.3 + anim.legSwing * 0.1;
 
         const leftArm = drawTwoSegmentLimb(
@@ -270,8 +276,8 @@ export class KnightEnemy extends BaseEnemy {
         ctx.fillRect(leftArm.endX - baseSize * 0.12, leftArm.endY - baseSize * 0.18, baseSize * 0.24, baseSize * 0.08);
         ctx.fillRect(leftArm.endX - baseSize * 0.12, leftArm.endY + baseSize * 0.08, baseSize * 0.24, baseSize * 0.08);
 
-        const rightShoulderX = baseSize * 0.65;
-        const rightShoulderY = -baseSize * 0.35;
+        const rightShoulderX = baseSize * 0.72;
+        const rightShoulderY = -baseSize * 0.4;
         const rightArmAngle = -2.84 - anim.legSwing * 0.1;
 
         const rightArm = drawTwoSegmentLimb(
@@ -288,20 +294,22 @@ export class KnightEnemy extends BaseEnemy {
         this.drawTwoHandedSword(ctx, leftArm.endX, leftArm.endY, rightArm.endX, rightArm.endY, baseSize, leftArmAngle, anim.legSwing * 0.4);
 
         // --- LEGS WITH LEG ARMOR: IK-based foot placement for proper stepping ---
-        const legUpper = baseSize * 0.42;
-        const legLower = baseSize * 0.43;
-        const legHipY  = baseSize * 0.35;
+        // Longer + wider-set than ShieldKnightEnemy's legs (0.42/0.43 upper/lower,
+        // 0.4 stance) so the Knight reads as taller and bulkier through the legs too.
+        const legUpper = baseSize * 0.46;
+        const legLower = baseSize * 0.47;
+        const legHipY  = baseSize * 0.37;
         const groundY  = legHipY + (legUpper + legLower) * 0.96;
         const strideX  = baseSize * 0.17;
         const liftY    = baseSize * 0.18;
 
-        const leftFootX = -baseSize * 0.4 + anim.legSwing * strideX;
+        const leftFootX = -baseSize * 0.45 + anim.legSwing * strideX;
         const leftFootY = groundY - kneeFlex(anim, false) * liftY;
-        const leftAngles = solveLegIK(-baseSize * 0.4, legHipY, leftFootX, leftFootY, legUpper, legLower, -1);
+        const leftAngles = solveLegIK(-baseSize * 0.45, legHipY, leftFootX, leftFootY, legUpper, legLower, -1);
         const leftLeg = drawTwoSegmentLimb(
-            ctx, -baseSize * 0.4, legHipY,
+            ctx, -baseSize * 0.45, legHipY,
             leftAngles.upperAngle, legUpper, leftAngles.lowerAngle, legLower,
-            { limbColor: '#4A5568', padColor: '#2a2a2a', limbWidth: baseSize * 0.28, padRadius: 0 }
+            { limbColor: '#4A5568', padColor: '#2a2a2a', limbWidth: baseSize * 0.32, padRadius: 0 }
         );
         // Knee joint armor plate (drawn at the elbow/knee position the helper returned)
         ctx.fillStyle = '#5A6B7A';
@@ -314,13 +322,13 @@ export class KnightEnemy extends BaseEnemy {
         ctx.fillStyle = '#3a3a3a';
         ctx.fillRect(leftLeg.elbowX - baseSize * 0.08, leftLeg.elbowY - baseSize * 0.12, baseSize * 0.16, baseSize * 0.08);
 
-        const rightFootX = baseSize * 0.4 - anim.legSwing * strideX;
+        const rightFootX = baseSize * 0.45 - anim.legSwing * strideX;
         const rightFootY = groundY - kneeFlex(anim, true) * liftY;
-        const rightAngles = solveLegIK(baseSize * 0.4, legHipY, rightFootX, rightFootY, legUpper, legLower, -1);
+        const rightAngles = solveLegIK(baseSize * 0.45, legHipY, rightFootX, rightFootY, legUpper, legLower, -1);
         const rightLeg = drawTwoSegmentLimb(
-            ctx, baseSize * 0.4, legHipY,
+            ctx, baseSize * 0.45, legHipY,
             rightAngles.upperAngle, legUpper, rightAngles.lowerAngle, legLower,
-            { limbColor: '#4A5568', padColor: '#2a2a2a', limbWidth: baseSize * 0.28, padRadius: 0 }
+            { limbColor: '#4A5568', padColor: '#2a2a2a', limbWidth: baseSize * 0.32, padRadius: 0 }
         );
         ctx.fillStyle = '#5A6B7A';
         ctx.beginPath();

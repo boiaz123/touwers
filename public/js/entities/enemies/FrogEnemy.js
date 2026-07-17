@@ -1,5 +1,6 @@
 import { BaseEnemy } from './BaseEnemy.js';
 import { EnemyColorCache, FROG_COLOR_VARIANTS } from '../../utils/EnemyColorCache.js';
+import { drawFlipperFoot } from './FrogFlipperRenderer.js';
 
 export class FrogEnemy extends BaseEnemy {
     // Shared cached color-variant lookup (skinColor -> lighten/darken variants).
@@ -295,8 +296,8 @@ export class FrogEnemy extends BaseEnemy {
         // --- FROG BODY ---
         
         // Back legs (lower) - more prominent and frog-like
-        this.drawFrogBackLeg(ctx, -baseSize * 0.4, baseSize * 0.4, baseSize, false);
-        this.drawFrogBackLeg(ctx, baseSize * 0.4, baseSize * 0.4, baseSize, true);
+        this.drawFrogBackLeg(ctx, -baseSize * 0.4, baseSize * 0.4, baseSize, false, jumpProgress);
+        this.drawFrogBackLeg(ctx, baseSize * 0.4, baseSize * 0.4, baseSize, true, jumpProgress);
         
         // Main body (rounded, more compact) - cache gradient per instance (baseSize is fixed during gameplay)
         if (!this._bodyGradient || this._gradBaseSize !== baseSize || this._gradCtx !== ctx) {
@@ -325,9 +326,12 @@ export class FrogEnemy extends BaseEnemy {
         ctx.ellipse(0, baseSize * 0.15, baseSize * 0.38 * bodyScaleX, baseSize * 0.42 * bodyScaleY, 0, 0, Math.PI * 2);
         ctx.fill();
         
-        // Front legs (upper)
-        this.drawFrogFrontLeg(ctx, -baseSize * 0.28, -baseSize * 0.12, baseSize, false);
-        this.drawFrogFrontLeg(ctx, baseSize * 0.28, -baseSize * 0.12, baseSize, true);
+        // Tiny front arms - shoulder sits just below the head's bottom edge (head
+        // reaches down to y=0; the old y=-0.12 placement put the shoulder up under
+        // the head ellipse, which is drawn afterward and painted straight over it,
+        // hiding the arms entirely) so they read at the sides of the body instead.
+        this.drawFrogArm(ctx, -baseSize * 0.3, baseSize * 0.06, baseSize, false, jumpProgress);
+        this.drawFrogArm(ctx, baseSize * 0.3, baseSize * 0.06, baseSize, true, jumpProgress);
         
         // --- HEAD ---
         
@@ -493,24 +497,44 @@ export class FrogEnemy extends BaseEnemy {
         this.renderHealthBar(ctx, baseSize, { widthMul: 2.8, heightMul: 0.38, yOffsetMul: -2.1 });
     }
 
-    drawFrogBackLeg(ctx, hipX, hipY, baseSize, isRight) {
-        // Back leg - powerful folded jumping position
-        const thighLength = baseSize * 0.42;
-        const legLength = baseSize * 0.48;
-        
-        // Thigh (upper part, thick and muscular)
-        const thighAngle = isRight ? -Math.PI / 2.8 : -Math.PI + Math.PI / 2.8;
+    drawFrogBackLeg(ctx, hipX, hipY, baseSize, isRight, jumpProgress) {
+        // Back leg - powerful folded jumping position, crouched out to the side and
+        // down toward the ground. The thigh/calf angles here are a vertical mirror
+        // of what they used to be: the old angles pointed the whole leg UP and OVER
+        // the body toward the head, so it got hidden behind the body fill (drawn
+        // after) except for a stray foot-nub - which is exactly why the frog read as
+        // a featureless little ball. Flipping both angles sends the leg down and
+        // outward instead, where it's actually visible beside/behind the body.
+        const side = isRight ? 1 : -1;
+
+        // Push-off extension: 1 = fully extended, reaching for the ground (right at
+        // takeoff/landing - jumpProgress 0 or 1), 0 = tucked up crouch at the airborne
+        // apex (jumpProgress 0.5, where the jumpArc translate above is also at its
+        // highest). This used to be inverted - legs extended at the mid-air apex and
+        // folded at ground contact, which reads backwards for a jump (a real hopper
+        // pushes off/lands with extended legs and tucks them up while airborne).
+        const apexPhase = jumpProgress < 0.5 ? jumpProgress * 2 : (1 - jumpProgress) * 2;
+        const extension = 1 - apexPhase;
+
+        const thighLength = baseSize * 0.32;
+        const legLength = baseSize * 0.36;
+
+        // Thigh (upper part, thick and muscular) - splays out further as the leg extends
+        const baseThighAngle = isRight ? Math.PI / 2.8 : Math.PI - Math.PI / 2.8;
+        const thighAngle = baseThighAngle - side * extension * 0.22;
         const kneeX = hipX + Math.cos(thighAngle) * thighLength;
         const kneeY = hipY + Math.sin(thighAngle) * thighLength;
-        
-        // Calf/foot (lower part, folded)
-        const calfAngle = thighAngle + (isRight ? -0.4 : 0.4);
+
+        // Calf/foot - folds back sharply at rest, straightens out into the thigh's
+        // line as the leg extends mid-hop.
+        const restCalfBend = side * 0.55;
+        const calfAngle = thighAngle + restCalfBend * (1 - extension * 0.8);
         const footX = kneeX + Math.cos(calfAngle) * legLength;
         const footY = kneeY + Math.sin(calfAngle) * legLength;
-        
+
         // Shadow for depth
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
-        ctx.lineWidth = baseSize * 0.2;
+        ctx.lineWidth = baseSize * 0.24;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -518,82 +542,133 @@ export class FrogEnemy extends BaseEnemy {
         ctx.lineTo(kneeX + 1, kneeY + 1);
         ctx.lineTo(footX + 1, footY + 1);
         ctx.stroke();
-        
-        // Draw leg - thicker for muscular appearance
+
+        // Thigh - thicker, muscular segment (drawn separately from the calf so the
+        // taper from hip to foot actually reads instead of one uniform-width line)
         ctx.strokeStyle = FrogEnemy._colors.get(this.skinColor, 'darken_leg');
-        ctx.lineWidth = baseSize * 0.2;
+        ctx.lineWidth = baseSize * 0.24;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(hipX, hipY);
         ctx.lineTo(kneeX, kneeY);
+        ctx.stroke();
+
+        // Thigh muscle highlight
+        ctx.strokeStyle = FrogEnemy._colors.get(this.skinColor, 'lighten');
+        ctx.lineWidth = baseSize * 0.07;
+        ctx.beginPath();
+        ctx.moveTo(hipX + Math.cos(thighAngle - 0.3) * thighLength * 0.25, hipY + Math.sin(thighAngle - 0.3) * thighLength * 0.25);
+        ctx.lineTo(kneeX + Math.cos(thighAngle - 0.3) * baseSize * 0.05, kneeY + Math.sin(thighAngle - 0.3) * baseSize * 0.05);
+        ctx.stroke();
+
+        // Calf - slightly thinner than the thigh
+        ctx.strokeStyle = FrogEnemy._colors.get(this.skinColor, 'darken_leg');
+        ctx.lineWidth = baseSize * 0.17;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(kneeX, kneeY);
         ctx.lineTo(footX, footY);
         ctx.stroke();
-        
-        // Foot pads - webbed appearance
-        ctx.fillStyle = FrogEnemy._colors.get(this.skinColor, 'lighten_foot');
+
+        // Knee joint - small highlighted node so the thigh/calf bend reads clearly
+        ctx.fillStyle = FrogEnemy._colors.get(this.skinColor, 'lighten');
         ctx.beginPath();
-        ctx.ellipse(footX, footY, baseSize * 0.16, baseSize * 0.18, calfAngle, 0, Math.PI * 2);
+        ctx.arc(kneeX, kneeY, baseSize * 0.1, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Toe details - webbing
         ctx.strokeStyle = FrogEnemy._colors.get(this.skinColor, 'darken_detail');
-        ctx.lineWidth = 0.8;
-        for (let i = -1; i <= 1; i++) {
-            const toeAngle = calfAngle + (i * 0.3);
-            const toeX = footX + Math.cos(toeAngle) * baseSize * 0.1;
-            const toeY = footY + Math.sin(toeAngle) * baseSize * 0.12;
-            ctx.beginPath();
-            ctx.moveTo(footX, footY);
-            ctx.lineTo(toeX, toeY);
-            ctx.stroke();
-        }
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+
+        // Flipper foot - shared clawed webbed-toe outline (see FrogFlipperRenderer.js),
+        // scaled down to match the shortened leg above.
+        drawFlipperFoot(
+            ctx, footX, footY, calfAngle,
+            baseSize * 0.36, baseSize * 0.19,
+            FrogEnemy._colors.get(this.skinColor, 'lighten_foot'),
+            FrogEnemy._colors.get(this.skinColor, 'darken_detail')
+        );
     }
-    
-    drawFrogFrontLeg(ctx, hipX, hipY, baseSize, isRight) {
-        // Front leg - shorter, more relaxed
-        const upperLegLength = baseSize * 0.22;
-        const lowerLegLength = baseSize * 0.24;
-        
-        // Upper leg angle (slightly out and forward)
-        const upperAngle = isRight ? Math.PI / 5 : 4 * Math.PI / 5;
-        const elbowX = hipX + Math.cos(upperAngle) * upperLegLength;
-        const elbowY = hipY + Math.sin(upperAngle) * upperLegLength;
-        
-        // Lower leg angle (pointing forward/down)
-        const lowerAngle = Math.PI / 2.2 + (isRight ? 0.15 : -0.15);
-        const handX = elbowX + Math.cos(lowerAngle) * lowerLegLength;
-        const handY = elbowY + Math.sin(lowerAngle) * lowerLegLength;
-        
-        // Shadow for depth
+
+    drawFrogArm(ctx, shoulderX, shoulderY, baseSize, isRight, jumpProgress) {
+        // Tiny front arm - frogs really only have two functional leg-pairs (the big
+        // back jumping legs and a pair of small front arms used for landing/bracing),
+        // so this reuses the exact same segmented-limb + flipper-hand construction as
+        // drawFrogBackLeg, just scaled down and swung on a small counter-lift instead
+        // of the leg's fold/extend, matching the elemental battle-frogs' drawBattleArm.
+        const side = isRight ? 1 : -1;
+
+        let armLift;
+        if (jumpProgress < 0.6) armLift = jumpProgress / 0.6;
+        else armLift = (1 - jumpProgress) / 0.4;
+
+        const upperLength = baseSize * 0.2;
+        const lowerLength = baseSize * 0.2;
+
+        // Rest pose points almost straight out to the side (a small bracing arm,
+        // like a real frog's), so it clears the belly's silhouette instead of
+        // folding back flush against it; it swings upward during the hop the same
+        // way the elemental battle-frogs' drawBattleArm lifts on takeoff.
+        const baseUpperAngle = side > 0 ? 0.25 : Math.PI - 0.25;
+        const upperAngle = baseUpperAngle - armLift * 0.5 * side;
+        const elbowX = shoulderX + Math.cos(upperAngle) * upperLength;
+        const elbowY = shoulderY + Math.sin(upperAngle) * upperLength;
+
+        const baseLowerAngle = side > 0 ? 0.65 : Math.PI - 0.65;
+        const lowerAngle = baseLowerAngle - armLift * 0.4 * side;
+        const handX = elbowX + Math.cos(lowerAngle) * lowerLength;
+        const handY = elbowY + Math.sin(lowerAngle) * lowerLength;
+
+        // Shadow for depth (two tapered segments matching the real strokes below)
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
-        ctx.lineWidth = baseSize * 0.15;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
+        ctx.lineWidth = baseSize * 0.12;
         ctx.beginPath();
-        ctx.moveTo(hipX + 0.8, hipY + 0.8);
+        ctx.moveTo(shoulderX + 0.8, shoulderY + 0.8);
         ctx.lineTo(elbowX + 0.8, elbowY + 0.8);
+        ctx.stroke();
+        ctx.lineWidth = baseSize * 0.08;
+        ctx.beginPath();
+        ctx.moveTo(elbowX + 0.8, elbowY + 0.8);
         ctx.lineTo(handX + 0.8, handY + 0.8);
         ctx.stroke();
-        
-        // Draw leg
-        ctx.strokeStyle = FrogEnemy._colors.get(this.skinColor, 'darken_leg');
-        ctx.lineWidth = baseSize * 0.15;
+
+        // Upper arm - thicker
+        const armColor = FrogEnemy._colors.get(this.skinColor, 'darken_leg');
+        ctx.strokeStyle = armColor;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
+        ctx.lineWidth = baseSize * 0.12;
         ctx.beginPath();
-        ctx.moveTo(hipX, hipY);
+        ctx.moveTo(shoulderX, shoulderY);
         ctx.lineTo(elbowX, elbowY);
+        ctx.stroke();
+
+        // Forearm - tapers down toward the hand
+        ctx.strokeStyle = FrogEnemy._colors.get(this.skinColor, 'darken_detail');
+        ctx.lineWidth = baseSize * 0.08;
+        ctx.beginPath();
+        ctx.moveTo(elbowX, elbowY);
         ctx.lineTo(handX, handY);
         ctx.stroke();
-        
-        // Hand pads
-        ctx.fillStyle = FrogEnemy._colors.get(this.skinColor, 'lighten_foot');
+
+        // Elbow joint bump
+        ctx.fillStyle = armColor;
         ctx.beginPath();
-        ctx.ellipse(handX, handY, baseSize * 0.11, baseSize * 0.13, lowerAngle, 0, Math.PI * 2);
+        ctx.arc(elbowX, elbowY, baseSize * 0.055, 0, Math.PI * 2);
         ctx.fill();
+
+        // Tiny hand - the same flipper shape as the feet, scaled down
+        drawFlipperFoot(
+            ctx, handX, handY, lowerAngle,
+            baseSize * 0.28, baseSize * 0.15,
+            FrogEnemy._colors.get(this.skinColor, 'lighten_foot'),
+            FrogEnemy._colors.get(this.skinColor, 'darken_detail')
+        );
     }
-    
+
     drawWizardHat(ctx, baseSize) {
         // Hat body - large pointy cone (cache gradients per instance)
         if (!this._hatGradient || this._hatGradBaseSize !== baseSize || this._hatGradCtx !== ctx) {
