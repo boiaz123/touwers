@@ -72,11 +72,13 @@ export class CombinationTower extends Tower {
         }
 
         // Set by TowerRenderAdapter once it has baked/synced this tower via Pixi (particles/
-        // bolts/attack-radius still draw here regardless - not migrated yet). Unlike
-        // MagicTower, the base/cylinder colors depend on selectedSpell (changeable at runtime
-        // via setSpell()), so they can't be safely shared-baked per campaign - they're
-        // Strategy B (dynamic) here instead. The shadow and the spell-independent tesla coil
-        // apparatus (fixed metal colors) are still Strategy A (static/shared), same as MagicTower.
+        // bolts/attack-radius still draw here regardless - not migrated yet). The spire body/
+        // windows/rune bands/crystal all depend on selectedSpell (changeable at runtime via
+        // setSpell()), so they can't be safely shared-baked per campaign - they're Strategy B
+        // (dynamic) here instead. The shadow, stone foundation, buttresses, banding, and
+        // support struts are spell-independent and stay Strategy A (static/shared). Structural
+        // language (flattened octagonal base, angled support struts, tapered spire body) is
+        // borrowed from SuperWeaponLab.js rather than MagicTower's tesla-coil tower.
         this.skipCanvas2DBodyRender = false;
     }
     
@@ -686,32 +688,36 @@ export class CombinationTower extends Tower {
         // intentionally empty
     }
 
-    /** Strategy A (baked once per campaign, shared across instances): shadow + the mechanical
-     *  amplifier structure - foundation tier, corner buttresses, tesla coil column/rings. All
-     *  fixed dark metal/stone colors that don't depend on selectedSpell (unlike MagicTower's
-     *  single coil disc, this whole apparatus is spell-independent), so it can be shared-baked
-     *  instead of redrawn every frame - only the crystal on top carries the spell color. */
+    /** Strategy A (baked once per campaign, shared across instances): shadow + stone foundation
+     *  + support struts + banding - all fixed dark stone/metal colors that don't depend on
+     *  selectedSpell, so this can be shared-baked instead of redrawn every frame. Structural
+     *  language borrowed from SuperWeaponLab.js (flattened octagonal floor-plan base, angled
+     *  support struts, partial-arc banding) rather than MagicTower's tesla-coil tower - a
+     *  different building silhouette, not a recolor of the same one. */
     renderStaticBack(ctx, towerSize) {
-        // 3D shadow
-        ctx.fillStyle = 'rgba(75, 0, 130, 0.3)';
+        const baseWidth = towerSize * 0.9;
+        const baseFlat = towerSize * 0.16; // vertical squash on the octagon = floor-plan perspective, matching SuperWeaponLab's renderStoneBase
+        const baseY = this.y + towerSize * 0.08;
+
+        // Drop shadow, squashed to match the base's own floor-plan flatten ratio
+        ctx.fillStyle = 'rgba(15, 8, 25, 0.35)';
         ctx.beginPath();
-        ctx.arc(this.x + 3, this.y + 3, towerSize * 0.4, 0, Math.PI * 2);
+        ctx.ellipse(this.x + 3, baseY + 3, baseWidth * 0.52, baseFlat * 1.3, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        const baseRadius = towerSize * 0.38;
-        const towerHeight = towerSize * 0.5;
-
-        // Wide stone foundation tier peeking out beneath the octagon - a heavier, fortified stance
-        const foundationRadius = baseRadius * 1.25;
-        const foundationY = this.y + towerSize * 0.05;
-        ctx.fillStyle = '#241238';
-        ctx.strokeStyle = '#140a1f';
+        // Octagonal stone foundation
+        const stoneGradient = ctx.createLinearGradient(this.x - baseWidth / 2, baseY - baseFlat, this.x + baseWidth / 2, baseY + baseFlat);
+        stoneGradient.addColorStop(0, '#5c5568');
+        stoneGradient.addColorStop(0.5, '#3d3847');
+        stoneGradient.addColorStop(1, '#221f2b');
+        ctx.fillStyle = stoneGradient;
+        ctx.strokeStyle = '#15131b';
         ctx.lineWidth = 2;
         ctx.beginPath();
         for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const x = this.x + Math.cos(angle) * foundationRadius;
-            const y = foundationY + Math.sin(angle) * foundationRadius;
+            const angle = (i / 8) * Math.PI * 2 - Math.PI / 2;
+            const x = this.x + Math.cos(angle) * baseWidth / 2;
+            const y = baseY + Math.sin(angle) * baseFlat;
             if (i === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
         }
@@ -719,63 +725,77 @@ export class CombinationTower extends Tower {
         ctx.fill();
         ctx.stroke();
 
-        // Corner buttresses - iron spikes anchoring the foundation, fortress-like silhouette
+        // Corner buttresses - kept from the original design (fortress-like silhouette,
+        // distinct from SuperWeaponLab's plain octagon), re-anchored to the flattened base.
         ctx.fillStyle = '#3a3a3a';
         ctx.strokeStyle = '#1a1a1a';
         ctx.lineWidth = 1.2;
         for (let i = 0; i < 4; i++) {
-            const angle = (i / 4) * Math.PI * 2;
-            const spikeX = this.x + Math.cos(angle) * foundationRadius;
-            const spikeY = foundationY + Math.sin(angle) * foundationRadius;
-            const outX = this.x + Math.cos(angle) * (foundationRadius + towerSize * 0.09);
-            const outY = foundationY + Math.sin(angle) * (foundationRadius + towerSize * 0.09) - towerSize * 0.06;
+            const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+            const spikeX = this.x + Math.cos(angle) * baseWidth * 0.46;
+            const spikeY = baseY + Math.sin(angle) * baseFlat * 1.15;
+            const outX = this.x + Math.cos(angle) * baseWidth * 0.58;
+            const outY = baseY + Math.sin(angle) * baseFlat * 1.4 - towerSize * 0.05;
             ctx.beginPath();
-            ctx.moveTo(spikeX - towerSize * 0.035, spikeY);
+            ctx.moveTo(spikeX - towerSize * 0.03, spikeY);
             ctx.lineTo(outX, outY);
-            ctx.lineTo(spikeX + towerSize * 0.035, spikeY);
+            ctx.lineTo(spikeX + towerSize * 0.03, spikeY);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
         }
 
-        // Tesla coil apparatus - taller and more heavily ringed than MagicTower's, neutral
-        // metal so it reads the same regardless of the selected spell.
-        const coilBaseRadius = baseRadius * 0.68;
-        const coilBaseY = this.y - towerHeight;
-        const coilHeight = towerSize * 0.5;
-        const coilWidth = baseRadius * 0.16;
-
-        ctx.fillStyle = '#2F2F2F';
-        ctx.strokeStyle = '#1A1A1A';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(this.x, coilBaseY, coilBaseRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#7A7A7A';
-        ctx.strokeStyle = '#1A1A1A';
-        ctx.lineWidth = 2;
-        ctx.fillRect(this.x - coilWidth, coilBaseY - coilHeight, coilWidth * 2, coilHeight);
-        ctx.strokeRect(this.x - coilWidth, coilBaseY - coilHeight, coilWidth * 2, coilHeight);
-
-        const ringCount = 6;
-        for (let i = 0; i < ringCount; i++) {
-            const ringY = coilBaseY - coilHeight + (i + 1) * coilHeight / (ringCount + 1);
-            const ringRadius = coilWidth * (2.2 + Math.sin(i * 0.6));
-
-            ctx.strokeStyle = '#A0A0A0';
-            ctx.lineWidth = 3;
+        // Partial-arc banding around the base, echoing SuperWeaponLab's iron bands - drawn
+        // with ctx.arc() (properly supports start/end through CanvasGraphicsShim, unlike
+        // ctx.ellipse()) rather than any full-circle "ring" texture.
+        ctx.strokeStyle = '#18151d';
+        ctx.lineWidth = towerSize * 0.018;
+        [0.02, -0.09, -0.20].forEach(fy => {
             ctx.beginPath();
-            ctx.arc(this.x, ringY, ringRadius, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y + towerSize * fy, towerSize * 0.34, Math.PI * 0.78, Math.PI * 2.22);
             ctx.stroke();
+        });
 
-            ctx.strokeStyle = '#E0E0E0';
+        // Four angled support struts flanking the spire base, each capped with a small fixed
+        // (spell-independent) amethyst stud - a magical echo of SuperWeaponLab's plain wooden
+        // beam supports.
+        const strutSpecs = [
+            { fx: -0.22, fy: 0.03, angle: -0.22 },
+            { fx: 0.22, fy: 0.03, angle: 0.22 },
+            { fx: -0.16, fy: 0.08, angle: -0.12 },
+            { fx: 0.16, fy: 0.08, angle: 0.12 }
+        ];
+        strutSpecs.forEach(strut => {
+            ctx.save();
+            ctx.translate(this.x + towerSize * strut.fx, this.y + towerSize * strut.fy);
+            ctx.rotate(strut.angle);
+
+            const strutGradient = ctx.createLinearGradient(-towerSize * 0.02, -towerSize * 0.22, towerSize * 0.02, 0);
+            strutGradient.addColorStop(0, '#5a5a62');
+            strutGradient.addColorStop(0.5, '#3a3a42');
+            strutGradient.addColorStop(1, '#1e1e24');
+            ctx.fillStyle = strutGradient;
+            ctx.strokeStyle = '#111114';
             ctx.lineWidth = 1;
+            ctx.fillRect(-towerSize * 0.018, -towerSize * 0.22, towerSize * 0.036, towerSize * 0.24);
+            ctx.strokeRect(-towerSize * 0.018, -towerSize * 0.22, towerSize * 0.036, towerSize * 0.24);
+
+            // Amethyst stud cap - static/neutral color, the crystal accents that actually
+            // carry the spell color live only in renderDynamicParts.
+            ctx.fillStyle = '#7c5fb8';
             ctx.beginPath();
-            ctx.arc(this.x, ringY, ringRadius, -Math.PI / 4, Math.PI / 4);
+            ctx.moveTo(0, -towerSize * 0.26);
+            ctx.lineTo(towerSize * 0.02, -towerSize * 0.22);
+            ctx.lineTo(0, -towerSize * 0.19);
+            ctx.lineTo(-towerSize * 0.02, -towerSize * 0.22);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+            ctx.lineWidth = 0.6;
             ctx.stroke();
-        }
+
+            ctx.restore();
+        });
     }
 
     /** Idle ambient dust - see the ambientParticles split in update()/constructor. Drawn as
@@ -792,128 +812,164 @@ export class CombinationTower extends Tower {
         }
     }
 
-    /** Strategy B (per-instance Graphics, redrawn every frame): base/cylinder/windows, and the
-     *  fused elemental crystal + floating runes on top of the coil - colored by selectedSpell
-     *  (runtime-changeable) and pulse-animated. */
+    /** Strategy B (per-instance Graphics, redrawn every frame): tapered spire body, windows,
+     *  rune bands, floating runes, and the fused crystal cluster on top - all colored by
+     *  selectedSpell (runtime-changeable) and pulse-animated. The body is a single tapered
+     *  polygon (SuperWeaponLab's spire shape, not MagicTower's stacked octagon+cylinder), so
+     *  there's no separate ring texture and nothing that needs circle-containment math. */
     renderDynamicParts(ctx, towerSize) {
-        // Ambient dust drawn first, before any body geometry, so the octagon/cylinder fills
-        // that follow paint over it - reads as motes drifting behind/through the tower
-        // instead of floating in front of it (see the ambientParticles split in update()).
+        // Ambient dust drawn first, before the spire fill, so it sits behind the tower instead
+        // of drifting over it (see the ambientParticles split in update()).
         this.renderAmbientDust(ctx);
 
-        const baseRadius = towerSize * 0.38;
-        const towerHeight = towerSize * 0.5;
-
-        // Tower foundation (using combination color instead of purple)
         const combinationColor = this.getCombinationColor();
 
-        // Opaque fill, matching MagicTower's solid '#6A5ACD' body - a translucent (0.8-alpha)
-        // fill let the fully-opaque stone-ring strokes and ambient dust show through/in front
-        // of it in a way that read as floating rather than embedded texture on solid stone.
-        ctx.fillStyle = combinationColor + '1)';
-        ctx.strokeStyle = combinationColor + '1)';
+        const spireHeight = towerSize * 0.8;
+        const spireBaseWidth = towerSize * 0.46;
+        const spireTopWidth = towerSize * 0.15;
+        const spireBaseY = this.y - towerSize * 0.02;
+        const spireTopY = spireBaseY - spireHeight;
+
+        // Tapered spire body - a single gradient-filled polygon. Opaque at both ends with a
+        // slightly softer band through the middle, matching MagicTower/SuperWeaponLab's solid
+        // (non-glassy) look rather than the flat translucent fill the old cylinder used.
+        const spireGradient = ctx.createLinearGradient(this.x - spireBaseWidth / 2, spireBaseY, this.x + spireBaseWidth / 2, spireTopY);
+        spireGradient.addColorStop(0, combinationColor + '1)');
+        spireGradient.addColorStop(0.5, combinationColor + '0.85)');
+        spireGradient.addColorStop(1, combinationColor + '1)');
+        ctx.fillStyle = spireGradient;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.lineWidth = 2;
-
-        // Draw octagonal tower base
         ctx.beginPath();
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const x = this.x + Math.cos(angle) * baseRadius;
-            const y = this.y + Math.sin(angle) * baseRadius;
+        ctx.moveTo(this.x - spireBaseWidth / 2, spireBaseY);
+        ctx.lineTo(this.x - spireTopWidth / 2, spireTopY);
+        ctx.lineTo(this.x + spireTopWidth / 2, spireTopY);
+        ctx.lineTo(this.x + spireBaseWidth / 2, spireBaseY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
 
+        // Carved block lines - straight segments sampled from the SAME width-interpolation
+        // formula as the spire polygon above, so they are geometrically guaranteed to stay
+        // inside it at every height. Replaces the old circular ring texture entirely (that
+        // geometry could never be reliably contained through CanvasGraphicsShim, which has no
+        // working ctx.clip() - a straight line derived from the shape's own width formula has
+        // no such containment problem to begin with).
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 7; i++) {
+            const t = i / 7;
+            const y = spireBaseY - spireHeight * t;
+            const width = spireBaseWidth - (spireBaseWidth - spireTopWidth) * t;
+            ctx.beginPath();
+            ctx.moveTo(this.x - width / 2, y);
+            ctx.lineTo(this.x + width / 2, y);
+            ctx.stroke();
+        }
+
+        // Magical window openings - radial-gradient glow tinted by the active spell, proportional
+        // to towerSize/spireHeight throughout so they stay correctly placed on the taper at any
+        // resolution instead of relying on fixed pixel offsets.
+        const windowSpecs = [
+            { t: 0.30, size: towerSize * 0.05 },
+            { t: 0.53, size: towerSize * 0.042 },
+            { t: 0.75, size: towerSize * 0.034 }
+        ];
+        windowSpecs.forEach(win => {
+            const wy = spireBaseY - spireHeight * win.t;
+
+            ctx.fillStyle = '#15131b';
+            ctx.beginPath();
+            ctx.arc(this.x, wy, win.size + 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            const glow = ctx.createRadialGradient(this.x, wy, 0, this.x, wy, win.size * 2.2);
+            glow.addColorStop(0, combinationColor + `${this.crystalPulse})`);
+            glow.addColorStop(0.5, combinationColor + `${this.crystalPulse * 0.5})`);
+            glow.addColorStop(1, combinationColor + '0)');
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(this.x, wy, win.size * 2.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.crystalPulse * 0.7})`;
+            ctx.beginPath();
+            ctx.arc(this.x, wy, win.size * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Carved rune bands - thin glowing line + symbol, proportional positions along the taper.
+        const runeBands = [
+            { t: 0.40, symbol: '◇' },
+            { t: 0.60, symbol: '✧' },
+            { t: 0.82, symbol: '❋' }
+        ];
+        runeBands.forEach(band => {
+            const by = spireBaseY - spireHeight * band.t;
+            const bandWidth = (spireBaseWidth - (spireBaseWidth - spireTopWidth) * band.t) - towerSize * 0.04;
+
+            ctx.strokeStyle = combinationColor + `${this.crystalPulse})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(this.x - bandWidth / 2, by);
+            ctx.lineTo(this.x + bandWidth / 2, by);
+            ctx.stroke();
+
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.crystalPulse})`;
+            ctx.font = `${Math.round(towerSize * 0.075)}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(band.symbol, this.x, by);
+        });
+
+        // Floating runes orbiting the spire base
+        const runeOrbitRadius = spireBaseWidth * 0.85;
+        for (let i = 0; i < this.runePositions.length; i++) {
+            const rune = this.runePositions[i];
+            const floatY = Math.sin(this.animationTime * 2 + rune.floatOffset) * towerSize * 0.015;
+            const runeAngle = this.runeRotation + rune.angle;
+            const runeX = this.x + Math.cos(runeAngle) * runeOrbitRadius;
+            const runeY = spireBaseY - spireHeight * 0.14 + Math.sin(runeAngle) * runeOrbitRadius * 0.3 + floatY;
+
+            ctx.fillStyle = combinationColor + `${this.crystalPulse * 0.4})`;
+            ctx.beginPath();
+            ctx.arc(runeX, runeY, towerSize * 0.03, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.crystalPulse})`;
+            ctx.font = `bold ${Math.round(towerSize * 0.035)}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(rune.symbol, runeX, runeY);
+        }
+
+        // --- Fused elemental crystal cluster mounted at the spire tip - bigger and more
+        // elaborate than MagicTower's single prism gem or SuperWeaponLab's plain diamond, with
+        // smaller orbiting shards standing in for the four combinable spells (steam/magma/
+        // tempest/meteor) fused into one focus. ---
+        const cx = this.x;
+        const sphereY = spireTopY - towerSize * 0.16;
+        const gemRadius = towerSize * 0.13;
+        const glowSize = towerSize * 0.03 + this.crystalPulse * towerSize * 0.05;
+        const gw = gemRadius;
+        const gt = gemRadius * 1.2;
+        const gb = gemRadius * 0.7;
+
+        // Small mounting platform at the spire tip, seating the crystal
+        ctx.fillStyle = '#2a2732';
+        ctx.strokeStyle = '#15131b';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const x = cx + Math.cos(angle) * gemRadius * 0.55;
+            const y = spireTopY + Math.sin(angle) * gemRadius * 0.22;
             if (i === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
         }
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-
-        // Tower cylinder (combination colored)
-        const cylinderCy = this.y - towerHeight/2;
-        const cylinderR = baseRadius * 0.9;
-        ctx.beginPath();
-        ctx.arc(this.x, cylinderCy, cylinderR, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        // Stone blocks texture - drawn as latitude bands on the cylinder's own circle
-        // (radius derived from cylinderR and each ring's vertical offset via the circle
-        // equation, like lines of latitude on a sphere) instead of 4 fixed-radius circles.
-        // A fixed radius close to the cylinder's own (0.85 vs 0.9 * baseRadius) floats well
-        // outside the cylinder at every offset except dead-center - ctx.clip() would fix that
-        // on a real Canvas2D, but towers render through CanvasGraphicsShim in the actual game
-        // (Strategy B live-redraw path) and its clip() is an intentional no-op, so containment
-        // has to come from the ring geometry itself, not a clip call.
-        ctx.strokeStyle = '#2E0A4F';
-        ctx.lineWidth = 1;
-        const ringInset = 0.92; // keep the band just inside the cylinder edge, not touching it
-        for (let ring = 0; ring < 4; ring++) {
-            const ringY = this.y - towerHeight + (ring * towerHeight/4);
-            const dy = ringY - cylinderCy;
-            if (Math.abs(dy) >= cylinderR) continue; // this latitude is beyond the cylinder's own pole
-            const ringRadius = Math.sqrt(cylinderR * cylinderR - dy * dy) * ringInset;
-            ctx.beginPath();
-            ctx.arc(this.x, ringY, ringRadius, 0, Math.PI * 2);
-            ctx.stroke();
-        }
-
-        // Mystical sigil windows (four-pointed star glyphs instead of plain dots) with combination
-        // glow. Fill alpha capped lower than before (was 0.6*pulse, washing out as a flat blob at
-        // peak pulse) with a crisp stroked outline added so the glyph reads as an engraved sigil
-        // - lower brightness, more visible shape detail - plus a small bright core spark instead
-        // of a flat dark dot for a subtler but more deliberate "lit rune" look.
-        for (let i = 0; i < 4; i++) {
-            const angle = (i / 4) * Math.PI * 2;
-            const windowX = this.x + Math.cos(angle) * baseRadius * 0.7;
-            const windowY = this.y - towerHeight/2;
-
-            ctx.save();
-            ctx.translate(windowX, windowY);
-            ctx.beginPath();
-            for (let p = 0; p < 8; p++) {
-                const pAngle = (p / 8) * Math.PI * 2;
-                const r = (p % 2 === 0) ? 9 : 3.5;
-                const px = Math.cos(pAngle) * r;
-                const py = Math.sin(pAngle) * r;
-                if (p === 0) ctx.moveTo(px, py);
-                else ctx.lineTo(px, py);
-            }
-            ctx.closePath();
-            ctx.fillStyle = combinationColor + `${this.crystalPulse * 0.32})`;
-            ctx.fill();
-            ctx.strokeStyle = combinationColor + `${0.5 + this.crystalPulse * 0.3})`;
-            ctx.lineWidth = 0.75;
-            ctx.stroke();
-            ctx.restore();
-
-            ctx.fillStyle = '#2E0A4F';
-            ctx.beginPath();
-            ctx.arc(windowX, windowY, 3, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Small bright core spark - the "lit" detail, sized independent of the pulse so
-            // it stays a crisp pinprick rather than swelling into another glow blob.
-            ctx.fillStyle = `rgba(255, 255, 255, ${0.4 + this.crystalPulse * 0.4})`;
-            ctx.beginPath();
-            ctx.arc(windowX, windowY, 1, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        // --- Fused elemental crystal cluster atop the coil - bigger and more elaborate than
-        // MagicTower's single prism gem, with smaller orbiting shards standing in for the four
-        // combinable spells (steam/magma/tempest/meteor) fused into one focus. ---
-        const coilBaseY = this.y - towerHeight;
-        const coilHeight = towerSize * 0.5;
-        const coilWidth = baseRadius * 0.16;
-        const sphereY = coilBaseY - coilHeight;
-
-        const sphereRadius = coilWidth * 1.9;
-        const gemRadius = sphereRadius * 1.9;
-        const glowSize = 8 + this.crystalPulse * 18;
-        const cx = this.x;
-        const gw = gemRadius;
-        const gt = gemRadius * 1.2;
-        const gb = gemRadius * 0.7;
 
         ctx.save();
 
@@ -1058,28 +1114,6 @@ export class CombinationTower extends Tower {
             if (isFrontShard(i)) drawShard(i);
         }
         ctx.restore();
-
-        // Floating runes around the tower base (already tracked/rotated in update() but
-        // previously never drawn)
-        for (let i = 0; i < this.runePositions.length; i++) {
-            const rune = this.runePositions[i];
-            const floatY = Math.sin(this.animationTime * 2 + rune.floatOffset) * 6;
-            const runeAngle = this.runeRotation + rune.angle;
-            const runeRadius = baseRadius * 1.4;
-            const runeX = this.x + Math.cos(runeAngle) * runeRadius;
-            const runeY = this.y - towerHeight * 0.3 + Math.sin(runeAngle) * runeRadius * 0.3 + floatY;
-
-            ctx.fillStyle = combinationColor + `${this.crystalPulse * 0.4})`;
-            ctx.beginPath();
-            ctx.arc(runeX, runeY, 12, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = `rgba(255, 255, 255, ${this.crystalPulse})`;
-            ctx.font = 'bold 14px serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(rune.symbol, runeX, runeY);
-        }
     }
 
     /** Phase 5: particles/bolts - drawn via renderProjectiles() above, inside the Pixi shim when active, or directly on Canvas2D otherwise. */
