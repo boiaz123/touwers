@@ -71,14 +71,20 @@ export class CombinationTower extends Tower {
             });
         }
 
-        // Set by TowerRenderAdapter once it has baked/synced this tower via Pixi (particles/
-        // bolts/attack-radius still draw here regardless - not migrated yet). The spire body/
-        // windows/rune bands/crystal all depend on selectedSpell (changeable at runtime via
-        // setSpell()), so they can't be safely shared-baked per campaign - they're Strategy B
-        // (dynamic) here instead. The shadow, stone foundation, buttresses, banding, and
-        // support struts are spell-independent and stay Strategy A (static/shared). Structural
-        // language (flattened octagonal base, angled support struts, tapered spire body) is
-        // borrowed from SuperWeaponLab.js rather than MagicTower's tesla-coil tower.
+        // Flipped true by TowerRenderAdapter.register() the moment this tower is handed off
+        // to Pixi (every tower with a renderStaticBack method gets auto-registered by
+        // GameplayState._syncTowerPixi - see TowerRenderAdapter.js). Body + windows + runes +
+        // crystal + particles/bolts all then draw through the Pixi shim via
+        // renderDynamicParts/renderProjectiles below instead of this Canvas2D render(); only
+        // the attack-radius circle stays on Canvas2D on top (cheap, selection-dependent, never
+        // migrated - see render() below). The spire body/windows/rune bands/crystal all depend
+        // on selectedSpell (changeable at runtime via setSpell()), so they can't be safely
+        // shared-baked per campaign - they're Strategy B (dynamic, redrawn per-instance every
+        // frame) here instead. The shadow, stone foundation, buttresses, banding, and support
+        // struts are spell-independent and stay Strategy A (static/shared, baked once per
+        // campaign). Structural language (flattened octagonal base, angled support struts,
+        // tapered spire body) is borrowed from SuperWeaponLab.js rather than MagicTower's
+        // tesla-coil tower.
         this.skipCanvas2DBodyRender = false;
     }
     
@@ -653,7 +659,27 @@ export class CombinationTower extends Tower {
     applySpellBonuses(bonuses) {
         Object.assign(this.combinationBonuses, bonuses);
     }
-    
+
+    /** Samples a flattened-ellipse arc as a manual polyline (moveTo/lineTo per segment) rather
+     *  than ctx.ellipse(..., rotation, start, end) - Pixi's real Graphics.ellipse() (see
+     *  node_modules/pixi.js Graphics.d.ts) only ever takes (x, y, radiusX, radiusY); the shim's
+     *  rotation/start/end params get silently dropped, so an ellipse arc call always renders as
+     *  a full, uncut ellipse in the actual game despite working in a plain Canvas2D test.
+     *  Shared by the base's iron banding (renderStaticBack) and the crystal cluster's
+     *  containment halo (renderDynamicParts), both of which need a partial (non-full-circle)
+     *  flattened ring. */
+    _strokeEllipseArc(ctx, cx, cy, rx, ry, fromAngle, toAngle, steps = 16) {
+        ctx.beginPath();
+        for (let s = 0; s <= steps; s++) {
+            const a = fromAngle + (toAngle - fromAngle) * (s / steps);
+            const px = cx + Math.cos(a) * rx;
+            const py = cy + Math.sin(a) * ry;
+            if (s === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+    }
+
     getCombinationColor() {
         switch(this.selectedSpell) {
             case 'steam': return 'rgba(100, 200, 255, ';
@@ -727,7 +753,10 @@ export class CombinationTower extends Tower {
 
         // Corner buttresses - kept from the original design (fortress-like silhouette,
         // distinct from SuperWeaponLab's plain octagon), re-anchored to the flattened base.
-        ctx.fillStyle = '#3a3a3a';
+        // Given a small metallic gradient (was a single flat fill) so they read as distinct
+        // 3D spikes instead of blending into the foundation's own shadow at typical in-game
+        // zoom - cheap to do here since renderStaticBack is baked once per campaign, not
+        // redrawn every frame like renderDynamicParts below.
         ctx.strokeStyle = '#1a1a1a';
         ctx.lineWidth = 1.2;
         for (let i = 0; i < 4; i++) {
@@ -736,6 +765,12 @@ export class CombinationTower extends Tower {
             const spikeY = baseY + Math.sin(angle) * baseFlat * 1.15;
             const outX = this.x + Math.cos(angle) * baseWidth * 0.58;
             const outY = baseY + Math.sin(angle) * baseFlat * 1.4 - towerSize * 0.05;
+
+            const buttressGradient = ctx.createLinearGradient(spikeX, spikeY, outX, outY);
+            buttressGradient.addColorStop(0, '#4d4d56');
+            buttressGradient.addColorStop(1, '#232228');
+            ctx.fillStyle = buttressGradient;
+
             ctx.beginPath();
             ctx.moveTo(spikeX - towerSize * 0.03, spikeY);
             ctx.lineTo(outX, outY);
@@ -745,15 +780,20 @@ export class CombinationTower extends Tower {
             ctx.stroke();
         }
 
-        // Partial-arc banding around the base, echoing SuperWeaponLab's iron bands - drawn
-        // with ctx.arc() (properly supports start/end through CanvasGraphicsShim, unlike
-        // ctx.ellipse()) rather than any full-circle "ring" texture.
+        // Partial-arc banding around the base, echoing SuperWeaponLab's iron bands - flattened
+        // to the SAME floor-plan squash ratio as the octagon foundation above (rather than a
+        // true circle) so the bands read as wrapping the tower's actual octagonal footprint
+        // instead of a mismatched cylinder - a perspective bug the original circular ctx.arc()
+        // version had. Sampled as a manual polyline via _strokeEllipseArc rather than
+        // ctx.ellipse(..., start, end) since Pixi's real Graphics.ellipse() silently drops
+        // rotation/start/end through CanvasGraphicsShim (see the crystal halo below, which hit
+        // the same gap).
+        const bandRx = towerSize * 0.34;
+        const bandRy = bandRx * (baseFlat / (baseWidth / 2));
         ctx.strokeStyle = '#18151d';
         ctx.lineWidth = towerSize * 0.018;
         [0.02, -0.09, -0.20].forEach(fy => {
-            ctx.beginPath();
-            ctx.arc(this.x, this.y + towerSize * fy, towerSize * 0.34, Math.PI * 0.78, Math.PI * 2.22);
-            ctx.stroke();
+            this._strokeEllipseArc(ctx, this.x, this.y + towerSize * fy, bandRx, bandRy, Math.PI * 0.78, Math.PI * 2.22);
         });
 
         // Four angled support struts flanking the spire base, each capped with a small fixed
@@ -794,6 +834,12 @@ export class CombinationTower extends Tower {
             ctx.lineWidth = 0.6;
             ctx.stroke();
 
+            // Small specular fleck for a glassier, more finished-looking stud.
+            ctx.fillStyle = 'rgba(255,255,255,0.55)';
+            ctx.beginPath();
+            ctx.arc(-towerSize * 0.006, -towerSize * 0.235, towerSize * 0.006, 0, Math.PI * 2);
+            ctx.fill();
+
             ctx.restore();
         });
     }
@@ -833,11 +879,26 @@ export class CombinationTower extends Tower {
         // Tapered spire body - a single gradient-filled polygon. Opaque at both ends with a
         // slightly softer band through the middle, matching MagicTower/SuperWeaponLab's solid
         // (non-glassy) look rather than the flat translucent fill the old cylinder used.
-        const spireGradient = ctx.createLinearGradient(this.x - spireBaseWidth / 2, spireBaseY, this.x + spireBaseWidth / 2, spireTopY);
-        spireGradient.addColorStop(0, combinationColor + '1)');
-        spireGradient.addColorStop(0.5, combinationColor + '0.85)');
-        spireGradient.addColorStop(1, combinationColor + '1)');
-        ctx.fillStyle = spireGradient;
+        //
+        // The gradient only actually changes when the selected spell (color) or the tower's
+        // baked size changes - both rare, runtime-only events (setSpell(), or never, since
+        // towers don't resize after placement) - so it's cached per-instance instead of
+        // rebuilt (a fresh GPU-backed FillGradient) on every ~30fps redraw tick. Keyed on ctx
+        // too: renderDynamicParts can be called with a real CanvasRenderingContext2D before
+        // Pixi finishes initializing and with the CanvasGraphicsShim afterward, and a
+        // CanvasGradient from the former is not valid for the latter (see FrogEnemy.js's
+        // identical _gradCtx guard).
+        const spireGradientKey = combinationColor + '|' + towerSize;
+        if (this._spireGradientCtx !== ctx || this._spireGradientKey !== spireGradientKey) {
+            this._spireGradientCtx = ctx;
+            this._spireGradientKey = spireGradientKey;
+            const spireGradient = ctx.createLinearGradient(this.x - spireBaseWidth / 2, spireBaseY, this.x + spireBaseWidth / 2, spireTopY);
+            spireGradient.addColorStop(0, combinationColor + '1)');
+            spireGradient.addColorStop(0.5, combinationColor + '0.85)');
+            spireGradient.addColorStop(1, combinationColor + '1)');
+            this._spireGradient = spireGradient;
+        }
+        ctx.fillStyle = this._spireGradient;
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -847,6 +908,23 @@ export class CombinationTower extends Tower {
         ctx.lineTo(this.x + spireBaseWidth / 2, spireBaseY);
         ctx.closePath();
         ctx.fill();
+        ctx.stroke();
+
+        // Cheap directional rim-light: a bright stroke along the spire's sun-facing (left) edge
+        // and a darker one along its right edge, so the taper reads as rounded/faceted at a
+        // glance - much more legible at typical in-game zoom than the interior carved-line
+        // texture below, and far cheaper than a second gradient fill.
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        ctx.lineWidth = Math.max(1, towerSize * 0.012);
+        ctx.beginPath();
+        ctx.moveTo(this.x - spireBaseWidth / 2, spireBaseY);
+        ctx.lineTo(this.x - spireTopWidth / 2, spireTopY);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.beginPath();
+        ctx.moveTo(this.x + spireBaseWidth / 2, spireBaseY);
+        ctx.lineTo(this.x + spireTopWidth / 2, spireTopY);
         ctx.stroke();
 
         // Carved block lines - straight segments sampled from the SAME width-interpolation
@@ -883,6 +961,13 @@ export class CombinationTower extends Tower {
             ctx.arc(this.x, wy, win.size + 2, 0, Math.PI * 2);
             ctx.fill();
 
+            // Rebuilt every frame (not cached like the spire gradient above) because its color
+            // stops bake in crystalPulse directly - CanvasGraphicsShim's globalAlpha maps to
+            // the whole per-instance Graphics object's alpha (reset() sets it once at the start
+            // of the frame; it isn't part of the save/restore transform stack or scoped to an
+            // individual fill() the way real Canvas2D's globalAlpha is), so it can't be used
+            // here to fake the pulse on top of a cached, pulse-independent gradient without the
+            // glow silently stopping animating once rendered through Pixi.
             const glow = ctx.createRadialGradient(this.x, wy, 0, this.x, wy, win.size * 2.2);
             glow.addColorStop(0, combinationColor + `${this.crystalPulse})`);
             glow.addColorStop(0.5, combinationColor + `${this.crystalPulse * 0.5})`);
@@ -993,34 +1078,17 @@ export class CombinationTower extends Tower {
         // new relative to MagicTower's single static gem, marking the fused/orbiting nature
         // of the four spells without adding another shape that needs its own depth-sorting.
         //
-        // Sampled as a manual polyline (moveTo/lineTo per segment) rather than
-        // ctx.ellipse(..., start, end) - Pixi's real Graphics.ellipse() (see
-        // node_modules/pixi.js Graphics.d.ts) only ever takes (x, y, radiusX, radiusY); the
-        // shim's rotation/start/end params get silently dropped, so an ellipse arc call always
-        // renders as a full, uncut ellipse in the actual game despite working in a plain
-        // Canvas2D test - the same class of Canvas2D/Pixi-parity gap as ctx.clip() above.
         // ctx.arc() (circle only) IS properly supported with start/end by Pixi, but a true
         // circle wouldn't match the shards' own flattened (*0.4 vertical) orbit, hence the
-        // manual ellipse sampling here instead of switching to arc().
+        // shared _strokeEllipseArc helper (manual polyline sampling, see its own doc comment)
+        // instead of switching to arc() or ctx.ellipse(..., start, end) directly - the same
+        // Pixi/Canvas2D parity gap the base's iron banding hit in renderStaticBack above.
         const haloRadius = gemRadius * 1.55;
         const haloRy = haloRadius * 0.4;
-        const haloAlpha = combinationColor + `${0.2 + this.crystalPulse * 0.25})`;
-        const drawHaloArc = (fromAngle, toAngle) => {
-            const steps = 16;
-            ctx.beginPath();
-            for (let s = 0; s <= steps; s++) {
-                const a = fromAngle + (toAngle - fromAngle) * (s / steps);
-                const px = cx + Math.cos(a) * haloRadius;
-                const py = sphereY + Math.sin(a) * haloRy;
-                if (s === 0) ctx.moveTo(px, py);
-                else ctx.lineTo(px, py);
-            }
-            ctx.stroke();
-        };
-        ctx.strokeStyle = haloAlpha;
+        ctx.strokeStyle = combinationColor + `${0.2 + this.crystalPulse * 0.25})`;
         ctx.lineWidth = 1.5;
-        drawHaloArc(this.runeRotation * 0.5, this.runeRotation * 0.5 + Math.PI * 0.7);
-        drawHaloArc(this.runeRotation * 0.5 + Math.PI, this.runeRotation * 0.5 + Math.PI * 1.7);
+        this._strokeEllipseArc(ctx, cx, sphereY, haloRadius, haloRy, this.runeRotation * 0.5, this.runeRotation * 0.5 + Math.PI * 0.7);
+        this._strokeEllipseArc(ctx, cx, sphereY, haloRadius, haloRy, this.runeRotation * 0.5 + Math.PI, this.runeRotation * 0.5 + Math.PI * 1.7);
 
         // Three smaller orbiting shards, representing the fused spells, circling the main
         // crystal. sin(orbitAngle) also doubles as each shard's depth relative to the gem
