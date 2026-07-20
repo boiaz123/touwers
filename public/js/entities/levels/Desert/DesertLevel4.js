@@ -141,21 +141,21 @@ export class DesertLevel4 extends LevelBase {
         const waveConfigs = [
         // Wave 1
         { 
-            enemyHealth_multiplier: 4, 
+            enemyHealth_multiplier: 1, 
             speedMultiplier: 1, 
             spawnInterval: 6, 
             pattern: [{ type: 'beefyenemy', count: 16 }] 
         }
         // Wave 2
         , { 
-            enemyHealth_multiplier: 3, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 1, 
             spawnInterval: 1, 
             pattern: [{ type: 'frog', count: 19 }] 
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 1.5, 
+            enemyHealth_multiplier: 1.2, 
             speedMultiplier: 1, 
             spawnInterval: 0.9, 
             pattern: [{ type: 'archer', count: 6 }, { type: 'villager', count: 11 }, { type: 'basic', count: 5 }, { type: 'frog', count: 9, healthMultiplier: 3 }] 
@@ -172,7 +172,7 @@ export class DesertLevel4 extends LevelBase {
             enemyHealth_multiplier: 2, 
             speedMultiplier: 1, 
             spawnInterval: 0.8, 
-            pattern: [{ type: 'basic', count: 7, healthMultiplier: 3 }, { type: 'villager', count: 9, healthMultiplier: 3 }, { type: 'beefyenemy', count: 7, healthMultiplier: 4, speedMultiplier: 1.2 }, { type: 'villager', count: 3, healthMultiplier: 5 }, { type: 'basic', count: 4, healthMultiplier: 5 }] 
+            pattern: [{ type: 'basic', count: 7, healthMultiplier: 3 }, { type: 'villager', count: 9, healthMultiplier: 3 }, { type: 'beefyenemy', count: 7, healthMultiplier: 1, speedMultiplier: 1.2 }, { type: 'villager', count: 3, healthMultiplier: 5 }, { type: 'basic', count: 4, healthMultiplier: 5 }] 
         }
         // Wave 6
         , { 
@@ -186,7 +186,7 @@ export class DesertLevel4 extends LevelBase {
             enemyHealth_multiplier: 3, 
             speedMultiplier: 1, 
             spawnInterval: 3, 
-            pattern: [{ type: 'shieldknight', count: 3 }, { type: 'beefyenemy', count: 4, healthMultiplier: 5 }, { type: 'knight', count: 1, healthMultiplier: 1 }, { type: 'beefyenemy', count: 6, healthMultiplier: 7 }, { type: 'shieldknight', count: 2, healthMultiplier: 5 }] 
+            pattern: [{ type: 'shieldknight', count: 3 }, { type: 'beefyenemy', count: 4, healthMultiplier: 2 }, { type: 'knight', count: 1, healthMultiplier: 1 }, { type: 'beefyenemy', count: 6, healthMultiplier: 7 }, { type: 'shieldknight', count: 2, healthMultiplier: 5 }] 
         }
         // Wave 8
         , { 
@@ -207,7 +207,7 @@ export class DesertLevel4 extends LevelBase {
             enemyHealth_multiplier: 1, 
             speedMultiplier: 1, 
             spawnInterval: 0.9, 
-            pattern: [{ type: 'shieldknight', count: 3, healthMultiplier: 2 }, { type: 'beefyenemy', count: 5, healthMultiplier: 6 }, { type: 'archer', count: 6, healthMultiplier: 3 }, { type: 'knight', count: 1, healthMultiplier: 2 }, { type: 'beefyenemy', count: 5, healthMultiplier: 7, speedMultiplier: 1.1 }, { type: 'archer', count: 8, healthMultiplier: 6, speedMultiplier: 1.6 }] 
+            pattern: [{ type: 'shieldknight', count: 3, healthMultiplier: 2 }, { type: 'beefyenemy', count: 5, healthMultiplier: 6 }, { type: 'archer', count: 6, healthMultiplier: 3 }, { type: 'knight', count: 1, healthMultiplier: 2 }, { type: 'beefyenemy', count: 5, healthMultiplier: 3, speedMultiplier: 1.1 }, { type: 'archer', count: 8, healthMultiplier: 6, speedMultiplier: 1.6 }] 
         }
         // Wave 11
         , { 
@@ -235,7 +235,7 @@ export class DesertLevel4 extends LevelBase {
             enemyHealth_multiplier: 3, 
             speedMultiplier: 1, 
             spawnInterval: 0.9, 
-            pattern: [{ type: 'mage', count: 1, healthMultiplier: 4, speedMultiplier: 1.2 }, { type: 'villager', count: 8 }, { type: 'basic', count: 5 }, { type: 'archer', count: 7 }, { type: 'beefyenemy', count: 5, healthMultiplier: 4 }, { type: 'shieldknight', count: 2 }, { type: 'archer', count: 8, healthMultiplier: 4, speedMultiplier: 1.3 }, { type: 'beefyenemy', count: 5, healthMultiplier: 6, speedMultiplier: 0.8 }, { type: 'basic', count: 8, healthMultiplier: 2, speedMultiplier: 1.5 }, { type: 'shieldknight', count: 2, healthMultiplier: 2 }] 
+            pattern: [{ type: 'mage', count: 1, healthMultiplier: 4, speedMultiplier: 1.2 }, { type: 'villager', count: 8 }, { type: 'basic', count: 5 }, { type: 'archer', count: 7 }, { type: 'beefyenemy', count: 5, healthMultiplier: 4 }, { type: 'shieldknight', count: 2 }, { type: 'archer', count: 8, healthMultiplier: 4, speedMultiplier: 1.3 }, { type: 'beefyenemy', count: 5, healthMultiplier: 4, speedMultiplier: 0.8 }, { type: 'basic', count: 8, healthMultiplier: 2, speedMultiplier: 1.5 }, { type: 'shieldknight', count: 2, healthMultiplier: 2 }] 
         }
         // Wave 15
         , { 

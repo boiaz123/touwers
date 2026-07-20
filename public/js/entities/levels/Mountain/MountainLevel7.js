@@ -295,7 +295,7 @@ export class MountainLevel7 extends LevelBase {
         }
         // Wave 10
         , { 
-            enemyHealth_multiplier: 6, 
+            enemyHealth_multiplier: 4, 
             speedMultiplier: 1.63, 
             spawnInterval: 1, 
             pattern: [{ type: 'knight', count: 1 }] 
@@ -330,7 +330,7 @@ export class MountainLevel7 extends LevelBase {
         }
         // Wave 15
         , { 
-            enemyHealth_multiplier: 7, 
+            enemyHealth_multiplier: 6, 
             speedMultiplier: 0.88, 
             spawnInterval: 0.4, 
             pattern: [{ type: 'knight', count: 3 }] 

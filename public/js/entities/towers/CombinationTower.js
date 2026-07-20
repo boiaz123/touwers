@@ -52,6 +52,13 @@ export class CombinationTower extends Tower {
         this._magicParticlePool = new ObjectPool(() => ({
             x: 0, y: 0, vx: 0, vy: 0, life: 0, maxLife: 0, size: 0, maxSize: 0, color: ''
         }));
+        // Ambient idle dust, kept in its own array (sharing _magicParticlePool's generic
+        // object shape) so it can be drawn separately from magicParticles - it's rendered
+        // first, before the body fill, so it sits behind the tower instead of drifting over
+        // it in front like the attack-effect particles/bolts (which stay in magicParticles,
+        // still drawn on top via renderParticlesAndBolts - they represent the active attack
+        // and should stay visible).
+        this.ambientParticles = [];
         this.runePositions = [];
         
         // Initialize floating runes
@@ -66,9 +73,10 @@ export class CombinationTower extends Tower {
 
         // Set by TowerRenderAdapter once it has baked/synced this tower via Pixi (particles/
         // bolts/attack-radius still draw here regardless - not migrated yet). Unlike
-        // MagicTower, the base/cylinder/coil colors depend on selectedSpell (changeable at
-        // runtime via setSpell()), so they can't be safely shared-baked per campaign the
-        // same way - they're Strategy B (dynamic) here instead, only the shadow is static.
+        // MagicTower, the base/cylinder colors depend on selectedSpell (changeable at runtime
+        // via setSpell()), so they can't be safely shared-baked per campaign - they're
+        // Strategy B (dynamic) here instead. The shadow and the spell-independent tesla coil
+        // apparatus (fixed metal colors) are still Strategy A (static/shared), same as MagicTower.
         this.skipCanvas2DBodyRender = false;
     }
     
@@ -137,8 +145,25 @@ export class CombinationTower extends Tower {
         }
         this.magicParticles.length = pWrite;
 
-        // Generate ambient magic particles (skip if already at cap)
-        if (this.magicParticles.length < 200 && Math.random() < deltaTime * 3) {
+        // Update ambient dust (compact in-place, same pattern as magicParticles above)
+        let aWrite = 0;
+        for (let i = 0; i < this.ambientParticles.length; i++) {
+            const particle = this.ambientParticles[i];
+            particle.x += particle.vx * deltaTime;
+            particle.y += particle.vy * deltaTime;
+            particle.life -= deltaTime;
+            if (particle.life > 0) {
+                particle.size = particle.maxSize * (particle.life / particle.maxLife);
+                this.ambientParticles[aWrite++] = particle;
+            } else {
+                this._magicParticlePool.release(particle);
+            }
+        }
+        this.ambientParticles.length = aWrite;
+
+        // Generate ambient dust (skip if already at cap) - drawn behind the tower body via
+        // renderAmbientDust(), not mixed into magicParticles/renderParticlesAndBolts.
+        if (this.ambientParticles.length < 200 && Math.random() < deltaTime * 3) {
             const angle = Math.random() * Math.PI * 2;
             const radius = Math.random() * 50 + 20;
             const particle = this._magicParticlePool.acquire();
@@ -151,7 +176,7 @@ export class CombinationTower extends Tower {
             particle.size = 0;
             particle.maxSize = Math.random() * 4 + 2;
             particle.color = Math.random() < 0.5 ? 'rgba(138, 43, 226, ' : 'rgba(75, 0, 130, ';
-            this.magicParticles.push(particle);
+            this.ambientParticles.push(particle);
         }
     }
     
@@ -661,85 +686,400 @@ export class CombinationTower extends Tower {
         // intentionally empty
     }
 
-    /** Strategy A (baked once per campaign, shared across instances): drop shadow only - see constructor comment for why the rest is dynamic here. */
+    /** Strategy A (baked once per campaign, shared across instances): shadow + the mechanical
+     *  amplifier structure - foundation tier, corner buttresses, tesla coil column/rings. All
+     *  fixed dark metal/stone colors that don't depend on selectedSpell (unlike MagicTower's
+     *  single coil disc, this whole apparatus is spell-independent), so it can be shared-baked
+     *  instead of redrawn every frame - only the crystal on top carries the spell color. */
     renderStaticBack(ctx, towerSize) {
         // 3D shadow
         ctx.fillStyle = 'rgba(75, 0, 130, 0.3)';
         ctx.beginPath();
-        ctx.arc(this.x + 3, this.y + 3, towerSize * 0.35, 0, Math.PI * 2);
+        ctx.arc(this.x + 3, this.y + 3, towerSize * 0.4, 0, Math.PI * 2);
         ctx.fill();
-    }
 
-    /** Strategy B (per-instance Graphics, redrawn every frame): base/cylinder/coil/windows - colored by selectedSpell (runtime-changeable) and pulse-animated. */
-    renderDynamicParts(ctx, towerSize) {
-        const baseRadius = towerSize * 0.35;
+        const baseRadius = towerSize * 0.38;
         const towerHeight = towerSize * 0.5;
-        
-        // Tower foundation (using combination color instead of purple)
-        const combinationColor = this.getCombinationColor();
-        
-        ctx.fillStyle = combinationColor + '0.8)';
-        ctx.strokeStyle = combinationColor + '1)';
+
+        // Wide stone foundation tier peeking out beneath the octagon - a heavier, fortified stance
+        const foundationRadius = baseRadius * 1.25;
+        const foundationY = this.y + towerSize * 0.05;
+        ctx.fillStyle = '#241238';
+        ctx.strokeStyle = '#140a1f';
         ctx.lineWidth = 2;
-        
-        // Draw octagonal tower base
         ctx.beginPath();
         for (let i = 0; i < 8; i++) {
             const angle = (i / 8) * Math.PI * 2;
-            const x = this.x + Math.cos(angle) * baseRadius;
-            const y = this.y + Math.sin(angle) * baseRadius;
-            
+            const x = this.x + Math.cos(angle) * foundationRadius;
+            const y = foundationY + Math.sin(angle) * foundationRadius;
             if (i === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
         }
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        
-        // Tower cylinder (combination colored)
-        ctx.beginPath();
-        ctx.arc(this.x, this.y - towerHeight/2, baseRadius * 0.9, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        
-        // Stone blocks texture
-        ctx.strokeStyle = '#2E0A4F';
-        ctx.lineWidth = 1;
-        for (let ring = 0; ring < 4; ring++) {
-            const ringY = this.y - towerHeight + (ring * towerHeight/4);
-            ctx.beginPath();
-            ctx.arc(this.x, ringY, baseRadius * 0.85, 0, Math.PI * 2);
-            ctx.stroke();
-        }
-        
-        // Mystical windows with combination glow
+
+        // Corner buttresses - iron spikes anchoring the foundation, fortress-like silhouette
+        ctx.fillStyle = '#3a3a3a';
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 1.2;
         for (let i = 0; i < 4; i++) {
             const angle = (i / 4) * Math.PI * 2;
-            const windowX = this.x + Math.cos(angle) * baseRadius * 0.7;
-            const windowY = this.y - towerHeight/2;
-            
-            ctx.fillStyle = combinationColor + `${this.crystalPulse * 0.5})`;
+            const spikeX = this.x + Math.cos(angle) * foundationRadius;
+            const spikeY = foundationY + Math.sin(angle) * foundationRadius;
+            const outX = this.x + Math.cos(angle) * (foundationRadius + towerSize * 0.09);
+            const outY = foundationY + Math.sin(angle) * (foundationRadius + towerSize * 0.09) - towerSize * 0.06;
             ctx.beginPath();
-            ctx.arc(windowX, windowY, 8, 0, Math.PI * 2);
+            ctx.moveTo(spikeX - towerSize * 0.035, spikeY);
+            ctx.lineTo(outX, outY);
+            ctx.lineTo(spikeX + towerSize * 0.035, spikeY);
+            ctx.closePath();
             ctx.fill();
-            
-            ctx.fillStyle = '#2E0A4F';
-            ctx.beginPath();
-            ctx.arc(windowX, windowY, 4, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.stroke();
         }
-        
-        // Tesla coil base (similar to MagicTower but with combination coloring)
-        const coilBaseRadius = baseRadius * 0.6;
+
+        // Tesla coil apparatus - taller and more heavily ringed than MagicTower's, neutral
+        // metal so it reads the same regardless of the selected spell.
+        const coilBaseRadius = baseRadius * 0.68;
         const coilBaseY = this.y - towerHeight;
-        
-        ctx.fillStyle = combinationColor + '0.7)';
-        ctx.strokeStyle = combinationColor + '1)';
+        const coilHeight = towerSize * 0.5;
+        const coilWidth = baseRadius * 0.16;
+
+        ctx.fillStyle = '#2F2F2F';
+        ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(this.x, coilBaseY, coilBaseRadius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+
+        ctx.fillStyle = '#7A7A7A';
+        ctx.strokeStyle = '#1A1A1A';
+        ctx.lineWidth = 2;
+        ctx.fillRect(this.x - coilWidth, coilBaseY - coilHeight, coilWidth * 2, coilHeight);
+        ctx.strokeRect(this.x - coilWidth, coilBaseY - coilHeight, coilWidth * 2, coilHeight);
+
+        const ringCount = 6;
+        for (let i = 0; i < ringCount; i++) {
+            const ringY = coilBaseY - coilHeight + (i + 1) * coilHeight / (ringCount + 1);
+            const ringRadius = coilWidth * (2.2 + Math.sin(i * 0.6));
+
+            ctx.strokeStyle = '#A0A0A0';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(this.x, ringY, ringRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#E0E0E0';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(this.x, ringY, ringRadius, -Math.PI / 4, Math.PI / 4);
+            ctx.stroke();
+        }
+    }
+
+    /** Idle ambient dust - see the ambientParticles split in update()/constructor. Drawn as
+     *  the first thing in renderDynamicParts, before the body fill, so it sits behind the
+     *  tower rather than drifting over it. */
+    renderAmbientDust(ctx) {
+        for (let i = 0; i < this.ambientParticles.length; i++) {
+            const particle = this.ambientParticles[i];
+            const alpha = particle.life / particle.maxLife;
+            ctx.fillStyle = particle.color + alpha + ')';
+            ctx.beginPath();
+            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): base/cylinder/windows, and the
+     *  fused elemental crystal + floating runes on top of the coil - colored by selectedSpell
+     *  (runtime-changeable) and pulse-animated. */
+    renderDynamicParts(ctx, towerSize) {
+        // Ambient dust drawn first, before any body geometry, so the octagon/cylinder fills
+        // that follow paint over it - reads as motes drifting behind/through the tower
+        // instead of floating in front of it (see the ambientParticles split in update()).
+        this.renderAmbientDust(ctx);
+
+        const baseRadius = towerSize * 0.38;
+        const towerHeight = towerSize * 0.5;
+
+        // Tower foundation (using combination color instead of purple)
+        const combinationColor = this.getCombinationColor();
+
+        // Opaque fill, matching MagicTower's solid '#6A5ACD' body - a translucent (0.8-alpha)
+        // fill let the fully-opaque stone-ring strokes and ambient dust show through/in front
+        // of it in a way that read as floating rather than embedded texture on solid stone.
+        ctx.fillStyle = combinationColor + '1)';
+        ctx.strokeStyle = combinationColor + '1)';
+        ctx.lineWidth = 2;
+
+        // Draw octagonal tower base
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const x = this.x + Math.cos(angle) * baseRadius;
+            const y = this.y + Math.sin(angle) * baseRadius;
+
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Tower cylinder (combination colored)
+        const cylinderCy = this.y - towerHeight/2;
+        const cylinderR = baseRadius * 0.9;
+        ctx.beginPath();
+        ctx.arc(this.x, cylinderCy, cylinderR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Stone blocks texture - drawn as latitude bands on the cylinder's own circle
+        // (radius derived from cylinderR and each ring's vertical offset via the circle
+        // equation, like lines of latitude on a sphere) instead of 4 fixed-radius circles.
+        // A fixed radius close to the cylinder's own (0.85 vs 0.9 * baseRadius) floats well
+        // outside the cylinder at every offset except dead-center - ctx.clip() would fix that
+        // on a real Canvas2D, but towers render through CanvasGraphicsShim in the actual game
+        // (Strategy B live-redraw path) and its clip() is an intentional no-op, so containment
+        // has to come from the ring geometry itself, not a clip call.
+        ctx.strokeStyle = '#2E0A4F';
+        ctx.lineWidth = 1;
+        const ringInset = 0.92; // keep the band just inside the cylinder edge, not touching it
+        for (let ring = 0; ring < 4; ring++) {
+            const ringY = this.y - towerHeight + (ring * towerHeight/4);
+            const dy = ringY - cylinderCy;
+            if (Math.abs(dy) >= cylinderR) continue; // this latitude is beyond the cylinder's own pole
+            const ringRadius = Math.sqrt(cylinderR * cylinderR - dy * dy) * ringInset;
+            ctx.beginPath();
+            ctx.arc(this.x, ringY, ringRadius, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // Mystical sigil windows (four-pointed star glyphs instead of plain dots) with combination
+        // glow. Fill alpha capped lower than before (was 0.6*pulse, washing out as a flat blob at
+        // peak pulse) with a crisp stroked outline added so the glyph reads as an engraved sigil
+        // - lower brightness, more visible shape detail - plus a small bright core spark instead
+        // of a flat dark dot for a subtler but more deliberate "lit rune" look.
+        for (let i = 0; i < 4; i++) {
+            const angle = (i / 4) * Math.PI * 2;
+            const windowX = this.x + Math.cos(angle) * baseRadius * 0.7;
+            const windowY = this.y - towerHeight/2;
+
+            ctx.save();
+            ctx.translate(windowX, windowY);
+            ctx.beginPath();
+            for (let p = 0; p < 8; p++) {
+                const pAngle = (p / 8) * Math.PI * 2;
+                const r = (p % 2 === 0) ? 9 : 3.5;
+                const px = Math.cos(pAngle) * r;
+                const py = Math.sin(pAngle) * r;
+                if (p === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fillStyle = combinationColor + `${this.crystalPulse * 0.32})`;
+            ctx.fill();
+            ctx.strokeStyle = combinationColor + `${0.5 + this.crystalPulse * 0.3})`;
+            ctx.lineWidth = 0.75;
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.fillStyle = '#2E0A4F';
+            ctx.beginPath();
+            ctx.arc(windowX, windowY, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Small bright core spark - the "lit" detail, sized independent of the pulse so
+            // it stays a crisp pinprick rather than swelling into another glow blob.
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.4 + this.crystalPulse * 0.4})`;
+            ctx.beginPath();
+            ctx.arc(windowX, windowY, 1, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // --- Fused elemental crystal cluster atop the coil - bigger and more elaborate than
+        // MagicTower's single prism gem, with smaller orbiting shards standing in for the four
+        // combinable spells (steam/magma/tempest/meteor) fused into one focus. ---
+        const coilBaseY = this.y - towerHeight;
+        const coilHeight = towerSize * 0.5;
+        const coilWidth = baseRadius * 0.16;
+        const sphereY = coilBaseY - coilHeight;
+
+        const sphereRadius = coilWidth * 1.9;
+        const gemRadius = sphereRadius * 1.9;
+        const glowSize = 8 + this.crystalPulse * 18;
+        const cx = this.x;
+        const gw = gemRadius;
+        const gt = gemRadius * 1.2;
+        const gb = gemRadius * 0.7;
+
+        ctx.save();
+
+        // Ambient power-core glow beneath the crystal - alpha capped lower than before (was
+        // 0.15-0.35, reading as a flat haze at high pulse) with a thin defined ring added at
+        // its edge, so the glow reads as a deliberate lit halo instead of a diffuse smear.
+        ctx.fillStyle = combinationColor + `${0.08 + this.crystalPulse * 0.1})`;
+        ctx.beginPath();
+        ctx.ellipse(cx, sphereY + gb * 0.3, glowSize * 1.4, glowSize * 0.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = combinationColor + `${0.25 + this.crystalPulse * 0.2})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(cx, sphereY + gb * 0.3, glowSize * 1.4, glowSize * 0.8, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Containment-field halo at the shards' own orbit radius - a broken ring (two arcs
+        // with gaps, not a full circle) so it reads as an energy band rather than another
+        // solid outline competing with the gem's silhouette. Drawn once, behind everything
+        // in the cluster, at low alpha - this is the one piece of the crystal that's genuinely
+        // new relative to MagicTower's single static gem, marking the fused/orbiting nature
+        // of the four spells without adding another shape that needs its own depth-sorting.
+        //
+        // Sampled as a manual polyline (moveTo/lineTo per segment) rather than
+        // ctx.ellipse(..., start, end) - Pixi's real Graphics.ellipse() (see
+        // node_modules/pixi.js Graphics.d.ts) only ever takes (x, y, radiusX, radiusY); the
+        // shim's rotation/start/end params get silently dropped, so an ellipse arc call always
+        // renders as a full, uncut ellipse in the actual game despite working in a plain
+        // Canvas2D test - the same class of Canvas2D/Pixi-parity gap as ctx.clip() above.
+        // ctx.arc() (circle only) IS properly supported with start/end by Pixi, but a true
+        // circle wouldn't match the shards' own flattened (*0.4 vertical) orbit, hence the
+        // manual ellipse sampling here instead of switching to arc().
+        const haloRadius = gemRadius * 1.55;
+        const haloRy = haloRadius * 0.4;
+        const haloAlpha = combinationColor + `${0.2 + this.crystalPulse * 0.25})`;
+        const drawHaloArc = (fromAngle, toAngle) => {
+            const steps = 16;
+            ctx.beginPath();
+            for (let s = 0; s <= steps; s++) {
+                const a = fromAngle + (toAngle - fromAngle) * (s / steps);
+                const px = cx + Math.cos(a) * haloRadius;
+                const py = sphereY + Math.sin(a) * haloRy;
+                if (s === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+        };
+        ctx.strokeStyle = haloAlpha;
+        ctx.lineWidth = 1.5;
+        drawHaloArc(this.runeRotation * 0.5, this.runeRotation * 0.5 + Math.PI * 0.7);
+        drawHaloArc(this.runeRotation * 0.5 + Math.PI, this.runeRotation * 0.5 + Math.PI * 1.7);
+
+        // Three smaller orbiting shards, representing the fused spells, circling the main
+        // crystal. sin(orbitAngle) also doubles as each shard's depth relative to the gem
+        // (positive = swung toward the viewer), so shards are split into a back batch drawn
+        // before the gem and a front batch drawn after it - otherwise every shard would draw
+        // behind the gem regardless of orbit position, popping in front of it unnaturally as
+        // runeRotation advances instead of correctly passing behind/in front of it. Each
+        // shard's tether line is drawn together with it (same function, same depth batch) so
+        // a back shard's tether never crosses in front of the gem either.
+        const drawShard = (i) => {
+            const orbitAngle = this.runeRotation * 1.4 + (i / 3) * Math.PI * 2;
+            const orbitRadius = gemRadius * 1.55;
+            const shardX = cx + Math.cos(orbitAngle) * orbitRadius;
+            const shardY = sphereY + Math.sin(orbitAngle) * orbitRadius * 0.4;
+            const shardSize = gemRadius * 0.32;
+
+            ctx.strokeStyle = combinationColor + `${0.35 + this.crystalPulse * 0.25})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(cx, sphereY);
+            ctx.lineTo(shardX, shardY);
+            ctx.stroke();
+
+            ctx.fillStyle = combinationColor + '0.9)';
+            ctx.beginPath();
+            ctx.moveTo(shardX, shardY - shardSize);
+            ctx.lineTo(shardX + shardSize * 0.6, shardY);
+            ctx.lineTo(shardX, shardY + shardSize);
+            ctx.lineTo(shardX - shardSize * 0.6, shardY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+        };
+
+        const isFrontShard = (i) => Math.sin(this.runeRotation * 1.4 + (i / 3) * Math.PI * 2) > 0;
+
+        for (let i = 0; i < 3; i++) {
+            if (!isFrontShard(i)) drawShard(i);
+        }
+
+        // Main prism gem body - taller/wider than MagicTower's for a heavier centerpiece
+        ctx.fillStyle = combinationColor + '1)';
+        ctx.beginPath();
+        ctx.moveTo(cx, sphereY - gt);
+        ctx.lineTo(cx + gw * 0.5, sphereY - gt * 0.35);
+        ctx.lineTo(cx + gw, sphereY);
+        ctx.lineTo(cx + gw * 0.45, sphereY + gb);
+        ctx.lineTo(cx - gw * 0.45, sphereY + gb);
+        ctx.lineTo(cx - gw, sphereY);
+        ctx.lineTo(cx - gw * 0.5, sphereY - gt * 0.35);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Upper table facet highlight
+        ctx.fillStyle = combinationColor + '0.9)';
+        ctx.globalAlpha = 0.55;
+        ctx.beginPath();
+        ctx.moveTo(cx, sphereY - gt * 0.85);
+        ctx.lineTo(cx + gw * 0.28, sphereY - gt * 0.25);
+        ctx.lineTo(cx - gw * 0.28, sphereY - gt * 0.25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // Specular dot
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.beginPath();
+        ctx.arc(cx - gw * 0.15, sphereY - gt * 0.55, gw * 0.11, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Facet lines
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(cx + gw * 0.5, sphereY - gt * 0.35);
+        ctx.lineTo(cx + gw * 0.45, sphereY + gb);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - gw * 0.5, sphereY - gt * 0.35);
+        ctx.lineTo(cx - gw * 0.45, sphereY + gb);
+        ctx.stroke();
+
+        // Shards swung toward the viewer this frame draw last so they occlude the gem
+        // instead of always sitting behind it (see isFrontShard() above).
+        for (let i = 0; i < 3; i++) {
+            if (isFrontShard(i)) drawShard(i);
+        }
+        ctx.restore();
+
+        // Floating runes around the tower base (already tracked/rotated in update() but
+        // previously never drawn)
+        for (let i = 0; i < this.runePositions.length; i++) {
+            const rune = this.runePositions[i];
+            const floatY = Math.sin(this.animationTime * 2 + rune.floatOffset) * 6;
+            const runeAngle = this.runeRotation + rune.angle;
+            const runeRadius = baseRadius * 1.4;
+            const runeX = this.x + Math.cos(runeAngle) * runeRadius;
+            const runeY = this.y - towerHeight * 0.3 + Math.sin(runeAngle) * runeRadius * 0.3 + floatY;
+
+            ctx.fillStyle = combinationColor + `${this.crystalPulse * 0.4})`;
+            ctx.beginPath();
+            ctx.arc(runeX, runeY, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = `rgba(255, 255, 255, ${this.crystalPulse})`;
+            ctx.font = 'bold 14px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(rune.symbol, runeX, runeY);
+        }
     }
 
     /** Phase 5: particles/bolts - drawn via renderProjectiles() above, inside the Pixi shim when active, or directly on Canvas2D otherwise. */

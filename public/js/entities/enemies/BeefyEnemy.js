@@ -381,7 +381,8 @@ export class BeefyEnemy extends BaseEnemy {
         const v = this.cachedColorVariants;
         ctx.save();
         ctx.translate(handX, handY);
-        const swordAngle = -Math.PI / 2 + 0.3;
+        // Upright pointing up with a slight tilt to the right (matches ShieldKnightEnemy's convention).
+        const swordAngle = 0.3;
         ctx.rotate(swordAngle);
 
         const swordLength = baseSize * 1.85;

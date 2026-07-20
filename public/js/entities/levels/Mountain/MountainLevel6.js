@@ -302,10 +302,10 @@ export class MountainLevel6 extends LevelBase {
         }
         // Wave 4
         , { 
-            enemyHealth_multiplier: 3.55, 
+            enemyHealth_multiplier: 2.25, 
             speedMultiplier: 0.58, 
-            spawnInterval: 1.4, 
-            pattern: [{ type: 'beefyenemy', count: 40 }] 
+            spawnInterval: 3, 
+            pattern: [{ type: 'beefyenemy', count: 32 }] 
         }
         // Wave 5
         , { 

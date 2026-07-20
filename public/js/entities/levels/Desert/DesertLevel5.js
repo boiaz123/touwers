@@ -214,7 +214,7 @@ export class DesertLevel5 extends LevelBase {
             enemyHealth_multiplier: 1, 
             speedMultiplier: 1, 
             spawnInterval: 1.2, 
-            pattern: [{ type: 'shieldknight', count: 3 }, { type: 'beefyenemy', count: 6, healthMultiplier: 4 }, { type: 'shieldknight', count: 1, healthMultiplier: 3 }, { type: 'beefyenemy', count: 9, healthMultiplier: 7 }, { type: 'shieldknight', count: 2, healthMultiplier: 3 }] 
+            pattern: [{ type: 'shieldknight', count: 3 }, { type: 'beefyenemy', count: 6, healthMultiplier: 2 }, { type: 'shieldknight', count: 1, healthMultiplier: 3 }, { type: 'beefyenemy', count: 9, healthMultiplier: 7 }, { type: 'shieldknight', count: 2, healthMultiplier: 3 }] 
         }
         // Wave 8
         , { 
@@ -270,7 +270,7 @@ export class DesertLevel5 extends LevelBase {
             enemyHealth_multiplier: 3, 
             speedMultiplier: 0.8, 
             spawnInterval: 1, 
-            pattern: [{ type: 'beefyenemy', count: 7, healthMultiplier: 5 }, { type: 'frog', count: 12 }, { type: 'mage', count: 1, healthMultiplier: 2 }, { type: 'basic', count: 11 }, { type: 'villager', count: 9 }, { type: 'shieldknight', count: 4 }, { type: 'archer', count: 9, healthMultiplier: 2, speedMultiplier: 2 }] 
+            pattern: [{ type: 'beefyenemy', count: 7, healthMultiplier: 4 }, { type: 'frog', count: 12 }, { type: 'mage', count: 1, healthMultiplier: 2 }, { type: 'basic', count: 11 }, { type: 'villager', count: 9 }, { type: 'shieldknight', count: 4 }, { type: 'archer', count: 9, healthMultiplier: 2, speedMultiplier: 2 }] 
         }
         // Wave 16
         , { 
@@ -302,7 +302,7 @@ export class DesertLevel5 extends LevelBase {
         }
         // Wave 20
         , { 
-            enemyHealth_multiplier: 8, 
+            enemyHealth_multiplier: 5, 
             speedMultiplier: 1, 
             spawnInterval: 0.6, 
             pattern: [{ type: 'beefyenemy', count: 18, speedMultiplier: 1.4 }] 
@@ -333,7 +333,7 @@ export class DesertLevel5 extends LevelBase {
             enemyHealth_multiplier: 2.5, 
             speedMultiplier: 1, 
             spawnInterval: 0.6, 
-            pattern: [{ type: 'shieldknight', count: 3, speedMultiplier: 1.2 }, { type: 'beefyenemy', count: 9, healthMultiplier: 6 }, { type: 'frog', count: 16 }, { type: 'villager', count: 11 }, { type: 'archer', count: 13 }, { type: 'knight', count: 1, healthMultiplier: 7, speedMultiplier: 0.5 }] 
+            pattern: [{ type: 'shieldknight', count: 3, speedMultiplier: 1.2 }, { type: 'beefyenemy', count: 9, healthMultiplier: 4 }, { type: 'frog', count: 16 }, { type: 'villager', count: 11 }, { type: 'archer', count: 13 }, { type: 'knight', count: 1, healthMultiplier: 7, speedMultiplier: 0.5 }] 
         }
         // Wave 25
         , { 

@@ -35,7 +35,7 @@ export class InputManager {
         'building_academy': 'c',
         'building_training': 'v',
         'building_superweapon': 'b',
-        'building_diamond-press': 'n',
+        'building_diamond-press': 'p',
 
         // Spell hotkeys
         'spell_arcaneBlast': 'a',
@@ -173,6 +173,13 @@ export class InputManager {
                 // 'building_diamond-press' on its old default key ('g'), which now collides
                 // with collectGold's default. Drop the stale entry so the new default (L) applies.
                 if (!('collectGold' in parsed) && parsed['building_diamond-press'] === 'g') {
+                    delete parsed['building_diamond-press'];
+                }
+                // Migration: 'building_diamond-press' was later defaulted to 'n', which
+                // silently shadowed 'nextWave' in the reverse key->action lookup (both
+                // bound to 'n', last one registered wins). Drop the stale entry so the
+                // new default (P) applies and N works for next wave again.
+                if (parsed['building_diamond-press'] === 'n') {
                     delete parsed['building_diamond-press'];
                 }
                 // Merge with defaults so new actions added later get their defaults

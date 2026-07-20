@@ -354,7 +354,7 @@ export class MountainLevel9 extends LevelBase {
         }
         // Wave 21
         , { 
-            enemyHealth_multiplier: 9, 
+            enemyHealth_multiplier: 15, 
             speedMultiplier: 0.78, 
             spawnInterval: 1, 
             pattern: [{ type: 'mage', count: 1 }] 

@@ -308,7 +308,7 @@ export class MountainLevel10 extends LevelBase {
         }
         // Wave 4
         , { 
-            enemyHealth_multiplier: 1, 
+            enemyHealth_multiplier: 0.5, 
             speedMultiplier: 1, 
             spawnInterval: 0.6, 
             pattern: [{ type: 'beefyenemy', count: 10 }] 
@@ -444,7 +444,7 @@ export class MountainLevel10 extends LevelBase {
             enemyHealth_multiplier: 4.5, 
             speedMultiplier: 1, 
             spawnInterval: 0.3, 
-            pattern: [{ type: 'mage', count: 1 }, { type: 'frog', count: 19 }] 
+            pattern: [{ type: 'mage', count: 1, healthMultiplier: 15 }, { type: 'frog', count: 19 }] 
         }
         ];
 

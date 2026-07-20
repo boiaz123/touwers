@@ -211,7 +211,7 @@ export class MountainLevel8 extends LevelBase {
         }
         // Wave 4
         , { 
-            enemyHealth_multiplier: 2, 
+            enemyHealth_multiplier: 1.5, 
             speedMultiplier: 1.08, 
             spawnInterval: 0.8, 
             pattern: [{ type: 'beefyenemy', count: 14 }, { type: 'frog', count: 3 }] 
@@ -253,7 +253,7 @@ export class MountainLevel8 extends LevelBase {
         }
         // Wave 10
         , { 
-            enemyHealth_multiplier: 6, 
+            enemyHealth_multiplier: 4, 
             speedMultiplier: 0.92, 
             spawnInterval: 0.5, 
             pattern: [{ type: 'beefyenemy', count: 8 }, { type: 'shieldknight', count: 5 }, { type: 'frog', count: 3 }] 
