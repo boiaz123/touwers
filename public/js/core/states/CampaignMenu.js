@@ -123,25 +123,16 @@ export class CampaignMenu {
     }
 
     setupMouseListeners() {
+        // Note: clicks are NOT bound here. game.js's global canvas 'click' listener
+        // already routes through GameStateManager.handleClick() to this.handleClick() -
+        // binding our own listener too would fire handleClick() twice per click.
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
-        this.clickHandler = (e) => {
-            const rect = this.stateManager.canvas.getBoundingClientRect();
-            const scaleX = this.stateManager.canvas.width / rect.width;
-            const scaleY = this.stateManager.canvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
-            this.handleClick(x, y);
-        };
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
-        this.stateManager.canvas.addEventListener('click', this.clickHandler);
     }
 
     removeMouseListeners() {
         if (this.mouseMoveHandler) {
             this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
-        }
-        if (this.clickHandler) {
-            this.stateManager.canvas.removeEventListener('click', this.clickHandler);
         }
     }
 
