@@ -913,7 +913,12 @@ export class GameplayState {
     }
     
     handleMouseMove(e) {
-        const rect = this.stateManager.canvas.getBoundingClientRect();
+        // getBoundingClientRect() forces a synchronous layout read; this fires on
+        // every mousemove while dragging a tower/building placement preview, so use
+        // the cached rect (invalidated only on actual resize/orientation change).
+        const rect = this.stateManager.game
+            ? this.stateManager.game.getCachedCanvasRect()
+            : this.stateManager.canvas.getBoundingClientRect();
         // Account for CSS scaling
         const scaleX = this.stateManager.canvas.width / rect.width;
         const scaleY = this.stateManager.canvas.height / rect.height;

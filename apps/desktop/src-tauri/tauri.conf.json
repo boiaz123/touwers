@@ -11,9 +11,7 @@
   "app": {
     "windows": [
       {
-        "fullscreen": false,
-        "decorations": false,
-        "maximized": true,
+        "fullscreen": true,
         "title": "Touwers",
         "width": 1920,
         "height": 1080,

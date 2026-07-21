@@ -59,6 +59,14 @@ export class Game {
             
             // Prevent infinite resize loops
             this.isResizing = false;
+
+            // Cached canvas bounding rect - getBoundingClientRect() forces a synchronous
+            // layout read, and this is queried on every click and (via getCachedCanvasRect)
+            // every mousemove during tower/building placement. The canvas's on-screen box
+            // only actually changes on resize/orientation change (its drawing buffer is
+            // fixed-resolution, see resizeCanvas()), so cache it and invalidate there instead
+            // of paying a forced reflow per input event.
+            this._canvasRectCache = null;
             
             // Initialize resolution manager with current canvas size
             this.resolutionManager = new ResolutionManager(this.canvas.width, this.canvas.height);
@@ -266,6 +274,19 @@ export class Game {
     }
 
     /**
+     * Returns the canvas's bounding rect, computing it lazily and caching it
+     * instead of forcing a synchronous layout read on every mousemove/click.
+     * Invalidated by handleResizeOrOrientation below, the only place the
+     * canvas's on-screen box can actually change.
+     */
+    getCachedCanvasRect() {
+        if (!this._canvasRectCache) {
+            this._canvasRectCache = this.canvas.getBoundingClientRect();
+        }
+        return this._canvasRectCache;
+    }
+
+    /**
      * Toggle the body.orientation-portrait class used by the portrait layout
      * CSS, since some sidebar DOM is also driven by UIManager's inline
      * styles and a plain @media (orientation: portrait) query can't reliably
@@ -299,6 +320,7 @@ export class Game {
                         this.applyUIScaling();
                         this.updateOrientationClass();
                         this.resizeCanvas();
+                        this._canvasRectCache = null;
                     }
                 }, 100);
             };
@@ -309,7 +331,7 @@ export class Game {
             
             this.canvas.addEventListener('click', (e) => {
                 try {
-                    const rect = this.canvas.getBoundingClientRect();
+                    const rect = this.getCachedCanvasRect();
                     const scaleX = this.canvas.width / rect.width;
                     const scaleY = this.canvas.height / rect.height;
                     const canvasX = (e.clientX - rect.left) * scaleX;
