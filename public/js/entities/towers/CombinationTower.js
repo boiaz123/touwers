@@ -689,6 +689,23 @@ export class CombinationTower extends Tower {
             default: return 'rgba(138, 43, 226, ';
         }
     }
+
+    /** Splits a getCombinationColor() 'rgba(r, g, b, ' prefix into a lightened and a darkened
+     *  flat variant for the spire's two-facet fill in renderDynamicParts - cached by color
+     *  string since the color only changes on setSpell(), not every frame. */
+    _getFacetColors(combinationColor) {
+        if (this._facetColorsKey === combinationColor) return this._facetColorsCache;
+        const m = /rgba\((\d+), (\d+), (\d+), $/.exec(combinationColor);
+        const [r, g, b] = m ? [+m[1], +m[2], +m[3]] : [138, 43, 226];
+        const lighten = (v) => Math.round(v + (255 - v) * 0.4);
+        const darken = (v) => Math.round(v * 0.55);
+        this._facetColorsKey = combinationColor;
+        this._facetColorsCache = {
+            light: `rgba(${lighten(r)}, ${lighten(g)}, ${lighten(b)}, 1)`,
+            dark: `rgba(${darken(r)}, ${darken(g)}, ${darken(b)}, 1)`
+        };
+        return this._facetColorsCache;
+    }
     
     render(ctx) {
         const cellSize = this.getCellSize(ctx);
@@ -731,11 +748,13 @@ export class CombinationTower extends Tower {
         ctx.ellipse(this.x + 3, baseY + 3, baseWidth * 0.52, baseFlat * 1.3, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Octagonal stone foundation
+        // Octagonal stone foundation - lightened from the original #5c5568/#3d3847/#221f2b
+        // (near-black against this level's dark grass, so the whole foundation read as a
+        // faint smudge with no visible connection to the spire standing on it).
         const stoneGradient = ctx.createLinearGradient(this.x - baseWidth / 2, baseY - baseFlat, this.x + baseWidth / 2, baseY + baseFlat);
-        stoneGradient.addColorStop(0, '#5c5568');
-        stoneGradient.addColorStop(0.5, '#3d3847');
-        stoneGradient.addColorStop(1, '#221f2b');
+        stoneGradient.addColorStop(0, '#948aa8');
+        stoneGradient.addColorStop(0.5, '#655d78');
+        stoneGradient.addColorStop(1, '#3a3448');
         ctx.fillStyle = stoneGradient;
         ctx.strokeStyle = '#15131b';
         ctx.lineWidth = 2;
@@ -767,8 +786,8 @@ export class CombinationTower extends Tower {
             const outY = baseY + Math.sin(angle) * baseFlat * 1.4 - towerSize * 0.05;
 
             const buttressGradient = ctx.createLinearGradient(spikeX, spikeY, outX, outY);
-            buttressGradient.addColorStop(0, '#4d4d56');
-            buttressGradient.addColorStop(1, '#232228');
+            buttressGradient.addColorStop(0, '#6e6b7a');
+            buttressGradient.addColorStop(1, '#2c2a35');
             ctx.fillStyle = buttressGradient;
 
             ctx.beginPath();
@@ -779,6 +798,13 @@ export class CombinationTower extends Tower {
             ctx.fill();
             ctx.stroke();
         }
+
+        // Top-rim highlight - a light partial arc traced just inside the octagon's own top
+        // edge, so the foundation reads as a raised, lit platform the spire actually stands
+        // on rather than a flat dark smudge sitting under it.
+        ctx.strokeStyle = 'rgba(200, 190, 220, 0.55)';
+        ctx.lineWidth = Math.max(1, towerSize * 0.014);
+        this._strokeEllipseArc(ctx, this.x, baseY - baseFlat * 0.55, baseWidth * 0.46, baseFlat * 0.5, Math.PI * 1.08, Math.PI * 1.92);
 
         // Partial-arc banding around the base, echoing SuperWeaponLab's iron bands - flattened
         // to the SAME floor-plan squash ratio as the octagon foundation above (rather than a
@@ -811,9 +837,9 @@ export class CombinationTower extends Tower {
             ctx.rotate(strut.angle);
 
             const strutGradient = ctx.createLinearGradient(-towerSize * 0.02, -towerSize * 0.22, towerSize * 0.02, 0);
-            strutGradient.addColorStop(0, '#5a5a62');
-            strutGradient.addColorStop(0.5, '#3a3a42');
-            strutGradient.addColorStop(1, '#1e1e24');
+            strutGradient.addColorStop(0, '#7a7684');
+            strutGradient.addColorStop(0.5, '#4e4b58');
+            strutGradient.addColorStop(1, '#252330');
             ctx.fillStyle = strutGradient;
             ctx.strokeStyle = '#111114';
             ctx.lineWidth = 1;
@@ -876,29 +902,60 @@ export class CombinationTower extends Tower {
         const spireBaseY = this.y - towerSize * 0.02;
         const spireTopY = spireBaseY - spireHeight;
 
-        // Tapered spire body - a single gradient-filled polygon. Opaque at both ends with a
-        // slightly softer band through the middle, matching MagicTower/SuperWeaponLab's solid
-        // (non-glassy) look rather than the flat translucent fill the old cylinder used.
-        //
-        // The gradient only actually changes when the selected spell (color) or the tower's
-        // baked size changes - both rare, runtime-only events (setSpell(), or never, since
-        // towers don't resize after placement) - so it's cached per-instance instead of
-        // rebuilt (a fresh GPU-backed FillGradient) on every ~30fps redraw tick. Keyed on ctx
-        // too: renderDynamicParts can be called with a real CanvasRenderingContext2D before
-        // Pixi finishes initializing and with the CanvasGraphicsShim afterward, and a
-        // CanvasGradient from the former is not valid for the latter (see FrogEnemy.js's
-        // identical _gradCtx guard).
-        const spireGradientKey = combinationColor + '|' + towerSize;
-        if (this._spireGradientCtx !== ctx || this._spireGradientKey !== spireGradientKey) {
-            this._spireGradientCtx = ctx;
-            this._spireGradientKey = spireGradientKey;
-            const spireGradient = ctx.createLinearGradient(this.x - spireBaseWidth / 2, spireBaseY, this.x + spireBaseWidth / 2, spireTopY);
-            spireGradient.addColorStop(0, combinationColor + '1)');
-            spireGradient.addColorStop(0.5, combinationColor + '0.85)');
-            spireGradient.addColorStop(1, combinationColor + '1)');
-            this._spireGradient = spireGradient;
-        }
-        ctx.fillStyle = this._spireGradient;
+        // Stone collar bridging the spire's own (narrower) foot down into the wider octagonal
+        // foundation below. Without it the spire's fill just starts abruptly over the
+        // foundation's top face with nothing spanning the width gap between them (spire foot
+        // is 0.46*towerSize wide, the foundation is 0.9*towerSize) - the two pieces read as
+        // separately-drawn objects rather than one structure. Neutral stone/metal (not
+        // spell-colored) since it's part of the fixed structure, matching the buttresses/
+        // struts above rather than the spire's spell-dependent facets below.
+        const collarTopWidth = spireBaseWidth * 1.05;
+        const collarBottomWidth = spireBaseWidth * 1.75;
+        const collarHeight = towerSize * 0.09;
+        const collarGradient = ctx.createLinearGradient(this.x, spireBaseY, this.x, spireBaseY + collarHeight);
+        collarGradient.addColorStop(0, '#59535f');
+        collarGradient.addColorStop(1, '#232028');
+        ctx.fillStyle = collarGradient;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(this.x - collarTopWidth / 2, spireBaseY);
+        ctx.lineTo(this.x - collarBottomWidth / 2, spireBaseY + collarHeight);
+        ctx.lineTo(this.x + collarBottomWidth / 2, spireBaseY + collarHeight);
+        ctx.lineTo(this.x + collarTopWidth / 2, spireBaseY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Tapered spire body, split into two flat facets (a lightened left half, a darkened
+        // right half, meeting at a bright center ridge) instead of one smooth gradient fill.
+        // A smooth gradient across such a thin taper reads as flat/2D at typical in-game
+        // size - the hard facet seam is what actually sells "angular faceted column" at a
+        // glance, the same reason SuperWeaponLab/MagicTower lean on strong rim strokes rather
+        // than gradients alone. Colors are derived once per spell via _getFacetColors below
+        // rather than rebuilt as a fresh CanvasGradient every frame.
+        const facetColors = this._getFacetColors(combinationColor);
+
+        ctx.fillStyle = facetColors.light;
+        ctx.beginPath();
+        ctx.moveTo(this.x - spireBaseWidth / 2, spireBaseY);
+        ctx.lineTo(this.x - spireTopWidth / 2, spireTopY);
+        ctx.lineTo(this.x, spireTopY);
+        ctx.lineTo(this.x, spireBaseY);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = facetColors.dark;
+        ctx.beginPath();
+        ctx.moveTo(this.x, spireBaseY);
+        ctx.lineTo(this.x, spireTopY);
+        ctx.lineTo(this.x + spireTopWidth / 2, spireTopY);
+        ctx.lineTo(this.x + spireBaseWidth / 2, spireBaseY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Full silhouette outline drawn on top of both facets, so the center seam doesn't
+        // read as a line poking past the tower's actual edge.
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -907,21 +964,25 @@ export class CombinationTower extends Tower {
         ctx.lineTo(this.x + spireTopWidth / 2, spireTopY);
         ctx.lineTo(this.x + spireBaseWidth / 2, spireBaseY);
         ctx.closePath();
-        ctx.fill();
         ctx.stroke();
 
-        // Cheap directional rim-light: a bright stroke along the spire's sun-facing (left) edge
-        // and a darker one along its right edge, so the taper reads as rounded/faceted at a
-        // glance - much more legible at typical in-game zoom than the interior carved-line
-        // texture below, and far cheaper than a second gradient fill.
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+        // Center ridge crease - brighter than either facet, reading as the lit edge where the
+        // two faces meet rather than a flat crack down the middle.
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+        ctx.lineWidth = Math.max(1, towerSize * 0.012);
+        ctx.beginPath();
+        ctx.moveTo(this.x, spireBaseY);
+        ctx.lineTo(this.x, spireTopY);
+        ctx.stroke();
+
+        // Outer silhouette edges kept dark - both facets already carry their own light/dark
+        // value, so these just crisp the silhouette against the background.
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
         ctx.lineWidth = Math.max(1, towerSize * 0.012);
         ctx.beginPath();
         ctx.moveTo(this.x - spireBaseWidth / 2, spireBaseY);
         ctx.lineTo(this.x - spireTopWidth / 2, spireTopY);
         ctx.stroke();
-
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.beginPath();
         ctx.moveTo(this.x + spireBaseWidth / 2, spireBaseY);
         ctx.lineTo(this.x + spireTopWidth / 2, spireTopY);
@@ -1040,8 +1101,14 @@ export class CombinationTower extends Tower {
         const gt = gemRadius * 1.2;
         const gb = gemRadius * 0.7;
 
-        // Small mounting platform at the spire tip, seating the crystal
-        ctx.fillStyle = '#2a2732';
+        // Small mounting platform at the spire tip, seating the crystal - given a metallic
+        // gradient (was a single flat #2a2732, nearly invisible against the spire tip's own
+        // color) so the crystal reads as seated on a distinct cap rather than glued directly
+        // onto the spire.
+        const platformGradient = ctx.createLinearGradient(cx, spireTopY - gemRadius * 0.22, cx, spireTopY + gemRadius * 0.22);
+        platformGradient.addColorStop(0, '#6b667a');
+        platformGradient.addColorStop(1, '#232028');
+        ctx.fillStyle = platformGradient;
         ctx.strokeStyle = '#15131b';
         ctx.lineWidth = 1;
         ctx.beginPath();

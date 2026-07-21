@@ -486,13 +486,13 @@ export class LevelBase {
         }
     }
     
-    screenToGrid(screenX, screenY) {
+    screenToGrid(screenX, screenY, size = 2) {
         // Use ResolutionManager if available, otherwise use cellSize
         if (this.resolutionManager) {
-            return this.resolutionManager.screenToGrid(screenX, screenY);
+            return this.resolutionManager.screenToGrid(screenX, screenY, size);
         }
-        const gridX = Math.floor(screenX / this.cellSize);
-        const gridY = Math.floor(screenY / this.cellSize);
+        const gridX = Math.round(screenX / this.cellSize - size / 2);
+        const gridY = Math.round(screenY / this.cellSize - size / 2);
         return { gridX, gridY };
     }
     
@@ -1808,8 +1808,9 @@ export class LevelBase {
                 this.previewScreenX = screenX;
                 this.previewScreenY = screenY;
             } else {
-                // For regular towers/buildings, use grid coordinates
-                const { gridX, gridY } = this.screenToGrid(screenX, screenY);
+                // For regular towers/buildings, use grid coordinates, centered on
+                // the cursor for this footprint's size (see screenToGrid)
+                const { gridX, gridY } = this.screenToGrid(screenX, screenY, size);
                 this.previewGridX = gridX;
                 this.previewGridY = gridY;
             }

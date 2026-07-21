@@ -63,9 +63,12 @@ export class Game {
             // Cached canvas bounding rect - getBoundingClientRect() forces a synchronous
             // layout read, and this is queried on every click and (via getCachedCanvasRect)
             // every mousemove during tower/building placement. The canvas's on-screen box
-            // only actually changes on resize/orientation change (its drawing buffer is
-            // fixed-resolution, see resizeCanvas()), so cache it and invalidate there instead
-            // of paying a forced reflow per input event.
+            // isn't just a function of window size: #gameCanvas is width:100%/height:100%
+            // inside the #canvas-viewport flex item next to #tower-sidebar (see style.css),
+            // so any state transition that toggles the sidebar's display (menu <-> gameplay)
+            // reflows the canvas box without ever firing a window 'resize' event. A
+            // ResizeObserver on the canvas itself is invalidated below to catch that case
+            // (and any other CSS-driven box change) in addition to real window resizes.
             this._canvasRectCache = null;
             
             // Initialize resolution manager with current canvas size
@@ -276,8 +279,9 @@ export class Game {
     /**
      * Returns the canvas's bounding rect, computing it lazily and caching it
      * instead of forcing a synchronous layout read on every mousemove/click.
-     * Invalidated by handleResizeOrOrientation below, the only place the
-     * canvas's on-screen box can actually change.
+     * Invalidated by handleResizeOrOrientation and the ResizeObserver set up
+     * in setupEventListeners, which together cover both window-level resizes
+     * and CSS-driven reflows of the canvas's own box (sidebar toggle, etc).
      */
     getCachedCanvasRect() {
         if (!this._canvasRectCache) {
@@ -328,7 +332,19 @@ export class Game {
             // Orientation events can lag the resize event on some Android WebViews,
             // so listen for both and funnel into the same debounced handler.
             window.addEventListener('orientationchange', handleResizeOrOrientation);
-            
+
+            // Sidebar show/hide (menu <-> gameplay transitions), UI-scale class swaps,
+            // and fullscreen/borderless changes all reflow #gameCanvas's box without
+            // necessarily firing a window 'resize' event. Watch the canvas element
+            // itself so the rect cache is invalidated immediately whenever its actual
+            // on-screen box changes, regardless of what caused the reflow.
+            if (typeof ResizeObserver !== 'undefined') {
+                this._canvasResizeObserver = new ResizeObserver(() => {
+                    this._canvasRectCache = null;
+                });
+                this._canvasResizeObserver.observe(this.canvas);
+            }
+
             this.canvas.addEventListener('click', (e) => {
                 try {
                     const rect = this.getCachedCanvasRect();

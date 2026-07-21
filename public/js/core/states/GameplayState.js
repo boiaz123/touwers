@@ -915,7 +915,8 @@ export class GameplayState {
     handleMouseMove(e) {
         // getBoundingClientRect() forces a synchronous layout read; this fires on
         // every mousemove while dragging a tower/building placement preview, so use
-        // the cached rect (invalidated only on actual resize/orientation change).
+        // the cached rect (kept fresh by Game's ResizeObserver + resize/orientation
+        // listeners - see Game.getCachedCanvasRect).
         const rect = this.stateManager.game
             ? this.stateManager.game.getCachedCanvasRect()
             : this.stateManager.canvas.getBoundingClientRect();
@@ -1372,12 +1373,11 @@ export class GameplayState {
             }
             return; // Exit if placement check failed - don't open menus
         } else if (this.selectedBuildingType) {
-            const { gridX, gridY } = this.level.screenToGrid(x, y);
-            
             // Get the actual building size from registry instead of hardcoding 4
             const buildingType = BuildingRegistry.getBuildingType(this.selectedBuildingType);
             const buildingSize = buildingType ? buildingType.size : 4;
-            
+            const { gridX, gridY } = this.level.screenToGrid(x, y, buildingSize);
+
             if (this.level.canPlaceBuilding(gridX, gridY, buildingSize, this.towerManager)) {
                 const { screenX, screenY } = this.level.gridToScreen(gridX, gridY, buildingSize);
                 

@@ -45,11 +45,19 @@ export class ResolutionManager {
     }
     
     /**
-     * Convert screen coordinates to grid coordinates
+     * Convert screen coordinates to grid coordinates.
+     * `size` is the footprint (in cells) that will be placed there - passing it
+     * centers the returned top-left cell on (screenX, screenY) instead of just
+     * snapping to whichever cell the point happens to fall in, which would
+     * otherwise anchor the footprint's corner (not its center) to the cursor.
+     * NOTE: this must be Math.round, not Math.floor - size/2 is always a whole
+     * number of cells (size is always even), so floor(u - size/2) === floor(u) -
+     * size/2 identically and would silently cancel back out to the uncentered,
+     * corner-anchored behavior this is meant to fix.
      */
-    screenToGrid(screenX, screenY) {
-        const gridX = Math.floor(screenX / this.cellSize);
-        const gridY = Math.floor(screenY / this.cellSize);
+    screenToGrid(screenX, screenY, size = 2) {
+        const gridX = Math.round(screenX / this.cellSize - size / 2);
+        const gridY = Math.round(screenY / this.cellSize - size / 2);
         return { gridX, gridY };
     }
     
