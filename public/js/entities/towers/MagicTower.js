@@ -783,6 +783,36 @@ export class MagicTower extends Tower {
             ctx.lineWidth = 1;
             this._strokeEllipseArc(ctx, this.x, ringY, ringRx, ringRy, -Math.PI / 3, Math.PI / 3);
         }
+
+        // Small metallic mounting platform seating the gem on the coil, so it reads as
+        // mounted hardware rather than a shape glued directly onto the rod tip. Neutral
+        // colors, independent of selectedElement/crystalPulse, so - unlike the gem itself -
+        // it belongs in this baked-once layer rather than renderDynamicParts: a gradient
+        // rebuilt here costs nothing extra (baked once per campaign to a plain Canvas2D
+        // offscreen canvas), but the same gradient rebuilt every ~33ms per tower instance in
+        // the dynamic layer means recreating a GPU-backed FillGradient texture on every
+        // redraw (see CanvasGraphicsShim's createLinearGradient/createRadialGradient doc
+        // comment) - with enough Magic Towers on screen that per-frame churn is what was
+        // actually behind the "massive performance hit" this platform used to cause when it
+        // lived in renderDynamicParts.
+        const platformRadius = g.gemRadius * 0.6;
+        const platformGradient = ctx.createLinearGradient(this.x, g.sphereY - platformRadius * 0.25, this.x, g.sphereY + platformRadius * 0.25);
+        platformGradient.addColorStop(0, '#6B6070');
+        platformGradient.addColorStop(1, '#221A30');
+        ctx.fillStyle = platformGradient;
+        ctx.strokeStyle = '#0A0A0A';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const x = this.x + Math.cos(angle) * platformRadius;
+            const y = g.sphereY + Math.sin(angle) * platformRadius * 0.35;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
     }
 
     /** Strategy B (per-instance Graphics, redrawn every frame): window glow + gem - pulse animation and element-dependent color are continuous per-instance state, not bakeable. */
@@ -807,14 +837,25 @@ export class MagicTower extends Tower {
             const glowStrength = this.crystalPulse;
 
             // Outer light halo, behind the frame, so the window reads as an active light
-            // source rather than just a lit hole in the wall.
-            const glow = ctx.createRadialGradient(windowX, windowY, 0, windowX, windowY, winH * 1.7);
-            glow.addColorStop(0, `rgba(190, 110, 255, ${glowStrength * 0.55})`);
-            glow.addColorStop(0.6, `rgba(150, 60, 230, ${glowStrength * 0.22})`);
-            glow.addColorStop(1, 'rgba(150, 60, 230, 0)');
-            ctx.fillStyle = glow;
+            // source rather than just a lit hole in the wall. Approximated with a few flat
+            // alpha-blended circles instead of a radial gradient - a FillGradient rebuilt
+            // every ~33ms per tower (this runs in renderDynamicParts, redrawn every sync())
+            // allocates a real GPU texture each time it's recreated (see
+            // CanvasGraphicsShim's createRadialGradient doc comment), which is cheap for one
+            // tower but adds up fast with several Magic Towers on screen - this was in fact
+            // the actual source of the "massive performance hit" reported after this
+            // window's glow was first added. Flat circle fills cost nothing comparable.
+            ctx.fillStyle = `rgba(150, 60, 230, ${glowStrength * 0.12})`;
             ctx.beginPath();
             ctx.arc(windowX, windowY, winH * 1.7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = `rgba(170, 90, 255, ${glowStrength * 0.22})`;
+            ctx.beginPath();
+            ctx.arc(windowX, windowY, winH * 1.1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = `rgba(190, 110, 255, ${glowStrength * 0.35})`;
+            ctx.beginPath();
+            ctx.arc(windowX, windowY, winH * 0.6, 0, Math.PI * 2);
             ctx.fill();
 
             // Carved stone surround
@@ -882,26 +923,9 @@ export class MagicTower extends Tower {
         ctx.ellipse(cx, sphereY + gb * 0.3, glowSize * 1.3, glowSize * 0.7, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Small metallic mounting platform seating the gem on the coil, so it reads as
-        // mounted hardware rather than a shape glued directly onto the rod tip.
-        const platformRadius = gemRadius * 0.6;
-        const platformGradient = ctx.createLinearGradient(cx, sphereY - platformRadius * 0.25, cx, sphereY + platformRadius * 0.25);
-        platformGradient.addColorStop(0, '#6B6070');
-        platformGradient.addColorStop(1, '#221A30');
-        ctx.fillStyle = platformGradient;
-        ctx.strokeStyle = '#0A0A0A';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const x = cx + Math.cos(angle) * platformRadius;
-            const y = sphereY + Math.sin(angle) * platformRadius * 0.35;
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        // (Mounting platform now lives in renderStaticBack - it's neutral/static geometry
+        // that never depends on crystalPulse or selectedElement, so it's baked once instead
+        // of rebuilding a gradient-filled shape every frame - see that method.)
 
         // Containment-field halo at the gem's own scale - a broken ring (two arcs with gaps,
         // not a full circle) so it reads as an energy band rather than another solid outline
