@@ -10,6 +10,9 @@ export class CannonTower extends Tower {
     // neutral "as-built" facing once a shot's recoil finishes, so it doesn't sit
     // twisted toward wherever it last fired.
     static RESET_TURN_SPEED = Math.PI * 0.9;
+    // Height of the solid parapet rim the platform rests on - shared between
+    // renderStaticBack (draws it) and renderDynamicParts (anchors to its top).
+    static PARAPET_HEIGHT = 12;
 
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
@@ -323,30 +326,33 @@ export class CannonTower extends Tower {
             }
         }
         
-        // Tower battlements (crenellations)
+        // Solid parapet rim - alternating raised/recessed merlons here used to
+        // leave 3 separate block "pillars" with visible gaps between them
+        // holding up the platform, which read as disconnected rather than a
+        // finished wall. A single rim spanning the full tower width sits flush
+        // with the body below it and gives the platform one continuous seat.
+        const parapetHeight = CannonTower.PARAPET_HEIGHT;
+        const parapetY = this.y - towerHeight - parapetHeight;
         ctx.fillStyle = '#969696';
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
-        
-        const battlementCount = 6;
-        const battlementWidth = towerWidth / battlementCount;
-        
-        for (let i = 0; i < battlementCount; i++) {
-            if (i % 2 === 0) { // Every other battlement is raised
-                const battlementX = this.x - towerWidth/2 + i * battlementWidth;
-                const battlementY = this.y - towerHeight;
-                
-                ctx.fillRect(battlementX, battlementY - 12, battlementWidth, 12);
-                ctx.strokeRect(battlementX, battlementY - 12, battlementWidth, 12);
-            }
+        ctx.fillRect(this.x - towerWidth/2, parapetY, towerWidth, parapetHeight);
+        ctx.strokeRect(this.x - towerWidth/2, parapetY, towerWidth, parapetHeight);
+
+        // Brick divisions along the rim, matching the wall's block pattern below
+        const parapetBrickCount = 6;
+        ctx.beginPath();
+        for (let i = 1; i < parapetBrickCount; i++) {
+            const bx = this.x - towerWidth/2 + i * (towerWidth / parapetBrickCount);
+            ctx.moveTo(bx, parapetY);
+            ctx.lineTo(bx, parapetY + parapetHeight);
         }
-        
-        // Trebuchet platform on top - its underside rests flush on the raised
-        // merlon tops (battlementY - 12) instead of floating a few pixels above
-        // them, so there's no gap of background visible between the wall and the
-        // platform. The recessed notches between merlons stay open underneath it,
-        // same as real crenellations.
-        const platformY = this.y - towerHeight - 12;
+        ctx.stroke();
+
+        // Trebuchet platform on top - its underside rests flush on the parapet
+        // rim so there's no gap of background visible between the wall and the
+        // platform.
+        const platformY = parapetY;
         const platformWidth = towerWidth * 0.9;
         const platformThickness = 10;
 
@@ -377,8 +383,8 @@ export class CannonTower extends Tower {
         // sits ON it, flush with the same flat, front-facing plank drawn in
         // renderStaticBack - an ellipse "swivel base" here previously read as a
         // top-down disc, a different perspective than the rest of the tower. Must
-        // match renderStaticBack's platformY (battlementY - 12) plus its thickness.
-        const platformY = this.y - towerHeight - 12 - platformThickness;
+        // match renderStaticBack's platformY (parapet top) plus its thickness.
+        const platformY = this.y - towerHeight - CannonTower.PARAPET_HEIGHT - platformThickness;
 
         // Trebuchet mechanism - translate to base, rotate around pivot
         ctx.save();

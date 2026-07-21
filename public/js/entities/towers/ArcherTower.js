@@ -119,16 +119,20 @@ export class ArcherTower extends Tower {
             const cellSize = 32; // Default fallback
             const towerSize = cellSize * 2;
             const towerHeight = towerSize * 0.7;
-            const platformWidth = towerSize * 0.6 * 1.2;
+            const platformWidth = towerSize * 0.6 * 1.25;
             const platformY = this.y - towerHeight;
             const platformThickness = towerSize * 0.08;
-            const railingHeight = towerSize * 0.19;
-            
+
+            // Evenly spread across the wider deck, all standing at the same floor
+            // height (see renderDynamicParts for why - was a mix of floating above
+            // and sinking into the floor before, now consistently grounded with
+            // just enough headroom to peek over the rail).
+            const floorY = platformY - platformThickness;
             const archerPositions = [
-                { x: this.x - platformWidth * 0.08, y: platformY - platformThickness - railingHeight * 0.70 },
-                { x: this.x + platformWidth * 0.14, y: platformY - platformThickness - railingHeight * 0.62 },
-                { x: this.x - platformWidth * 0.30, y: platformY - platformThickness - railingHeight * 0.38 },
-                { x: this.x + platformWidth * 0.27, y: platformY - platformThickness - railingHeight * 0.32 }
+                { x: this.x - platformWidth * 0.30, y: floorY - 6 },
+                { x: this.x - platformWidth * 0.10, y: floorY - 6 },
+                { x: this.x + platformWidth * 0.10, y: floorY - 6 },
+                { x: this.x + platformWidth * 0.30, y: floorY - 6 }
             ];
             
             const archerIndex = Math.floor(Math.random() * this.archers.length);
@@ -246,8 +250,10 @@ export class ArcherTower extends Tower {
             ctx.stroke();
         }
         
-        // Watchtower platform at top
-        const platformWidth = towerWidth * 1.2;
+        // Watchtower platform at top - wide enough for the 4 archers to stand
+        // with a little room, but not so wide it reads as a broad mushroom cap
+        // over the narrow shaft below.
+        const platformWidth = towerWidth * 1.25;
         const platformThickness = towerSize * 0.08;
         const platformY = this.y - towerHeight;
         
@@ -277,38 +283,41 @@ export class ArcherTower extends Tower {
             ctx.stroke();
         }
         
-        // Wooden railings with arrow slits
-        const railingHeight = towerSize * 0.19;
+        // Wooden railing with arrow slits - this used to loop twice for a "front and
+        // back" wall, but neither pass's position actually depended on that side, so
+        // it silently drew the same rectangle on top of itself; the second pass also
+        // never reset fillStyle after the arrow-slit loop tinted it dark, painting
+        // the whole railing black on top of the correct brown one. One draw, with
+        // colours reset before each part, fixes both.
+        // Taller than before to make up the headroom lost by narrowing the
+        // platform - keeps the archers' heads well clear of the roof and gives
+        // the whole top a taller, slimmer silhouette instead of a broad, squat one.
+        const railingHeight = towerSize * 0.27;
+        const railingY = platformY - platformThickness - railingHeight;
         ctx.fillStyle = '#A0522D';
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 1;
-        
-        // Front and back railings
-        for (let side = -1; side <= 1; side += 2) {
-            const railingY = platformY - platformThickness - railingHeight;
-            ctx.fillRect(this.x - platformWidth/2, railingY, platformWidth, railingHeight);
-            ctx.strokeRect(this.x - platformWidth/2, railingY, platformWidth, railingHeight);
-            
-            // Arrow slits
-            for (let i = 0; i < 3; i++) {
-                const slitX = this.x - platformWidth/2 + (i + 1) * platformWidth/4;
-                const slitWidth = platformWidth * 0.03;
-                const slitHeight = railingHeight * 0.6;
-                ctx.fillStyle = '#2F2F2F';
-                ctx.fillRect(slitX - slitWidth/2, railingY + railingHeight * 0.2, slitWidth, slitHeight);
-            }
+        ctx.fillRect(this.x - platformWidth/2, railingY, platformWidth, railingHeight);
+        ctx.strokeRect(this.x - platformWidth/2, railingY, platformWidth, railingHeight);
+
+        // Arrow slits
+        ctx.fillStyle = '#2F2F2F';
+        for (let i = 0; i < 3; i++) {
+            const slitX = this.x - platformWidth/2 + (i + 1) * platformWidth/4;
+            const slitWidth = platformWidth * 0.03;
+            const slitHeight = railingHeight * 0.6;
+            ctx.fillRect(slitX - slitWidth/2, railingY + railingHeight * 0.2, slitWidth, slitHeight);
         }
-        
-        // Corner posts
+
+        // Corner posts - same redundant double-draw as above (the "z" side never
+        // affected position either), collapsed to one pass per corner.
         const postSize = towerSize * 0.05;
+        const postZ = platformY - platformThickness - railingHeight;
         ctx.fillStyle = '#654321';
         for (let x = -1; x <= 1; x += 2) {
-            for (let z = -1; z <= 1; z += 2) {
-                const postX = this.x + x * platformWidth/2;
-                const postZ = platformY - platformThickness - railingHeight;
-                ctx.fillRect(postX - postSize/2, postZ, postSize, railingHeight + platformThickness);
-                ctx.strokeRect(postX - postSize/2, postZ, postSize, railingHeight + platformThickness);
-            }
+            const postX = this.x + x * platformWidth/2;
+            ctx.fillRect(postX - postSize/2, postZ, postSize, railingHeight + platformThickness);
+            ctx.strokeRect(postX - postSize/2, postZ, postSize, railingHeight + platformThickness);
         }
         
         // Thatched roof
@@ -426,10 +435,10 @@ export class ArcherTower extends Tower {
         const baseWidth = towerSize * 0.6;
         const towerWidth = baseWidth * 0.8;
         const towerHeight = towerSize * 0.7;
-        const platformWidth = towerWidth * 1.2;
+        const platformWidth = towerWidth * 1.25;
         const platformThickness = towerSize * 0.08;
         const platformY = this.y - towerHeight;
-        const railingHeight = towerSize * 0.19;
+        const floorY = platformY - platformThickness;
 
         // Render archers on platform — each visually distinct
         // Per-archer configs: tunic, skin tone, headgear style, height offset
@@ -443,13 +452,18 @@ export class ArcherTower extends Tower {
         this.archers.forEach((archer, index) => {
             ctx.save();
             
+            // Evenly spread across the wider deck, all standing at the same floor
+            // height - they used to range from floating 2-3px above the floor to
+            // sinking 2px into it, and stood tall enough that most of their body
+            // (not just their head) rose above the rail, reading as if they were
+            // standing in front of the platform rather than on/behind it.
             const archerPositions = [
-                { x: this.x - platformWidth * 0.08, y: platformY - platformThickness - railingHeight * 0.70 },
-                { x: this.x + platformWidth * 0.14, y: platformY - platformThickness - railingHeight * 0.62 },
-                { x: this.x - platformWidth * 0.30, y: platformY - platformThickness - railingHeight * 0.38 },
-                { x: this.x + platformWidth * 0.27, y: platformY - platformThickness - railingHeight * 0.32 }
+                { x: this.x - platformWidth * 0.30, y: floorY - 6 },
+                { x: this.x - platformWidth * 0.10, y: floorY - 6 },
+                { x: this.x + platformWidth * 0.10, y: floorY - 6 },
+                { x: this.x + platformWidth * 0.30, y: floorY - 6 }
             ];
-            
+
             const pos = archerPositions[index];
             const style = archerStyles[index];
             ctx.translate(pos.x, pos.y + style.dy);
@@ -537,7 +551,22 @@ export class ArcherTower extends Tower {
             
             // Bow and aiming
             if (this.target) {
-                const aimAngle = Math.atan2(this.target.y - pos.y, this.target.x - pos.x);
+                const rawAngle = Math.atan2(this.target.y - pos.y, this.target.x - pos.x);
+
+                // Clamp how steeply the bow can tilt downward - the bow, string and
+                // drawn arrow reach ~9px out from the archer's waist, further down
+                // than the front lip (5px) covers, so an uncapped angle let them
+                // poke out past the floor whenever the target was below the tower.
+                // Left/right aim is left untouched; this only pulls in the
+                // downward cases.
+                let dx = Math.cos(rawAngle);
+                let dy = Math.sin(rawAngle);
+                const maxDownDy = 0.6;
+                if (dy > maxDownDy) {
+                    dy = maxDownDy;
+                    dx = (dx < 0 ? -1 : 1) * Math.sqrt(Math.max(0, 1 - dy * dy));
+                }
+                const aimAngle = Math.atan2(dy, dx);
                 ctx.rotate(aimAngle);
 
                 // Bow stave (darker, slightly thicker)
@@ -594,6 +623,20 @@ export class ArcherTower extends Tower {
             
             ctx.restore();
         });
+
+        // Front lip of the railing, redrawn on top of the archers - the wall was
+        // drawn before them in renderStaticBack, so their legs painted straight
+        // over it and hid it entirely, making them look like they were standing in
+        // front of the platform instead of behind its fence. This covers just
+        // their legs/feet (the fixed-size sprite's legs run from local y=2 to 6),
+        // leaving waists, bows and heads visible above it, like actually standing
+        // behind a waist-high rail.
+        const legCoverHeight = 5;
+        ctx.fillStyle = '#A0522D';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 1;
+        ctx.fillRect(this.x - platformWidth/2, floorY - legCoverHeight, platformWidth, legCoverHeight);
+        ctx.strokeRect(this.x - platformWidth/2, floorY - legCoverHeight, platformWidth, legCoverHeight);
     }
 
     /** Not yet migrated (Phase 5: projectile pooling) - always drawn on Canvas2D regardless of renderer. */
