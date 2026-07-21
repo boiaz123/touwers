@@ -554,7 +554,8 @@
     const designer = new LevelDesigner('designCanvas', {
         gridWidth: 60,
         gridHeight: 33.75,
-        cellSize: 32
+        cellSize: 32,
+        mode: 'dev'
     });
     window.levelDesigner = designer;
 
@@ -580,6 +581,7 @@
         if (e.key === 'v' || e.key === 'V') designer.setTerrainMode('vegetation');
         if (e.key === 'r' || e.key === 'R') designer.setTerrainMode('rock');
         if (e.key === 'w' || e.key === 'W') designer.setTerrainMode('water');
+        if (e.key === 'd' || e.key === 'D') designer.setDeleteMode();
         if (e.key === 'Escape') designer.setMode('path');
     });
 </script>

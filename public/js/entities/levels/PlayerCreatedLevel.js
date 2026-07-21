@@ -3,7 +3,7 @@ import { LevelBase } from './LevelBase.js';
 /**
  * PlayerCreatedLevel
  * A level class that loads its design data from a JSON object saved
- * by the PlayerLevelDesigner into localStorage.
+ * by LevelDesigner (in 'player' mode) into localStorage.
  *
  * Usage: LevelRegistry.registerLevel('campaign-5', slotId, PlayerCreatedLevel.createClass(data), meta)
  */
@@ -52,6 +52,19 @@ export class PlayerCreatedLevel extends LevelBase {
 
     initializeForCanvas(canvasWidth, canvasHeight) {
         if (this.isInitializing) return;
+
+        // Mirror LevelBase.initializeForCanvas's guard: render(ctx) calls this every
+        // frame unconditionally (only gated on !isInitializing), so without this check
+        // the full re-init below - including nulling out terrainCanvas/backgroundCanvas
+        // and recreating the castle - would run on EVERY frame instead of once, forcing
+        // a full terrain re-render every frame (this is what was causing player-created
+        // levels to grind to a crawl while shipped levels ran fine).
+        const sizeChangeThreshold = 50;
+        const sizeChanged = !this.lastCanvasWidth ||
+                           Math.abs(this.lastCanvasWidth - canvasWidth) > sizeChangeThreshold ||
+                           Math.abs(this.lastCanvasHeight - canvasHeight) > sizeChangeThreshold;
+        if (this.isInitialized && !sizeChanged) return;
+
         this.isInitializing = true;
 
         try {
@@ -137,6 +150,8 @@ export class PlayerCreatedLevel extends LevelBase {
             this.terrainCanvas = null;
             this.terrainFgCanvas = null;
 
+            this.maxWaves = this.waves.length;
+
             this.lastCanvasWidth = canvasWidth;
             this.lastCanvasHeight = canvasHeight;
             this.isInitialized = true;
@@ -146,5 +161,25 @@ export class PlayerCreatedLevel extends LevelBase {
         } finally {
             this.isInitializing = false;
         }
+    }
+
+    /**
+     * Without this, GameplayState.getWaveConfig() finds no getWaveConfig function on
+     * the level and always falls back to its hardcoded default (10 basic enemies,
+     * no multipliers) - silently discarding every wave the player actually designed.
+     * Field name note: GameplayState reads `enemyHealth_multiplier` (underscore, matching
+     * the convention shipped Level classes use), while designer-saved wave data stores
+     * `enemyHealthMultiplier` (camelCase) - translate here rather than at the designer,
+     * to keep the saved JSON schema unchanged.
+     */
+    getWaveConfig(wave) {
+        const waveData = this.waves[wave - 1];
+        if (!waveData) return null;
+        return {
+            pattern: waveData.pattern,
+            enemyHealth_multiplier: waveData.enemyHealthMultiplier,
+            speedMultiplier: waveData.speedMultiplier,
+            spawnInterval: waveData.spawnInterval
+        };
     }
 }

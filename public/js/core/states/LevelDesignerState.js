@@ -1,4 +1,4 @@
-import { PlayerLevelDesigner } from '../../level-designer/PlayerLevelDesigner.js';
+import { LevelDesigner } from '../../level-designer/LevelDesigner.js';
 
 /**
  * LevelDesignerState
@@ -29,10 +29,11 @@ export class LevelDesignerState {
 
         // Instantiate the designer once on first enter
         if (!this.designer) {
-            this.designer = new PlayerLevelDesigner('designCanvas', {
+            this.designer = new LevelDesigner('designCanvas', {
                 gridWidth: 60,
                 gridHeight: 33.75,
-                cellSize: 32
+                cellSize: 32,
+                mode: 'player'
             });
             window.levelDesigner = this.designer;
         }
@@ -70,6 +71,7 @@ export class LevelDesignerState {
             if (e.key === 'v' || e.key === 'V') this.designer.setTerrainMode('vegetation');
             if (e.key === 'r' || e.key === 'R') this.designer.setTerrainMode('rock');
             if (e.key === 'w' || e.key === 'W') this.designer.setTerrainMode('water');
+            if (e.key === 'd' || e.key === 'D') this.designer.setDeleteMode();
             if (e.key === 'Escape') this.designer.setMode('path');
         };
         document.addEventListener('keydown', this._keyHandler);

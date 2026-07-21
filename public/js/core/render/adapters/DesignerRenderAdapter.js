@@ -4,17 +4,18 @@ import { CanvasGraphicsShim } from '../CanvasGraphicsShim.js';
 
 /**
  * Phase 8 of the Canvas2D -> Pixi migration: the Level Designer tool's own
- * canvas (#designCanvas in level-designer.html / player-level-designer.html,
- * also reused embedded inside the main game shell via LevelDesignerState).
+ * canvas (#designCanvas in level-designer.html, also reused embedded inside
+ * the main game shell via LevelDesignerState for the in-game Commander's
+ * Workshop designer - same LevelDesigner class, gated by a `mode` option).
  *
  * Unlike gameplay, the designer has no pre-existing shared PixiApp - each of
- * its three host pages (or the in-game overlay) is its own isolated lifecycle,
- * so this adapter owns its own PixiApp instance rather than reusing
- * stateManager.pixiApp. render() is a single self-contained Strategy-B draw
- * routine (LevelDesigner.render(), only ever called event-driven - mousemove/
- * click/button handlers, never a rAF loop) that only touches this.ctx, so it
- * runs completely unmodified against the CanvasGraphicsShim exactly like
- * SpellEffectRenderAdapter.
+ * its two host contexts (the standalone dev page, or the in-game overlay) is
+ * its own isolated lifecycle, so this adapter owns its own PixiApp instance
+ * rather than reusing stateManager.pixiApp. render() is a single
+ * self-contained Strategy-B draw routine (LevelDesigner.render(), only ever
+ * called event-driven - mousemove/click/button handlers, never a rAF loop)
+ * that only touches this.ctx, so it runs completely unmodified against the
+ * CanvasGraphicsShim exactly like SpellEffectRenderAdapter.
  */
 export class DesignerRenderAdapter {
     constructor() {

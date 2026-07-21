@@ -51,7 +51,6 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'public/index.html'),
         levelDesigner: resolve(__dirname, 'public/level-designer.html'),
-        playerLevelDesigner: resolve(__dirname, 'public/player-level-designer.html'),
       },
     },
   },

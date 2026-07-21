@@ -4,11 +4,38 @@
  */
 import { CampaignThemeConfig } from '../core/CampaignThemeConfig.js';
 import { DesignerRenderAdapter } from '../core/render/adapters/DesignerRenderAdapter.js';
+import * as TerrainRenderer from '../core/render/TerrainRenderer.js';
+
+// Vite glob patterns must be literal strings (no variables), hence one call per
+// campaign folder. This replaces a hardcoded per-campaign level count that would
+// silently go stale whenever a level file was added or removed — the "Load
+// Existing Level" dropdown now always reflects exactly what's on disk.
+const LEVEL_FILE_GLOBS = {
+    Forest: import.meta.glob('../entities/levels/Forest/*.js'),
+    Mountain: import.meta.glob('../entities/levels/Mountain/*.js'),
+    Desert: import.meta.glob('../entities/levels/Desert/*.js'),
+    Space: import.meta.glob('../entities/levels/Space/*.js'),
+};
+
+// Player-mode save-to-slot: the 6 custom-level slots live inside the active
+// game save file; LEGACY_STORAGE_KEY is a non-slot-scoped fallback used only
+// when no stateManager is available (e.g. no save loaded yet).
+const PLAYER_LEVEL_SLOT_COUNT = 6;
+const PLAYER_LEVEL_LEGACY_STORAGE_KEY = 'touwers_player_levels';
 
 export class LevelDesigner {
     constructor(canvasId, config = {}) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
+
+        // 'dev' = standalone level-designer.html (Export/Load-Existing-Level tools).
+        // 'player' = in-game Commander's Workshop overlay (Save-to-slot instead).
+        // A single class serves both so the in-game designer is exactly the one
+        // developers use, not a parallel reimplementation. Deliberately NOT named
+        // `this.mode` - that field already means the current tool/interaction mode
+        // ('path' | 'terrain' | 'deleteTerrain').
+        this.designerMode = config.mode || 'dev';
+        this._stateManager = null;
 
         // See DesignerRenderAdapter.js. Init is async, so the very first setupCanvas()/
         // render() below still happen against Canvas2D until it resolves.
@@ -51,7 +78,11 @@ export class LevelDesigner {
         this.lastBrushPaintPos = null;
         // Wave drag-and-drop state
         this.draggedWaveIndex = null;
-        
+
+        // Undo stack: records path/terrain/river mutations so Undo can reverse
+        // whichever action was most recent, not just path-point placement.
+        this.undoStack = [];
+
         // Path texture cache (invalidated when path changes)
         this.designerPathTexture = [];
         this.designerPathLeaves = [];
@@ -97,8 +128,30 @@ export class LevelDesigner {
     }
 
     setupCanvas() {
-        this.canvas.width = this.canvas.offsetWidth;
-        this.canvas.height = this.canvas.offsetHeight;
+        if (this.designerMode === 'player') {
+            // In-game overlay: fit the canvas to its wrapper while preserving the
+            // designer's 16:9 grid aspect ratio (60 / 33.75), since the wrapper isn't
+            // guaranteed to already be exactly 16:9 the way the standalone dev page is.
+            const wrapper = this.canvas.parentElement;
+            const maxW = wrapper ? wrapper.clientWidth : this.canvas.offsetWidth;
+            const maxH = wrapper ? wrapper.clientHeight : this.canvas.offsetHeight;
+            const ratio = this.gridWidth / this.gridHeight;
+            let w, h;
+            if (maxW / maxH > ratio) {
+                h = maxH;
+                w = Math.round(h * ratio);
+            } else {
+                w = maxW;
+                h = Math.round(w / ratio);
+            }
+            this.canvas.width = w;
+            this.canvas.height = h;
+            this.canvas.style.width = w + 'px';
+            this.canvas.style.height = h + 'px';
+        } else {
+            this.canvas.width = this.canvas.offsetWidth;
+            this.canvas.height = this.canvas.offsetHeight;
+        }
 
         if (this.designerRenderAdapter) {
             this.designerRenderAdapter.init(this.canvas).then(() => {
@@ -136,10 +189,9 @@ export class LevelDesigner {
         window.addEventListener('resize', () => this.handleResize());
 
         // Toolbar buttons
-        document.getElementById('drawPathBtn').addEventListener('click', () => this.setMode('path'));
-        document.getElementById('undoBtn').addEventListener('click', () => this.undo());
-        document.getElementById('clearBtn').addEventListener('click', () => this.onClearClick());
-        document.getElementById('exportBtn').addEventListener('click', () => this.exportLevel());
+        document.getElementById('drawPathBtn')?.addEventListener('click', () => this.setMode('path'));
+        document.getElementById('undoBtn')?.addEventListener('click', () => this.undo());
+        document.getElementById('clearBtn')?.addEventListener('click', () => this.onClearClick());
         document.getElementById('finishPathBtn')?.addEventListener('click', () => this.onFinishPathClick());
         document.getElementById('finishRiverBtn')?.addEventListener('click', () => this.onFinishRiverClick());
         
@@ -198,28 +250,33 @@ export class LevelDesigner {
             if (lbl) lbl.textContent = this.treeBrushMaxSize.toFixed(1);
         });
 
-        // Copy code button
-        document.getElementById('copyCodeBtn').addEventListener('click', () => this.copyCode());
+        if (this.designerMode === 'dev') {
+            // Dev-only tools: export-to-.js-source and the campaign/level browser used
+            // to load a shipped level for editing. Neither exists in the in-game overlay.
+            document.getElementById('exportBtn')?.addEventListener('click', () => this.exportLevel());
+            document.getElementById('copyCodeBtn')?.addEventListener('click', () => this.copyCode());
 
-        // Load level button
-        document.getElementById('loadLevelBtn').addEventListener('click', () => this.openLoadLevelModal());
+            document.getElementById('loadLevelBtn')?.addEventListener('click', () => this.openLoadLevelModal());
+            document.getElementById('loadLevelCloseBtn')?.addEventListener('click', () => this.closeLoadLevelModal());
+            document.getElementById('loadLevelCancelBtn')?.addEventListener('click', () => this.closeLoadLevelModal());
+            document.getElementById('campaignSelect')?.addEventListener('change', (e) => this.onCampaignSelectChange(e));
+            document.getElementById('loadLevelConfirmBtn')?.addEventListener('click', () => this.onLoadLevelConfirm());
+            document.getElementById('loadLevelModal')?.addEventListener('click', (e) => {
+                if (e.target.id === 'loadLevelModal') {
+                    this.closeLoadLevelModal();
+                }
+            });
+        }
 
-        // Load level modal controls
-        document.getElementById('loadLevelCloseBtn').addEventListener('click', () => this.closeLoadLevelModal());
-        document.getElementById('loadLevelCancelBtn').addEventListener('click', () => this.closeLoadLevelModal());
-        
-        // Campaign selector change
-        document.getElementById('campaignSelect')?.addEventListener('change', (e) => this.onCampaignSelectChange(e));
-        
-        // Level confirm button
-        document.getElementById('loadLevelConfirmBtn').addEventListener('click', () => this.onLoadLevelConfirm());
-
-        // Close load level modal on overlay click
-        document.getElementById('loadLevelModal').addEventListener('click', (e) => {
-            if (e.target.id === 'loadLevelModal') {
-                this.closeLoadLevelModal();
-            }
-        });
+        if (this.designerMode === 'player') {
+            // Player-only: save the current design into one of the 6 level slots,
+            // replacing the dev tool's export flow.
+            document.getElementById('saveToSlotBtn')?.addEventListener('click', () => this.openSaveModal());
+            document.getElementById('saveSlotCloseBtn')?.addEventListener('click', () => this.closeSaveModal());
+            document.getElementById('saveSlotModal')?.addEventListener('click', (e) => {
+                if (e.target.id === 'saveSlotModal') this.closeSaveModal();
+            });
+        }
     }
 
     setupFormHandlers() {
@@ -562,13 +619,17 @@ export class LevelDesigner {
 
         if (this.mode === 'deleteTerrain') {
             if (this.hoveredTerrainElementIndex !== null) {
-                this.terrainElements.splice(this.hoveredTerrainElementIndex, 1);
+                const idx = this.hoveredTerrainElementIndex;
+                const removed = this.terrainElements[idx];
+                this.terrainElements.splice(idx, 1);
+                this._pushUndo({ type: 'terrainRemove', index: idx, element: removed });
                 this.hoveredTerrainElementIndex = null;
             }
         } else if (this.mode === 'path') {
             // Snap path points to grid
             const snapped = this.snapToGrid(gridCoords.gridX, gridCoords.gridY);
             this.pathPoints.push(snapped);
+            this._pushUndo({ type: 'pathPoint' });
         } else if (this.mode === 'terrain' && this.terrainMode) {
             if (this.waterMode === 'river') {
                 // Add point to river (not snapped for smooth curves)
@@ -684,6 +745,7 @@ export class LevelDesigner {
         }
         
         this.terrainElements.push(element);
+        this._pushUndo({ type: 'terrainAdd' });
     }
 
     finishRiver() {
@@ -691,6 +753,7 @@ export class LevelDesigner {
         // Cells are generated only on export so the river remains editable
         if (!this.riverPoints || this.riverPoints.length < 2) return;
         this.riverPaths.push([...this.riverPoints]);
+        this._pushUndo({ type: 'riverPath' });
     }
 
     finishPath() {
@@ -776,12 +839,33 @@ export class LevelDesigner {
         );
     }
 
+    /** Records a reversible action; capped so memory can't grow unbounded over a long session. */
+    _pushUndo(action) {
+        this.undoStack.push(action);
+        if (this.undoStack.length > 50) this.undoStack.shift();
+    }
+
     undo() {
-        if (this.pathPoints.length > 0) {
-            this.pathPoints.pop();
-            this.updateGeneratedCode();
-            this.render();
+        const action = this.undoStack.pop();
+        if (!action) return;
+
+        switch (action.type) {
+            case 'pathPoint':
+                this.pathPoints.pop();
+                break;
+            case 'terrainAdd':
+                this.terrainElements.pop();
+                break;
+            case 'terrainRemove':
+                this.terrainElements.splice(action.index, 0, action.element);
+                break;
+            case 'riverPath':
+                this.riverPaths.pop();
+                break;
         }
+
+        this.updateGeneratedCode();
+        this.render();
     }
 
     clearPath() {
@@ -790,6 +874,7 @@ export class LevelDesigner {
         this.terrainElements = [];
         this.riverPaths = [];
         this.riverPoints = [];
+        this.undoStack = [];
         this.updateGeneratedCode();
         this.render();
     }
@@ -1673,10 +1758,6 @@ export class LevelDesigner {
         return theme ? theme.pathColors : {};
     }
 
-    drawDesignerDirtPatches() {}
-    drawDesignerGrassPatches() {}
-    drawDesignerFlowers() {}
-
     updateStatusBar() {
         const pathInfo = document.getElementById('pathInfo');
         if (!pathInfo) return;
@@ -2139,230 +2220,71 @@ export class LevelDesigner {
         });
     }
 
+    /**
+     * Lazily instantiates the real Castle class (public/js/entities/buildings/Castle.js)
+     * so the designer's preview renders the exact same castle gameplay uses, instead of
+     * a hand-drawn lookalike icon. Castle's fixed pixel dimensions (120x80 wall, etc.)
+     * are authored against a 32px reference cell (matching gridWidth=60 -> a 1920px-wide
+     * reference canvas); `scale` below reproduces that same ratio at the designer's
+     * actual on-screen canvas size, the same way drawTerrainElements() already scales
+     * trees/rocks relative to that reference cell.
+     */
+    async _ensureCastlePreview() {
+        if (this._castlePreview || this._castlePreviewLoading) return;
+        this._castlePreviewLoading = true;
+        const { Castle } = await import('../entities/buildings/Castle.js');
+        this._castlePreview = new Castle(0, 0, 0, 0);
+        this._castlePreview.update(1); // one tick so window lights aren't frozen at their initial 0 intensity
+        this._castlePreviewLoading = false;
+        this.render();
+    }
+
     drawCastle() {
+        if (!this._castlePreview) {
+            this._ensureCastlePreview();
+            return; // draws once the async import above resolves and re-triggers render()
+        }
+
         const cW = this.canvas.width / this.gridWidth;
         const cH = this.canvas.height / this.gridHeight;
-        const size = Math.min(cW, cH) * 2.8;
+        const scale = cW / 32;
 
-        // Show semi-transparent preview at last path point during editing
+        let gridX, gridY, alpha;
         if (!this.pathLocked && this.pathPoints.length > 0) {
             const last = this.pathPoints[this.pathPoints.length - 1];
-            this._renderCastle(last.gridX * cW, last.gridY * cH, size, 0.38);
+            gridX = last.gridX;
+            gridY = last.gridY;
+            alpha = 0.38;
+        } else if (this.castlePosition && this.pathLocked) {
+            gridX = this.castlePosition.gridX;
+            gridY = this.castlePosition.gridY;
+            alpha = 1.0;
+        } else {
             return;
         }
 
-        if (!this.castlePosition || !this.pathLocked) return;
-        this._renderCastle(
-            this.castlePosition.gridX * cW,
-            this.castlePosition.gridY * cH,
-            size,
-            1.0
-        );
-    }
+        // Gate (local y = +wallHeight/2 = +40 in Castle's own coordinate space) aligns
+        // with the path end, matching LevelBase.createCastle()'s castleScreenY math.
+        const castle = this._castlePreview;
+        castle.x = gridX * cW;
+        castle.y = gridY * cH - 40 * scale;
+        castle.gateAngle = 0;
 
-    _renderCastle(x, y, size, alpha) {
         const ctx = this.ctx;
-        ctx.globalAlpha = alpha;
         ctx.save();
-        ctx.translate(x, y);
-        const scale = size / 200;
+        ctx.globalAlpha = alpha;
+        ctx.translate(castle.x, castle.y);
         ctx.scale(scale, scale);
-        const wW = 120, wH = 80, tW = 35, tH = 66.5;
-
-        // --- Main wall ---
-        const wallGrad = ctx.createLinearGradient(-wW/2, -wH/2, wW/2, wH/2);
-        wallGrad.addColorStop(0, '#8B7D6B');
-        wallGrad.addColorStop(0.5, '#7A6D5D');
-        wallGrad.addColorStop(1, '#6B5D4D');
-        ctx.fillStyle = wallGrad;
-        ctx.fillRect(-wW/2, -wH/2, wW, wH);
-        ctx.strokeStyle = '#3D3830'; ctx.lineWidth = 2;
-        ctx.strokeRect(-wW/2, -wH/2, wW, wH);
-        ctx.strokeStyle = '#5D5247'; ctx.lineWidth = 0.7;
-        const bkW = wW / 12, bkH = wH / 8;
-        for (let wy = -wH/2; wy < wH/2; wy += bkH) {
-            const ox = (Math.abs(wy + wH/2) / bkH) % 2 * bkW / 2;
-            for (let wx = -wW/2; wx < wW/2; wx += bkW) {
-                ctx.strokeRect(wx + ox, wy, bkW - 0.8, bkH - 0.8);
-            }
-        }
-        ctx.fillStyle = 'rgba(255,255,255,0.10)';
-        for (let wy = -wH/2 + 1.5; wy < wH/2; wy += bkH) {
-            const ox = (Math.abs(wy + wH/2) / bkH) % 2 * bkW / 2;
-            for (let wx = -wW/2 + 1.5; wx < wW/2; wx += bkW) {
-                ctx.fillRect(wx + ox, wy, bkW / 3, bkH / 3);
-            }
-        }
-        ctx.fillStyle = 'rgba(107,93,77,0.8)';
-        ctx.beginPath();
-        ctx.moveTo(wW/2, -wH/2); ctx.lineTo(wW/2+8, -wH/2-4);
-        ctx.lineTo(wW/2+8, wH/2-4); ctx.lineTo(wW/2, wH/2);
-        ctx.closePath(); ctx.fill();
-        ctx.fillStyle = 'rgba(155,140,120,0.6)';
-        ctx.beginPath();
-        ctx.moveTo(-wW/2, -wH/2); ctx.lineTo(wW/2, -wH/2);
-        ctx.lineTo(wW/2+8, -wH/2-4); ctx.lineTo(-wW/2+8, -wH/2-4);
-        ctx.closePath(); ctx.fill();
-        const ws = 4;
-        [{ x: -30, y: -20 }, { x: 0, y: -20 }, { x: 30, y: -20 }].forEach(pos => {
-            ctx.fillStyle = '#1A1815';
-            ctx.fillRect(pos.x - ws/2, pos.y - ws/2, ws, ws);
-            ctx.strokeStyle = '#3D3830'; ctx.lineWidth = 0.8;
-            ctx.strokeRect(pos.x - ws/2, pos.y - ws/2, ws, ws);
-            ctx.fillStyle = 'rgba(255,200,100,0.20)';
-            ctx.fillRect(pos.x - ws/2 + 0.5, pos.y - ws/2 + 0.5, ws - 1, ws - 1);
-            ctx.strokeStyle = '#3D3830'; ctx.lineWidth = 0.5;
-            ctx.beginPath(); ctx.moveTo(pos.x, pos.y - ws/2); ctx.lineTo(pos.x, pos.y + ws/2); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(pos.x - ws/2, pos.y); ctx.lineTo(pos.x + ws/2, pos.y); ctx.stroke();
-        });
-
-        // --- Tower renderer ---
-        const drawTwr = (tx) => {
-            ctx.save();
-            ctx.translate(tx, 0);
-            const tTW = tW * 0.85, baseY = wH/2, topY = -tH;
-            const tGrad = ctx.createLinearGradient(0, topY, 0, baseY);
-            tGrad.addColorStop(0, '#9A8B7B'); tGrad.addColorStop(0.5, '#8A7B6B'); tGrad.addColorStop(1, '#7A6B5B');
-            ctx.fillStyle = tGrad;
-            ctx.beginPath();
-            ctx.moveTo(-tW/2, baseY); ctx.lineTo(-tTW/2, topY);
-            ctx.lineTo(tTW/2, topY); ctx.lineTo(tW/2, baseY);
-            ctx.closePath(); ctx.fill();
-            ctx.strokeStyle = '#3D3830'; ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(-tW/2, baseY); ctx.lineTo(-tTW/2, topY);
-            ctx.lineTo(tTW/2, topY); ctx.lineTo(tW/2, baseY);
-            ctx.closePath(); ctx.stroke();
-            ctx.strokeStyle = '#5D5247'; ctx.lineWidth = 0.7;
-            const tbW = tW / 6, tbH = 10.5;
-            for (let ty = topY; ty < baseY; ty += tbH) {
-                const rf = (ty - topY) / tH;
-                const rW = tTW + (tW - tTW) * rf;
-                const ox = (Math.abs(ty - topY) / tbH) % 2 * tbW / 2;
-                const hW = rW / 2;
-                for (let bi = 0; bi < 6; bi++) {
-                    const bl = -rW/2 + bi * tbW + ox;
-                    if (bl >= -hW && bl + tbW - 0.8 <= hW) ctx.strokeRect(bl, ty, tbW - 0.8, tbH - 0.8);
-                }
-            }
-            ctx.fillStyle = 'rgba(255,255,255,0.10)';
-            for (let ty = topY + 1.5; ty < baseY; ty += tbH) {
-                const rf = (ty - topY) / tH;
-                const rW = tTW + (tW - tTW) * rf;
-                const ox = (Math.abs(ty - topY) / tbH) % 2 * tbW / 2;
-                const hW = rW / 2;
-                for (let bi = 0; bi < 6; bi++) {
-                    const hl = -rW/2 + bi * tbW + ox + 1.5;
-                    if (hl >= -hW && hl + tbW/3 <= hW) ctx.fillRect(hl, ty + 1.5, tbW / 3, tbH / 3);
-                }
-            }
-            const tws = 3.5;
-            [{ x: 0, y: -50 }, { x: 0, y: -30 }, { x: 0, y: -10 }].forEach(pos => {
-                ctx.fillStyle = '#1A1815';
-                ctx.fillRect(pos.x - tws/2, pos.y - tws/2, tws, tws);
-                ctx.strokeStyle = '#3D3830'; ctx.lineWidth = 0.8;
-                ctx.strokeRect(pos.x - tws/2, pos.y - tws/2, tws, tws);
-                ctx.fillStyle = 'rgba(255,180,100,0.16)';
-                ctx.fillRect(pos.x - tws/2 + 0.3, pos.y - tws/2 + 0.3, tws - 0.6, tws - 0.6);
-                ctx.strokeStyle = '#3D3830'; ctx.lineWidth = 0.4;
-                ctx.beginPath(); ctx.moveTo(pos.x, pos.y - tws/2); ctx.lineTo(pos.x, pos.y + tws/2); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(pos.x - tws/2, pos.y); ctx.lineTo(pos.x + tws/2, pos.y); ctx.stroke();
-            });
-            const crH = 10, mrH = 4, rfH = 12;
-            ctx.fillStyle = '#7A6D5D';
-            ctx.fillRect(-tTW/2, topY - crH, tTW, crH);
-            ctx.strokeStyle = '#3D3830'; ctx.lineWidth = 0.8;
-            ctx.strokeRect(-tTW/2, topY - crH, tTW, crH);
-            const mrW = tTW / 4;
-            ctx.fillStyle = '#7A6D5D';
-            ctx.fillRect(-tTW/2 + 2, topY - crH - mrH, mrW - 3, mrH);
-            ctx.strokeRect(-tTW/2 + 2, topY - crH - mrH, mrW - 3, mrH);
-            ctx.fillRect(-mrW/2 + 2, topY - crH - mrH, mrW - 3, mrH);
-            ctx.strokeRect(-mrW/2 + 2, topY - crH - mrH, mrW - 3, mrH);
-            ctx.fillRect(tTW/2 - mrW + 1, topY - crH - mrH, mrW - 3, mrH);
-            ctx.strokeRect(tTW/2 - mrW + 1, topY - crH - mrH, mrW - 3, mrH);
-            const pkY = topY - crH - mrH - rfH;
-            ctx.fillStyle = '#5A4A3A';
-            ctx.beginPath();
-            ctx.moveTo(-tTW/2, topY - crH - mrH); ctx.lineTo(0, pkY); ctx.lineTo(tTW/2, topY - crH - mrH);
-            ctx.closePath(); ctx.fill();
-            ctx.strokeStyle = '#3D2810'; ctx.lineWidth = 1; ctx.stroke();
-            ctx.restore();
-        };
-
-        drawTwr(-wW/2 - tW/2);
-        drawTwr(wW/2 + tW/2);
-
-        // --- Castle base ---
-        const cbW = wW + 100, cbH = 30, cbY = wH/2;
-        const cbGrad = ctx.createLinearGradient(0, cbY, 0, cbY + cbH);
-        cbGrad.addColorStop(0, '#6B5D4D'); cbGrad.addColorStop(0.3, '#5A4D3D'); cbGrad.addColorStop(1, '#4A3D2D');
-        ctx.fillStyle = cbGrad;
-        ctx.fillRect(-cbW/2, cbY, cbW, cbH);
-        ctx.strokeStyle = '#2D1810'; ctx.lineWidth = 1.5;
-        ctx.strokeRect(-cbW/2, cbY, cbW, cbH);
-        ctx.strokeStyle = '#3D2810'; ctx.lineWidth = 0.6;
-        const cbS = 20;
-        for (let bx = -cbW/2; bx < cbW/2; bx += cbS) {
-            ctx.beginPath(); ctx.moveTo(bx, cbY); ctx.lineTo(bx, cbY + cbH); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(bx, cbY + cbH/2); ctx.lineTo(bx + cbS, cbY + cbH/2); ctx.stroke();
-        }
-        ctx.fillStyle = 'rgba(0,0,0,0.15)';
-        for (let bx = -cbW/2; bx < cbW/2; bx += cbS) ctx.fillRect(bx, cbY + cbH/2, cbS, cbH/2);
-        ctx.fillStyle = 'rgba(255,255,255,0.05)';
-        for (let bx = -cbW/2; bx < cbW/2; bx += cbS) ctx.fillRect(bx, cbY, cbS, cbH/2);
-
-        // --- Gate ---
-        const gW = 40, gH = 50;
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(-gW/2 + 2, wH/2 - gH + 1, gW, gH);
-        ctx.fillStyle = '#4A3A2A';
-        ctx.fillRect(-gW/2, wH/2 - gH, gW, gH);
-        ctx.strokeStyle = '#2C1810'; ctx.lineWidth = 1.5;
-        ctx.strokeRect(-gW/2, wH/2 - gH, gW, gH);
-        ctx.beginPath(); ctx.moveTo(0, wH/2 - gH); ctx.lineTo(0, wH/2); ctx.stroke();
-        ctx.strokeStyle = '#8B7355'; ctx.lineWidth = 2;
-        for (let gi = 1; gi < 3; gi++) {
-            ctx.beginPath();
-            ctx.moveTo(-gW/2 + 2, wH/2 - gH + gi * gH/3);
-            ctx.lineTo(gW/2 - 2, wH/2 - gH + gi * gH/3);
-            ctx.stroke();
-        }
-        ctx.fillStyle = '#654321';
-        for (let gi = 0; gi < 4; gi++) {
-            for (let gj = 0; gj < 3; gj++) {
-                ctx.beginPath();
-                ctx.arc(-gW/4 + gi * gW/6, wH/2 - gH + gH/6 + gj * gH/4, 1.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-        ctx.fillStyle = '#D4AF37';
-        ctx.beginPath(); ctx.arc(gW/2 - 6, wH/2 - gH/2, 2, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#8B7500'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.arc(gW/2 - 6, wH/2 - gH/2, 2, 0, Math.PI * 2); ctx.stroke();
-
-        // --- Crenellations on wall ---
-        const crW = 12, crGap = 16, crHt = 14;
-        ctx.fillStyle = '#7A6D5D'; ctx.strokeStyle = '#3D3830'; ctx.lineWidth = 0.8;
-        for (let cx = -wW/2 + 8; cx < wW/2; cx += crGap) {
-            ctx.fillRect(cx, -wH/2 - crHt, crW, crHt);
-            ctx.strokeRect(cx, -wH/2 - crHt, crW, crHt);
-        }
-
+        ctx.translate(-castle.x, -castle.y);
+        castle.render(ctx);
         ctx.restore();
         ctx.globalAlpha = 1;
-
-        // CASTLE label
-        ctx.fillStyle = '#fff';
-        ctx.font = `bold ${Math.max(9, size * 0.13)}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText('CASTLE', x, y + size / 2 + 5);
     }
 
     drawTerrainElements() {
         const cellWidthPixels = this.canvas.width / this.gridWidth;
         const cellHeightPixels = this.canvas.height / this.gridHeight;
+        const campaign = this.currentCampaign || 'forest';
 
         const sorted = [...this.terrainElements].sort((a, b) => a.gridY - b.gridY);
         sorted.forEach(element => {
@@ -2371,2732 +2293,24 @@ export class LevelDesigner {
             const baseSize = element.size * Math.min(cellWidthPixels, cellHeightPixels);
             const size = element.type === 'water' ? baseSize : baseSize * 0.75;
 
+            // Delegates to TerrainRenderer so the preview here is drawn by the exact
+            // same code as real gameplay (see TerrainRenderer.js header comment).
             switch (element.type) {
                 case 'vegetation':
-                    this.drawVegetation(x, y - size * 0.45, size, element.variant);
+                    TerrainRenderer.renderVegetation(this.ctx, x, y - size * 0.45, size, element.gridX, element.gridY, element.variant, campaign);
                     break;
                 case 'rock':
-                    this.drawRock(x, y, size, element.variant);
+                    TerrainRenderer.renderRock(this.ctx, x, y, size, element.gridX, element.gridY, element.variant, campaign);
                     break;
                 case 'water':
                     if (element.waterType === 'river') {
-                        this.drawRiver(x, y, size, element.flowAngle);
+                        TerrainRenderer.renderRiver(this.ctx, x, y, size, element.flowAngle);
                     } else {
-                        this.drawLake(x, y, size);
+                        TerrainRenderer.renderLake(this.ctx, x, y, size);
                     }
                     break;
             }
         });
-    }
-
-    drawTree(x, y, size, variant) {
-        const terrainInfo = CampaignThemeConfig.getTerrainRenderingInfo(this.currentCampaign);
-        const primaryColor = terrainInfo.primaryColor;
-        const accentColor = terrainInfo.accentColor;
-        const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(x + y) % 4;
-        switch(this.currentCampaign) {
-            case 'mountain':
-                this.drawSnowPineTree(x, y, size, primaryColor, accentColor, seed);
-                break;
-            case 'desert':
-                this.drawCactusTree(x, y, size, primaryColor, accentColor, seed);
-                break;
-            case 'space':
-                this.drawCrystalStructure(x, y, size, primaryColor, accentColor, seed);
-                break;
-            default: // forest
-                switch(seed) {
-                    case 0: this.drawTreeType1(x, y, size, primaryColor, accentColor); break;
-                    case 1: this.drawTreeType2(x, y, size, primaryColor, accentColor); break;
-                    case 2: this.drawTreeType3(x, y, size, primaryColor, accentColor); break;
-                    default: this.drawTreeType4(x, y, size, primaryColor, accentColor);
-                }
-        }
-    }
-
-    drawSnowPineTree(x, y, size, primaryColor, accentColor, seed) {
-        // Snowy pine trees for mountain campaign
-        const trunkWidth = size * 0.16;
-        const trunkHeight = size * 0.4;
-        
-        // Trunk with snow
-        this.ctx.fillStyle = '#5a4a3a';
-        this.ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        
-        // Snow on trunk
-        this.ctx.fillStyle = '#e8f4f8';
-        this.ctx.beginPath();
-        this.ctx.arc(x - trunkWidth * 0.25, y + trunkHeight * 0.3, trunkWidth * 0.3, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Layered foliage (snowy pine style)
-        // Bottom layer - widest
-        this.ctx.fillStyle = primaryColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.4);
-        this.ctx.lineTo(x + size * 0.35, y);
-        this.ctx.lineTo(x - size * 0.35, y);
-        this.ctx.closePath();
-        this.ctx.fill();
-        
-        // Snow on bottom layer
-        this.ctx.fillStyle = 'rgba(232, 244, 248, 0.7)';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.4);
-        this.ctx.lineTo(x + size * 0.32, y - size * 0.1);
-        this.ctx.lineTo(x - size * 0.32, y - size * 0.1);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Middle layer
-        this.ctx.fillStyle = accentColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.2);
-        this.ctx.lineTo(x + size * 0.25, y + size * 0.1);
-        this.ctx.lineTo(x - size * 0.25, y + size * 0.1);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Top point
-        this.ctx.fillStyle = primaryColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.5);
-        this.ctx.lineTo(x + size * 0.12, y - size * 0.4);
-        this.ctx.lineTo(x - size * 0.12, y - size * 0.4);
-        this.ctx.closePath();
-        this.ctx.fill();
-    }
-
-    drawCactusTree(x, y, size, primaryColor, accentColor, seed) {
-        const ctx = this.ctx;
-        switch(seed % 4) {
-            case 0: {
-                // Saguaro — tall trunk with upward-curving arms, natural desert coloring
-                const tw = size * 0.14, th = size * 0.55;
-                ctx.fillStyle = '#5a8440';
-                ctx.fillRect(x - tw, y - th, tw * 2, th);
-                ctx.beginPath();
-                ctx.arc(x, y - th, tw, Math.PI, 0);
-                ctx.fill();
-                ctx.fillStyle = '#3d6030';
-                ctx.fillRect(x + tw * 0.35, y - th, tw * 0.3, th);
-                // Left arm
-                ctx.fillStyle = '#5a8440';
-                ctx.beginPath();
-                ctx.moveTo(x - tw * 0.8, y - th * 0.55);
-                ctx.quadraticCurveTo(x - size * 0.32, y - th * 0.68, x - size * 0.30, y - th * 0.85);
-                ctx.quadraticCurveTo(x - size * 0.28, y - th * 1.02, x - size * 0.16, y - th);
-                ctx.quadraticCurveTo(x - size * 0.08, y - th * 0.90, x - tw * 1.15, y - th * 0.55 - tw);
-                ctx.closePath(); ctx.fill();
-                // Right arm
-                ctx.beginPath();
-                ctx.moveTo(x + tw * 0.8, y - th * 0.40);
-                ctx.quadraticCurveTo(x + size * 0.30, y - th * 0.50, x + size * 0.28, y - th * 0.70);
-                ctx.quadraticCurveTo(x + size * 0.26, y - th * 0.94, x + size * 0.14, y - th * 0.92);
-                ctx.quadraticCurveTo(x + size * 0.06, y - th * 0.82, x + tw * 1.15, y - th * 0.40 - tw);
-                ctx.closePath(); ctx.fill();
-                // Spine dots
-                ctx.fillStyle = '#c8b870';
-                for (let i = 0; i < 5; i++) {
-                    const sy = y - th * 0.12 * (i + 0.5);
-                    ctx.beginPath(); ctx.arc(x + tw * 0.55, sy, 1.2, 0, Math.PI * 2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(x - tw * 0.55, sy, 1.2, 0, Math.PI * 2); ctx.fill();
-                }
-                break;
-            }
-            case 1: {
-                // Dry desert bush — gnarled woody branches
-                const baseR = size * 0.18;
-                ctx.fillStyle = '#4a3012';
-                ctx.beginPath();
-                ctx.ellipse(x, y, baseR, baseR * 0.50, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#6a4a1c';
-                ctx.beginPath();
-                ctx.ellipse(x - baseR * 0.15, y - baseR * 0.1, baseR * 0.68, baseR * 0.32, -0.2, 0, Math.PI * 2);
-                ctx.fill();
-                const dryBranches = [
-                    { ang: -2.36, len: size * 0.40, lw: 2.3, bend: -0.38 },
-                    { ang: -1.88, len: size * 0.44, lw: 2.1, bend: 0.30 },
-                    { ang: -1.26, len: size * 0.38, lw: 1.9, bend: -0.22 },
-                    { ang: -0.62, len: size * 0.32, lw: 1.7, bend: 0.35 },
-                    { ang: -2.76, len: size * 0.34, lw: 1.9, bend: 0.24 },
-                    { ang:  3.40, len: size * 0.36, lw: 1.9, bend: -0.28 },
-                    { ang:  2.90, len: size * 0.40, lw: 2.1, bend: 0.30 }
-                ];
-                ctx.lineCap = 'round';
-                dryBranches.forEach(b => {
-                    const ex = x + Math.cos(b.ang) * b.len;
-                    const ey = y + Math.sin(b.ang) * b.len;
-                    const mx = x + Math.cos(b.ang + b.bend) * b.len * 0.52;
-                    const my = y + Math.sin(b.ang + b.bend) * b.len * 0.52;
-                    ctx.strokeStyle = '#7a5522';
-                    ctx.lineWidth = b.lw;
-                    ctx.beginPath();
-                    ctx.moveTo(x, y - baseR * 0.28);
-                    ctx.quadraticCurveTo(mx, my, ex, ey);
-                    ctx.stroke();
-                    ctx.fillStyle = '#c4a040';
-                    ctx.beginPath();
-                    ctx.arc(ex, ey, b.lw * 1.4, 0, Math.PI * 2);
-                    ctx.fill();
-                });
-                break;
-            }
-            case 2: {
-                // Columnar — no arms, simple ribbed pillar
-                const cw = size * 0.12, ch = size * 0.48;
-                ctx.fillStyle = primaryColor;
-                ctx.beginPath();
-                ctx.moveTo(x - cw, y); ctx.lineTo(x - cw, y - ch);
-                ctx.quadraticCurveTo(x, y - ch - cw * 0.8, x + cw, y - ch);
-                ctx.lineTo(x + cw, y); ctx.closePath(); ctx.fill();
-                ctx.fillStyle = accentColor;
-                ctx.fillRect(x + cw * 0.38, y - ch, cw * 0.32, ch);
-                // Rib marks
-                ctx.strokeStyle = accentColor; ctx.lineWidth = 1;
-                for (let ri = 0; ri < 4; ri++) {
-                    const ry = y - ch + ch * ri * 0.25;
-                    ctx.beginPath(); ctx.moveTo(x - cw * 0.88, ry); ctx.lineTo(x - cw * 0.88, ry + ch * 0.18); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(x + cw * 0.88, ry); ctx.lineTo(x + cw * 0.88, ry + ch * 0.18); ctx.stroke();
-                }
-                ctx.fillStyle = '#c4a140';
-                for (let i = 0; i < 4; i++) {
-                    const sy = y - ch * 0.20 * (i + 0.5);
-                    ctx.beginPath(); ctx.arc(x + cw * 0.52, sy, 1.2, 0, Math.PI * 2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(x - cw * 0.52, sy, 1.2, 0, Math.PI * 2); ctx.fill();
-                }
-                break;
-            }
-            default: {
-                // Prickly pear — stacked rounded pads at varied angles
-                // Bottom pad (largest, upright)
-                ctx.fillStyle = primaryColor;
-                ctx.beginPath(); ctx.ellipse(x, y - size * 0.20, size * 0.18, size * 0.26, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = accentColor;
-                ctx.beginPath(); ctx.ellipse(x + size * 0.05, y - size * 0.14, size * 0.14, size * 0.20, 0.18, 0, Math.PI * 2); ctx.fill();
-                // Left pad
-                ctx.fillStyle = primaryColor;
-                ctx.beginPath(); ctx.ellipse(x - size * 0.20, y - size * 0.38, size * 0.13, size * 0.19, -0.45, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = accentColor;
-                ctx.beginPath(); ctx.ellipse(x - size * 0.18, y - size * 0.34, size * 0.09, size * 0.14, -0.35, 0, Math.PI * 2); ctx.fill();
-                // Right pad (top)
-                ctx.fillStyle = primaryColor;
-                ctx.beginPath(); ctx.ellipse(x + size * 0.18, y - size * 0.42, size * 0.12, size * 0.17, 0.40, 0, Math.PI * 2); ctx.fill();
-                // Spine dots on each pad
-                ctx.fillStyle = '#c4a140';
-                [[x, y - size * 0.18, 4], [x - size * 0.20, y - size * 0.38, 3], [x + size * 0.18, y - size * 0.42, 3]]
-                .forEach(([px, py, cnt]) => {
-                    for (let si = 0; si < cnt; si++) {
-                        const ang = (si / cnt) * Math.PI * 2;
-                        ctx.beginPath();
-                        ctx.arc(px + Math.cos(ang) * size * 0.07, py + Math.sin(ang) * size * 0.07, 1.5, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                });
-                break;
-            }
-        }
-    }
-
-    drawCrystalStructure(x, y, size, primaryColor, accentColor, seed) {
-        // Alien crystalline structures for space campaign
-        const crystalHeight = size * 0.55;
-        
-        // Main crystal shaft
-        this.ctx.fillStyle = primaryColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.15, y);
-        this.ctx.lineTo(x - size * 0.08, y - crystalHeight);
-        this.ctx.lineTo(x + size * 0.08, y - crystalHeight);
-        this.ctx.lineTo(x + size * 0.15, y);
-        this.ctx.closePath();
-        this.ctx.fill();
-        
-        // Crystal facet highlight
-        this.ctx.fillStyle = accentColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.08, y - crystalHeight);
-        this.ctx.lineTo(x, y - crystalHeight * 0.7);
-        this.ctx.lineTo(x + size * 0.08, y - crystalHeight);
-        this.ctx.closePath();
-        this.ctx.fill();
-        
-        // Side crystal shards
-        if (seed % 2 === 0) {
-            this.ctx.fillStyle = primaryColor;
-            this.ctx.globalAlpha = 0.7;
-            this.ctx.beginPath();
-            this.ctx.moveTo(x + size * 0.15, y - size * 0.2);
-            this.ctx.lineTo(x + size * 0.3, y - size * 0.35);
-            this.ctx.lineTo(x + size * 0.25, y);
-            this.ctx.closePath();
-            this.ctx.fill();
-            this.ctx.globalAlpha = 1;
-        }
-        
-        // Glow effect
-        this.ctx.fillStyle = 'rgba(138, 106, 170, 0.3)';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y - crystalHeight * 0.5, size * 0.25, 0, Math.PI * 2);
-        this.ctx.fill();
-    }
-
-    drawTreeType1(x, y, size, primaryColor, accentColor) {
-        // Tall conifer-style tree
-        const trunkWidth = size * 0.25;
-        const trunkHeight = size * 0.5;
-        
-        // Trunk
-        this.ctx.fillStyle = '#5D4037';
-        this.ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        
-        // Trunk shadow
-        this.ctx.fillStyle = '#3E2723';
-        this.ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
-
-        // Main foliage cone shape (dark)
-        this.ctx.fillStyle = primaryColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.6);
-        this.ctx.lineTo(x + size * 0.35, y - size * 0.1);
-        this.ctx.lineTo(x - size * 0.35, y - size * 0.1);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Mid foliage layer
-        this.ctx.fillStyle = accentColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.35);
-        this.ctx.lineTo(x + size * 0.3, y + size * 0.05);
-        this.ctx.lineTo(x - size * 0.3, y + size * 0.05);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Light foliage layer
-        this.ctx.fillStyle = primaryColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.15);
-        this.ctx.lineTo(x + size * 0.25, y + size * 0.2);
-        this.ctx.lineTo(x - size * 0.25, y + size * 0.2);
-        this.ctx.closePath();
-        this.ctx.fill();
-    }
-
-    drawTreeType2(x, y, size, primaryColor, accentColor) {
-        // Deciduous round tree
-        const trunkWidth = size * 0.2;
-        const trunkHeight = size * 0.4;
-        
-        // Trunk
-        this.ctx.fillStyle = '#6B4423';
-        this.ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        
-        // Trunk highlight
-        this.ctx.fillStyle = '#8B5A3C';
-        this.ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
-
-        // Lower foliage - round dark
-        this.ctx.fillStyle = '#1B5E20';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Upper foliage - round medium
-        this.ctx.fillStyle = '#2E7D32';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y - size * 0.35, size * 0.35, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Top foliage - smaller
-        this.ctx.fillStyle = '#43A047';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y - size * 0.55, size * 0.2, 0, Math.PI * 2);
-        this.ctx.fill();
-    }
-
-    drawTreeType3(x, y, size) {
-        // Sparse tree with distinct branches
-        const trunkWidth = size * 0.22;
-        
-        // Trunk
-        this.ctx.fillStyle = '#795548';
-        this.ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
-        
-        // Trunk shadow
-        this.ctx.fillStyle = '#4E342E';
-        this.ctx.beginPath();
-        this.ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Left foliage cluster
-        this.ctx.fillStyle = '#1B5E20';
-        this.ctx.beginPath();
-        this.ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Right foliage cluster
-        this.ctx.beginPath();
-        this.ctx.arc(x + size * 0.28, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Top foliage cluster
-        this.ctx.fillStyle = '#2E7D32';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
-        this.ctx.fill();
-    }
-
-    drawTreeType4(x, y, size) {
-        // Pine/Spruce style with layered triangles
-        const trunkWidth = size * 0.18;
-        
-        // Trunk
-        this.ctx.fillStyle = '#8B4513';
-        this.ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
-
-        // Bottom foliage layer (widest)
-        this.ctx.fillStyle = '#0D3817';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.05);
-        this.ctx.lineTo(x + size * 0.38, y + size * 0.15);
-        this.ctx.lineTo(x - size * 0.38, y + size * 0.15);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Middle foliage layer
-        this.ctx.fillStyle = '#1B5E20';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.25);
-        this.ctx.lineTo(x + size * 0.3, y);
-        this.ctx.lineTo(x - size * 0.3, y);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Top foliage layer (narrow)
-        this.ctx.fillStyle = '#2E7D32';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.45);
-        this.ctx.lineTo(x + size * 0.2, y - size * 0.15);
-        this.ctx.lineTo(x - size * 0.2, y - size * 0.15);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Very top point
-        this.ctx.fillStyle = '#43A047';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x, y - size * 0.6);
-        this.ctx.lineTo(x + size * 0.12, y - size * 0.45);
-        this.ctx.lineTo(x - size * 0.12, y - size * 0.45);
-        this.ctx.closePath();
-        this.ctx.fill();
-    }
-
-    drawRock(x, y, size, variant) {
-        const terrainInfo = CampaignThemeConfig.getTerrainRenderingInfo(this.currentCampaign);
-        const rockColor = terrainInfo.rockColor;
-        const rockAccent = terrainInfo.rockAccent;
-        const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(x * 0.5 + y * 0.7) % 4;
-        switch(this.currentCampaign) {
-            case 'mountain':
-                this.drawSnowRock(x, y, size, rockColor, rockAccent, seed);
-                break;
-            case 'desert':
-                this.drawSandstoneRock(x, y, size, rockColor, rockAccent, seed);
-                break;
-            case 'space':
-                this.drawAlienRock(x, y, size, rockColor, rockAccent, seed);
-                break;
-            default: // forest
-                this.drawForestRock(x, y, size, rockColor, rockAccent, seed);
-        }
-    }
-
-    drawSnowRock(x, y, size, rockColor, rockAccent, seed) {
-        switch(seed % 4) {
-            case 0: {
-                // Rounded grey boulder with natural irregular shape and snow cap
-                this.ctx.fillStyle = '#6a7880';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.28, y + size * 0.12);
-                this.ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.06, x - size * 0.18, y - size * 0.22);
-                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.12, y - size * 0.24);
-                this.ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
-                this.ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
-                this.ctx.quadraticCurveTo(x - size * 0.10, y + size * 0.22, x - size * 0.28, y + size * 0.12);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Dark shadow face on right
-                this.ctx.fillStyle = 'rgba(38, 48, 58, 0.45)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.12, y - size * 0.24);
-                this.ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
-                this.ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
-                this.ctx.lineTo(x + size * 0.04, y + size * 0.06);
-                this.ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.08, x + size * 0.12, y - size * 0.24);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Highlight on upper left
-                this.ctx.fillStyle = 'rgba(180, 195, 210, 0.40)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.18, y - size * 0.22);
-                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.06, y - size * 0.24);
-                this.ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.12, x - size * 0.14, y - size * 0.08);
-                this.ctx.quadraticCurveTo(x - size * 0.24, y - size * 0.10, x - size * 0.18, y - size * 0.22);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Organic snow cap
-                this.ctx.fillStyle = 'rgba(238, 248, 255, 0.88)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.22, y - size * 0.16);
-                this.ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.26, x + size * 0.06, y - size * 0.24);
-                this.ctx.quadraticCurveTo(x + size * 0.22, y - size * 0.20, x + size * 0.24, y - size * 0.10);
-                this.ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.08, x - size * 0.04, y - size * 0.10);
-                this.ctx.quadraticCurveTo(x - size * 0.18, y - size * 0.08, x - size * 0.22, y - size * 0.16);
-                this.ctx.closePath();
-                this.ctx.fill();
-                break;
-            }
-            case 1: {
-                // Angular slab with faceted faces and snow on top ledge
-                const hw = size * 0.34, hh = size * 0.22;
-                this.ctx.fillStyle = '#586470';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - hw, y + hh * 0.5);
-                this.ctx.lineTo(x - hw * 0.72, y - hh);
-                this.ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
-                this.ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
-                this.ctx.lineTo(x + hw, y + hh * 0.3);
-                this.ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Dark right face
-                this.ctx.fillStyle = '#3a4550';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + hw * 0.68, y - hh * 0.85);
-                this.ctx.lineTo(x + hw, y + hh * 0.3);
-                this.ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
-                this.ctx.lineTo(x + hw * 0.40, y + hh * 0.1);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Lighter top face
-                this.ctx.fillStyle = 'rgba(130, 145, 160, 0.50)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - hw * 0.72, y - hh);
-                this.ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
-                this.ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
-                this.ctx.lineTo(x + hw * 0.20, y - hh * 0.50);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Crack detail
-                this.ctx.strokeStyle = 'rgba(30, 40, 48, 0.30)';
-                this.ctx.lineWidth = size * 0.012;
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - hw * 0.20, y - hh * 0.60);
-                this.ctx.lineTo(x + hw * 0.10, y + hh * 0.10);
-                this.ctx.lineTo(x + hw * 0.30, y + hh * 0.45);
-                this.ctx.stroke();
-                // Snow on top ledge
-                this.ctx.fillStyle = 'rgba(235, 248, 255, 0.90)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - hw * 0.78, y - hh * 0.90);
-                this.ctx.quadraticCurveTo(x - hw * 0.30, y - hh * 1.16, x + hw * 0.20, y - hh * 1.06);
-                this.ctx.quadraticCurveTo(x + hw * 0.68, y - hh * 0.92, x + hw * 0.60, y - hh * 0.72);
-                this.ctx.quadraticCurveTo(x + hw * 0.20, y - hh * 0.56, x - hw * 0.20, y - hh * 0.65);
-                this.ctx.quadraticCurveTo(x - hw * 0.60, y - hh * 0.70, x - hw * 0.78, y - hh * 0.90);
-                this.ctx.closePath();
-                this.ctx.fill();
-                break;
-            }
-            case 2: {
-                // Two overlapping boulders with snow caps
-                // Smaller boulder (behind)
-                this.ctx.fillStyle = '#708090';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.02, y - size * 0.02);
-                this.ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.18, x + size * 0.18, y - size * 0.20);
-                this.ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
-                this.ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.10, y + size * 0.12);
-                this.ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.02, y - size * 0.02);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Shadow on smaller boulder
-                this.ctx.fillStyle = 'rgba(40, 50, 62, 0.40)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.18, y - size * 0.20);
-                this.ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
-                this.ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.16, y + size * 0.12);
-                this.ctx.lineTo(x + size * 0.20, y - size * 0.06);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Larger boulder (front)
-                this.ctx.fillStyle = '#6a7a84';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.30, y + size * 0.10);
-                this.ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.04, x - size * 0.20, y - size * 0.18);
-                this.ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.24, x + size * 0.10, y - size * 0.16);
-                this.ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
-                this.ctx.quadraticCurveTo(x - size * 0.06, y + size * 0.18, x - size * 0.30, y + size * 0.10);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Shadow on larger boulder
-                this.ctx.fillStyle = 'rgba(40, 50, 60, 0.38)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.10, y - size * 0.16);
-                this.ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
-                this.ctx.quadraticCurveTo(x + size * 0.02, y + size * 0.14, x + size * 0.02, y + size * 0.02);
-                this.ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.06, x + size * 0.10, y - size * 0.16);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Highlight on larger boulder
-                this.ctx.fillStyle = 'rgba(175, 190, 205, 0.35)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.20, y - size * 0.18);
-                this.ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.22, x + size * 0.02, y - size * 0.18);
-                this.ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.08, x - size * 0.16, y - size * 0.08);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Snow cap on larger boulder
-                this.ctx.fillStyle = 'rgba(238, 248, 255, 0.86)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.24, y - size * 0.12);
-                this.ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.22, x + size * 0.06, y - size * 0.18);
-                this.ctx.quadraticCurveTo(x + size * 0.12, y - size * 0.12, x + size * 0.08, y - size * 0.06);
-                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.04, x - size * 0.18, y - size * 0.06);
-                this.ctx.quadraticCurveTo(x - size * 0.28, y - size * 0.06, x - size * 0.24, y - size * 0.12);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Snow cap on smaller boulder
-                this.ctx.fillStyle = 'rgba(235, 246, 255, 0.80)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.08, y - size * 0.14);
-                this.ctx.quadraticCurveTo(x + size * 0.16, y - size * 0.20, x + size * 0.24, y - size * 0.16);
-                this.ctx.quadraticCurveTo(x + size * 0.28, y - size * 0.10, x + size * 0.22, y - size * 0.06);
-                this.ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.06, x + size * 0.08, y - size * 0.14);
-                this.ctx.closePath();
-                this.ctx.fill();
-                break;
-            }
-            default: {
-                // Cluster of small stones with varied shapes and snow patches
-                // Main stone
-                this.ctx.fillStyle = '#6a7880';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.26, y + size * 0.14);
-                this.ctx.quadraticCurveTo(x - size * 0.28, y + size * 0.02, x - size * 0.18, y - size * 0.06);
-                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.12, x + size * 0.04, y - size * 0.04);
-                this.ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
-                this.ctx.quadraticCurveTo(x - size * 0.18, y + size * 0.18, x - size * 0.26, y + size * 0.14);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Shadow on main stone
-                this.ctx.fillStyle = 'rgba(40, 52, 62, 0.35)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.04, y - size * 0.04);
-                this.ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
-                this.ctx.lineTo(x - size * 0.02, y + size * 0.04);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Second stone
-                this.ctx.fillStyle = '#5e6e78';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.06, y + size * 0.08);
-                this.ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.04, x + size * 0.16, y - size * 0.08);
-                this.ctx.quadraticCurveTo(x + size * 0.26, y - size * 0.04, x + size * 0.24, y + size * 0.06);
-                this.ctx.quadraticCurveTo(x + size * 0.18, y + size * 0.12, x + size * 0.06, y + size * 0.08);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Third stone
-                this.ctx.fillStyle = '#74848c';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.04, y + size * 0.18);
-                this.ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.08, y + size * 0.12);
-                this.ctx.quadraticCurveTo(x + size * 0.12, y + size * 0.18, x + size * 0.04, y + size * 0.22);
-                this.ctx.quadraticCurveTo(x - size * 0.04, y + size * 0.22, x - size * 0.04, y + size * 0.18);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Fourth small stone
-                this.ctx.fillStyle = '#667682';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.08, y - size * 0.10);
-                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.16, x + size * 0.06, y - size * 0.14);
-                this.ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.10, x + size * 0.06, y - size * 0.06);
-                this.ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.04, x - size * 0.08, y - size * 0.10);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Snow on main stone
-                this.ctx.fillStyle = 'rgba(238, 248, 255, 0.82)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.20, y - size * 0.02);
-                this.ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.10, x + size * 0.02, y - size * 0.06);
-                this.ctx.quadraticCurveTo(x, y + size * 0.02, x - size * 0.12, y + size * 0.02);
-                this.ctx.quadraticCurveTo(x - size * 0.22, y + size * 0.02, x - size * 0.20, y - size * 0.02);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Snow on second stone
-                this.ctx.fillStyle = 'rgba(235, 246, 255, 0.78)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.10, y - size * 0.04);
-                this.ctx.quadraticCurveTo(x + size * 0.16, y - size * 0.08, x + size * 0.22, y - size * 0.04);
-                this.ctx.quadraticCurveTo(x + size * 0.20, y + size * 0.02, x + size * 0.12, y + size * 0.02);
-                this.ctx.quadraticCurveTo(x + size * 0.08, y, x + size * 0.10, y - size * 0.04);
-                this.ctx.closePath();
-                this.ctx.fill();
-                break;
-            }
-        }
-    }
-
-    drawSandstoneRock(x, y, size, rockColor, rockAccent, seed) {
-        const ctx = this.ctx;
-        switch(seed % 4) {
-            case 0: {
-                // Rounded sandstone boulder — organic irregular shape
-                ctx.fillStyle = 'rgba(80,40,10,0.30)';
-                ctx.beginPath();
-                ctx.moveTo(x - size * 0.28, y + size * 0.14);
-                ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.06, x - size * 0.18, y - size * 0.22);
-                ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.12, y - size * 0.24);
-                ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
-                ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
-                ctx.quadraticCurveTo(x - size * 0.10, y + size * 0.22, x - size * 0.28, y + size * 0.14);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = '#c49050';
-                ctx.beginPath();
-                ctx.moveTo(x - size * 0.28, y + size * 0.12);
-                ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.06, x - size * 0.18, y - size * 0.22);
-                ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.12, y - size * 0.24);
-                ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
-                ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
-                ctx.quadraticCurveTo(x - size * 0.10, y + size * 0.22, x - size * 0.28, y + size * 0.12);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = 'rgba(80,40,10,0.48)';
-                ctx.beginPath();
-                ctx.moveTo(x + size * 0.12, y - size * 0.24);
-                ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
-                ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
-                ctx.lineTo(x + size * 0.04, y + size * 0.06);
-                ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.08, x + size * 0.12, y - size * 0.24);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = 'rgba(220,178,96,0.45)';
-                ctx.beginPath();
-                ctx.moveTo(x - size * 0.18, y - size * 0.22);
-                ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.06, y - size * 0.24);
-                ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.12, x - size * 0.14, y - size * 0.08);
-                ctx.quadraticCurveTo(x - size * 0.24, y - size * 0.10, x - size * 0.18, y - size * 0.22);
-                ctx.closePath();
-                ctx.fill();
-                break;
-            }
-            case 1: {
-                // Layered sandstone slab with strata
-                const hw = size * 0.34, hh = size * 0.22;
-                ctx.fillStyle = 'rgba(80,40,10,0.28)';
-                ctx.beginPath();
-                ctx.moveTo(x - hw, y + hh * 0.6);
-                ctx.lineTo(x - hw * 0.72, y - hh * 1.0);
-                ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
-                ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
-                ctx.lineTo(x + hw, y + hh * 0.4);
-                ctx.lineTo(x + hw * 0.60, y + hh * 0.7);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = '#b88540';
-                ctx.beginPath();
-                ctx.moveTo(x - hw, y + hh * 0.5);
-                ctx.lineTo(x - hw * 0.72, y - hh);
-                ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
-                ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
-                ctx.lineTo(x + hw, y + hh * 0.3);
-                ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = '#8a5e20';
-                ctx.beginPath();
-                ctx.moveTo(x + hw * 0.68, y - hh * 0.85);
-                ctx.lineTo(x + hw, y + hh * 0.3);
-                ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
-                ctx.lineTo(x + hw * 0.40, y + hh * 0.1);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = 'rgba(210,168,80,0.55)';
-                ctx.beginPath();
-                ctx.moveTo(x - hw * 0.72, y - hh);
-                ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
-                ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
-                ctx.lineTo(x + hw * 0.20, y - hh * 0.50);
-                ctx.closePath();
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(80,45,8,0.35)';
-                ctx.lineWidth = size * 0.012;
-                for (let i = 0; i < 3; i++) {
-                    const ly = y - hh * 0.30 + i * hh * 0.46;
-                    ctx.beginPath();
-                    ctx.moveTo(x - hw * 0.78, ly);
-                    ctx.lineTo(x + hw * 0.60, ly + hh * 0.04);
-                    ctx.stroke();
-                }
-                break;
-            }
-            case 2: {
-                // Two overlapping sandstone boulders
-                ctx.fillStyle = 'rgba(80,40,10,0.28)';
-                ctx.beginPath();
-                ctx.moveTo(x + size * 0.02, y - size * 0.02);
-                ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.18, x + size * 0.18, y - size * 0.20);
-                ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
-                ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.10, y + size * 0.12);
-                ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.02, y - size * 0.02);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = '#d4a860';
-                ctx.beginPath();
-                ctx.moveTo(x + size * 0.02, y - size * 0.02);
-                ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.18, x + size * 0.18, y - size * 0.20);
-                ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
-                ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.10, y + size * 0.12);
-                ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.02, y - size * 0.02);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = 'rgba(80,42,10,0.42)';
-                ctx.beginPath();
-                ctx.moveTo(x + size * 0.18, y - size * 0.20);
-                ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
-                ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.16, y + size * 0.12);
-                ctx.lineTo(x + size * 0.20, y - size * 0.06);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = '#c49050';
-                ctx.beginPath();
-                ctx.moveTo(x - size * 0.30, y + size * 0.10);
-                ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.04, x - size * 0.20, y - size * 0.18);
-                ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.24, x + size * 0.10, y - size * 0.16);
-                ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
-                ctx.quadraticCurveTo(x - size * 0.06, y + size * 0.18, x - size * 0.30, y + size * 0.10);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = 'rgba(80,40,10,0.42)';
-                ctx.beginPath();
-                ctx.moveTo(x + size * 0.10, y - size * 0.16);
-                ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
-                ctx.quadraticCurveTo(x + size * 0.02, y + size * 0.14, x + size * 0.02, y + size * 0.02);
-                ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.06, x + size * 0.10, y - size * 0.16);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = 'rgba(220,178,96,0.40)';
-                ctx.beginPath();
-                ctx.moveTo(x - size * 0.20, y - size * 0.18);
-                ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.22, x + size * 0.02, y - size * 0.18);
-                ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.08, x - size * 0.16, y - size * 0.08);
-                ctx.closePath();
-                ctx.fill();
-                break;
-            }
-            default: {
-                // Cluster of small sandstone pebbles
-                ctx.fillStyle = '#c49050';
-                ctx.beginPath();
-                ctx.moveTo(x - size * 0.26, y + size * 0.14);
-                ctx.quadraticCurveTo(x - size * 0.28, y + size * 0.02, x - size * 0.18, y - size * 0.06);
-                ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.12, x + size * 0.04, y - size * 0.04);
-                ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
-                ctx.quadraticCurveTo(x - size * 0.18, y + size * 0.18, x - size * 0.26, y + size * 0.14);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = 'rgba(80,40,10,0.38)';
-                ctx.beginPath();
-                ctx.moveTo(x + size * 0.04, y - size * 0.04);
-                ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
-                ctx.lineTo(x - size * 0.02, y + size * 0.04);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = '#b88040';
-                ctx.beginPath();
-                ctx.moveTo(x + size * 0.06, y + size * 0.08);
-                ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.04, x + size * 0.16, y - size * 0.08);
-                ctx.quadraticCurveTo(x + size * 0.26, y - size * 0.04, x + size * 0.24, y + size * 0.06);
-                ctx.quadraticCurveTo(x + size * 0.18, y + size * 0.12, x + size * 0.06, y + size * 0.08);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = '#d4aa62';
-                ctx.beginPath();
-                ctx.moveTo(x - size * 0.04, y + size * 0.18);
-                ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.08, y + size * 0.12);
-                ctx.quadraticCurveTo(x + size * 0.12, y + size * 0.18, x + size * 0.04, y + size * 0.22);
-                ctx.quadraticCurveTo(x - size * 0.04, y + size * 0.22, x - size * 0.04, y + size * 0.18);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = '#c0924a';
-                ctx.beginPath();
-                ctx.moveTo(x - size * 0.08, y - size * 0.10);
-                ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.16, x + size * 0.06, y - size * 0.14);
-                ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.10, x + size * 0.06, y - size * 0.06);
-                ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.04, x - size * 0.08, y - size * 0.10);
-                ctx.closePath();
-                ctx.fill();
-                ctx.fillStyle = 'rgba(220,178,96,0.42)';
-                ctx.beginPath();
-                ctx.moveTo(x - size * 0.20, y - size * 0.02);
-                ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.10, x + size * 0.02, y - size * 0.06);
-                ctx.quadraticCurveTo(x, y + size * 0.02, x - size * 0.12, y + size * 0.02);
-                ctx.quadraticCurveTo(x - size * 0.22, y + size * 0.02, x - size * 0.20, y - size * 0.02);
-                ctx.closePath();
-                ctx.fill();
-                break;
-            }
-        }
-    }
-
-    drawAlienRock(x, y, size, rockColor, rockAccent, seed) {
-        // Weird alien rocks - 5 abstract variations
-        const typeIndex = seed % 5;
-        
-        switch(typeIndex) {
-            case 0:
-                this.drawSpaceRockFractal(x, y, size);
-                break;
-            case 1:
-                this.drawSpaceRockSpiky(x, y, size);
-                break;
-            case 2:
-                this.drawSpaceRockCrystalline(x, y, size);
-                break;
-            case 3:
-                this.drawSpaceRockVoid(x, y, size);
-                break;
-            default:
-                this.drawSpaceRockNonEuclidean(x, y, size);
-        }
-    }
-
-    drawSpaceRockFractal(x, y, size) {
-        // Asteroid with deterministic surface marks — no Math.random, no flicker
-        const s = (a, b) => Math.abs(Math.sin(x * 0.43 + y * 0.17 + a * 2.3 + b * 1.7));
-
-        // Main jagged body
-        this.ctx.fillStyle = '#5a4a7a';
-        const points = [
-            {x: -0.25, y: -0.30}, {x: 0.15, y: -0.35},
-            {x: 0.28, y: -0.10}, {x: 0.35, y: 0.15},
-            {x: 0.20, y: 0.30},  {x: -0.10, y: 0.35},
-            {x: -0.32, y: 0.10}, {x: -0.30, y: -0.15}
-        ];
-        this.ctx.beginPath();
-        this.ctx.moveTo(x + points[0].x * size, y + points[0].y * size);
-        for (let i = 1; i < points.length; i++) {
-            this.ctx.lineTo(x + points[i].x * size, y + points[i].y * size);
-        }
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Highlight face (top-left facet)
-        this.ctx.fillStyle = 'rgba(120,88,180,0.55)';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x + points[0].x * size, y + points[0].y * size);
-        this.ctx.lineTo(x + points[1].x * size, y + points[1].y * size);
-        this.ctx.lineTo(x, y);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Deterministic surface veins — positions seeded from x,y
-        this.ctx.strokeStyle = 'rgba(200,150,255,0.45)';
-        this.ctx.lineWidth = 1;
-        for (let i = 0; i < 6; i++) {
-            const fx = (s(i, 0) - 0.5) * size * 0.38;
-            const fy = (s(i, 1) - 0.5) * size * 0.38;
-            const ang = s(i, 2) * Math.PI * 2;
-            const len = size * (0.04 + s(i, 3) * 0.07);
-            this.ctx.beginPath();
-            this.ctx.moveTo(x + fx, y + fy);
-            this.ctx.lineTo(x + fx + Math.cos(ang) * len, y + fy + Math.sin(ang) * len);
-            this.ctx.stroke();
-        }
-
-        // Glowing edge outline
-        this.ctx.strokeStyle = 'rgba(150,100,255,0.70)';
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x + points[0].x * size, y + points[0].y * size);
-        for (let i = 1; i < points.length; i++) {
-            this.ctx.lineTo(x + points[i].x * size, y + points[i].y * size);
-        }
-        this.ctx.closePath();
-        this.ctx.stroke();
-
-        // Dark void center
-        this.ctx.fillStyle = 'rgba(40,20,60,0.80)';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.12, 0, Math.PI * 2);
-        this.ctx.fill();
-    }
-
-    drawSpaceRockSpiky(x, y, size) {
-        // Jagged asteroid with bioluminescent spikes
-        this.ctx.fillStyle = '#6a4a8a';
-        
-        // Main body
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.22, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Spike protrusions in all directions
-        const spikeCount = 12;
-        for (let i = 0; i < spikeCount; i++) {
-            const angle = (i / spikeCount) * Math.PI * 2;
-            const baseX = x + Math.cos(angle) * size * 0.22;
-            const baseY = y + Math.sin(angle) * size * 0.22;
-            const tipX = x + Math.cos(angle) * size * 0.35;
-            const tipY = y + Math.sin(angle) * size * 0.35;
-
-            // Spike body
-            this.ctx.fillStyle = '#5a3a7a';
-            this.ctx.beginPath();
-            this.ctx.moveTo(baseX, baseY);
-            this.ctx.lineTo(tipX, tipY);
-            this.ctx.lineTo(baseX + Math.cos(angle + 0.2) * size * 0.08, baseY + Math.sin(angle + 0.2) * size * 0.08);
-            this.ctx.closePath();
-            this.ctx.fill();
-
-            // Bioluminescent glow on spike
-            this.ctx.strokeStyle = `rgba(100, ${150 + Math.sin(i) * 50}, 255, 0.8)`;
-            this.ctx.lineWidth = 2;
-            this.ctx.beginPath();
-            this.ctx.moveTo(baseX, baseY);
-            this.ctx.lineTo(tipX, tipY);
-            this.ctx.stroke();
-        }
-
-        // Glow core
-        this.ctx.fillStyle = 'rgba(100, 150, 255, 0.6)';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.18, 0, Math.PI * 2);
-        this.ctx.fill();
-    }
-
-    drawSpaceRockCrystalline(x, y, size) {
-        // Crystalline hexagonal structure
-        const hexagonSize = size * 0.25;
-        
-        // Main crystal body
-        this.ctx.fillStyle = '#7a5aaa';
-        this.ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const px = x + Math.cos(angle) * hexagonSize;
-            const py = y + Math.sin(angle) * hexagonSize;
-            if (i === 0) this.ctx.moveTo(px, py);
-            else this.ctx.lineTo(px, py);
-        }
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Inner crystal layers
-        this.ctx.fillStyle = '#9a7aaa';
-        this.ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const px = x + Math.cos(angle) * hexagonSize * 0.6;
-            const py = y + Math.sin(angle) * hexagonSize * 0.6;
-            if (i === 0) this.ctx.moveTo(px, py);
-            else this.ctx.lineTo(px, py);
-        }
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Radiating glow rays
-        this.ctx.strokeStyle = 'rgba(200, 150, 255, 0.7)';
-        this.ctx.lineWidth = 2;
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const startX = x + Math.cos(angle) * hexagonSize;
-            const startY = y + Math.sin(angle) * hexagonSize;
-            const endX = x + Math.cos(angle) * hexagonSize * 1.4;
-            const endY = y + Math.sin(angle) * hexagonSize * 1.4;
-            this.ctx.beginPath();
-            this.ctx.moveTo(startX, startY);
-            this.ctx.lineTo(endX, endY);
-            this.ctx.stroke();
-        }
-
-        // Center glow
-        this.ctx.fillStyle = 'rgba(200, 150, 255, 0.9)';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.1, 0, Math.PI * 2);
-        this.ctx.fill();
-    }
-
-    drawSpaceRockVoid(x, y, size) {
-        // Floating chunk with impossible topology
-        // Outer distorted form
-        this.ctx.fillStyle = '#4a3a6a';
-        this.ctx.beginPath();
-        for (let i = 0; i < 12; i++) {
-            const angle = (i / 12) * Math.PI * 2;
-            const distortion = 0.15 + Math.sin(angle * 3) * 0.1;
-            const px = x + Math.cos(angle) * size * distortion;
-            const py = y + Math.sin(angle) * size * distortion;
-            if (i === 0) this.ctx.moveTo(px, py);
-            else this.ctx.lineTo(px, py);
-        }
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Energy field distortion ring
-        this.ctx.strokeStyle = 'rgba(150, 100, 200, 0.5)';
-        this.ctx.lineWidth = 3;
-        this.ctx.beginPath();
-        for (let i = 0; i < 20; i++) {
-            const angle = (i / 20) * Math.PI * 2;
-            const radius = size * (0.2 + Math.sin(angle * 4) * 0.08);
-            const px = x + Math.cos(angle) * radius;
-            const py = y + Math.sin(angle) * radius;
-            if (i === 0) this.ctx.moveTo(px, py);
-            else this.ctx.lineTo(px, py);
-        }
-        this.ctx.closePath();
-        this.ctx.stroke();
-
-        // Void core - darker than surrounding space
-        this.ctx.fillStyle = 'rgba(20, 10, 40, 0.9)';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.12, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // Void event horizon
-        this.ctx.strokeStyle = 'rgba(200, 100, 255, 0.8)';
-        this.ctx.lineWidth = 1;
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.12, 0, Math.PI * 2);
-        this.ctx.stroke();
-    }
-
-    drawSpaceRockNonEuclidean(x, y, size) {
-        // Non-euclidean geometry rock with bezier curves and energy field
-        // Multiple overlapping surfaces at impossible angles
-        
-        // First impossible surface
-        this.ctx.fillStyle = '#6a4a9a';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.25, y - size * 0.2);
-        this.ctx.bezierCurveTo(
-            x - size * 0.3, y - size * 0.35,
-            x + size * 0.1, y - size * 0.4,
-            x + size * 0.3, y - size * 0.1
-        );
-        this.ctx.lineTo(x + size * 0.2, y + size * 0.15);
-        this.ctx.bezierCurveTo(
-            x + size * 0.05, y + size * 0.3,
-            x - size * 0.15, y + size * 0.25,
-            x - size * 0.25, y + size * 0.05
-        );
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Second overlapping surface
-        this.ctx.fillStyle = '#7a5aaa';
-        this.ctx.globalAlpha = 0.7;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.15, y - size * 0.25);
-        this.ctx.bezierCurveTo(
-            x - size * 0.05, y - size * 0.38,
-            x + size * 0.25, y - size * 0.3,
-            x + size * 0.25, y);
-        this.ctx.lineTo(x + size * 0.1, y + size * 0.2);
-        this.ctx.bezierCurveTo(
-            x - size * 0.05, y + size * 0.2,
-            x - size * 0.2, y + size * 0.1,
-            x - size * 0.15, y - size * 0.1
-        );
-        this.ctx.closePath();
-        this.ctx.fill();
-        this.ctx.globalAlpha = 1;
-
-        // Energy flowing between surfaces
-        this.ctx.strokeStyle = 'rgba(150, 100, 255, 0.6)';
-        this.ctx.lineWidth = 2;
-        for (let i = 0; i < 5; i++) {
-            const progress = i / 5;
-            const startX = x - size * 0.25 + size * 0.5 * progress;
-            const startY = y - size * 0.2;
-            const endX = x - size * 0.25 + size * 0.5 * progress;
-            const endY = y + size * 0.2;
-            
-            this.ctx.beginPath();
-            this.ctx.moveTo(startX, startY);
-            this.ctx.quadraticCurveTo(
-                startX + Math.sin(progress * Math.PI * 4) * size * 0.1,
-                (startY + endY) * 0.5,
-                endX, endY
-            );
-            this.ctx.stroke();
-        }
-
-        // Edge glow
-        this.ctx.strokeStyle = 'rgba(150, 100, 255, 0.9)';
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.25, y - size * 0.2);
-        this.ctx.bezierCurveTo(
-            x - size * 0.3, y - size * 0.35,
-            x + size * 0.1, y - size * 0.4,
-            x + size * 0.3, y - size * 0.1
-        );
-        this.ctx.stroke();
-    }
-
-    drawForestRock(x, y, size, rockColor, rockAccent, seed) {
-        switch(seed % 4) {
-            case 0: {
-                // Rounded grey boulder with natural irregular shape and shading
-                this.ctx.fillStyle = '#6a7880';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.28, y + size * 0.12);
-                this.ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.06, x - size * 0.18, y - size * 0.22);
-                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.12, y - size * 0.24);
-                this.ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
-                this.ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
-                this.ctx.quadraticCurveTo(x - size * 0.10, y + size * 0.22, x - size * 0.28, y + size * 0.12);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Dark shadow face on right
-                this.ctx.fillStyle = 'rgba(38, 48, 58, 0.45)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.12, y - size * 0.24);
-                this.ctx.quadraticCurveTo(x + size * 0.30, y - size * 0.16, x + size * 0.32, y + size * 0.02);
-                this.ctx.quadraticCurveTo(x + size * 0.30, y + size * 0.16, x + size * 0.10, y + size * 0.20);
-                this.ctx.lineTo(x + size * 0.04, y + size * 0.06);
-                this.ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.08, x + size * 0.12, y - size * 0.24);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Highlight on upper left
-                this.ctx.fillStyle = 'rgba(180, 195, 210, 0.40)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.18, y - size * 0.22);
-                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.28, x + size * 0.06, y - size * 0.24);
-                this.ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.12, x - size * 0.14, y - size * 0.08);
-                this.ctx.quadraticCurveTo(x - size * 0.24, y - size * 0.10, x - size * 0.18, y - size * 0.22);
-                this.ctx.closePath();
-                this.ctx.fill();
-                break;
-            }
-            case 1: {
-                // Angular slab with faceted faces
-                const hw = size * 0.34, hh = size * 0.22;
-                this.ctx.fillStyle = '#586470';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - hw, y + hh * 0.5);
-                this.ctx.lineTo(x - hw * 0.72, y - hh);
-                this.ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
-                this.ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
-                this.ctx.lineTo(x + hw, y + hh * 0.3);
-                this.ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Dark right face
-                this.ctx.fillStyle = '#3a4550';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + hw * 0.68, y - hh * 0.85);
-                this.ctx.lineTo(x + hw, y + hh * 0.3);
-                this.ctx.lineTo(x + hw * 0.60, y + hh * 0.6);
-                this.ctx.lineTo(x + hw * 0.40, y + hh * 0.1);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Lighter top face
-                this.ctx.fillStyle = 'rgba(130, 145, 160, 0.50)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - hw * 0.72, y - hh);
-                this.ctx.lineTo(x - hw * 0.10, y - hh * 1.10);
-                this.ctx.lineTo(x + hw * 0.68, y - hh * 0.85);
-                this.ctx.lineTo(x + hw * 0.20, y - hh * 0.50);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Crack detail
-                this.ctx.strokeStyle = 'rgba(30, 40, 48, 0.30)';
-                this.ctx.lineWidth = size * 0.012;
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - hw * 0.20, y - hh * 0.60);
-                this.ctx.lineTo(x + hw * 0.10, y + hh * 0.10);
-                this.ctx.lineTo(x + hw * 0.30, y + hh * 0.45);
-                this.ctx.stroke();
-                break;
-            }
-            case 2: {
-                // Two overlapping boulders
-                // Smaller boulder (behind)
-                this.ctx.fillStyle = '#708090';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.02, y - size * 0.02);
-                this.ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.18, x + size * 0.18, y - size * 0.20);
-                this.ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
-                this.ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.10, y + size * 0.12);
-                this.ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.02, y - size * 0.02);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Shadow on smaller boulder
-                this.ctx.fillStyle = 'rgba(40, 50, 62, 0.40)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.18, y - size * 0.20);
-                this.ctx.quadraticCurveTo(x + size * 0.32, y - size * 0.16, x + size * 0.30, y + size * 0.02);
-                this.ctx.quadraticCurveTo(x + size * 0.26, y + size * 0.12, x + size * 0.16, y + size * 0.12);
-                this.ctx.lineTo(x + size * 0.20, y - size * 0.06);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Larger boulder (front)
-                this.ctx.fillStyle = '#6a7a84';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.30, y + size * 0.10);
-                this.ctx.quadraticCurveTo(x - size * 0.34, y - size * 0.04, x - size * 0.20, y - size * 0.18);
-                this.ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.24, x + size * 0.10, y - size * 0.16);
-                this.ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
-                this.ctx.quadraticCurveTo(x - size * 0.06, y + size * 0.18, x - size * 0.30, y + size * 0.10);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Shadow on larger boulder
-                this.ctx.fillStyle = 'rgba(40, 50, 60, 0.38)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.10, y - size * 0.16);
-                this.ctx.quadraticCurveTo(x + size * 0.18, y - size * 0.06, x + size * 0.14, y + size * 0.10);
-                this.ctx.quadraticCurveTo(x + size * 0.02, y + size * 0.14, x + size * 0.02, y + size * 0.02);
-                this.ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.06, x + size * 0.10, y - size * 0.16);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Highlight on larger boulder
-                this.ctx.fillStyle = 'rgba(175, 190, 205, 0.35)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.20, y - size * 0.18);
-                this.ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.22, x + size * 0.02, y - size * 0.18);
-                this.ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.08, x - size * 0.16, y - size * 0.08);
-                this.ctx.closePath();
-                this.ctx.fill();
-                break;
-            }
-            default: {
-                // Cluster of small stones with varied shapes
-                // Main stone
-                this.ctx.fillStyle = '#6a7880';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.26, y + size * 0.14);
-                this.ctx.quadraticCurveTo(x - size * 0.28, y + size * 0.02, x - size * 0.18, y - size * 0.06);
-                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.12, x + size * 0.04, y - size * 0.04);
-                this.ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
-                this.ctx.quadraticCurveTo(x - size * 0.18, y + size * 0.18, x - size * 0.26, y + size * 0.14);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Shadow on main stone
-                this.ctx.fillStyle = 'rgba(40, 52, 62, 0.35)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.04, y - size * 0.04);
-                this.ctx.quadraticCurveTo(x + size * 0.06, y + size * 0.08, x - size * 0.06, y + size * 0.16);
-                this.ctx.lineTo(x - size * 0.02, y + size * 0.04);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Second stone
-                this.ctx.fillStyle = '#5e6e78';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x + size * 0.06, y + size * 0.08);
-                this.ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.04, x + size * 0.16, y - size * 0.08);
-                this.ctx.quadraticCurveTo(x + size * 0.26, y - size * 0.04, x + size * 0.24, y + size * 0.06);
-                this.ctx.quadraticCurveTo(x + size * 0.18, y + size * 0.12, x + size * 0.06, y + size * 0.08);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Third stone
-                this.ctx.fillStyle = '#74848c';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.04, y + size * 0.18);
-                this.ctx.quadraticCurveTo(x - size * 0.02, y + size * 0.10, x + size * 0.08, y + size * 0.12);
-                this.ctx.quadraticCurveTo(x + size * 0.12, y + size * 0.18, x + size * 0.04, y + size * 0.22);
-                this.ctx.quadraticCurveTo(x - size * 0.04, y + size * 0.22, x - size * 0.04, y + size * 0.18);
-                this.ctx.closePath();
-                this.ctx.fill();
-                // Fourth small stone
-                this.ctx.fillStyle = '#667682';
-                this.ctx.beginPath();
-                this.ctx.moveTo(x - size * 0.08, y - size * 0.10);
-                this.ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.16, x + size * 0.06, y - size * 0.14);
-                this.ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.10, x + size * 0.06, y - size * 0.06);
-                this.ctx.quadraticCurveTo(x - size * 0.02, y - size * 0.04, x - size * 0.08, y - size * 0.10);
-                this.ctx.closePath();
-                this.ctx.fill();
-                break;
-            }
-        }
-    }
-
-    drawRockType1(x, y, size, primaryColor, accentColor) {
-        // Jagged irregular rock — matches game renderRockType1
-        const ctx = this.ctx;
-        
-        // Drop shadow
-        ctx.fillStyle = '#1a1a18';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.34, y + size * 0.23);
-        ctx.lineTo(x - size * 0.36, y - size * 0.22);
-        ctx.lineTo(x - size * 0.21, y - size * 0.38);
-        ctx.lineTo(x + size * 0.06, y - size * 0.43);
-        ctx.lineTo(x + size * 0.36, y - size * 0.13);
-        ctx.lineTo(x + size * 0.35, y + size * 0.28);
-        ctx.lineTo(x + 1, y + size * 0.42);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Main rock body
-        ctx.fillStyle = '#5e5e5e';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.35, y - size * 0.25);
-        ctx.lineTo(x - size * 0.2, y - size * 0.4);
-        ctx.lineTo(x + size * 0.05, y - size * 0.45);
-        ctx.lineTo(x + size * 0.35, y - size * 0.15);
-        ctx.lineTo(x + size * 0.32, y + size * 0.25);
-        ctx.lineTo(x, y + size * 0.38);
-        ctx.lineTo(x - size * 0.35, y + size * 0.2);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Right shadow face
-        ctx.fillStyle = '#3a3a3a';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.32, y + size * 0.25);
-        ctx.lineTo(x + size * 0.35, y - size * 0.15);
-        ctx.lineTo(x + size * 0.05, y - size * 0.45);
-        ctx.lineTo(x + size * 0.08, y - size * 0.3);
-        ctx.lineTo(x + size * 0.02, y + size * 0.32);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Light highlights on upper faces
-        ctx.fillStyle = '#8a8a8a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.2, y - size * 0.4);
-        ctx.lineTo(x + size * 0.05, y - size * 0.45);
-        ctx.lineTo(x - size * 0.05, y - size * 0.25);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Weathering spots
-        ctx.fillStyle = '#4a4440';
-        for (let i = 0; i < 4; i++) {
-            const offsetX = (Math.sin(i * 1.7 + x * 0.015) - 0.5) * size * 0.3;
-            const offsetY = (Math.cos(i * 1.7 + y * 0.015) - 0.5) * size * 0.22;
-            const spotSize = size * (0.06 + Math.abs(Math.sin(i * 0.7)) * 0.03);
-            ctx.beginPath();
-            ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // Rock cracks
-        ctx.strokeStyle = '#2a2a28';
-        ctx.lineWidth = 1.5;
-        const crackCount = 2 + Math.floor(Math.abs(Math.sin(x * 0.02)) * 2);
-        for (let i = 0; i < crackCount; i++) {
-            const startX = (Math.sin(i * 0.7 + x * 0.01) - 0.5) * size * 0.3;
-            const startY = (Math.cos(i * 0.7 + y * 0.01) - 0.5) * size * 0.2;
-            const endX = startX + (Math.sin(i * 1.2 + x * 0.02) - 0.5) * size * 0.2;
-            const endY = startY + (Math.cos(i * 1.2 + y * 0.02) - 0.5) * size * 0.15;
-            ctx.beginPath();
-            ctx.moveTo(x + startX, y + startY);
-            ctx.lineTo(x + endX, y + endY);
-            ctx.stroke();
-        }
-        
-        // Outline
-        ctx.strokeStyle = '#1a1a1a';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.35, y - size * 0.25);
-        ctx.lineTo(x - size * 0.2, y - size * 0.4);
-        ctx.lineTo(x + size * 0.05, y - size * 0.45);
-        ctx.lineTo(x + size * 0.35, y - size * 0.15);
-        ctx.lineTo(x + size * 0.32, y + size * 0.25);
-        ctx.lineTo(x, y + size * 0.38);
-        ctx.lineTo(x - size * 0.35, y + size * 0.2);
-        ctx.closePath();
-        ctx.stroke();
-    }
-
-    drawRockType2(x, y, size, primaryColor, accentColor) {
-        // Irregular boulder — matches game renderRockType2
-        const ctx = this.ctx;
-        
-        // Drop shadow
-        ctx.fillStyle = '#1a1a18';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.30, y + size * 0.22);
-        ctx.lineTo(x - size * 0.36, y + size * 0.05);
-        ctx.lineTo(x - size * 0.28, y - size * 0.22);
-        ctx.lineTo(x - size * 0.08, y - size * 0.34);
-        ctx.lineTo(x + size * 0.20, y - size * 0.30);
-        ctx.lineTo(x + size * 0.36, y - size * 0.10);
-        ctx.lineTo(x + size * 0.34, y + size * 0.18);
-        ctx.lineTo(x + size * 0.18, y + size * 0.30);
-        ctx.lineTo(x - size * 0.10, y + size * 0.32);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Main boulder body — irregular polygon
-        ctx.fillStyle = '#636363';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.32, y + size * 0.18);
-        ctx.lineTo(x - size * 0.38, y + size * 0.02);
-        ctx.lineTo(x - size * 0.30, y - size * 0.20);
-        ctx.lineTo(x - size * 0.10, y - size * 0.36);
-        ctx.lineTo(x + size * 0.18, y - size * 0.32);
-        ctx.lineTo(x + size * 0.34, y - size * 0.12);
-        ctx.lineTo(x + size * 0.32, y + size * 0.15);
-        ctx.lineTo(x + size * 0.16, y + size * 0.28);
-        ctx.lineTo(x - size * 0.12, y + size * 0.30);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Darker right/bottom face
-        ctx.fillStyle = '#444444';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.34, y - size * 0.12);
-        ctx.lineTo(x + size * 0.32, y + size * 0.15);
-        ctx.lineTo(x + size * 0.16, y + size * 0.28);
-        ctx.lineTo(x - size * 0.12, y + size * 0.30);
-        ctx.lineTo(x - size * 0.05, y + size * 0.10);
-        ctx.lineTo(x + size * 0.15, y - size * 0.05);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Light highlight on upper-left
-        ctx.fillStyle = '#9a9a9a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.30, y - size * 0.20);
-        ctx.lineTo(x - size * 0.10, y - size * 0.36);
-        ctx.lineTo(x + size * 0.08, y - size * 0.28);
-        ctx.lineTo(x - size * 0.12, y - size * 0.10);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Secondary highlight
-        ctx.fillStyle = '#888888';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.38, y + size * 0.02);
-        ctx.lineTo(x - size * 0.30, y - size * 0.15);
-        ctx.lineTo(x - size * 0.18, y - size * 0.02);
-        ctx.lineTo(x - size * 0.28, y + size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Weathering spots
-        ctx.fillStyle = '#4e4844';
-        for (let i = 0; i < 4; i++) {
-            const angle = (i / 4) * Math.PI * 2 + 0.5;
-            const distance = size * (0.12 + Math.abs(Math.sin(i * 0.5)) * 0.08);
-            const vx = x + Math.cos(angle) * distance;
-            const vy = y + Math.sin(angle) * distance;
-            const spotSize = size * (0.05 + Math.abs(Math.cos(i * 0.7)) * 0.03);
-            ctx.beginPath();
-            ctx.arc(vx, vy, spotSize, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // Subtle cracks
-        ctx.strokeStyle = '#2e2e2c';
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.10, y - size * 0.15);
-        ctx.lineTo(x + size * 0.10, y + size * 0.12);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.05, y - size * 0.20);
-        ctx.lineTo(x + size * 0.20, y + size * 0.05);
-        ctx.stroke();
-        
-        // Outline
-        ctx.strokeStyle = '#1a1a1a';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.32, y + size * 0.18);
-        ctx.lineTo(x - size * 0.38, y + size * 0.02);
-        ctx.lineTo(x - size * 0.30, y - size * 0.20);
-        ctx.lineTo(x - size * 0.10, y - size * 0.36);
-        ctx.lineTo(x + size * 0.18, y - size * 0.32);
-        ctx.lineTo(x + size * 0.34, y - size * 0.12);
-        ctx.lineTo(x + size * 0.32, y + size * 0.15);
-        ctx.lineTo(x + size * 0.16, y + size * 0.28);
-        ctx.lineTo(x - size * 0.12, y + size * 0.30);
-        ctx.closePath();
-        ctx.stroke();
-    }
-
-    drawRockType3(x, y, size, primaryColor, accentColor) {
-        // Jagged angular rock — matches game renderRockType3
-        const ctx = this.ctx;
-        
-        // Drop shadow
-        ctx.fillStyle = '#1a1a18';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.34, y + size * 0.28);
-        ctx.lineTo(x - size * 0.36, y - size * 0.09);
-        ctx.lineTo(x - size * 0.1, y - size * 0.37);
-        ctx.lineTo(x + size * 0.32, y - size * 0.17);
-        ctx.lineTo(x + size * 0.36, y + size * 0.31);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Main rock body
-        ctx.fillStyle = '#585858';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.36, y - size * 0.12);
-        ctx.lineTo(x - size * 0.1, y - size * 0.38);
-        ctx.lineTo(x + size * 0.32, y - size * 0.18);
-        ctx.lineTo(x + size * 0.35, y + size * 0.28);
-        ctx.lineTo(x - size * 0.35, y + size * 0.25);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Highlighted face (left side)
-        ctx.fillStyle = '#8a8a8a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.36, y - size * 0.12);
-        ctx.lineTo(x - size * 0.1, y - size * 0.38);
-        ctx.lineTo(x + size * 0.15, y - size * 0.1);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Darker right side face
-        ctx.fillStyle = '#3e3e3e';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.1, y - size * 0.38);
-        ctx.lineTo(x + size * 0.32, y - size * 0.18);
-        ctx.lineTo(x + size * 0.15, y - size * 0.1);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Weathering spots
-        ctx.fillStyle = '#4a4440';
-        for (let i = 0; i < 4; i++) {
-            const offsetX = (Math.sin(i * 1.5 + x * 0.01) - 0.5) * size * 0.28;
-            const offsetY = (Math.cos(i * 1.5 + y * 0.01) - 0.5) * size * 0.20;
-            const spotSize = size * (0.05 + Math.abs(Math.sin(i * 0.6)) * 0.03);
-            ctx.beginPath();
-            ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // Cracks
-        ctx.strokeStyle = '#2a2a28';
-        ctx.lineWidth = 1.3;
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.1, y - size * 0.2);
-        ctx.lineTo(x + size * 0.1, y + size * 0.12);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.05, y - size * 0.35);
-        ctx.lineTo(x + size * 0.15, y - size * 0.05);
-        ctx.stroke();
-        
-        // Outline
-        ctx.strokeStyle = '#1a1a1a';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.36, y - size * 0.12);
-        ctx.lineTo(x - size * 0.1, y - size * 0.38);
-        ctx.lineTo(x + size * 0.32, y - size * 0.18);
-        ctx.lineTo(x + size * 0.35, y + size * 0.28);
-        ctx.lineTo(x - size * 0.35, y + size * 0.25);
-        ctx.closePath();
-        ctx.stroke();
-    }
-
-    drawRockType4(x, y, size, primaryColor, accentColor) {
-        // Jagged rocky formation — matches game renderRockType4
-        const ctx = this.ctx;
-        
-        // Drop shadow
-        ctx.fillStyle = '#1a1a18';
-        ctx.beginPath();
-        ctx.ellipse(x + size * 0.05, y + size * 0.24, size * 0.38, size * 0.12, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Main rock body - irregular polygon
-        ctx.fillStyle = '#5e5e5e';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.25, y + size * 0.2);
-        ctx.lineTo(x - size * 0.35, y - size * 0.1);
-        ctx.lineTo(x - size * 0.2, y - size * 0.32);
-        ctx.lineTo(x + size * 0.05, y - size * 0.35);
-        ctx.lineTo(x + size * 0.3, y - size * 0.15);
-        ctx.lineTo(x + size * 0.32, y + size * 0.15);
-        ctx.lineTo(x + size * 0.15, y + size * 0.22);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Left highlighted face
-        ctx.fillStyle = '#8a8a8a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.25, y + size * 0.2);
-        ctx.lineTo(x - size * 0.35, y - size * 0.1);
-        ctx.lineTo(x - size * 0.2, y - size * 0.32);
-        ctx.lineTo(x - size * 0.05, y - size * 0.1);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Top bright face
-        ctx.fillStyle = '#9a9a9a';
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.2, y - size * 0.32);
-        ctx.lineTo(x + size * 0.05, y - size * 0.35);
-        ctx.lineTo(x + size * 0.15, y - size * 0.2);
-        ctx.lineTo(x - size * 0.05, y - size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Dark right face
-        ctx.fillStyle = '#3a3a3a';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.05, y - size * 0.35);
-        ctx.lineTo(x + size * 0.3, y - size * 0.15);
-        ctx.lineTo(x + size * 0.2, y + size * 0.05);
-        ctx.lineTo(x + size * 0.05, y - size * 0.1);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Weathering stains
-        ctx.fillStyle = '#4a4440';
-        for (let i = 0; i < 5; i++) {
-            const offsetX = (Math.sin(i * 1.2 + x * 0.01) - 0.5) * size * 0.3;
-            const offsetY = (Math.cos(i * 1.2 + y * 0.01) - 0.5) * size * 0.25;
-            const spotSize = size * (0.05 + Math.abs(Math.sin(i * 0.6)) * 0.03);
-            ctx.beginPath();
-            ctx.arc(x + offsetX, y + offsetY, spotSize, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // Cracks
-        ctx.strokeStyle = '#2a2a28';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.15, y - size * 0.15);
-        ctx.lineTo(x + size * 0.1, y + size * 0.1);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.25);
-        ctx.lineTo(x - size * 0.1, y + size * 0.15);
-        ctx.stroke();
-        
-        // Outline
-        ctx.strokeStyle = '#1a1a1a';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(x - size * 0.25, y + size * 0.2);
-        ctx.lineTo(x - size * 0.35, y - size * 0.1);
-        ctx.lineTo(x - size * 0.2, y - size * 0.32);
-        ctx.lineTo(x + size * 0.05, y - size * 0.35);
-        ctx.lineTo(x + size * 0.3, y - size * 0.15);
-        ctx.lineTo(x + size * 0.32, y + size * 0.15);
-        ctx.lineTo(x + size * 0.15, y + size * 0.22);
-        ctx.closePath();
-        ctx.stroke();
-    }
-
-    drawLake(x, y, size) {
-        // Create organic water shape with rounded edges
-        // Use 0.7 multiplier to match collision radius (size * 0.71 in markTerrainCells)
-        const radius = size * 0.7;
-        
-        // Water gradient
-        const gradient = this.ctx.createRadialGradient(x - size * 0.1, y - size * 0.1, 0, x, y, radius * 1.2);
-        gradient.addColorStop(0, '#0277BD');
-        gradient.addColorStop(0.6, '#01579B');
-        gradient.addColorStop(1, '#004D7A');
-        this.ctx.fillStyle = gradient;
-        
-        // Draw organic water shape with perlin-like noise using sine waves
-        this.ctx.beginPath();
-        const points = 16;
-        for (let i = 0; i < points; i++) {
-            const angle = (i / points) * Math.PI * 2;
-            // Add sine-based variation to radius for organic look
-            const noise = Math.sin(angle * 3 + x * 0.1 + y * 0.1) * 0.15 + Math.sin(angle * 7 + x * 0.05) * 0.1;
-            const currentRadius = radius * (0.8 + noise);
-            const px = x + Math.cos(angle) * currentRadius;
-            const py = y + Math.sin(angle) * currentRadius;
-            
-            if (i === 0) {
-                this.ctx.moveTo(px, py);
-            } else {
-                this.ctx.lineTo(px, py);
-            }
-        }
-        this.ctx.closePath();
-        this.ctx.fill();
-        
-        // Water edge with soft border
-        this.ctx.strokeStyle = '#0277BD';
-        this.ctx.lineWidth = 1;
-        this.ctx.stroke();
-        
-        // Subtle wave reflections
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-        this.ctx.lineWidth = 0.5;
-        for (let i = 0; i < 2; i++) {
-            const waveRadius = radius * (0.3 + i * 0.3);
-            this.ctx.beginPath();
-            const wavePoints = 12;
-            for (let j = 0; j < wavePoints; j++) {
-                const angle = (j / wavePoints) * Math.PI * 2;
-                const waveNoise = Math.sin(angle * 2 + x * 0.1) * 0.1;
-                const px = x + Math.cos(angle) * (waveRadius * (0.9 + waveNoise));
-                const py = y + Math.sin(angle) * (waveRadius * (0.9 + waveNoise));
-                if (j === 0) {
-                    this.ctx.moveTo(px, py);
-                } else {
-                    this.ctx.lineTo(px, py);
-                }
-            }
-            this.ctx.closePath();
-            this.ctx.stroke();
-        }
-    }
-
-    drawRiver(x, y, size, flowAngle) {
-        // River rendering is handled entirely by drawRiversSmooth()
-        // No cell-based rendering needed - smooth line rendering creates the complete visualization
-    }
-
-    drawVegetation(x, y, size, variant) {
-        if (this.currentCampaign === 'mountain') {
-            this.drawMountainVegetation(x, y, size, variant);
-        } else if (this.currentCampaign === 'space') {
-            this.drawSpaceVegetation(x, y, size, variant);
-        } else if (this.currentCampaign === 'desert') {
-            this.drawDesertVegetation(x, y, size, variant);
-        } else {
-            this.drawTree(x, y, size, variant);
-        }
-    }
-
-    drawMountainVegetation(x, y, size, variant) {
-        const seed = (variant !== undefined && variant !== null) ? variant % 4 : Math.floor(x * 0.5 + y * 0.7) % 4;
-        switch(seed) {
-            case 0: this.drawMountainPine1(x, y, size); break;
-            case 1: this.drawMountainPine2(x, y, size); break;
-            case 2: this.drawMountainPine3(x, y, size); break;
-            default: this.drawMountainPine4(x, y, size);
-        }
-    }
-
-    drawMountainPine1(x, y, size) {
-        // Classic triangle pine with snow caps — matches LevelBase Type1
-        const ctx = this.ctx;
-        const trunkW = size * 0.16;
-        const trunkH = size * 0.40;
-        ctx.fillStyle = '#4a2c12';
-        ctx.fillRect(x - trunkW * 0.5, y - size * 0.08, trunkW, trunkH);
-        ctx.fillStyle = '#2e1a08';
-        ctx.fillRect(x + trunkW * 0.10, y - size * 0.08, trunkW * 0.40, trunkH);
-
-        ctx.fillStyle = '#0c2e1a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.08);
-        ctx.lineTo(x + size * 0.34, y + size * 0.14);
-        ctx.lineTo(x - size * 0.34, y + size * 0.14);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1a4a2e';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.08);
-        ctx.lineTo(x, y + size * 0.14);
-        ctx.lineTo(x - size * 0.34, y + size * 0.14);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#0e3620';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.30);
-        ctx.lineTo(x + size * 0.26, y - size * 0.02);
-        ctx.lineTo(x - size * 0.26, y - size * 0.02);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1c5234';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.30);
-        ctx.lineTo(x, y - size * 0.02);
-        ctx.lineTo(x - size * 0.26, y - size * 0.02);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#104028';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.52);
-        ctx.lineTo(x + size * 0.18, y - size * 0.20);
-        ctx.lineTo(x - size * 0.18, y - size * 0.20);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1e5a3a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.52);
-        ctx.lineTo(x, y - size * 0.20);
-        ctx.lineTo(x - size * 0.18, y - size * 0.20);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(236, 249, 255, 0.95)';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.52);
-        ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.38, x + size * 0.16, y - size * 0.28);
-        ctx.quadraticCurveTo(x + size * 0.06, y - size * 0.22, x, y - size * 0.28);
-        ctx.quadraticCurveTo(x - size * 0.06, y - size * 0.22, x - size * 0.16, y - size * 0.28);
-        ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.38, x, y - size * 0.52);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(232, 246, 255, 0.90)';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.30);
-        ctx.quadraticCurveTo(x + size * 0.14, y - size * 0.16, x + size * 0.22, y - size * 0.10);
-        ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.04, x, y - size * 0.10);
-        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.04, x - size * 0.22, y - size * 0.10);
-        ctx.quadraticCurveTo(x - size * 0.14, y - size * 0.16, x, y - size * 0.30);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(228, 242, 255, 0.80)';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.08);
-        ctx.quadraticCurveTo(x + size * 0.18, y + size * 0.04, x + size * 0.28, y + size * 0.08);
-        ctx.quadraticCurveTo(x + size * 0.12, y + size * 0.12, x, y + size * 0.06);
-        ctx.quadraticCurveTo(x - size * 0.12, y + size * 0.12, x - size * 0.28, y + size * 0.08);
-        ctx.quadraticCurveTo(x - size * 0.18, y + size * 0.04, x, y - size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    drawMountainPine2(x, y, size) {
-        // Wider 4-tier pine with heavy snow — matches LevelBase Type2
-        const ctx = this.ctx;
-        const trunkW = size * 0.18;
-        const trunkH = size * 0.42;
-        ctx.fillStyle = '#4a2c12';
-        ctx.fillRect(x - trunkW * 0.5, y - size * 0.05, trunkW, trunkH);
-        ctx.fillStyle = '#2e1a08';
-        ctx.fillRect(x + trunkW * 0.08, y - size * 0.05, trunkW * 0.42, trunkH);
-
-        ctx.fillStyle = '#0c2e1a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.05);
-        ctx.lineTo(x + size * 0.40, y + size * 0.18);
-        ctx.lineTo(x - size * 0.40, y + size * 0.18);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1a4a2e';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.05);
-        ctx.lineTo(x, y + size * 0.18);
-        ctx.lineTo(x - size * 0.40, y + size * 0.18);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#0e3620';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.25);
-        ctx.lineTo(x + size * 0.32, y + size * 0.02);
-        ctx.lineTo(x - size * 0.32, y + size * 0.02);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1c5234';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.25);
-        ctx.lineTo(x, y + size * 0.02);
-        ctx.lineTo(x - size * 0.32, y + size * 0.02);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#104028';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.46);
-        ctx.lineTo(x + size * 0.22, y - size * 0.15);
-        ctx.lineTo(x - size * 0.22, y - size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1e5a3a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.46);
-        ctx.lineTo(x, y - size * 0.15);
-        ctx.lineTo(x - size * 0.22, y - size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#14503a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.62);
-        ctx.lineTo(x + size * 0.13, y - size * 0.38);
-        ctx.lineTo(x - size * 0.13, y - size * 0.38);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#226844';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.62);
-        ctx.lineTo(x, y - size * 0.38);
-        ctx.lineTo(x - size * 0.13, y - size * 0.38);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(237, 249, 255, 0.96)';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.62);
-        ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.50, x + size * 0.12, y - size * 0.44);
-        ctx.quadraticCurveTo(x + size * 0.04, y - size * 0.40, x, y - size * 0.44);
-        ctx.quadraticCurveTo(x - size * 0.04, y - size * 0.40, x - size * 0.12, y - size * 0.44);
-        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.50, x, y - size * 0.62);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(234, 247, 255, 0.94)';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.46);
-        ctx.quadraticCurveTo(x + size * 0.13, y - size * 0.32, x + size * 0.20, y - size * 0.24);
-        ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.18, x, y - size * 0.24);
-        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.18, x - size * 0.20, y - size * 0.24);
-        ctx.quadraticCurveTo(x - size * 0.13, y - size * 0.32, x, y - size * 0.46);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(230, 244, 255, 0.78)';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.25);
-        ctx.quadraticCurveTo(x + size * 0.16, y - size * 0.12, x + size * 0.26, y - size * 0.06);
-        ctx.quadraticCurveTo(x + size * 0.10, y - size * 0.01, x, y - size * 0.08);
-        ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.01, x - size * 0.26, y - size * 0.06);
-        ctx.quadraticCurveTo(x - size * 0.16, y - size * 0.12, x, y - size * 0.25);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    drawMountainPine3(x, y, size) {
-        // Short young pine — 2 wide triangle tiers, compact and squat
-        const ctx = this.ctx;
-        const trunkW = size * 0.18;
-        const trunkH = size * 0.32;
-        ctx.fillStyle = '#553216';
-        ctx.fillRect(x - trunkW * 0.5, y - size * 0.02, trunkW, trunkH);
-        ctx.fillStyle = '#301a08';
-        ctx.fillRect(x + trunkW * 0.10, y - size * 0.02, trunkW * 0.40, trunkH);
-
-        ctx.fillStyle = '#0c2e1a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.04);
-        ctx.lineTo(x + size * 0.38, y + size * 0.18);
-        ctx.lineTo(x - size * 0.38, y + size * 0.18);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1a4a2e';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.04);
-        ctx.lineTo(x, y + size * 0.18);
-        ctx.lineTo(x - size * 0.38, y + size * 0.18);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#0e3620';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.28);
-        ctx.lineTo(x + size * 0.28, y + size * 0.04);
-        ctx.lineTo(x - size * 0.28, y + size * 0.04);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1c5234';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.28);
-        ctx.lineTo(x, y + size * 0.04);
-        ctx.lineTo(x - size * 0.28, y + size * 0.04);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(236, 249, 255, 0.94)';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.28);
-        ctx.quadraticCurveTo(x + size * 0.16, y - size * 0.14, x + size * 0.24, y - size * 0.06);
-        ctx.quadraticCurveTo(x + size * 0.08, y - size * 0.01, x, y - size * 0.08);
-        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.01, x - size * 0.24, y - size * 0.06);
-        ctx.quadraticCurveTo(x - size * 0.16, y - size * 0.14, x, y - size * 0.28);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(230, 244, 255, 0.75)';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.04);
-        ctx.quadraticCurveTo(x + size * 0.20, y + size * 0.08, x + size * 0.32, y + size * 0.12);
-        ctx.quadraticCurveTo(x + size * 0.14, y + size * 0.16, x, y + size * 0.10);
-        ctx.quadraticCurveTo(x - size * 0.14, y + size * 0.16, x - size * 0.32, y + size * 0.12);
-        ctx.quadraticCurveTo(x - size * 0.20, y + size * 0.08, x, y - size * 0.04);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    drawMountainPine4(x, y, size) {
-        // Tall narrow columnar pine with snow down one side — matches LevelBase Type4
-        const ctx = this.ctx;
-        const trunkW = size * 0.15;
-        const trunkH = size * 0.52;
-        ctx.fillStyle = '#4a2c12';
-        ctx.fillRect(x - trunkW * 0.5, y - size * 0.15, trunkW, trunkH);
-        ctx.fillStyle = '#2a1508';
-        ctx.fillRect(x + trunkW * 0.15, y - size * 0.15, trunkW * 0.35, trunkH);
-
-        ctx.fillStyle = '#0c2e1a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.22);
-        ctx.lineTo(x + size * 0.26, y + size * 0.10);
-        ctx.lineTo(x - size * 0.26, y + size * 0.10);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1a4a2e';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.22);
-        ctx.lineTo(x, y + size * 0.10);
-        ctx.lineTo(x - size * 0.26, y + size * 0.10);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#0e3620';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.44);
-        ctx.lineTo(x + size * 0.20, y - size * 0.10);
-        ctx.lineTo(x - size * 0.20, y - size * 0.10);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1c5234';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.44);
-        ctx.lineTo(x, y - size * 0.10);
-        ctx.lineTo(x - size * 0.20, y - size * 0.10);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = '#104028';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.62);
-        ctx.lineTo(x + size * 0.14, y - size * 0.30);
-        ctx.lineTo(x - size * 0.14, y - size * 0.30);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1e5a3a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.62);
-        ctx.lineTo(x, y - size * 0.30);
-        ctx.lineTo(x - size * 0.14, y - size * 0.30);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(236, 249, 255, 0.95)';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.62);
-        ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.48, x - size * 0.13, y - size * 0.38);
-        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.34, x, y - size * 0.40);
-        ctx.quadraticCurveTo(x - size * 0.05, y - size * 0.48, x, y - size * 0.62);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(232, 246, 255, 0.92)';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.44);
-        ctx.quadraticCurveTo(x - size * 0.14, y - size * 0.28, x - size * 0.18, y - size * 0.18);
-        ctx.quadraticCurveTo(x - size * 0.10, y - size * 0.12, x, y - size * 0.20);
-        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.30, x, y - size * 0.44);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(228, 242, 255, 0.82)';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.22);
-        ctx.quadraticCurveTo(x - size * 0.16, y - size * 0.08, x - size * 0.22, y + size * 0.02);
-        ctx.quadraticCurveTo(x - size * 0.12, y + size * 0.06, x, y - size * 0.02);
-        ctx.quadraticCurveTo(x - size * 0.08, y - size * 0.12, x, y - size * 0.22);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = 'rgba(240, 252, 255, 0.98)';
-        ctx.beginPath();
-        ctx.ellipse(x, y - size * 0.63, size * 0.04, size * 0.03, 0, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    drawDesertVegetation(x, y, size, variant) {
-        const seed = (variant !== undefined && variant !== null) ? variant % 6 : Math.floor(x * 0.5 + y * 0.7) % 6;
-        switch(seed) {
-            case 0: this.drawDesertSaguaro(x, y, size); break;
-            case 1: this.drawDryDesertShrub(x, y, size); break;
-            case 2: this.drawDesertPricklyPear(x, y, size); break;
-            case 3: this.drawDesertTree(x, y, size); break;
-            case 4: this.drawDesertDryBush(x, y, size); break;
-            default: this.drawDesertDeadTree(x, y, size); break;
-        }
-    }
-
-    drawDesertSaguaro(x, y, size) {
-        const ctx = this.ctx;
-        const h = size * 0.70;
-        const w = size * 0.15;
-        // Ground shadow
-        ctx.fillStyle = 'rgba(60,40,10,0.25)';
-        ctx.beginPath();
-        ctx.ellipse(x, y + 1, w * 1.8, size * 0.07, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // Left arm (drawn first, behind trunk)
-        ctx.fillStyle = '#5a7850';
-        ctx.beginPath();
-        ctx.moveTo(x - w * 0.8, y - h * 0.38);
-        ctx.quadraticCurveTo(x - w * 3.0, y - h * 0.44, x - w * 3.0, y - h * 0.65);
-        ctx.quadraticCurveTo(x - w * 3.0, y - h * 0.76, x - w * 2.3, y - h * 0.76);
-        ctx.quadraticCurveTo(x - w * 1.6, y - h * 0.76, x - w * 1.5, y - h * 0.62);
-        ctx.quadraticCurveTo(x - w * 1.4, y - h * 0.50, x - w * 0.6, y - h * 0.34);
-        ctx.closePath();
-        ctx.fill();
-        // Left arm shadow
-        ctx.fillStyle = '#3a5034';
-        ctx.beginPath();
-        ctx.moveTo(x - w * 1.6, y - h * 0.62);
-        ctx.quadraticCurveTo(x - w * 2.2, y - h * 0.70, x - w * 3.0, y - h * 0.65);
-        ctx.quadraticCurveTo(x - w * 3.0, y - h * 0.76, x - w * 2.3, y - h * 0.76);
-        ctx.quadraticCurveTo(x - w * 1.9, y - h * 0.76, x - w * 1.7, y - h * 0.68);
-        ctx.closePath();
-        ctx.fill();
-        // Right arm
-        ctx.fillStyle = '#5a7850';
-        ctx.beginPath();
-        ctx.moveTo(x + w * 0.8, y - h * 0.50);
-        ctx.quadraticCurveTo(x + w * 2.8, y - h * 0.54, x + w * 2.8, y - h * 0.74);
-        ctx.quadraticCurveTo(x + w * 2.8, y - h * 0.84, x + w * 2.1, y - h * 0.84);
-        ctx.quadraticCurveTo(x + w * 1.5, y - h * 0.84, x + w * 1.4, y - h * 0.72);
-        ctx.quadraticCurveTo(x + w * 1.3, y - h * 0.60, x + w * 0.6, y - h * 0.46);
-        ctx.closePath();
-        ctx.fill();
-        // Right arm shadow
-        ctx.fillStyle = '#3a5034';
-        ctx.beginPath();
-        ctx.moveTo(x + w * 1.5, y - h * 0.72);
-        ctx.quadraticCurveTo(x + w * 2.1, y - h * 0.80, x + w * 2.8, y - h * 0.74);
-        ctx.quadraticCurveTo(x + w * 2.8, y - h * 0.84, x + w * 2.1, y - h * 0.84);
-        ctx.quadraticCurveTo(x + w * 1.7, y - h * 0.84, x + w * 1.5, y - h * 0.76);
-        ctx.closePath();
-        ctx.fill();
-        // Main trunk
-        ctx.fillStyle = '#5a7850';
-        ctx.beginPath();
-        ctx.moveTo(x - w, y);
-        ctx.lineTo(x - w * 0.9, y - h);
-        ctx.quadraticCurveTo(x, y - h * 1.04, x + w * 0.9, y - h);
-        ctx.lineTo(x + w, y);
-        ctx.closePath();
-        ctx.fill();
-        // Trunk shadow side
-        ctx.fillStyle = '#3a5034';
-        ctx.beginPath();
-        ctx.moveTo(x + w * 0.12, y);
-        ctx.lineTo(x + w * 0.12, y - h * 0.96);
-        ctx.quadraticCurveTo(x + w * 0.52, y - h * 1.01, x + w * 0.9, y - h);
-        ctx.lineTo(x + w, y);
-        ctx.closePath();
-        ctx.fill();
-        // Rib lines
-        ctx.strokeStyle = 'rgba(20,40,10,0.35)';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath(); ctx.moveTo(x - w * 0.50, y); ctx.lineTo(x - w * 0.46, y - h * 0.98); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x + w * 0.50, y); ctx.lineTo(x + w * 0.46, y - h * 0.98); ctx.stroke();
-        // Spine areoles — evenly spaced along trunk edges and arm tips
-        ctx.fillStyle = '#d4c484';
-        ctx.beginPath(); ctx.arc(x - w * 1.05, y - h * 0.08, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + w * 1.05, y - h * 0.08, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - w * 1.05, y - h * 0.22, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + w * 1.05, y - h * 0.22, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - w * 1.05, y - h * 0.40, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + w * 1.05, y - h * 0.40, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - w * 2.65, y - h * 0.76, 1.0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + w * 2.45, y - h * 0.84, 1.0, 0, Math.PI * 2); ctx.fill();
-    }
-
-    drawDryDesertShrub(x, y, size) {
-        const ctx = this.ctx;
-        // Spreading dry desert shrub — creosote/brittlebush style
-        const baseY = y - size * 0.02;
-        // Ground shadow
-        ctx.fillStyle = 'rgba(60,40,10,0.26)';
-        ctx.beginPath();
-        ctx.ellipse(x, y + 1, size * 0.30, size * 0.07, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.lineCap = 'round';
-        const brS = (x1, y1, cpx, cpy, x2, y2, w, col) => {
-            ctx.strokeStyle = col; ctx.lineWidth = w;
-            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cpx, cpy, x2, y2); ctx.stroke();
-        };
-        // 5 main branches fanning out from base
-        brS(x, baseY, x - size*0.14, baseY - size*0.10, x - size*0.27, baseY - size*0.18, size*0.085, '#7a5838');
-        brS(x, baseY, x - size*0.06, baseY - size*0.14, x - size*0.10, baseY - size*0.26, size*0.082, '#7a5838');
-        brS(x, baseY, x + size*0.01, baseY - size*0.16, x + size*0.02, baseY - size*0.28, size*0.080, '#7a5838');
-        brS(x, baseY, x + size*0.08, baseY - size*0.13, x + size*0.16, baseY - size*0.26, size*0.082, '#7a5838');
-        brS(x, baseY, x + size*0.15, baseY - size*0.09, x + size*0.27, baseY - size*0.17, size*0.083, '#7a5838');
-        // Sub-branches
-        brS(x - size*0.20, baseY - size*0.14, x - size*0.27, baseY - size*0.19, x - size*0.33, baseY - size*0.21, size*0.048, '#9a7050');
-        brS(x - size*0.09, baseY - size*0.20, x - size*0.13, baseY - size*0.27, x - size*0.16, baseY - size*0.31, size*0.044, '#9a7050');
-        brS(x + size*0.02, baseY - size*0.22, x - size*0.02, baseY - size*0.29, x - size*0.04, baseY - size*0.33, size*0.042, '#9a7050');
-        brS(x + size*0.13, baseY - size*0.21, x + size*0.17, baseY - size*0.27, x + size*0.20, baseY - size*0.30, size*0.044, '#9a7050');
-        brS(x + size*0.23, baseY - size*0.13, x + size*0.29, baseY - size*0.18, x + size*0.32, baseY - size*0.20, size*0.046, '#9a7050');
-        // Fine twigs
-        brS(x - size*0.31, baseY - size*0.19, x - size*0.34, baseY - size*0.25, x - size*0.36, baseY - size*0.27, size*0.024, '#b08860');
-        brS(x - size*0.14, baseY - size*0.28, x - size*0.18, baseY - size*0.34, x - size*0.20, baseY - size*0.36, size*0.022, '#b08860');
-        brS(x + size*0.19, baseY - size*0.27, x + size*0.22, baseY - size*0.33, x + size*0.24, baseY - size*0.35, size*0.023, '#b08860');
-        brS(x + size*0.31, baseY - size*0.18, x + size*0.35, baseY - size*0.23, x + size*0.36, baseY - size*0.25, size*0.024, '#b08860');
-        // Woody base at ground
-        ctx.fillStyle = '#5a3c20';
-        ctx.beginPath();
-        ctx.ellipse(x, baseY, size * 0.10, size * 0.05, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.lineCap = 'butt';
-    }
-
-    drawDesertDryBush(x, y, size) {
-        const ctx = this.ctx;
-        const r = size * 0.30;
-        // Ground shadow
-        ctx.fillStyle = 'rgba(80,50,10,0.22)';
-        ctx.beginPath();
-        ctx.ellipse(x, y + 2, r * 1.05, r * 0.22, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // Woody base
-        ctx.fillStyle = '#4a2e14';
-        ctx.beginPath();
-        ctx.moveTo(x - r * 0.18, y);
-        ctx.quadraticCurveTo(x - r * 0.22, y - r * 0.35, x - r * 0.14, y - r * 0.50);
-        ctx.lineTo(x + r * 0.14, y - r * 0.50);
-        ctx.quadraticCurveTo(x + r * 0.22, y - r * 0.35, x + r * 0.18, y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = '#5c3820';
-        ctx.lineCap = 'round';
-        // Left main branch
-        ctx.lineWidth = 2.2;
-        ctx.beginPath(); ctx.moveTo(x - r * 0.10, y - r * 0.42); ctx.quadraticCurveTo(x - r * 0.65, y - r * 0.58, x - r * 0.98, y - r * 0.84); ctx.stroke();
-        ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.moveTo(x - r * 0.98, y - r * 0.84); ctx.lineTo(x - r * 1.08, y - r * 1.04); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x - r * 0.96, y - r * 0.88); ctx.lineTo(x - r * 0.82, y - r * 1.08); ctx.stroke();
-        // Right main branch
-        ctx.lineWidth = 2.0;
-        ctx.beginPath(); ctx.moveTo(x + r * 0.10, y - r * 0.42); ctx.quadraticCurveTo(x + r * 0.60, y - r * 0.56, x + r * 0.92, y - r * 0.78); ctx.stroke();
-        ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.moveTo(x + r * 0.92, y - r * 0.78); ctx.lineTo(x + r * 1.02, y - r * 0.96); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x + r * 0.90, y - r * 0.82); ctx.lineTo(x + r * 0.78, y - r * 1.00); ctx.stroke();
-        // Center upward branch
-        ctx.lineWidth = 1.8;
-        ctx.beginPath(); ctx.moveTo(x, y - r * 0.50); ctx.quadraticCurveTo(x + r * 0.10, y - r * 0.86, x - r * 0.08, y - r * 1.10); ctx.stroke();
-        ctx.lineWidth = 1.0;
-        ctx.beginPath(); ctx.moveTo(x - r * 0.08, y - r * 1.10); ctx.lineTo(x - r * 0.20, y - r * 1.26); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x - r * 0.08, y - r * 1.10); ctx.lineTo(x + r * 0.10, y - r * 1.24); ctx.stroke();
-        // Low left branch
-        ctx.lineWidth = 1.4;
-        ctx.beginPath(); ctx.moveTo(x - r * 0.10, y - r * 0.46); ctx.quadraticCurveTo(x - r * 0.88, y - r * 0.42, x - r * 1.12, y - r * 0.56); ctx.stroke();
-        // Dry leaf tufts at branch tips
-        ctx.fillStyle = '#7a5830';
-        ctx.beginPath(); ctx.arc(x - r * 1.09, y - r * 1.05, r * 0.10, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - r * 0.82, y - r * 1.09, r * 0.08, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + r * 0.92, y - r * 0.97, r * 0.10, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - r * 0.07, y - r * 1.28, r * 0.09, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + r * 0.10, y - r * 1.25, r * 0.08, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#9e7840';
-        ctx.beginPath(); ctx.arc(x - r * 1.12, y - r * 1.07, r * 0.06, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x + r * 0.94, y - r * 0.99, r * 0.06, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(x - r * 0.05, y - r * 1.30, r * 0.06, 0, Math.PI * 2); ctx.fill();
-    }
-
-    drawDesertPricklyPear(x, y, size) {
-        const ctx = this.ctx;
-        const padW = size * 0.22;
-        const padH = size * 0.34;
-        const drawPad = (px, py, rot, sc) => {
-            ctx.save();
-            ctx.translate(px, py);
-            ctx.rotate(rot);
-            // Pad body — muted blue-green like real Opuntia
-            ctx.fillStyle = '#5a7a6a';
-            ctx.beginPath();
-            ctx.moveTo(0, -padH * sc * 0.5);
-            ctx.quadraticCurveTo(padW * sc * 0.40, -padH * sc * 0.30, padW * sc * 0.42, 0);
-            ctx.quadraticCurveTo(padW * sc * 0.32, padH * sc * 0.42, 0, padH * sc * 0.52);
-            ctx.quadraticCurveTo(-padW * sc * 0.32, padH * sc * 0.42, -padW * sc * 0.42, 0);
-            ctx.quadraticCurveTo(-padW * sc * 0.40, -padH * sc * 0.30, 0, -padH * sc * 0.5);
-            ctx.closePath();
-            ctx.fill();
-            // Shadow side
-            ctx.fillStyle = '#3a5248';
-            ctx.beginPath();
-            ctx.moveTo(0, -padH * sc * 0.5);
-            ctx.quadraticCurveTo(padW * sc * 0.40, -padH * sc * 0.30, padW * sc * 0.42, 0);
-            ctx.quadraticCurveTo(padW * sc * 0.32, padH * sc * 0.42, padW * sc * 0.10, padH * sc * 0.52);
-            ctx.quadraticCurveTo(padW * sc * 0.05, padH * sc * 0.20, 0, -padH * sc * 0.5);
-            ctx.closePath();
-            ctx.fill();
-            // Spine dots
-            ctx.fillStyle = '#d4c484';
-            const sp = [{x:0,y:-padH*sc*0.32},{x:padW*sc*0.24,y:-padH*sc*0.06},{x:-padW*sc*0.24,y:-padH*sc*0.06},{x:padW*sc*0.18,y:padH*sc*0.22},{x:-padW*sc*0.18,y:padH*sc*0.22},{x:0,y:padH*sc*0.38}];
-            sp.forEach(s => { ctx.beginPath(); ctx.arc(s.x, s.y, 1.0, 0, Math.PI*2); ctx.fill(); });
-            ctx.restore();
-        };
-        // Ground shadow
-        ctx.fillStyle = 'rgba(60,40,10,0.22)';
-        ctx.beginPath();
-        ctx.ellipse(x, y + 2, padW * 1.10, padH * 0.12, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // 4 pads arranged naturally
-        drawPad(x, y - padH * 0.22, 0, 0.52);
-        drawPad(x + padW * 0.44, y - padH * 0.10, Math.PI / 4.2, 0.46);
-        drawPad(x - padW * 0.44, y + padH * 0.06, -Math.PI / 4.8, 0.46);
-        drawPad(x, y + padH * 0.30, Math.PI / 9, 0.48);
-    }
-
-    drawDesertTree(x, y, size) {
-        const ctx = this.ctx;
-        // Sparse gnarled desert tree — palo verde/desert willow style
-        const th = size * 0.66;
-        const tw = size * 0.082;
-        // Ground shadow
-        ctx.fillStyle = 'rgba(60,40,10,0.28)';
-        ctx.beginPath();
-        ctx.ellipse(x, y + 1, size * 0.18, size * 0.07, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // Trunk — warm gray-brown, gnarled slightly
-        ctx.fillStyle = '#8c6c48';
-        ctx.beginPath();
-        ctx.moveTo(x - tw, y);
-        ctx.quadraticCurveTo(x - tw * 1.08, y - th * 0.38, x - tw * 0.80, y - th * 0.72);
-        ctx.quadraticCurveTo(x - tw * 0.30, y - th * 0.84, x + tw * 0.15, y - th * 0.78);
-        ctx.quadraticCurveTo(x + tw * 0.70, y - th * 0.72, x + tw, y - th * 0.60);
-        ctx.lineTo(x + tw, y);
-        ctx.closePath();
-        ctx.fill();
-        // Trunk shadow stripe
-        ctx.fillStyle = '#5c4232';
-        ctx.beginPath();
-        ctx.moveTo(x + tw * 0.20, y);
-        ctx.quadraticCurveTo(x + tw * 0.38, y - th * 0.36, x + tw * 0.46, y - th * 0.70);
-        ctx.quadraticCurveTo(x + tw * 0.52, y - th * 0.74, x + tw, y - th * 0.60);
-        ctx.lineTo(x + tw, y);
-        ctx.closePath();
-        ctx.fill();
-        // Bark texture
-        ctx.strokeStyle = 'rgba(40,22,10,0.35)';
-        ctx.lineWidth = 0.7;
-        ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(x - tw*0.5, y - th*0.10); ctx.quadraticCurveTo(x - tw*0.55, y - th*0.35, x - tw*0.42, y - th*0.60); ctx.stroke();
-        const forkY = y - th * 0.70;
-        const brT = (x1, y1, cpx, cpy, x2, y2, w, col) => {
-            ctx.strokeStyle = col; ctx.lineWidth = w;
-            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.quadraticCurveTo(cpx, cpy, x2, y2); ctx.stroke();
-        };
-        // 3 main branches from upper trunk
-        brT(x - tw*0.4, forkY, x - size*0.09, forkY - size*0.07, x - size*0.20, forkY - size*0.14, tw * 1.30, '#8c6c48');
-        brT(x + tw*0.1, forkY, x + size*0.02, forkY - size*0.10, x + size*0.04, forkY - size*0.18, tw * 1.15, '#8c6c48');
-        brT(x + tw*0.4, forkY, x + size*0.10, forkY - size*0.06, x + size*0.19, forkY - size*0.12, tw * 1.10, '#8c6c48');
-        // Secondary branches
-        brT(x - size*0.14, forkY - size*0.09, x - size*0.19, forkY - size*0.14, x - size*0.24, forkY - size*0.16, tw * 0.65, '#7a5c3a');
-        brT(x + size*0.03, forkY - size*0.13, x + size*0.00, forkY - size*0.18, x - size*0.02, forkY - size*0.21, tw * 0.60, '#7a5c3a');
-        brT(x + size*0.15, forkY - size*0.09, x + size*0.20, forkY - size*0.14, x + size*0.24, forkY - size*0.17, tw * 0.60, '#7a5c3a');
-        // Small green leaf clusters at branch tips
-        const leafCluster = (lx, ly) => {
-            ctx.fillStyle = '#506040';
-            ctx.beginPath(); ctx.ellipse(lx, ly, size * 0.068, size * 0.045, -0.3, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#688254';
-            ctx.beginPath(); ctx.ellipse(lx - size*0.038, ly - size*0.028, size * 0.040, size * 0.028, 0.4, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(lx + size*0.030, ly - size*0.022, size * 0.034, size * 0.024, -0.5, 0, Math.PI * 2); ctx.fill();
-        };
-        leafCluster(x - size*0.24, forkY - size*0.16);
-        leafCluster(x - size*0.02, forkY - size*0.21);
-        leafCluster(x + size*0.24, forkY - size*0.17);
-        ctx.lineCap = 'butt';
-    }
-
-    drawDesertDeadTree(x, y, size) {
-        const ctx = this.ctx;
-        const h = size * 0.78;
-        const tw = size * 0.10;
-        // Ground shadow
-        ctx.fillStyle = 'rgba(80,50,10,0.25)';
-        ctx.beginPath();
-        ctx.ellipse(x, y + 1, tw * 2.4, size * 0.08, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // Root flare
-        ctx.fillStyle = '#3a2010';
-        ctx.beginPath();
-        ctx.moveTo(x - tw * 2.2, y);
-        ctx.quadraticCurveTo(x - tw * 1.5, y - h * 0.07, x - tw, y - h * 0.14);
-        ctx.lineTo(x + tw, y - h * 0.14);
-        ctx.quadraticCurveTo(x + tw * 1.5, y - h * 0.07, x + tw * 2.2, y);
-        ctx.closePath();
-        ctx.fill();
-        // Main trunk
-        ctx.fillStyle = '#3a2010';
-        ctx.beginPath();
-        ctx.moveTo(x - tw, y - h * 0.14);
-        ctx.quadraticCurveTo(x - tw * 1.1, y - h * 0.38, x - tw * 0.9, y - h * 0.60);
-        ctx.lineTo(x + tw * 0.9, y - h * 0.60);
-        ctx.quadraticCurveTo(x + tw * 1.1, y - h * 0.38, x + tw, y - h * 0.14);
-        ctx.closePath();
-        ctx.fill();
-        // Trunk highlight
-        ctx.fillStyle = '#5a3420';
-        ctx.beginPath();
-        ctx.moveTo(x - tw, y - h * 0.14);
-        ctx.quadraticCurveTo(x - tw * 0.98, y - h * 0.36, x - tw * 0.85, y - h * 0.58);
-        ctx.lineTo(x - tw * 0.30, y - h * 0.58);
-        ctx.quadraticCurveTo(x - tw * 0.44, y - h * 0.34, x - tw * 0.38, y - h * 0.14);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = '#3a2010';
-        ctx.lineCap = 'round';
-        // Left major branch
-        ctx.lineWidth = tw * 1.6;
-        ctx.beginPath();
-        ctx.moveTo(x - tw * 0.2, y - h * 0.58);
-        ctx.quadraticCurveTo(x - tw * 3.2, y - h * 0.64, x - tw * 4.4, y - h * 0.82);
-        ctx.stroke();
-        // Right major branch
-        ctx.lineWidth = tw * 1.4;
-        ctx.beginPath();
-        ctx.moveTo(x + tw * 0.2, y - h * 0.58);
-        ctx.quadraticCurveTo(x + tw * 2.8, y - h * 0.62, x + tw * 3.8, y - h * 0.76);
-        ctx.stroke();
-        // Center branch up
-        ctx.lineWidth = tw * 1.2;
-        ctx.beginPath();
-        ctx.moveTo(x, y - h * 0.60);
-        ctx.quadraticCurveTo(x + tw * 0.4, y - h * 0.74, x - tw * 0.2, y - h * 0.88);
-        ctx.stroke();
-        // Sub-branches left
-        ctx.lineWidth = tw * 0.9;
-        ctx.beginPath();
-        ctx.moveTo(x - tw * 2.0, y - h * 0.68);
-        ctx.quadraticCurveTo(x - tw * 2.6, y - h * 0.80, x - tw * 3.4, y - h * 0.92);
-        ctx.stroke();
-        ctx.lineWidth = tw * 0.7;
-        ctx.beginPath(); ctx.moveTo(x - tw * 3.4, y - h * 0.92); ctx.lineTo(x - tw * 2.9, y - h * 1.02); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x - tw * 3.4, y - h * 0.92); ctx.lineTo(x - tw * 3.9, y - h * 1.00); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x - tw * 4.4, y - h * 0.82); ctx.lineTo(x - tw * 4.8, y - h * 0.91); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x - tw * 4.4, y - h * 0.82); ctx.lineTo(x - tw * 4.7, y - h * 0.76); ctx.stroke();
-        // Sub-branches right
-        ctx.lineWidth = tw * 0.9;
-        ctx.beginPath();
-        ctx.moveTo(x + tw * 1.8, y - h * 0.65);
-        ctx.quadraticCurveTo(x + tw * 2.4, y - h * 0.75, x + tw * 3.0, y - h * 0.88);
-        ctx.stroke();
-        ctx.lineWidth = tw * 0.7;
-        ctx.beginPath(); ctx.moveTo(x + tw * 3.0, y - h * 0.88); ctx.lineTo(x + tw * 2.6, y - h * 0.98); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x + tw * 3.0, y - h * 0.88); ctx.lineTo(x + tw * 3.4, y - h * 0.96); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x + tw * 3.8, y - h * 0.76); ctx.lineTo(x + tw * 4.2, y - h * 0.84); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x + tw * 3.8, y - h * 0.76); ctx.lineTo(x + tw * 4.1, y - h * 0.70); ctx.stroke();
-        // Center sub-branches
-        ctx.lineWidth = tw * 0.7;
-        ctx.beginPath(); ctx.moveTo(x - tw * 0.2, y - h * 0.88); ctx.lineTo(x - tw * 0.9, y - h * 1.00); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x - tw * 0.2, y - h * 0.88); ctx.lineTo(x + tw * 0.5, y - h * 0.99); ctx.stroke();
-    }
-
-    drawSpaceVegetation(x, y, size, variant) {
-        const seed = (variant !== undefined && variant !== null) ? variant % 5 : Math.floor(x * 0.5 + y * 0.7) % 5;
-        switch(seed) {
-            case 0: this.drawSpaceVortexPlant(x, y, size); break;
-            case 1: this.drawSpaceSpikeCoral(x, y, size); break;
-            case 2: this.drawSpaceFractalGrowth(x, y, size); break;
-            case 3: this.drawSpaceBiolumPlant(x, y, size); break;
-            default: this.drawSpaceAlienMushroom(x, y, size);
-        }
-    }
-
-    drawSpaceVortexPlant(x, y, size) {
-        // Swirling vortex-like alien plant
-        this.ctx.fillStyle = '#4a6a9a';
-        
-        // Spiral body
-        const spirals = 3;
-        for (let layer = 0; layer < spirals; layer++) {
-            const radius = size * (0.08 + layer * 0.08);
-            this.ctx.beginPath();
-            for (let i = 0; i < 50; i++) {
-                const angle = (i / 50) * Math.PI * 2 + layer * Math.PI / 2;
-                const dist = radius * (i / 50);
-                const px = x + Math.cos(angle) * dist;
-                const py = y + Math.sin(angle) * dist;
-                if (i === 0) this.ctx.moveTo(px, py);
-                else this.ctx.lineTo(px, py);
-            }
-            this.ctx.strokeStyle = `rgba(100, 150, 255, ${0.6 - layer * 0.15})`;
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
-        }
-
-        // Center glow
-        this.ctx.fillStyle = 'rgba(200, 100, 255, 0.8)';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.08, 0, Math.PI * 2);
-        this.ctx.fill();
-    }
-
-    drawSpaceSpikeCoral(x, y, size) {
-        // Spike coral formation
-        this.ctx.fillStyle = '#5a7aaa';
-        
-        // Main body cluster
-        const spikeCount = 8;
-        for (let i = 0; i < spikeCount; i++) {
-            const angle = (i / spikeCount) * Math.PI * 2;
-            const baseX = x + Math.cos(angle) * size * 0.08;
-            const baseY = y + Math.sin(angle) * size * 0.08;
-            const tipX = x + Math.cos(angle) * size * 0.25;
-            const tipY = y + Math.sin(angle) * size * 0.25;
-            
-            // Spike
-            this.ctx.strokeStyle = `rgba(${100 + Math.cos(angle) * 50}, ${150}, ${200 + Math.sin(angle) * 50}, 0.9)`;
-            this.ctx.lineWidth = 3;
-            this.ctx.beginPath();
-            this.ctx.moveTo(baseX, baseY);
-            this.ctx.quadraticCurveTo(
-                (baseX + tipX) * 0.5 + Math.cos(angle + Math.PI/2) * size * 0.05,
-                (baseY + tipY) * 0.5 + Math.sin(angle + Math.PI/2) * size * 0.05,
-                tipX, tipY
-            );
-            this.ctx.stroke();
-        }
-
-        // Center sphere
-        this.ctx.fillStyle = '#8aaacc';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.1, 0, Math.PI * 2);
-        this.ctx.fill();
-    }
-
-    drawSpaceFractalGrowth(x, y, size) {
-        // Fractal branching alien structure
-        const drawFractal = (cx, cy, length, angle, depth) => {
-            if (depth === 0) return;
-            
-            const endX = cx + Math.cos(angle) * length;
-            const endY = cy + Math.sin(angle) * length;
-            
-            this.ctx.strokeStyle = `rgba(${100 + depth * 30}, ${150 + depth * 20}, ${255 - depth * 30}, ${0.7 - depth * 0.1})`;
-            this.ctx.lineWidth = Math.max(1, 3 - depth);
-            this.ctx.beginPath();
-            this.ctx.moveTo(cx, cy);
-            this.ctx.lineTo(endX, endY);
-            this.ctx.stroke();
-            
-            // Branch left and right
-            drawFractal(endX, endY, length * 0.7, angle - Math.PI / 5, depth - 1);
-            drawFractal(endX, endY, length * 0.7, angle + Math.PI / 5, depth - 1);
-        };
-
-        // Draw three main branches
-        for (let i = 0; i < 3; i++) {
-            const angle = (i / 3) * Math.PI * 2;
-            drawFractal(x, y, size * 0.15, angle, 3);
-        }
-
-        // Core
-        this.ctx.fillStyle = '#aabbdd';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.05, 0, Math.PI * 2);
-        this.ctx.fill();
-    }
-
-    drawSpaceBiolumPlant(x, y, size) {
-        // Bioluminescent branching organism
-        this.ctx.fillStyle = '#3a7a9a';
-        
-        // Main body
-        this.ctx.beginPath();
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const radius = size * (0.15 + Math.sin(i * 0.8) * 0.08);
-            const px = x + Math.cos(angle) * radius;
-            const py = y + Math.sin(angle) * radius;
-            if (i === 0) this.ctx.moveTo(px, py);
-            else this.ctx.lineTo(px, py);
-        }
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Bioluminescent tendrils
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const startX = x + Math.cos(angle) * size * 0.13;
-            const startY = y + Math.sin(angle) * size * 0.13;
-            
-            this.ctx.strokeStyle = `rgba(100, ${200 + Math.sin(angle) * 50}, 255, 0.8)`;
-            this.ctx.lineWidth = 2;
-            this.ctx.beginPath();
-            this.ctx.moveTo(startX, startY);
-            
-            // Wavy tendril
-            for (let j = 0; j < 5; j++) {
-                const progress = (j + 1) / 5;
-                const offsetX = Math.cos(angle) * size * 0.2 * progress;
-                const offsetY = Math.sin(angle) * size * 0.2 * progress;
-                const wiggleX = Math.sin(angle + j) * size * 0.05;
-                const wiggleY = Math.cos(angle + j) * size * 0.05;
-                this.ctx.lineTo(startX + offsetX + wiggleX, startY + offsetY + wiggleY);
-            }
-            this.ctx.stroke();
-        }
-
-        // Intense core glow
-        this.ctx.fillStyle = 'rgba(150, 200, 255, 0.9)';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.12, 0, Math.PI * 2);
-        this.ctx.fill();
-    }
-
-    drawSpaceAlienMushroom(x, y, size) {
-        // Impossible geometry alien mushroom
-        // Cap with inverted perspective
-        this.ctx.fillStyle = '#6a5aaa';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.18, y - size * 0.08);
-        this.ctx.bezierCurveTo(
-            x - size * 0.18, y - size * 0.18,
-            x + size * 0.18, y - size * 0.18,
-            x + size * 0.18, y - size * 0.08
-        );
-        this.ctx.lineTo(x + size * 0.1, y + size * 0.08);
-        this.ctx.lineTo(x - size * 0.1, y + size * 0.08);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Inverted inner surface (different color)
-        this.ctx.fillStyle = '#4a3aaa';
-        this.ctx.beginPath();
-        this.ctx.moveTo(x - size * 0.14, y - size * 0.05);
-        this.ctx.bezierCurveTo(
-            x - size * 0.14, y - size * 0.12,
-            x + size * 0.14, y - size * 0.12,
-            x + size * 0.14, y - size * 0.05
-        );
-        this.ctx.lineTo(x + size * 0.08, y + size * 0.04);
-        this.ctx.lineTo(x - size * 0.08, y + size * 0.04);
-        this.ctx.closePath();
-        this.ctx.fill();
-
-        // Stem
-        this.ctx.fillStyle = '#5a6aaa';
-        this.ctx.fillRect(x - size * 0.06, y + size * 0.08, size * 0.12, size * 0.16);
-
-        // Bioluminescent gill-like structures
-        this.ctx.strokeStyle = 'rgba(200, 100, 255, 0.6)';
-        this.ctx.lineWidth = 1;
-        for (let i = 0; i < 5; i++) {
-            const py = y - size * 0.08 + (i * size * 0.035);
-            this.ctx.beginPath();
-            this.ctx.moveTo(x - size * 0.14, py);
-            this.ctx.quadraticCurveTo(x, py - size * 0.02, x + size * 0.14, py);
-            this.ctx.stroke();
-        }
-
-        // Glow aura
-        this.ctx.fillStyle = 'rgba(200, 100, 255, 0.2)';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size * 0.22, 0, Math.PI * 2);
-        this.ctx.fill();
     }
 
     drawRiversSmooth() {
@@ -5145,6 +2359,7 @@ export class LevelDesigner {
     }
 
     updateGeneratedCode() {
+        if (this.designerMode === 'player') return; // no code-output panel in player mode
         const code = this.generateLevelCode();
         document.getElementById('outputCode').textContent = code;
     }
@@ -5399,33 +2614,23 @@ ${pathCode}
      */
     populateLevelsForCampaign(campaignName) {
         const select = document.getElementById('levelSelect');
-        
+
         // Clear existing options except placeholder
         while (select.options.length > 1) {
             select.remove(1);
         }
 
-        // Level definitions per campaign
-        const levelsByCampaign = {
-            'Forest': Array.from({ length: 12 }, (_, i) => ({
-                value: `Forest.ForestLevel${i + 1}`,
-                label: `Forest Level ${i + 1}`
-            })),
-            'Mountain': Array.from({ length: 12 }, (_, i) => ({
-                value: `Mountain.MountainLevel${i + 1}`,
-                label: `Mountain Level ${i + 1}`
-            })),
-            'Desert': Array.from({ length: 10 }, (_, i) => ({
-                value: `Desert.DesertLevel${i + 1}`,
-                label: `Desert Level ${i + 1}`
-            })),
-            'Space': Array.from({ length: 8 }, (_, i) => ({
-                value: `Space.SpaceLevel${i + 1}`,
-                label: `Space Level ${i + 1}`
-            }))
-        };
+        const glob = LEVEL_FILE_GLOBS[campaignName] || {};
+        const levels = Object.keys(glob)
+            .map(path => path.match(/([^/]+)\.js$/)[1])
+            .filter(name => /Level\d+$/.test(name))
+            .map(name => ({ name, num: parseInt(name.match(/(\d+)$/)[1], 10) }))
+            .sort((a, b) => a.num - b.num)
+            .map(({ name, num }) => ({
+                value: `${campaignName}.${name}`,
+                label: `${campaignName} Level ${num}`
+            }));
 
-        const levels = levelsByCampaign[campaignName] || [];
         levels.forEach(level => {
             const option = document.createElement('option');
             option.value = level.value;
@@ -5642,5 +2847,129 @@ ${pathCode}
         this.waterMode = null;
         this.currentEditingWaveId = null;
         this.riverPoints = [];
+        this.undoStack = [];
+    }
+
+    // ---- Player mode: save-to-slot (replaces the dev tool's export flow) ----
+
+    /** Called by LevelDesignerState after instantiation to wire save-slot support. */
+    setStateManager(sm) {
+        this._stateManager = sm;
+    }
+
+    openSaveModal() {
+        const modal = document.getElementById('saveSlotModal');
+        if (!modal) return;
+
+        const list = document.getElementById('saveSlotList');
+        if (!list) return;
+
+        const existing = this._getCurrentPlayerLevels();
+
+        // Build a select dropdown + confirm button
+        list.innerHTML = '';
+
+        const select = document.createElement('select');
+        select.style.cssText = 'width:100%;padding:8px 10px;background:#333;color:#dedede;border:1px solid #3e3e3e;border-radius:3px;font-size:13px;font-family:inherit;margin-bottom:10px;';
+        for (let i = 0; i < PLAYER_LEVEL_SLOT_COUNT; i++) {
+            const data = existing[i];
+            const opt = document.createElement('option');
+            opt.value = String(i);
+            opt.textContent = data
+                ? `Slot ${i + 1} — ${data.name || 'Custom Level'}`
+                : `Slot ${i + 1} — Empty`;
+            select.appendChild(opt);
+        }
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'dov-btn btn-success';
+        confirmBtn.style.cssText = 'width:100%;padding:8px;font-size:13px;';
+        confirmBtn.textContent = 'Save to Selected Slot';
+        confirmBtn.addEventListener('click', () => {
+            this.saveToSlot(parseInt(select.value, 10));
+            this.closeSaveModal();
+        });
+
+        list.appendChild(select);
+        list.appendChild(confirmBtn);
+
+        modal.style.display = 'flex';
+    }
+
+    closeSaveModal() {
+        const modal = document.getElementById('saveSlotModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    _getCurrentPlayerLevels() {
+        // Prefer save slot data
+        if (this._stateManager && this._stateManager.currentSaveData) {
+            const pl = this._stateManager.currentSaveData.playerLevels;
+            if (Array.isArray(pl)) {
+                const result = pl.slice(0, PLAYER_LEVEL_SLOT_COUNT);
+                while (result.length < PLAYER_LEVEL_SLOT_COUNT) result.push(null);
+                return result;
+            }
+        }
+        // Legacy localStorage fallback
+        try {
+            const raw = localStorage.getItem(PLAYER_LEVEL_LEGACY_STORAGE_KEY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    const result = parsed.slice(0, PLAYER_LEVEL_SLOT_COUNT);
+                    while (result.length < PLAYER_LEVEL_SLOT_COUNT) result.push(null);
+                    return result;
+                }
+            }
+        } catch (e) {}
+        return Array(PLAYER_LEVEL_SLOT_COUNT).fill(null);
+    }
+
+    async saveToSlot(index) {
+        const name = document.getElementById('levelName')?.value?.trim() || `Custom Level ${index + 1}`;
+
+        const levelData = {
+            name,
+            pathPoints: this.pathPoints.map(p => ({ gridX: p.gridX, gridY: p.gridY })),
+            waves: this.waves.map(w => JSON.parse(JSON.stringify(w))),
+            terrainElements: this.terrainElements.map(t => JSON.parse(JSON.stringify(t))),
+            riverPaths: this.riverPaths.map(rp => rp.map(pt => ({ gridX: pt.gridX, gridY: pt.gridY }))),
+            castlePosition: this.castlePosition
+                ? { gridX: this.castlePosition.gridX, gridY: this.castlePosition.gridY }
+                : null,
+            campaign: this.currentCampaign || 'forest',
+            savedAt: Date.now()
+        };
+
+        const existing = this._getCurrentPlayerLevels();
+        existing[index] = levelData;
+
+        // Save to current save slot via SaveSystem
+        if (this._stateManager && this._stateManager.currentSaveSlot && this._stateManager.SaveSystem) {
+            this._stateManager.SaveSystem.updateAndSaveSettlementData(
+                this._stateManager.currentSaveSlot,
+                { playerLevels: existing }
+            );
+            // Update in-memory save data so workshop picks it up immediately
+            if (this._stateManager.currentSaveData) {
+                this._stateManager.currentSaveData.playerLevels = existing;
+            }
+            // Also persist to the on-disk .sav file (desktop/Tauri build) - without this,
+            // a later app restart's syncAllSlotsFromFiles() would silently overwrite this
+            // localStorage-only change from the stale file on disk.
+            await this._stateManager.SaveSystem.persistToFile(this._stateManager.currentSaveSlot);
+        } else {
+            // Legacy localStorage fallback
+            localStorage.setItem(PLAYER_LEVEL_LEGACY_STORAGE_KEY, JSON.stringify(existing));
+        }
+
+        // Brief visual confirmation
+        const btn = document.getElementById('saveToSlotBtn');
+        if (btn) {
+            const orig = btn.textContent;
+            btn.textContent = 'Saved!';
+            setTimeout(() => { btn.textContent = orig; }, 1500);
+        }
     }
 }
