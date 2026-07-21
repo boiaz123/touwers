@@ -2,6 +2,15 @@ import { Tower } from './Tower.js';
 import { ObjectPool } from '../../core/ObjectPool.js';
 
 export class CannonTower extends Tower {
+    // How fast the whole mechanism can turn to face a target while winding up, in
+    // radians/sec - fast enough to comfortably finish the turn within the ~0.83s
+    // windup, slow enough to read as a heavy timber frame turning rather than a snap.
+    static TURN_SPEED = Math.PI * 1.5;
+    // Slightly gentler than TURN_SPEED - used only to settle the frame back to its
+    // neutral "as-built" facing once a shot's recoil finishes, so it doesn't sit
+    // twisted toward wherever it last fired.
+    static RESET_TURN_SPEED = Math.PI * 0.9;
+
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
         this.range = 155;
@@ -13,6 +22,8 @@ export class CannonTower extends Tower {
         this.trebuchetAngle = 0;
         this.armPosition = 0;
         this.armSpeed = 0;
+        this.isRecoiling = false;
+        this.isLoading = false;
         this.explosions = [];
         this.fireballs = [];
         // Phase 5: reuse fireball/explosion objects across shots instead of allocating a
@@ -37,34 +48,62 @@ export class CannonTower extends Tower {
         super.update(deltaTime, enemies);
         
         // Update trebuchet arm animation
-        if (this.armPosition === 2) {
+        this.isLoading = false;
+        if (this.isRecoiling) {
+            // Snap-back after release: accelerates from 0, so this must keep running
+            // every frame until the arm is fully home - a one-shot equality check here
+            // let the very first (barely-moved) frame count as "done" and handed off to
+            // the slow idle-decay below, which produced a visible pop next windup.
             this.armSpeed += deltaTime * 10;
             this.armPosition = Math.max(0, this.armPosition - this.armSpeed * deltaTime);
             if (this.armPosition <= 0) {
                 this.armPosition = 0;
                 this.armSpeed = 0;
+                this.isRecoiling = false;
             }
         } else if (this.target && this.cooldown === 0) {
+            this.isLoading = true;
             this.loadingTime += deltaTime * 1.2;
             this.armPosition = Math.min(1, this.loadingTime);
-            
+
             if (this.armPosition >= 1) {
                 this.shoot();
                 this.cooldown = 1 / this.fireRate;
                 this.armPosition = 2;
                 this.armSpeed = 0;
                 this.loadingTime = 0;
+                this.isLoading = false;
+                this.isRecoiling = true;
             }
         } else {
             this.loadingTime = 0;
             this.armPosition = Math.max(0, this.armPosition - deltaTime * 0.3);
         }
-        
-        if (this.target) {
+
+        // Only the arm winding up to throw turns the whole mechanism to face the
+        // enemy - the base and counterweight otherwise sit still between shots
+        // instead of continuously swivelling to chase a moving target, and the turn
+        // is a smooth turn-rate-limited sweep (not an instant snap) so it reads as
+        // one solid piece of timber coming around rather than teleporting.
+        if (this.target && this.isLoading) {
             const targetAngle = Math.atan2(this.target.y - this.y, this.target.x - this.x);
-            this.trebuchetAngle = targetAngle;
+            let diff = targetAngle - this.trebuchetAngle;
+            diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+            const maxStep = CannonTower.TURN_SPEED * deltaTime;
+            this.trebuchetAngle += Math.max(-maxStep, Math.min(maxStep, diff));
+        } else if (!this.isRecoiling && this.trebuchetAngle !== 0) {
+            // Once a shot's recoil is fully done, settle back to the neutral facing
+            // it had when first built instead of staying twisted toward the last
+            // target - it was "hanging" at the fired angle forever otherwise.
+            let diff = Math.atan2(Math.sin(-this.trebuchetAngle), Math.cos(-this.trebuchetAngle));
+            const maxStep = CannonTower.RESET_TURN_SPEED * deltaTime;
+            if (Math.abs(diff) <= maxStep) {
+                this.trebuchetAngle = 0;
+            } else {
+                this.trebuchetAngle += Math.sign(diff) * maxStep;
+            }
         }
-        
+
         // Update fireballs (compact in-place)
         let fbWrite = 0;
         for (let i = 0; i < this.fireballs.length; i++) {
@@ -302,11 +341,15 @@ export class CannonTower extends Tower {
             }
         }
         
-        // Trebuchet platform on top
-        const platformY = this.y - towerHeight - 5;
+        // Trebuchet platform on top - its underside rests flush on the raised
+        // merlon tops (battlementY - 12) instead of floating a few pixels above
+        // them, so there's no gap of background visible between the wall and the
+        // platform. The recessed notches between merlons stay open underneath it,
+        // same as real crenellations.
+        const platformY = this.y - towerHeight - 12;
         const platformWidth = towerWidth * 0.9;
-        const platformThickness = 8;
-        
+        const platformThickness = 10;
+
         // Wooden platform
         ctx.fillStyle = '#8B4513';
         ctx.strokeStyle = '#654321';
@@ -329,35 +372,80 @@ export class CannonTower extends Tower {
     renderDynamicParts(ctx, towerSize) {
         const towerHeight = towerSize * 0.7;
         const platformWidth = towerSize * 0.8 * 0.9;
-        const platformY = this.y - towerHeight - 5;
+        const platformThickness = 10;
+        // Anchor at the platform's top surface (not its underside) so the mechanism
+        // sits ON it, flush with the same flat, front-facing plank drawn in
+        // renderStaticBack - an ellipse "swivel base" here previously read as a
+        // top-down disc, a different perspective than the rest of the tower. Must
+        // match renderStaticBack's platformY (battlementY - 12) plus its thickness.
+        const platformY = this.y - towerHeight - 12 - platformThickness;
 
         // Trebuchet mechanism - translate to base, rotate around pivot
         ctx.save();
         ctx.translate(this.x, platformY);
-        
-        // Trebuchet base (more robust A-frame)
+
+        // Static mounting deck (does not rotate) - a flat block on top of the
+        // platform, drawn front-facing like the rest of the tower, that the A-frame
+        // is bolted to. Grounds the mechanism without switching to a top-down
+        // perspective the way the old ellipse did.
+        const deckHalfWidth = platformWidth * 0.4;
+        const deckHeight = 8;
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 2;
+        ctx.fillRect(-deckHalfWidth, -deckHeight, deckHalfWidth * 2, deckHeight);
+        ctx.strokeRect(-deckHalfWidth, -deckHeight, deckHalfWidth * 2, deckHeight);
+
+        // Grain lines, matching the main platform's plank style
+        ctx.beginPath();
+        for (let i = 1; i < 4; i++) {
+            const lx = -deckHalfWidth + i * (deckHalfWidth * 2 / 4);
+            ctx.moveTo(lx, -deckHeight);
+            ctx.lineTo(lx, 0);
+        }
+        ctx.stroke();
+
+        // Corner bolts - static, reinforce the "bolted to the platform" read
+        ctx.fillStyle = '#2F2F2F';
+        for (const sx of [-1, 1]) {
+            ctx.beginPath();
+            ctx.arc(sx * (deckHalfWidth - 4), -deckHeight + 3, 1.6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(sx * (deckHalfWidth - 4), -3, 1.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // The A-frame, pivot and arm all turn together to face the target - previously
+        // only the arm rotated here while the frame stayed fixed, so at most aim angles
+        // the arm/counterweight visibly detached from the frame instead of pivoting
+        // with it. Rotating before drawing the frame keeps everything joined.
+        ctx.rotate(this.trebuchetAngle);
+
+        // Trebuchet base (more robust A-frame) - kept compact so its feet stay on
+        // the swivel base at every rotation instead of swinging past its edge.
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 6;
-        
+
         // Main support frame
         ctx.beginPath();
-        ctx.moveTo(-25, 0);
+        ctx.moveTo(-14, 3);
         ctx.lineTo(0, -20);
-        ctx.lineTo(25, 0);
+        ctx.lineTo(14, 3);
         ctx.stroke();
-        
+
         // Cross braces
         ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.moveTo(-15, -8);
-        ctx.lineTo(15, -8);
+        ctx.moveTo(-9, -8);
+        ctx.lineTo(9, -8);
         ctx.stroke();
-        
+
         ctx.beginPath();
-        ctx.moveTo(-20, -4);
-        ctx.lineTo(20, -4);
+        ctx.moveTo(-11, -3);
+        ctx.lineTo(11, -3);
         ctx.stroke();
-        
+
         // Pivot point at correct location (large axle) - this is where we'll rotate around
         ctx.fillStyle = '#2F2F2F';
         ctx.strokeStyle = '#1A1A1A';
@@ -366,11 +454,11 @@ export class CannonTower extends Tower {
         ctx.arc(0, -15, 6, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-        
-        // Now translate to pivot and rotate the arm
+
+        // Now translate to the pivot - already rotated with the frame above, so the
+        // arm swings relative to it without a second, independent rotation.
         ctx.translate(0, -15);
-        ctx.rotate(this.trebuchetAngle);
-        
+
         // Trebuchet arm (longer and more realistic)
         // Angles are relative to pivot now
         const armLength = platformWidth * 0.6;
@@ -386,13 +474,30 @@ export class CannonTower extends Tower {
         const shortArmEndY = -Math.sin(armAngle) * shortArmLength;
         
         // Arm shaft
-        ctx.strokeStyle = '#654321';
+        ctx.strokeStyle = '#4A2F16';
         ctx.lineWidth = 6;
         ctx.beginPath();
         ctx.moveTo(shortArmEndX, shortArmEndY);
         ctx.lineTo(longArmEndX, longArmEndY);
         ctx.stroke();
-        
+
+        // Thin highlight down the middle so the beam reads as one solid piece of
+        // timber rather than a flat line blending into the platform behind it.
+        ctx.strokeStyle = 'rgba(200, 150, 100, 0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(shortArmEndX, shortArmEndY);
+        ctx.lineTo(longArmEndX, longArmEndY);
+        ctx.stroke();
+
+        // Metal strap clamping the arm to the pivot axle - reinforces the visual
+        // join between the two, now that both rotate together.
+        ctx.strokeStyle = '#1A1A1A';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.stroke();
+
         // Sling at end of long arm
         ctx.fillStyle = '#8B4513';
         ctx.strokeStyle = '#654321';
