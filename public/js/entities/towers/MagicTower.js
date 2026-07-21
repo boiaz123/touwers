@@ -62,8 +62,13 @@ export class MagicTower extends Tower {
         super.update(deltaTime, enemies);
         this.enemies = enemies; // Store for use in chainLightning
         
-        this.crystalPulse = 0.5 + 0.5 * Math.sin(this.animationTime * 3);
-        this.runeRotation += deltaTime * 0.5;
+        // Slow, high-floored breathing pulse (was 0-1 at 3rad/s, i.e. flickering fully dark
+        // and back roughly every 2s) - every glow site below (windows, halo, ambient core,
+        // floating runes) now reads this one value directly instead of inventing its own
+        // floor/range, so the whole tower breathes together at one calm, consistent rate
+        // instead of several independently-flickering light sources.
+        this.crystalPulse = 0.65 + 0.35 * Math.sin(this.animationTime * 1.1);
+        this.runeRotation += deltaTime * 0.35;
         
         if (this.target && this.cooldown === 0) {
             this.shoot();
@@ -368,7 +373,103 @@ export class MagicTower extends Tower {
 
         return segments;
     }
-    
+
+    /** Samples a flattened-ellipse arc as a manual polyline (moveTo/lineTo per segment) rather
+     *  than ctx.ellipse(..., rotation, start, end) - Pixi's real Graphics.ellipse() only ever
+     *  takes (x, y, radiusX, radiusY); the shim's rotation/start/end params get silently
+     *  dropped, so a partial-arc ellipse call would render as a full, uncut ellipse in the
+     *  actual game despite working in a plain Canvas2D test. Full ellipses (start=0, end=2π)
+     *  are unaffected by the gap and still use ctx.ellipse() directly elsewhere in this file. */
+    _strokeEllipseArc(ctx, cx, cy, rx, ry, fromAngle, toAngle, steps = 16) {
+        ctx.beginPath();
+        for (let s = 0; s <= steps; s++) {
+            const a = fromAngle + (toAngle - fromAngle) * (s / steps);
+            const px = cx + Math.cos(a) * rx;
+            const py = cy + Math.sin(a) * ry;
+            if (s === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+    }
+
+    /** Boulders ringing the foundation plinth - deterministic pseudo-random hash (not
+     *  Math.random()) so the pattern is stable no matter when/how often this static layer
+     *  gets baked, the same approach MagicAcademy's _renderMoatBankDetail uses for its own
+     *  bank rocks. No ellipse rotation is used (unlike a literal rock scatter might call
+     *  for) since CanvasGraphicsShim's ellipse() silently drops rotation - varying each
+     *  rock's size/shade/highlight offset instead keeps the Canvas2D and in-game Pixi
+     *  renders identical. */
+    _renderBaseRocks(ctx, g) {
+        const rockCount = 10;
+        for (let i = 0; i < rockCount; i++) {
+            const hash = (i * 53 % 29) / 29;
+            const angle = (i / rockCount) * Math.PI * 2 + hash * 0.3;
+            const rx = this.x + Math.cos(angle) * g.baseRadius * (0.9 + hash * 0.14);
+            const ry = this.y + Math.sin(angle) * g.baseFlat * (0.9 + hash * 0.14);
+            const rs = g.baseRadius * (0.1 + hash * 0.06);
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+            ctx.beginPath();
+            ctx.ellipse(rx + 1.5, ry + 1.5, rs * 1.1, rs * 0.55, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            const shade = 90 + hash * 50;
+            const rockGradient = ctx.createLinearGradient(rx - rs, ry - rs * 0.6, rx + rs, ry + rs * 0.6);
+            rockGradient.addColorStop(0, `rgb(${shade + 45}, ${shade + 40}, ${shade + 32})`);
+            rockGradient.addColorStop(1, `rgb(${shade - 25}, ${shade - 28}, ${shade - 32})`);
+            ctx.fillStyle = rockGradient;
+            ctx.strokeStyle = 'rgba(20, 18, 15, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.ellipse(rx, ry, rs, rs * 0.72, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(230, 225, 215, 0.35)';
+            ctx.beginPath();
+            ctx.ellipse(rx - rs * 0.32, ry - rs * 0.26, rs * 0.32, rs * 0.18, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    /** '#RRGGBB' -> 'rgba(r, g, b, ' (missing trailing alpha+')' on purpose, same calling
+     *  convention as getElementalColor() below) - lets the gem glow/halo share their exact
+     *  color with the gem body itself (gemData.glow) instead of drawing from
+     *  getElementalColor()'s separate palette, which doesn't match per element (e.g. air's
+     *  gem is pale blue but getElementalColor()'s air is yellow). */
+    _hexToRgbaPrefix(hex) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, `;
+    }
+
+    /** Single source of truth for the tower's silhouette geometry - shared by renderStaticBack/
+     *  renderDynamicParts/renderRunesParticlesAndBolts so the body, coil, gem and rune/bolt
+     *  anchor points can never drift out of sync with each other. baseFlat/capRy squash the
+     *  octagonal foundation and parapet cap into floor-plan ellipses (perspective the original
+     *  circular ctx.arc() base/rings didn't have); the body itself is drawn as a two-facet flat
+     *  prism (see renderStaticBack) rather than a flat top-down circle. */
+    _getGeometry(towerSize) {
+        const baseRadius = towerSize * 0.35;
+        const baseFlat = baseRadius * 0.42;
+        const bodyHeight = towerSize * 0.5;
+        const bodyBaseY = this.y - towerSize * 0.02;
+        const bodyTopY = bodyBaseY - bodyHeight;
+        const wallRx = baseRadius * 0.82;
+        const capRx = wallRx * 1.08;
+        const capRy = baseFlat * 0.55;
+        const coilBaseY = bodyTopY;
+        const coilHeight = towerSize * 0.4;
+        const coilWidth = baseRadius * 0.15;
+        const sphereY = coilBaseY - coilHeight;
+        const gemRadius = coilWidth * 1.5 * 1.6;
+        return {
+            baseRadius, baseFlat, bodyHeight, bodyBaseY, bodyTopY, wallRx, capRx, capRy,
+            coilBaseY, coilHeight, coilWidth, sphereY, gemRadius
+        };
+    }
+
     render(ctx) {
         const cellSize = this.getCellSize(ctx);
         const towerSize = cellSize * 2;
@@ -395,132 +496,368 @@ export class MagicTower extends Tower {
         // intentionally empty
     }
 
-    /** Strategy A (baked once per campaign, shared across instances): tower base + coil structure. */
+    /** Strategy A (baked once per campaign, shared across instances): foundation + tower body
+     *  + coil structure - all spell/element-independent, so they don't depend on the
+     *  per-instance selectedElement and can be shared-baked instead of redrawn every frame.
+     *  Reworked from flat solid-color circles/rings (no perspective, the "basic" look this
+     *  overhaul addresses) to gradient-shaded shapes on a flattened floor-plan ellipse ratio,
+     *  matching the technique CombinationTower's stone base/spire use. */
     renderStaticBack(ctx, towerSize) {
-        // 3D shadow
-        ctx.fillStyle = 'rgba(75, 0, 130, 0.3)';
+        const g = this._getGeometry(towerSize);
+
+        // Drop shadow, squashed to the same floor-plan ratio as the foundation below
+        ctx.fillStyle = 'rgba(15, 12, 8, 0.35)';
         ctx.beginPath();
-        ctx.arc(this.x + 3, this.y + 3, towerSize * 0.35, 0, Math.PI * 2);
+        ctx.ellipse(this.x + 3, this.y + 4, g.baseRadius * 1.08, g.baseFlat * 1.25, 0, 0, Math.PI * 2);
         ctx.fill();
-        
-        // Mystical stone base (octagonal mage tower)
-        const baseRadius = towerSize * 0.35;
-        const towerHeight = towerSize * 0.5;
-        
-        // Tower foundation - use solid colors instead of gradients
-        ctx.fillStyle = '#6A5ACD';
-        ctx.strokeStyle = '#4B0082';
+
+        // Wide flat stone plinth the octagon sits on - a quarried footing the tower is
+        // built into, matching MagicAcademy's plinth-under-wall convention
+        // (renderCobblestoneBase) instead of the tower floating on bare colored ground.
+        const plinthRx = g.baseRadius * 1.2;
+        const plinthRy = g.baseFlat * 1.15;
+        ctx.fillStyle = '#3c3934';
+        ctx.strokeStyle = '#18160f';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(this.x, this.y + g.baseFlat * 0.18, plinthRx, plinthRy, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Boulders anchoring the foundation into the plinth, half-embedded around the rim -
+        // breaks up what used to be a clean colored polygon edge and reads as the tower
+        // being built from/into solid rock, matching MagicAcademy's moat-bank boulders
+        // (_renderMoatBankDetail) rather than a smooth flat-filled shape. Drawn before the
+        // foundation polygon so the polygon's own edge overlaps their inner half, seating
+        // them rather than having them float on top of a finished edge.
+        this._renderBaseRocks(ctx, g);
+
+        // Octagonal stone foundation, flattened into a floor-plan ellipse ratio so it reads
+        // as ground the tower actually stands on. Neutral quarried-stone palette (matching
+        // MagicAcademy's cobblestone wall gradient) instead of tinted purple - the base is
+        // mundane masonry the arcane superstructure above is built on top of.
+        const foundationGradient = ctx.createLinearGradient(this.x, this.y - g.baseFlat, this.x, this.y + g.baseFlat);
+        foundationGradient.addColorStop(0, '#b8b4ac');
+        foundationGradient.addColorStop(0.5, '#8c8880');
+        foundationGradient.addColorStop(1, '#5c5850');
+        ctx.fillStyle = foundationGradient;
+        ctx.strokeStyle = '#2a2824';
         ctx.lineWidth = 2;
-        
-        // Draw octagonal tower base
         ctx.beginPath();
         for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
-            const x = this.x + Math.cos(angle) * baseRadius;
-            const y = this.y + Math.sin(angle) * baseRadius;
-            
+            const angle = (i / 8) * Math.PI * 2 - Math.PI / 8;
+            const x = this.x + Math.cos(angle) * g.baseRadius;
+            const y = this.y + Math.sin(angle) * g.baseFlat;
             if (i === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
         }
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-        
-        // Tower walls with 3D effect - simplified
-        ctx.fillStyle = '#6A5ACD';
-        ctx.strokeStyle = '#4B0082';
-        ctx.lineWidth = 2;
-        
-        // Draw tower cylinder
-        ctx.beginPath();
-        ctx.arc(this.x, this.y - towerHeight/2, baseRadius * 0.9, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        
-        // Stone blocks texture
-        ctx.strokeStyle = '#2E0A4F';
+
+        // Cut-stone joint lines radiating from center, echoing the coursing on
+        // MagicAcademy's own wall (renderCobblestoneBase) so the two structures read as
+        // the same masonry rather than unrelated materials.
+        ctx.strokeStyle = 'rgba(35, 32, 28, 0.4)';
         ctx.lineWidth = 1;
-        for (let ring = 0; ring < 4; ring++) {
-            const ringY = this.y - towerHeight + (ring * towerHeight/4);
+        for (let i = 0; i < 8; i++) {
+            if (i === 4) continue; // skip the seam that would cut straight through the front face
+            const angle = (i / 8) * Math.PI * 2 - Math.PI / 8;
             ctx.beginPath();
-            ctx.arc(this.x, ringY, baseRadius * 0.85, 0, Math.PI * 2);
+            ctx.moveTo(this.x, this.y);
+            ctx.lineTo(this.x + Math.cos(angle) * g.baseRadius, this.y + Math.sin(angle) * g.baseFlat);
             ctx.stroke();
         }
 
-        // Tesla coil base platform + column + rings. Drawn here (static) rather than where
-        // it appeared in the original code (between the windows and the gem, both dynamic)
-        // - the coil's footprint doesn't overlap either, so moving it doesn't change the
-        // final composited image, and it keeps the static/dynamic split contiguous.
-        const coilBaseRadius = baseRadius * 0.6;
-        const coilBaseY = this.y - towerHeight;
-        const coilHeight = towerSize * 0.4;
-        const coilWidth = baseRadius * 0.15;
+        // Lit far-rim highlight - the foundation's far edge catching ambient light, so it
+        // reads as a raised platform rather than a flat smudge under the tower.
+        ctx.strokeStyle = 'rgba(235, 230, 220, 0.5)';
+        ctx.lineWidth = Math.max(1, towerSize * 0.012);
+        this._strokeEllipseArc(ctx, this.x, this.y - g.baseFlat * 0.5, g.baseRadius * 0.9, g.baseFlat * 0.5, Math.PI * 1.1, Math.PI * 1.9);
 
-        ctx.fillStyle = '#2F2F2F';
-        ctx.strokeStyle = '#1A1A1A';
-        ctx.lineWidth = 2;
+        // Thin carved rune circle inlaid in the stone - a static arcane marking (not
+        // animated) that ties the mundane stone base back to the magic tower above without
+        // adding another moving light source, keeping the floating runes above as the
+        // base's only animated glow for a calmer overall read.
+        ctx.strokeStyle = 'rgba(150, 100, 220, 0.3)';
+        ctx.lineWidth = Math.max(1, towerSize * 0.007);
+        this._strokeEllipseArc(ctx, this.x, this.y - g.baseFlat * 0.05, g.baseRadius * 0.6, g.baseFlat * 0.6, 0, Math.PI * 2, 24);
+
+        // Stone collar bridging the (narrower, purple) tower body down into the (wider,
+        // neutral-stone) foundation - a warm cut-stone trim band, the same role
+        // MagicAcademy's belt course (_wallBeltY / renderCobblestoneBase) plays marking a
+        // storey division, so the join reads as a deliberate architectural transition
+        // rather than the body's fill just stopping abruptly over the foundation.
+        const collarTopW = g.wallRx * 2 * 1.05;
+        const collarBottomW = g.baseRadius * 1.5;
+        const collarHeight = towerSize * 0.07;
+        const collarGradient = ctx.createLinearGradient(this.x, g.bodyBaseY, this.x, g.bodyBaseY + collarHeight);
+        collarGradient.addColorStop(0, '#d8d0bc');
+        collarGradient.addColorStop(0.5, '#b8ac8e');
+        collarGradient.addColorStop(1, '#8a7d5e');
+        ctx.fillStyle = collarGradient;
+        ctx.strokeStyle = '#3a3428';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(this.x, coilBaseY, coilBaseRadius, 0, Math.PI * 2);
+        ctx.moveTo(this.x - collarTopW / 2, g.bodyBaseY);
+        ctx.lineTo(this.x - collarBottomW / 2, g.bodyBaseY + collarHeight);
+        ctx.lineTo(this.x + collarBottomW / 2, g.bodyBaseY + collarHeight);
+        ctx.lineTo(this.x + collarTopW / 2, g.bodyBaseY);
+        ctx.closePath();
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = '#808080';
+        // Tower body - each facet is its own light-to-dark gradient (not a flat fill), so the
+        // prism reads as genuinely rounded instead of two flat colored panels meeting at a
+        // seam - the facet split (the ridge below) now marks where the curve turns away from
+        // the light the way a real shaded cylinder would, rather than being the only shading
+        // cue. Replaces the old single ctx.arc() "cylinder" (a flat colored disc with no
+        // vertical wall at all).
+        const leftFacetGradient = ctx.createLinearGradient(this.x - g.wallRx, 0, this.x, 0);
+        leftFacetGradient.addColorStop(0, '#6656C0');
+        leftFacetGradient.addColorStop(0.5, '#8676DE');
+        leftFacetGradient.addColorStop(1, '#A89CF0');
+        ctx.fillStyle = leftFacetGradient;
+        ctx.beginPath();
+        ctx.moveTo(this.x - g.wallRx, g.bodyBaseY);
+        ctx.lineTo(this.x - g.wallRx, g.bodyTopY);
+        ctx.lineTo(this.x, g.bodyTopY);
+        ctx.lineTo(this.x, g.bodyBaseY);
+        ctx.closePath();
+        ctx.fill();
+
+        const rightFacetGradient = ctx.createLinearGradient(this.x, 0, this.x + g.wallRx, 0);
+        rightFacetGradient.addColorStop(0, '#5A48A0');
+        rightFacetGradient.addColorStop(0.5, '#3F2E80');
+        rightFacetGradient.addColorStop(1, '#241A4A');
+        ctx.fillStyle = rightFacetGradient;
+        ctx.beginPath();
+        ctx.moveTo(this.x, g.bodyBaseY);
+        ctx.lineTo(this.x, g.bodyTopY);
+        ctx.lineTo(this.x + g.wallRx, g.bodyTopY);
+        ctx.lineTo(this.x + g.wallRx, g.bodyBaseY);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(this.x - g.wallRx, g.bodyBaseY);
+        ctx.lineTo(this.x - g.wallRx, g.bodyTopY);
+        ctx.lineTo(this.x + g.wallRx, g.bodyTopY);
+        ctx.lineTo(this.x + g.wallRx, g.bodyBaseY);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.lineWidth = Math.max(1, towerSize * 0.012);
+        ctx.beginPath();
+        ctx.moveTo(this.x, g.bodyBaseY);
+        ctx.lineTo(this.x, g.bodyTopY);
+        ctx.stroke();
+
+        // Rounded cross-section cue - a bright sliver at the lit outer-left edge and a dark
+        // sliver at the shadowed outer-right edge, the same "edge shadow/highlight strip"
+        // technique MagicAcademy's _drawTowerShell uses on its own towers. Plain fillRect
+        // (no ctx.clip()) is safe here because the body facets are true axis-aligned
+        // rectangles rather than a tapered/curved outline, so the strip's own bounds already
+        // stay inside the silhouette - clip() is a no-op through the in-game Pixi shim
+        // (CanvasGraphicsShim), so relying on it here would leak past the edge in-game even
+        // though it'd look fine in a plain Canvas2D test.
+        const edgeW = Math.max(g.wallRx * 0.1, towerSize * 0.01);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.fillRect(this.x - g.wallRx, g.bodyTopY, edgeW, g.bodyHeight);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.32)';
+        ctx.fillRect(this.x + g.wallRx - edgeW, g.bodyTopY, edgeW, g.bodyHeight);
+
+        // Corner quoins - alternating light/dark cut-stone blocks stacked along both vertical
+        // edges, echoing real fortress corner masonry (and MagicAcademy's own cobblestone
+        // coursing) instead of a bare colored edge. Aligned to the same row rhythm as the
+        // horizontal coursing below so the whole body reads as one coursed structure.
+        const courseCount = 5;
+        const courseH = g.bodyHeight / courseCount;
+        const quoinW = g.wallRx * 0.16;
+        for (let c = 0; c < courseCount; c++) {
+            const qy = g.bodyTopY + c * courseH;
+            const lit = c % 2 === 0;
+            ctx.fillStyle = lit ? 'rgba(225, 215, 255, 0.35)' : 'rgba(15, 10, 35, 0.4)';
+            ctx.fillRect(this.x - g.wallRx, qy, quoinW, courseH - 1);
+            ctx.fillRect(this.x + g.wallRx - quoinW, qy, quoinW, courseH - 1);
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 0.6;
+            ctx.strokeRect(this.x - g.wallRx, qy, quoinW, courseH - 1);
+            ctx.strokeRect(this.x + g.wallRx - quoinW, qy, quoinW, courseH - 1);
+        }
+
+        // Horizontal stone coursing - straight lines (not elliptical arcs) since the body
+        // facets are flat planes rather than a curved cylinder; a curved seam across a
+        // hard-edged prism read as subtly mismatched with its own straight-edged silhouette.
+        // Each course also gets a faint alternating light/dark band, not just a bare line, so
+        // the body reads as coursed masonry rather than a smooth panel with stray scratches.
+        for (let c = 1; c < courseCount; c++) {
+            const rowY = g.bodyTopY + c * courseH;
+            ctx.fillStyle = c % 2 === 0 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.08)';
+            ctx.fillRect(this.x - g.wallRx, rowY, g.wallRx * 2, courseH * 0.28);
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(this.x - g.wallRx, rowY);
+            ctx.lineTo(this.x + g.wallRx, rowY);
+            ctx.stroke();
+        }
+
+        // Thin arcane tick-marks down each facet - a static (non-animated) carved conduit
+        // motif tying the body back to the inlaid rune circle on the foundation below,
+        // without adding another moving light source. Built from short discrete segments
+        // rather than ctx.setLineDash() since that API isn't confirmed supported by the
+        // in-game Pixi shim - plain moveTo/lineTo pairs render identically everywhere.
+        ctx.strokeStyle = 'rgba(160, 110, 230, 0.3)';
+        ctx.lineWidth = Math.max(1, towerSize * 0.006);
+        const tickCount = 5;
+        const tickSpan = g.bodyHeight * 0.7;
+        const tickGap = tickSpan / tickCount;
+        [-1, 1].forEach(side => {
+            const ix = this.x + side * g.wallRx * 0.55;
+            for (let t = 0; t < tickCount; t++) {
+                const ty0 = g.bodyBaseY - g.bodyHeight * 0.14 - t * tickGap;
+                const ty1 = ty0 - tickGap * 0.55;
+                ctx.beginPath();
+                ctx.moveTo(ix, ty0);
+                ctx.lineTo(ix, ty1);
+                ctx.stroke();
+            }
+        });
+
+        // Parapet cap the tesla coil is mounted on - always fully visible from above, so a
+        // full ctx.ellipse() fill (start=0, end=2π) is safe here even through the Pixi shim.
+        const capGradient = ctx.createLinearGradient(this.x, g.bodyTopY - g.capRy, this.x, g.bodyTopY + g.capRy);
+        capGradient.addColorStop(0, '#A093EE');
+        capGradient.addColorStop(1, '#4B3A9E');
+        ctx.fillStyle = capGradient;
+        ctx.strokeStyle = '#2E0A4F';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(this.x, g.bodyTopY, g.capRx, g.capRy, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Tesla coil base platform + column + rings, mounted on the parapet cap.
+        const coilBaseRadius = g.coilWidth * 2.6;
+        const coilBaseGradient = ctx.createLinearGradient(this.x - coilBaseRadius, g.coilBaseY, this.x + coilBaseRadius, g.coilBaseY);
+        coilBaseGradient.addColorStop(0, '#1A1A1A');
+        coilBaseGradient.addColorStop(0.5, '#4A4A4A');
+        coilBaseGradient.addColorStop(1, '#1A1A1A');
+        ctx.fillStyle = coilBaseGradient;
+        ctx.strokeStyle = '#0A0A0A';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(this.x, g.coilBaseY, coilBaseRadius, coilBaseRadius * 0.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        const coilGradient = ctx.createLinearGradient(this.x - g.coilWidth, 0, this.x + g.coilWidth, 0);
+        coilGradient.addColorStop(0, '#3A3A3A');
+        coilGradient.addColorStop(0.5, '#B0B0B0');
+        coilGradient.addColorStop(1, '#3A3A3A');
+        ctx.fillStyle = coilGradient;
         ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 2;
-        ctx.fillRect(this.x - coilWidth, coilBaseY - coilHeight, coilWidth * 2, coilHeight);
-        ctx.strokeRect(this.x - coilWidth, coilBaseY - coilHeight, coilWidth * 2, coilHeight);
+        ctx.fillRect(this.x - g.coilWidth, g.coilBaseY - g.coilHeight, g.coilWidth * 2, g.coilHeight);
+        ctx.strokeRect(this.x - g.coilWidth, g.coilBaseY - g.coilHeight, g.coilWidth * 2, g.coilHeight);
 
+        // Rings around the coil rod, flattened into ellipses (the coil is a vertical rod, so a
+        // ring around it should project as a flattened ellipse at this camera angle, not a full
+        // top-down circle like the original).
         const ringCount = 5;
         for (let i = 0; i < ringCount; i++) {
-            const ringY = coilBaseY - coilHeight + (i + 1) * coilHeight / (ringCount + 1);
-            const ringRadius = coilWidth * (2 + Math.sin(i * 0.5));
+            const ringY = g.coilBaseY - g.coilHeight + (i + 1) * g.coilHeight / (ringCount + 1);
+            const ringRx = g.coilWidth * (2 + Math.sin(i * 0.5));
+            const ringRy = ringRx * 0.32;
 
             ctx.strokeStyle = '#A0A0A0';
             ctx.lineWidth = 3;
             ctx.beginPath();
-            ctx.arc(this.x, ringY, ringRadius, 0, Math.PI * 2);
+            ctx.ellipse(this.x, ringY, ringRx, ringRy, 0, 0, Math.PI * 2);
             ctx.stroke();
 
-            ctx.strokeStyle = '#E0E0E0';
+            ctx.strokeStyle = '#E8E8E8';
             ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(this.x, ringY, ringRadius, -Math.PI/4, Math.PI/4);
-            ctx.stroke();
+            this._strokeEllipseArc(ctx, this.x, ringY, ringRx, ringRy, -Math.PI / 3, Math.PI / 3);
         }
     }
 
     /** Strategy B (per-instance Graphics, redrawn every frame): window glow + gem - pulse animation and element-dependent color are continuous per-instance state, not bakeable. */
     renderDynamicParts(ctx, towerSize) {
-        // Same derivation as renderStaticBack() above.
-        const baseRadius = towerSize * 0.35;
-        const towerHeight = towerSize * 0.5;
-        const coilBaseY = this.y - towerHeight;
-        const coilHeight = towerSize * 0.4;
-        const coilWidth = baseRadius * 0.15;
+        const g = this._getGeometry(towerSize);
 
-        // Mystical windows
-        for (let i = 0; i < 4; i++) {
-            const angle = (i / 4) * Math.PI * 2;
-            const windowX = this.x + Math.cos(angle) * baseRadius * 0.7;
-            const windowY = this.y - towerHeight/2;
+        // Mystical windows on the two visible body facets (not wrapped impossibly around the
+        // back of a solid prism like the original's 4-window full ring). Arched carved-stone
+        // surround (frame, keystone, sill) matching MagicAcademy's own window language
+        // (renderCentralTowerStatic) instead of a bare glowing circle, so the two structures
+        // read as the same architectural vocabulary.
+        const windowSpecs = [{ fx: -0.5 }, { fx: 0.5 }];
+        windowSpecs.forEach(win => {
+            const windowX = this.x + g.wallRx * win.fx;
+            const windowY = g.bodyBaseY - g.bodyHeight * 0.55;
+            const winW = towerSize * 0.055;
+            const winH = towerSize * 0.09;
+            const archR = winW / 2;
+            // crystalPulse is already a calm, high-floored breathing value (see update()) -
+            // read directly rather than re-deriving another floor/range here, so every glow
+            // site on the tower breathes in the same rhythm instead of each inventing its own.
+            const glowStrength = this.crystalPulse;
 
-            // Window glow - simplified without gradient
-            ctx.fillStyle = `rgba(138, 43, 226, ${this.crystalPulse * 0.8})`;
+            // Outer light halo, behind the frame, so the window reads as an active light
+            // source rather than just a lit hole in the wall.
+            const glow = ctx.createRadialGradient(windowX, windowY, 0, windowX, windowY, winH * 1.7);
+            glow.addColorStop(0, `rgba(190, 110, 255, ${glowStrength * 0.55})`);
+            glow.addColorStop(0.6, `rgba(150, 60, 230, ${glowStrength * 0.22})`);
+            glow.addColorStop(1, 'rgba(150, 60, 230, 0)');
+            ctx.fillStyle = glow;
             ctx.beginPath();
-            ctx.arc(windowX, windowY, 8, 0, Math.PI * 2);
+            ctx.arc(windowX, windowY, winH * 1.7, 0, Math.PI * 2);
             ctx.fill();
 
-            // Window frame
-            ctx.fillStyle = '#2E0A4F';
+            // Carved stone surround
+            ctx.fillStyle = '#241a44';
+            ctx.fillRect(windowX - winW / 2 - 1.5, windowY - winH / 2 - 1.5, winW + 3, winH + 3);
             ctx.beginPath();
-            ctx.arc(windowX, windowY, 4, 0, Math.PI * 2);
+            ctx.arc(windowX, windowY - winH / 2 - 1.5, archR + 1.5, Math.PI, 0);
             ctx.fill();
-        }
+
+            // Dark opening
+            ctx.fillStyle = '#0c0818';
+            ctx.fillRect(windowX - winW / 2, windowY - winH / 2, winW, winH);
+            ctx.beginPath();
+            ctx.arc(windowX, windowY - winH / 2, archR, Math.PI, 0);
+            ctx.fill();
+
+            // Frame outline
+            ctx.strokeStyle = '#4A3060';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(windowX - winW / 2, windowY + winH / 2);
+            ctx.lineTo(windowX - winW / 2, windowY - winH / 2);
+            ctx.arc(windowX, windowY - winH / 2, archR, Math.PI, 0);
+            ctx.lineTo(windowX + winW / 2, windowY + winH / 2);
+            ctx.stroke();
+
+            // Glowing glass filling the opening, pulse-driven
+            ctx.fillStyle = `rgba(190, 110, 255, ${glowStrength * 0.85})`;
+            ctx.fillRect(windowX - winW / 2 + 1, windowY - winH / 2 + 1, winW - 2, winH * 0.65);
+            ctx.beginPath();
+            ctx.arc(windowX, windowY - winH / 2 + 1, archR - 1, Math.PI, 0);
+            ctx.fill();
+
+            // Keystone and sill for a finished carved look
+            ctx.fillStyle = '#5c4a80';
+            ctx.fillRect(windowX - winW * 0.15, windowY - winH / 2 - archR - 2, winW * 0.3, 2.5);
+            ctx.fillStyle = '#4A3060';
+            ctx.fillRect(windowX - winW / 2 - 1.5, windowY + winH / 2, winW + 3, 2);
+        });
 
         // Tesla coil top elemental gem crystal (prism shape)
-        const sphereRadius = coilWidth * 1.5;
-        const sphereY = coilBaseY - coilHeight;
-        const gemRadius = sphereRadius * 1.6;
+        const sphereY = g.sphereY;
+        const gemRadius = g.gemRadius;
 
         const solidGemColors = {
             fire:  { gem: '#FF4400', inner: '#FF8855', glow: '#FF4400' },
@@ -534,8 +871,48 @@ export class MagicTower extends Tower {
         const gw = gemRadius;
         const gt = gemRadius * 1.15;
         const gb = gemRadius * 0.65;
+        const elementGlow = this._hexToRgbaPrefix(gemData.glow);
 
         ctx.save();
+
+        // Ambient power-core glow beneath the gem - glowSize was computed above but never
+        // actually drawn with in the original, leaving the gem floating with no light spill.
+        ctx.fillStyle = elementGlow + `${this.crystalPulse * 0.2})`;
+        ctx.beginPath();
+        ctx.ellipse(cx, sphereY + gb * 0.3, glowSize * 1.3, glowSize * 0.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Small metallic mounting platform seating the gem on the coil, so it reads as
+        // mounted hardware rather than a shape glued directly onto the rod tip.
+        const platformRadius = gemRadius * 0.6;
+        const platformGradient = ctx.createLinearGradient(cx, sphereY - platformRadius * 0.25, cx, sphereY + platformRadius * 0.25);
+        platformGradient.addColorStop(0, '#6B6070');
+        platformGradient.addColorStop(1, '#221A30');
+        ctx.fillStyle = platformGradient;
+        ctx.strokeStyle = '#0A0A0A';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const x = cx + Math.cos(angle) * platformRadius;
+            const y = sphereY + Math.sin(angle) * platformRadius * 0.35;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Containment-field halo at the gem's own scale - a broken ring (two arcs with gaps,
+        // not a full circle) so it reads as an energy band rather than another solid outline
+        // competing with the gem's silhouette.
+        const haloRadius = gemRadius * 1.5;
+        const haloRy = haloRadius * 0.35;
+        ctx.strokeStyle = elementGlow + `${this.crystalPulse * 0.4})`;
+        ctx.lineWidth = 1.5;
+        this._strokeEllipseArc(ctx, cx, sphereY, haloRadius, haloRy, this.runeRotation, this.runeRotation + Math.PI * 0.7);
+        this._strokeEllipseArc(ctx, cx, sphereY, haloRadius, haloRy, this.runeRotation + Math.PI, this.runeRotation + Math.PI * 1.7);
+
         // Prism gem body
         ctx.fillStyle = gemData.gem;
         ctx.beginPath();
@@ -585,30 +962,39 @@ export class MagicTower extends Tower {
 
     /** Phase 5: runes/particles/bolts - drawn via renderProjectiles() above, inside the Pixi shim when active, or directly on Canvas2D otherwise. Runes use ctx.fillText(), which CanvasGraphicsShim now backs with a pooled PIXI.Text per shim. */
     renderRunesParticlesAndBolts(ctx, towerSize) {
-        const baseRadius = towerSize * 0.35;
-        const towerHeight = towerSize * 0.5;
-        const coilHeight = towerSize * 0.4;
-        const coilWidth = baseRadius * 0.15;
-        const sphereY = this.y - towerHeight - coilHeight;
+        const g = this._getGeometry(towerSize);
+        const sphereY = g.sphereY;
 
-        // Floating runes around tower base (not coil)
+        // Floating runes orbit at the same flattened ratio as the foundation itself
+        // (baseFlat/baseRadius) so the ring reads as one consistent piece of the tower's own
+        // perspective instead of an arbitrarily squashed ellipse. Glow radius and font size
+        // now scale with towerSize - both were fixed pixel values before, so they stayed a
+        // constant on-screen size regardless of resolution/zoom while everything else on the
+        // tower scaled with it.
+        const runeRadius = g.baseRadius * 1.25;
+        const runeSquash = g.baseFlat / g.baseRadius;
+        const runeGlowR = towerSize * 0.032;
+        const runeFontSize = Math.round(towerSize * 0.037);
+
         for (let i = 0; i < this.runePositions.length; i++) {
             const rune = this.runePositions[i];
-            const floatY = Math.sin(this.animationTime * 2 + rune.floatOffset) * 6;
+            // Slower, smaller bob (was a fixed 6px at 2rad/s) for a calmer float in step with
+            // the slower orbit (see update()'s runeRotation) and the calmer crystalPulse.
+            const floatY = Math.sin(this.animationTime * 1.3 + rune.floatOffset) * towerSize * 0.012;
             const runeAngle = this.runeRotation + rune.angle;
-            const runeRadius = baseRadius * 1.3;
             const runeX = this.x + Math.cos(runeAngle) * runeRadius;
-            const runeY = this.y - towerHeight * 0.3 + Math.sin(runeAngle) * runeRadius * 0.3 + floatY;
-            
-            // Rune glow
-            ctx.fillStyle = `rgba(138, 43, 226, ${this.crystalPulse * 0.4})`;
+            const runeY = g.bodyBaseY - g.bodyHeight * 0.3 + Math.sin(runeAngle) * runeRadius * runeSquash + floatY;
+
+            // Rune glow - crystalPulse read directly (see update()'s doc comment), same as
+            // the window/gem glow, so every light source on the tower breathes in sync.
+            ctx.fillStyle = `rgba(138, 43, 226, ${this.crystalPulse * 0.35})`;
             ctx.beginPath();
-            ctx.arc(runeX, runeY, 12, 0, Math.PI * 2);
+            ctx.arc(runeX, runeY, runeGlowR, 0, Math.PI * 2);
             ctx.fill();
-            
+
             // Rune symbol
             ctx.fillStyle = `rgba(255, 255, 255, ${this.crystalPulse})`;
-            ctx.font = 'bold 14px serif';
+            ctx.font = `bold ${runeFontSize}px serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(rune.symbol, runeX, runeY);
