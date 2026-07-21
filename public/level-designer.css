@@ -1,0 +1,496 @@
+/* ============================================
+   LEVEL DESIGNER THEME
+   Shared by the standalone dev tool (level-designer.html) and the in-game
+   "Commander's Workshop" overlay (#designer-overlay in index.html) so both
+   hosts of LevelDesigner.js render identically instead of hand-copied CSS
+   drifting apart. Everything is scoped under .ld-root so it can safely
+   coexist with style.css's global rules when loaded inside index.html.
+   Palette/fonts are pulled from style.css's medieval theme (--primary-gold
+   etc.) so the designer reads as part of the game rather than a separate
+   dev tool.
+   ============================================ */
+
+.ld-root {
+    --ld-gold: #d4af37;
+    --ld-gold-light: #ffd700;
+    --ld-gold-dark: #b8860b;
+
+    --ld-wood-dark: #241609;
+    --ld-wood-medium: #3a2a1a;
+    --ld-wood-light: #4e3a24;
+
+    --ld-stone-dark: #150d08;
+    --ld-stone-medium: #241710;
+    --ld-stone-light: #332216;
+
+    --ld-text-primary: #f2e6c8;
+    --ld-text-secondary: #c9a876;
+    --ld-text-dim: #8d7a5c;
+
+    --ld-border: #6a5030;
+    --ld-border-light: #8b7355;
+
+    --ld-success: #2f7d3a;
+    --ld-success-light: #4caf50;
+    --ld-danger: #8f2f22;
+    --ld-danger-light: #d0453a;
+    --ld-brush: #3f6e34;
+    --ld-brush-light: #7bc45f;
+
+    font-family: 'Segoe UI', 'Trebuchet MS', serif;
+    color: var(--ld-text-primary);
+    display: flex;
+    width: 100%;
+    height: 100%;
+    letter-spacing: 0.2px;
+}
+
+.ld-root * { box-sizing: border-box; }
+
+/* ============ LAYOUT ============ */
+
+.ld-root .canvas-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: linear-gradient(160deg, var(--ld-stone-dark) 0%, #0a0603 100%);
+}
+
+.ld-root .settings-section {
+    width: clamp(320px, 24vw, 420px);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background:
+        linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 100%),
+        linear-gradient(135deg, var(--ld-wood-medium) 0%, var(--ld-stone-medium) 60%, var(--ld-stone-dark) 100%);
+    border-left: 3px solid var(--ld-border);
+    box-shadow: inset 3px 0 10px rgba(0,0,0,0.7), -4px 0 14px rgba(0,0,0,0.5);
+    position: relative;
+}
+
+/* ============ HEADER (mirrors #stats-bar's responsive padding formula so
+   the designer's top chrome scales the same way the real HUD beam does) ============ */
+.ld-root .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: max(0.6rem, 1.2vh) max(1.25rem, 2.5vw);
+    background: linear-gradient(180deg, rgba(78, 56, 30, 0.98) 0%, rgba(56, 38, 18, 0.98) 45%, rgba(40, 24, 8, 0.98) 100%);
+    border-bottom: 2px solid var(--ld-border);
+    box-shadow: inset 0 1px 0 rgba(255, 210, 140, 0.12), 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+.ld-root .header h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(0.95rem, 1.6vw, 1.2rem);
+    font-weight: 700;
+    color: var(--ld-gold-light);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    letter-spacing: 0.4px;
+}
+
+.ld-root .back-btn {
+    padding: 0.35rem 0.9rem;
+    background: linear-gradient(180deg, rgba(58, 40, 18, 0.95), rgba(38, 24, 8, 0.95));
+    color: var(--ld-gold);
+    border: 1.5px solid var(--ld-border-light);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+.ld-root .back-btn:hover { background: linear-gradient(180deg, rgba(78, 56, 26, 0.95), rgba(52, 34, 14, 0.95)); border-color: var(--ld-gold); color: var(--ld-gold-light); }
+
+/* ============ TOOLBAR ============ */
+.ld-root .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    padding: 0.4rem 0.75rem;
+    background: linear-gradient(180deg, rgba(36, 24, 12, 0.96), rgba(26, 16, 8, 0.96));
+    border-bottom: 1px solid var(--ld-border);
+    align-items: center;
+}
+.ld-root .tool-group { display: flex; gap: 3px; align-items: center; }
+.ld-root .tool-sep { width: 1px; height: 20px; background: var(--ld-border-light); opacity: 0.5; margin: 0 5px; }
+.ld-root .tool-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: var(--ld-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-right: 3px;
+}
+
+.ld-root .tool-btn {
+    padding: 0.32rem 0.65rem;
+    background: linear-gradient(180deg, rgba(74, 56, 36, 0.9) 0%, rgba(52, 36, 18, 0.9) 55%, rgba(40, 26, 10, 0.9) 100%);
+    color: var(--ld-text-primary);
+    border: 1.5px solid var(--ld-border);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.06);
+}
+.ld-root .tool-btn:hover {
+    background: linear-gradient(180deg, rgba(96, 74, 48, 0.95) 0%, rgba(70, 50, 26, 0.95) 55%, rgba(54, 36, 16, 0.95) 100%);
+    border-color: var(--ld-gold-dark);
+    transform: translateY(-1px);
+}
+.ld-root .tool-btn.active {
+    background: linear-gradient(180deg, rgba(140, 104, 34, 0.95), rgba(104, 76, 18, 0.95));
+    border-color: var(--ld-gold);
+    color: #fff6df;
+    box-shadow: 0 0 7px rgba(212, 175, 55, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.15);
+}
+.ld-root .tool-btn.t-success { border-color: var(--ld-success-light); color: #cdf5cf; }
+.ld-root .tool-btn.t-success:hover { background: linear-gradient(180deg, var(--ld-success-light), var(--ld-success)); color: #fff; }
+.ld-root .tool-btn.t-danger { border-color: var(--ld-danger-light); color: #ffd9d3; }
+.ld-root .tool-btn.t-danger:hover { background: linear-gradient(180deg, var(--ld-danger-light), var(--ld-danger)); color: #fff; }
+
+/* Round, numbered "swatch" style used for tree/rock Type pickers so they read
+   visually as a palette of options rather than generic action buttons. */
+.ld-root .variant-swatch {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Placement-mode segmented control (Single | Brush) — a single fused pill
+   instead of two separate buttons, so the two options read as one either/or
+   choice rather than two independent toggles. */
+.ld-root .segmented {
+    display: flex;
+    border: 1.5px solid var(--ld-border);
+    border-radius: 5px;
+    overflow: hidden;
+}
+.ld-root .segmented .tool-btn {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+.ld-root .segmented .tool-btn:not(:first-child) { border-left: 1px solid var(--ld-border); }
+.ld-root .segmented .tool-btn:hover { transform: none; }
+
+.ld-root .slider-row { display: flex; align-items: center; gap: 5px; }
+.ld-root .slider-row label { font-size: 0.62rem; color: var(--ld-text-dim); white-space: nowrap; }
+.ld-root .slider-row .val { font-size: 0.62rem; color: var(--ld-gold-light); min-width: 24px; }
+.ld-root input[type=range] {
+    width: 72px;
+    cursor: pointer;
+    accent-color: var(--ld-gold);
+}
+
+/* ============ TREE BRUSH PANEL ============
+   Its own row beneath the toolbar, with a distinct forest-green accent, so it
+   reads as a separate specialised tool rather than an extra option bolted
+   onto the normal tree-placement controls. */
+.ld-root .brush-panel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 0.4rem 0.75rem;
+    background: linear-gradient(135deg, rgba(30, 52, 20, 0.55), rgba(18, 30, 12, 0.55));
+    border-bottom: 1px solid var(--ld-brush);
+    box-shadow: inset 0 1px 0 rgba(140, 220, 110, 0.08);
+}
+.ld-root .brush-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--ld-brush-light);
+    margin-right: 2px;
+}
+.ld-root .brush-panel .tool-sep { background: var(--ld-brush-light); opacity: 0.35; }
+.ld-root .brush-panel .variant-swatch { border-color: var(--ld-brush); }
+.ld-root .brush-panel .variant-swatch.active {
+    background: linear-gradient(180deg, var(--ld-brush-light), var(--ld-brush));
+    border-color: var(--ld-brush-light);
+    color: #06210a;
+    box-shadow: 0 0 7px rgba(123, 196, 95, 0.6);
+}
+.ld-root .brush-panel input[type=range] { accent-color: var(--ld-brush-light); }
+
+/* ============ STATUS BAR ============ */
+.ld-root .status-bar {
+    padding: 0.35rem 0.75rem;
+    background: linear-gradient(180deg, rgba(20, 14, 8, 0.95), rgba(14, 9, 5, 0.95));
+    border-bottom: 1px solid var(--ld-border);
+    font-size: 0.68rem;
+    color: var(--ld-text-secondary);
+    min-height: 22px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ============ CANVAS ============ */
+.ld-root .canvas-wrapper {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(10, 10, 10, 0.95), rgba(20, 10, 5, 0.95));
+}
+.ld-root canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+}
+.ld-root .coord-display {
+    position: absolute;
+    bottom: 6px;
+    right: 10px;
+    font-size: 10px;
+    color: rgba(242, 230, 200, 0.4);
+    pointer-events: none;
+    font-family: 'Courier New', monospace;
+}
+
+/* ============ SETTINGS PANEL TABS ============ */
+.ld-root .panel-tabs { display: flex; border-bottom: 2px solid var(--ld-border); background: rgba(0,0,0,0.2); }
+.ld-root .tab-btn {
+    flex: 1;
+    padding: 0.55rem 0.3rem;
+    background: transparent;
+    color: var(--ld-text-dim);
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-size: 0.62rem;
+    font-weight: 700;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: color 0.15s, border-color 0.15s;
+    margin-bottom: -2px;
+}
+.ld-root .tab-btn.active { color: var(--ld-gold-light); border-bottom-color: var(--ld-gold); }
+.ld-root .tab-panel { display: none; overflow-y: auto; flex: 1; padding: 0.75rem 0.85rem; }
+.ld-root .tab-panel.active { display: flex; flex-direction: column; gap: 0.6rem; }
+.ld-root .tab-panel::-webkit-scrollbar,
+.ld-root .waves-list::-webkit-scrollbar { width: 5px; }
+.ld-root .tab-panel::-webkit-scrollbar-thumb,
+.ld-root .waves-list::-webkit-scrollbar-thumb { background: var(--ld-border); border-radius: 3px; }
+
+/* ============ FORM ============ */
+.ld-root .sec-title {
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: var(--ld-gold-light);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--ld-border);
+}
+.ld-root .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.ld-root .form-field { display: flex; flex-direction: column; gap: 3px; }
+.ld-root .form-field label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--ld-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.ld-root .form-field input,
+.ld-root .form-field select {
+    padding: 0.4rem 0.45rem;
+    background: rgba(0, 0, 0, 0.35);
+    color: var(--ld-text-primary);
+    border: 1px solid var(--ld-border);
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 0.75rem;
+}
+.ld-root .form-field input:focus,
+.ld-root .form-field select:focus { outline: none; border-color: var(--ld-gold); }
+.ld-root .form-field input[type=color] { height: 27px; padding: 2px 3px; cursor: pointer; }
+
+.ld-root .hint {
+    background: rgba(212, 175, 55, 0.08);
+    border-left: 3px solid var(--ld-gold);
+    padding: 0.4rem 0.55rem;
+    border-radius: 0 3px 3px 0;
+    font-size: 0.62rem;
+    color: var(--ld-text-secondary);
+    line-height: 1.5;
+}
+
+/* ============ BUTTONS (settings panel / modals) ============ */
+.ld-root .btn {
+    padding: 0.35rem 0.7rem;
+    background: linear-gradient(180deg, rgba(140, 104, 34, 0.95), rgba(104, 76, 18, 0.95));
+    color: #fff6df;
+    border: 1px solid var(--ld-gold-dark);
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: inherit;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+.ld-root .btn:hover { background: linear-gradient(180deg, rgba(164, 124, 44, 0.95), rgba(122, 90, 22, 0.95)); transform: translateY(-1px); }
+.ld-root .btn.btn-success { background: linear-gradient(180deg, var(--ld-success-light), var(--ld-success)); border-color: var(--ld-success); color: #fff; }
+.ld-root .btn.btn-success:hover { background: linear-gradient(180deg, #5cc460, var(--ld-success-light)); }
+.ld-root .btn.btn-danger { background: linear-gradient(180deg, var(--ld-danger-light), var(--ld-danger)); border-color: var(--ld-danger); color: #fff; }
+.ld-root .btn.btn-danger:hover { background: linear-gradient(180deg, #e0574a, var(--ld-danger-light)); }
+.ld-root .btn.btn-neutral { background: linear-gradient(180deg, #4a4238, #322c24); border-color: var(--ld-border-light); color: var(--ld-text-primary); }
+.ld-root .btn.btn-neutral:hover { background: linear-gradient(180deg, #5a5040, #3e362a); }
+.ld-root .btn.btn-outline { background: transparent; border: 1px solid var(--ld-gold); color: var(--ld-gold-light); }
+.ld-root .btn.btn-outline:hover { background: rgba(212, 175, 55, 0.12); }
+
+/* ============ WAVES ============ */
+#tab-waves.tab-panel { overflow: hidden; }
+.ld-root .waves-list { display: flex; flex-direction: column; gap: 5px; flex: 1; min-height: 0; overflow-y: auto; }
+.ld-root .wave-card {
+    background: rgba(0, 0, 0, 0.28);
+    border-left: 3px solid var(--ld-gold);
+    border-radius: 3px;
+    padding: 0.4rem 0.55rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+}
+.ld-root .wave-card-info { flex: 1; }
+.ld-root .wave-card-title { font-size: 0.75rem; font-weight: 700; color: var(--ld-gold-light); margin-bottom: 2px; }
+.ld-root .wave-card-meta { font-size: 0.62rem; color: var(--ld-text-dim); }
+.ld-root .wave-card-actions { display: flex; gap: 3px; }
+.ld-root .wave-card-actions button {
+    font-size: 0.62rem;
+    padding: 0.2rem 0.45rem;
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--ld-text-primary);
+    border: 1px solid var(--ld-border-light);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: inherit;
+}
+.ld-root .wave-card-actions button:hover { border-color: var(--ld-gold); color: var(--ld-gold-light); }
+.ld-root .wave-card[draggable] { cursor: grab; user-select: none; }
+.ld-root .wave-card.wave-dragging { opacity: 0.4; }
+.ld-root .wave-card.wave-drop-target { border-left-color: var(--ld-gold-light); box-shadow: inset 0 2px 0 var(--ld-gold-light); }
+.ld-root .wave-drag-handle { color: var(--ld-text-dim); font-size: 14px; padding-right: 6px; flex-shrink: 0; cursor: grab; }
+
+/* ============ EXPORT / CODE OUTPUT ============ */
+.ld-root .output-code {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid var(--ld-border);
+    border-radius: 3px;
+    padding: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 9px;
+    max-height: 150px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: #b8d9b0;
+}
+.ld-root .status-msg { padding: 0.4rem 0.55rem; border-radius: 3px; font-size: 0.68rem; text-align: center; }
+.ld-root .status-msg.ok { background: rgba(47, 125, 58, 0.25); color: #9fe89f; }
+.ld-root .status-msg.err { background: rgba(143, 47, 34, 0.25); color: #ff9f92; }
+
+/* ============ MODALS ============ */
+.ld-root .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 3, 1, 0.82);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+.ld-root .modal-overlay.active { display: flex; }
+.ld-root .modal-box {
+    background: linear-gradient(160deg, var(--ld-wood-medium) 0%, var(--ld-stone-medium) 70%, var(--ld-stone-dark) 100%);
+    border: 2px solid var(--ld-gold);
+    border-radius: 6px;
+    padding: 1.35rem;
+    max-width: 560px;
+    width: 92%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 12px 50px rgba(0, 0, 0, 0.9), 0 0 24px rgba(212, 175, 55, 0.15);
+}
+.ld-root .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--ld-border);
+}
+.ld-root .modal-header h2 { font-family: Georgia, serif; font-size: 1.05rem; color: var(--ld-gold-light); }
+.ld-root .modal-close {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--ld-border-light);
+    color: var(--ld-text-primary);
+    width: 28px;
+    height: 28px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: inherit;
+}
+.ld-root .modal-close:hover { background: var(--ld-danger); border-color: var(--ld-danger-light); color: #fff; }
+.ld-root .modal-body { display: flex; flex-direction: column; gap: 0.75rem; }
+.ld-root .modal-field { display: flex; flex-direction: column; gap: 4px; }
+.ld-root .modal-field label { font-size: 0.68rem; font-weight: 700; color: var(--ld-text-secondary); }
+.ld-root .modal-field input,
+.ld-root .modal-field select {
+    padding: 0.45rem;
+    background: rgba(0, 0, 0, 0.35);
+    color: var(--ld-text-primary);
+    border: 1px solid var(--ld-border);
+    border-radius: 3px;
+    font-size: 0.8rem;
+    font-family: inherit;
+}
+.ld-root .pattern-list {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid var(--ld-border);
+    border-radius: 3px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+}
+.ld-root .pattern-item { display: flex; gap: 7px; align-items: center; }
+.ld-root .pattern-item select { flex: 1; padding: 5px; font-size: 0.75rem; font-family: inherit; }
+.ld-root .modal-footer {
+    display: flex;
+    gap: 7px;
+    justify-content: flex-end;
+    margin-top: 0.9rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--ld-border);
+}
+
+.ld-root input[type=number]::-webkit-inner-spin-button,
+.ld-root input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.ld-root input[type=number] { -moz-appearance: textfield; appearance: textfield; }

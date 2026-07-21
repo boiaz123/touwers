@@ -95,24 +95,30 @@ export class LevelDesigner {
         // Enemies and towers for form
         this.enemies = ['basic', 'villager', 'archer', 'beefyenemy', 'knight', 'shieldknight', 'mage', 'frog', 'earthfrog', 'waterfrog', 'firefrog', 'airfrog', 'frogking'];
         
-        // Wire variant picker buttons
+        // Wire the single-select "Type" picker (used for single tree placement and rocks).
+        // Brush mode has its own separate multi-select swatches inside the brush panel
+        // (wired below) instead of overloading these same buttons with a second meaning.
         for (let i = 0; i < 4; i++) {
             document.getElementById(`variantBtn${i}`)?.addEventListener('click', () => {
-                if (this.terrainMode === 'vegetation' && this.treeBrushActive) {
-                    // Brush mode: toggle multi-select, always keep at least one active
-                    if (this.brushTreeVariants.has(i)) {
-                        if (this.brushTreeVariants.size > 1) this.brushTreeVariants.delete(i);
-                    } else {
-                        this.brushTreeVariants.add(i);
-                    }
-                    this.selectedTreeVariant = i; // keep last clicked as primary for non-brush placement
-                } else if (this.terrainMode === 'vegetation') {
+                if (this.terrainMode === 'vegetation') {
                     this.selectedTreeVariant = i;
-                    this.brushTreeVariants = new Set([i]); // sync brush set to match single selection
                 } else if (this.terrainMode === 'rock') {
                     this.selectedRockVariant = i;
                 }
                 this.updateVariantPicker();
+                this.render();
+            });
+        }
+
+        // Wire the tree brush panel's own multi-select swatches.
+        for (let i = 0; i < 4; i++) {
+            document.getElementById(`brushVariantBtn${i}`)?.addEventListener('click', () => {
+                if (this.brushTreeVariants.has(i)) {
+                    if (this.brushTreeVariants.size > 1) this.brushTreeVariants.delete(i);
+                } else {
+                    this.brushTreeVariants.add(i);
+                }
+                this.updateBrushVariantPicker();
                 this.render();
             });
         }
@@ -128,30 +134,14 @@ export class LevelDesigner {
     }
 
     setupCanvas() {
-        if (this.designerMode === 'player') {
-            // In-game overlay: fit the canvas to its wrapper while preserving the
-            // designer's 16:9 grid aspect ratio (60 / 33.75), since the wrapper isn't
-            // guaranteed to already be exactly 16:9 the way the standalone dev page is.
-            const wrapper = this.canvas.parentElement;
-            const maxW = wrapper ? wrapper.clientWidth : this.canvas.offsetWidth;
-            const maxH = wrapper ? wrapper.clientHeight : this.canvas.offsetHeight;
-            const ratio = this.gridWidth / this.gridHeight;
-            let w, h;
-            if (maxW / maxH > ratio) {
-                h = maxH;
-                w = Math.round(h * ratio);
-            } else {
-                w = maxW;
-                h = Math.round(w / ratio);
-            }
-            this.canvas.width = w;
-            this.canvas.height = h;
-            this.canvas.style.width = w + 'px';
-            this.canvas.style.height = h + 'px';
-        } else {
-            this.canvas.width = this.canvas.offsetWidth;
-            this.canvas.height = this.canvas.offsetHeight;
-        }
+        // Fill the wrapper exactly and let the 60x33.75 grid stretch to whatever box
+        // results, with no aspect-ratio lock - this mirrors #gameCanvas in gameplay
+        // (style.css: width:100%/height:100% of #canvas-viewport, no letterboxing),
+        // so the designer's preview always matches gameplay's actual on-screen shape
+        // instead of a fixed 16:9 crop that gameplay itself doesn't guarantee.
+        const wrapper = this.canvas.parentElement;
+        this.canvas.width = wrapper ? wrapper.clientWidth : this.canvas.offsetWidth;
+        this.canvas.height = wrapper ? wrapper.clientHeight : this.canvas.offsetHeight;
 
         if (this.designerRenderAdapter) {
             this.designerRenderAdapter.init(this.canvas).then(() => {
@@ -186,7 +176,25 @@ export class LevelDesigner {
         });
         window.addEventListener('mouseup', () => { this.isDrawingRiver = false; this.lastRiverDragPos = null; this.isBrushPainting = false; this.lastBrushPaintPos = null; });
         
-        window.addEventListener('resize', () => this.handleResize());
+        // A plain window 'resize' listener misses any CSS-driven change to the
+        // canvas-wrapper's box that isn't a window resize - e.g. the brush panel
+        // row appearing/disappearing, or the toolbar wrapping to a second line as
+        // tool groups show/hide. Without catching those, the canvas's internal
+        // draw buffer (set once in setupCanvas()) goes stale relative to its
+        // actual on-screen box, which silently desyncs pixelToGrid()'s click
+        // mapping from where the cursor visually is. A ResizeObserver on the
+        // wrapper itself catches all of these (mirrors game.js's ResizeObserver
+        // on #gameCanvas for the same reason).
+        let resizeDebounce;
+        const wrapperEl = this.canvas.parentElement;
+        if (wrapperEl && typeof ResizeObserver !== 'undefined') {
+            new ResizeObserver(() => {
+                clearTimeout(resizeDebounce);
+                resizeDebounce = setTimeout(() => this.handleResize(), 50);
+            }).observe(wrapperEl);
+        } else {
+            window.addEventListener('resize', () => this.handleResize());
+        }
 
         // Toolbar buttons
         document.getElementById('drawPathBtn')?.addEventListener('click', () => this.setMode('path'));
@@ -223,17 +231,11 @@ export class LevelDesigner {
             if (label) label.textContent = this.terrainElementSize.toFixed(1);
         });
 
-        // Tree brush controls
-        document.getElementById('treeBrushToggle')?.addEventListener('click', () => {
-            this.treeBrushActive = !this.treeBrushActive;
-            if (this.treeBrushActive) {
-                // Sync brush set to current single selection when enabling brush
-                this.brushTreeVariants = new Set([this.selectedTreeVariant]);
-            }
-            document.getElementById('treeBrushToggle')?.classList.toggle('active', this.treeBrushActive);
-            this.updateVariantPicker();
-            this.render();
-        });
+        // Placement mode: Single (the normal Type picker) vs Brush (its own dedicated
+        // multi-tree paint panel) - a clear either/or choice instead of one button that
+        // silently repurposed the Type picker's meaning.
+        document.getElementById('placeSingleBtn')?.addEventListener('click', () => this.setTreeBrushActive(false));
+        document.getElementById('placeBrushBtn')?.addEventListener('click', () => this.setTreeBrushActive(true));
         document.getElementById('treeBrushRadius')?.addEventListener('input', (e) => {
             this.treeBrushSize = parseFloat(e.target.value);
             const lbl = document.getElementById('treeBrushRadiusLabel');
@@ -346,13 +348,11 @@ export class LevelDesigner {
         const waterControls = document.getElementById('waterControls');
         if (waterControls) waterControls.style.display = 'none';
 
-        // Hide size group and brush controls when switching main mode
+        // Hide size group and brush panel when switching main mode
         const terrainSizeGroup = document.getElementById('terrainSizeGroup');
         if (terrainSizeGroup) terrainSizeGroup.style.display = 'none';
-        const treeBrushControls = document.getElementById('treeBrushControls');
-        if (treeBrushControls) treeBrushControls.style.display = 'none';
         this.treeBrushActive = false;
-        document.getElementById('treeBrushToggle')?.classList.remove('active');
+        this._updateBrushUI();
 
         this.updateStatusBar();
     }
@@ -361,13 +361,13 @@ export class LevelDesigner {
         this.mode = 'terrain';
         this.terrainMode = terrainType;
         this.waterMode = null; // Reset water mode
-        
+
         document.getElementById('drawPathBtn').classList.toggle('active', false);
         document.getElementById('drawVegetationBtn')?.classList.toggle('active', terrainType === 'vegetation');
         document.getElementById('drawRockBtn')?.classList.toggle('active', terrainType === 'rock');
         document.getElementById('drawWaterBtn')?.classList.toggle('active', terrainType === 'water');
         document.getElementById('deleteTerrainBtn')?.classList.toggle('active', false);
-        
+
         // Hide all finish controls when entering terrain mode
         const finishPathControl = document.getElementById('finishPathControl');
         if (finishPathControl) {
@@ -377,24 +377,19 @@ export class LevelDesigner {
         if (finishRiverControl) {
             finishRiverControl.style.display = 'none';
         }
-        
+
         // Show water controls when water is selected
         const waterControls = document.getElementById('waterControls');
         if (waterControls) waterControls.style.display = terrainType === 'water' ? 'flex' : 'none';
 
-        // Show size slider for vegetation and rock, hide for water
+        if (terrainType !== 'vegetation') this.treeBrushActive = false;
+
+        // Show size slider for vegetation and rock, hide for water. Placement mode,
+        // Type picker and brush panel visibility are all handled by _updateBrushUI().
         const terrainSizeGroup = document.getElementById('terrainSizeGroup');
         if (terrainSizeGroup) terrainSizeGroup.style.display = (terrainType === 'vegetation' || terrainType === 'rock') ? 'flex' : 'none';
 
-        // Show brush controls only for vegetation
-        const treeBrushControls = document.getElementById('treeBrushControls');
-        if (treeBrushControls) treeBrushControls.style.display = terrainType === 'vegetation' ? 'flex' : 'none';
-        if (terrainType !== 'vegetation') {
-            this.treeBrushActive = false;
-            document.getElementById('treeBrushToggle')?.classList.remove('active');
-        }
-
-        this.updateVariantPicker();
+        this._updateBrushUI();
         this.updateStatusBar();
     }
 
@@ -416,13 +411,53 @@ export class LevelDesigner {
         if (waterControls) waterControls.style.display = 'none';
         const terrainSizeGroup = document.getElementById('terrainSizeGroup');
         if (terrainSizeGroup) terrainSizeGroup.style.display = 'none';
-        const treeBrushControls = document.getElementById('treeBrushControls');
-        if (treeBrushControls) treeBrushControls.style.display = 'none';
-        const variantPickerRow = document.getElementById('variantPickerRow');
-        if (variantPickerRow) variantPickerRow.style.display = 'none';
+        this.treeBrushActive = false;
+        this._updateBrushUI();
 
         this.hoveredTerrainElementIndex = null;
         this.updateStatusBar();
+    }
+
+    /**
+     * Refreshes the placement-mode segmented control (Single/Brush), the brush panel's
+     * own visibility, and the Type picker's visibility - kept in one place since all
+     * three are driven by the same (terrainMode, treeBrushActive) state and need to
+     * agree with each other every time either changes.
+     */
+    _updateBrushUI() {
+        const isVeg = this.terrainMode === 'vegetation';
+
+        const placementModeRow = document.getElementById('placementModeRow');
+        if (placementModeRow) placementModeRow.style.display = isVeg ? 'flex' : 'none';
+        document.getElementById('placeSingleBtn')?.classList.toggle('active', !this.treeBrushActive);
+        document.getElementById('placeBrushBtn')?.classList.toggle('active', this.treeBrushActive);
+
+        const brushPanel = document.getElementById('brushPanel');
+        if (brushPanel) brushPanel.style.display = (isVeg && this.treeBrushActive) ? 'flex' : 'none';
+
+        // The single Size slider only applies to single placement (rock always, tree
+        // only when the brush - which has its own Min/Max sliders - isn't active).
+        if (this.terrainMode === 'vegetation' || this.terrainMode === 'rock') {
+            const terrainSizeGroup = document.getElementById('terrainSizeGroup');
+            if (terrainSizeGroup) terrainSizeGroup.style.display = (isVeg && this.treeBrushActive) ? 'none' : 'flex';
+        }
+
+        this.updateVariantPicker();
+        this.updateBrushVariantPicker();
+    }
+
+    /** Toggles between single-tree placement and the multi-tree brush. */
+    setTreeBrushActive(active) {
+        if (this.terrainMode !== 'vegetation') return;
+        this.treeBrushActive = active;
+        if (active) {
+            // Seed the brush's paint palette from the current single selection so
+            // switching modes feels continuous rather than resetting to variant 1.
+            this.brushTreeVariants = new Set([this.selectedTreeVariant]);
+        }
+        this._updateBrushUI();
+        this.updateStatusBar();
+        this.render();
     }
 
     _findHoveredTerrainElement(gridX, gridY) {
@@ -483,24 +518,28 @@ export class LevelDesigner {
     updateVariantPicker() {
         const row = document.getElementById('variantPickerRow');
         if (!row) return;
-        const isVeg = this.terrainMode === 'vegetation';
+        // Single-select Type picker: for vegetation it only applies to single
+        // placement - while the brush is active, its own swatches (below) take over.
+        const isVeg = this.terrainMode === 'vegetation' && !this.treeBrushActive;
         const isRock = this.terrainMode === 'rock';
         if (!isVeg && !isRock) { row.style.display = 'none'; return; }
         row.style.display = 'flex';
-        row.style.alignItems = 'center';
-        row.style.gap = '2px';
         for (let i = 0; i < 4; i++) {
             const btn = document.getElementById(`variantBtn${i}`);
             if (!btn) continue;
-            if (isVeg && this.treeBrushActive) {
-                btn.classList.toggle('active', this.brushTreeVariants.has(i));
-            } else {
-                const activeVariant = isVeg ? this.selectedTreeVariant : this.selectedRockVariant;
-                btn.classList.toggle('active', i === activeVariant);
-            }
+            const activeVariant = isVeg ? this.selectedTreeVariant : this.selectedRockVariant;
+            btn.classList.toggle('active', i === activeVariant);
         }
         const lbl = document.getElementById('variantPickerLabel');
         if (lbl) lbl.textContent = isVeg ? 'Tree' : 'Rock';
+    }
+
+    /** Reflects this.brushTreeVariants onto the brush panel's own multi-select swatches. */
+    updateBrushVariantPicker() {
+        for (let i = 0; i < 4; i++) {
+            const btn = document.getElementById(`brushVariantBtn${i}`);
+            if (btn) btn.classList.toggle('active', this.brushTreeVariants.has(i));
+        }
     }
 
     setWaterMode(mode) {
@@ -1016,12 +1055,12 @@ export class LevelDesigner {
                 <select onchange="window.levelDesigner.updateModalPatternType(${idx}, this.value)">
                     ${this.enemies.map(e => `<option value="${e}" ${e === entry.type ? 'selected' : ''}>${e}</option>`).join('')}
                 </select>
-                <input type="number" min="1" value="${entry.count}" style="width:60px;padding:4px;background:#1a1a2a;color:#c8c8d8;border:1px solid #444;border-radius:3px" title="Count" onchange="window.levelDesigner.updateModalPatternCount(${idx}, parseInt(this.value))">
-                <label style="font-size:10px;color:#888;margin:0 2px">HP:</label>
-                <input type="number" min="0.1" step="0.1" value="${hpVal}" placeholder="wave" style="width:55px;padding:4px;background:#1a1a2a;color:#c8c8d8;border:1px solid #444;border-radius:3px" title="Health multiplier (blank = use wave default)" onchange="window.levelDesigner.updateModalPatternHealthMul(${idx}, this.value)">
-                <label style="font-size:10px;color:#888;margin:0 2px">SPD:</label>
-                <input type="number" min="0.1" step="0.05" value="${spdVal}" placeholder="wave" style="width:55px;padding:4px;background:#1a1a2a;color:#c8c8d8;border:1px solid #444;border-radius:3px" title="Speed multiplier (blank = use wave default)" onchange="window.levelDesigner.updateModalPatternSpeedMul(${idx}, this.value)">
-                <button onclick="window.levelDesigner.removeModalPattern(${idx})">x</button>
+                <input type="number" min="1" value="${entry.count}" style="width:60px;padding:4px;background:rgba(0,0,0,0.35);color:var(--ld-text-primary);border:1px solid var(--ld-border);border-radius:3px" title="Count" onchange="window.levelDesigner.updateModalPatternCount(${idx}, parseInt(this.value))">
+                <label style="font-size:10px;color:var(--ld-text-dim);margin:0 2px">HP:</label>
+                <input type="number" min="0.1" step="0.1" value="${hpVal}" placeholder="wave" style="width:55px;padding:4px;background:rgba(0,0,0,0.35);color:var(--ld-text-primary);border:1px solid var(--ld-border);border-radius:3px" title="Health multiplier (blank = use wave default)" onchange="window.levelDesigner.updateModalPatternHealthMul(${idx}, this.value)">
+                <label style="font-size:10px;color:var(--ld-text-dim);margin:0 2px">SPD:</label>
+                <input type="number" min="0.1" step="0.05" value="${spdVal}" placeholder="wave" style="width:55px;padding:4px;background:rgba(0,0,0,0.35);color:var(--ld-text-primary);border:1px solid var(--ld-border);border-radius:3px" title="Speed multiplier (blank = use wave default)" onchange="window.levelDesigner.updateModalPatternSpeedMul(${idx}, this.value)">
+                <button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="window.levelDesigner.removeModalPattern(${idx})">x</button>
             `;
             patternList.appendChild(item);
         });
@@ -1177,7 +1216,7 @@ export class LevelDesigner {
                 <div class="wave-card-actions">
                     <button onclick="window.levelDesigner.openWaveModal(${wave.id})" style="font-size:10px;padding:3px 7px">Edit</button>
                     <button onclick="window.levelDesigner.duplicateWave(${wave.id})" style="font-size:10px;padding:3px 7px" title="Duplicate">Copy</button>
-                    <button onclick="window.levelDesigner.removeWave(${wave.id})" style="font-size:10px;padding:3px 7px;background:#c0392b">Del</button>
+                    <button onclick="window.levelDesigner.removeWave(${wave.id})" style="font-size:10px;padding:3px 7px;background:var(--ld-danger);border-color:var(--ld-danger-light)">Del</button>
                 </div>
             `;
 
@@ -2281,24 +2320,55 @@ export class LevelDesigner {
         ctx.globalAlpha = 1;
     }
 
+    /**
+     * Depth-sort key for a terrain element, mirrored from LevelBase.getTerrainElementDepthY()
+     * so the designer's paint order matches gameplay's exactly (see that method's doc
+     * comment for why the raw, unshifted gridY used to be wrong here too).
+     */
+    _terrainElementDepthY(element, cellWidthPixels, cellHeightPixels, campaign) {
+        const screenY = element.gridY * cellHeightPixels;
+        if (element.type === 'water') return screenY;
+        const baseSize = element.size * Math.min(cellWidthPixels, cellHeightPixels);
+        const sizeScale = (campaign !== 'forest' && campaign !== 'desert') ? 1.5 : 0.75;
+        const size = baseSize * sizeScale;
+        if (element.type === 'vegetation' && campaign !== 'mountain') {
+            return screenY - size * 0.45;
+        }
+        if (element.type === 'rock') {
+            return screenY - 0.5;
+        }
+        return screenY;
+    }
+
     drawTerrainElements() {
         const cellWidthPixels = this.canvas.width / this.gridWidth;
         const cellHeightPixels = this.canvas.height / this.gridHeight;
         const campaign = this.currentCampaign || 'forest';
 
-        const sorted = [...this.terrainElements].sort((a, b) => a.gridY - b.gridY);
+        const sorted = [...this.terrainElements].sort((a, b) =>
+            this._terrainElementDepthY(a, cellWidthPixels, cellHeightPixels, campaign) -
+            this._terrainElementDepthY(b, cellWidthPixels, cellHeightPixels, campaign)
+        );
         sorted.forEach(element => {
             const x = element.gridX * cellWidthPixels;
             const y = element.gridY * cellHeightPixels;
             const baseSize = element.size * Math.min(cellWidthPixels, cellHeightPixels);
-            const size = element.type === 'water' ? baseSize : baseSize * 0.75;
+            // Mirrors LevelBase.renderSingleTerrainElement()'s sizeScale exactly, so
+            // mountain/space trees & rocks (which render 2x larger in-game than
+            // forest/desert ones) preview at the same size here instead of always 0.75x.
+            const sizeScale = (element.type !== 'water' && campaign !== 'forest' && campaign !== 'desert') ? 1.5 : 0.75;
+            const size = element.type === 'water' ? baseSize : baseSize * sizeScale;
 
             // Delegates to TerrainRenderer so the preview here is drawn by the exact
             // same code as real gameplay (see TerrainRenderer.js header comment).
             switch (element.type) {
-                case 'vegetation':
-                    TerrainRenderer.renderVegetation(this.ctx, x, y - size * 0.45, size, element.gridX, element.gridY, element.variant, campaign);
+                case 'vegetation': {
+                    // Mountain: anchor at y so trunk/shadow embed below the ground anchor,
+                    // matching LevelBase.renderSingleTerrainElement()'s mountain special-case.
+                    const vegY = campaign === 'mountain' ? y : y - size * 0.45;
+                    TerrainRenderer.renderVegetation(this.ctx, x, vegY, size, element.gridX, element.gridY, element.variant, campaign);
                     break;
+                }
                 case 'rock':
                     TerrainRenderer.renderRock(this.ctx, x, y, size, element.gridX, element.gridY, element.variant, campaign);
                     break;
@@ -2870,7 +2940,7 @@ ${pathCode}
         list.innerHTML = '';
 
         const select = document.createElement('select');
-        select.style.cssText = 'width:100%;padding:8px 10px;background:#333;color:#dedede;border:1px solid #3e3e3e;border-radius:3px;font-size:13px;font-family:inherit;margin-bottom:10px;';
+        select.style.cssText = 'width:100%;padding:8px 10px;background:rgba(0,0,0,0.35);color:var(--ld-text-primary);border:1px solid var(--ld-border);border-radius:3px;font-size:13px;font-family:inherit;margin-bottom:10px;';
         for (let i = 0; i < PLAYER_LEVEL_SLOT_COUNT; i++) {
             const data = existing[i];
             const opt = document.createElement('option');
@@ -2882,7 +2952,7 @@ ${pathCode}
         }
 
         const confirmBtn = document.createElement('button');
-        confirmBtn.className = 'dov-btn btn-success';
+        confirmBtn.className = 'btn btn-success';
         confirmBtn.style.cssText = 'width:100%;padding:8px;font-size:13px;';
         confirmBtn.textContent = 'Save to Selected Slot';
         confirmBtn.addEventListener('click', () => {

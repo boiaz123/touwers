@@ -4,313 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Touwers Level Designer</title>
+    <link rel="stylesheet" href="level-designer.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        :root {
-            --bg-dark:   #1a1a1a;
-            --bg-mid:    #222222;
-            --bg-panel:  #292929;
-            --bg-input:  #333333;
-            --border:    #3e3e3e;
-            --text:      #dedede;
-            --text-dim:  #888;
-            --label:     #7eb8e8;
-            --accent:    #0e639c;
-            --accent-h:  #1177bb;
-            --success:   #1e9448;
-            --danger:    #c0392b;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-        .designer { display: flex; width: 100%; height: 100%; }
-        .canvas-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-width: 0;
-            background: var(--bg-dark);
-            border-right: 2px solid var(--border);
-        }
-        .settings-section {
-            width: 370px;
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            background: var(--bg-mid);
-        }
-        .designer-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 7px 12px;
-            background: var(--bg-panel);
-            border-bottom: 1px solid var(--border);
-        }
-        .designer-header h1 { font-size: 16px; font-weight: 700; color: #58c4dc; }
-        .toolbar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 2px;
-            padding: 5px 8px;
-            background: var(--bg-panel);
-            border-bottom: 1px solid var(--border);
-            align-items: center;
-        }
-        .tool-group { display: flex; gap: 2px; align-items: center; }
-        .tool-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
-        .tool-label { font-size: 9px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; margin-right: 2px; }
-        .tool-btn {
-            padding: 4px 9px;
-            background: var(--bg-input);
-            color: var(--text);
-            border: 1px solid var(--border);
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 600;
-            transition: background 0.15s;
-            white-space: nowrap;
-        }
-        .tool-btn:hover { background: #404040; border-color: #666; }
-        .tool-btn.active { background: var(--accent); border-color: #1488cc; color: #fff; }
-        .tool-btn.t-success { background: var(--success); border-color: #27ae60; color: #fff; }
-        .tool-btn.t-danger  { background: var(--danger); border-color: #e74c3c; color: #fff; }
-        .tool-btn.t-danger:hover  { background: #e74c3c; }
-        .tool-btn.t-success:hover { background: #27ae60; }
-        .slider-row { display: flex; align-items: center; gap: 4px; }
-        .slider-row label { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
-        .slider-row input[type=range] { width: 75px; cursor: pointer; }
-        .slider-row .val { font-size: 10px; color: var(--label); min-width: 26px; }
-        .status-bar {
-            padding: 5px 10px;
-            background: #1c2a1c;
-            border-bottom: 1px solid var(--border);
-            font-size: 11px;
-            color: #7ec86a;
-            min-height: 24px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .canvas-wrapper { flex: 1; position: relative; overflow: hidden; background: #111; }
-        canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
-        .coord-display {
-            position: absolute;
-            bottom: 5px;
-            right: 8px;
-            font-size: 10px;
-            color: rgba(255,255,255,0.38);
-            pointer-events: none;
-            font-family: 'Courier New', monospace;
-        }
-        /* Panel tabs */
-        .panel-tabs { display: flex; border-bottom: 2px solid var(--border); background: var(--bg-panel); }
-        .tab-btn {
-            flex: 1;
-            padding: 7px 4px;
-            background: transparent;
-            color: var(--text-dim);
-            border: none;
-            border-bottom: 2px solid transparent;
-            cursor: pointer;
-            font-size: 10px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: color 0.15s, border-color 0.15s;
-            margin-bottom: -2px;
-        }
-        .tab-btn.active { color: #58c4dc; border-bottom-color: #58c4dc; }
-        .tab-panel { display: none; overflow-y: auto; flex: 1; padding: 10px 12px; }
-        .tab-panel.active { display: flex; flex-direction: column; gap: 9px; }
-        .tab-panel::-webkit-scrollbar { width: 5px; }
-        .tab-panel::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
-        /* Form */
-        .sec-title {
-            font-size: 9px;
-            font-weight: 700;
-            color: #58c4dc;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            padding-bottom: 4px;
-            border-bottom: 1px solid #333;
-        }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-        .form-field { display: flex; flex-direction: column; gap: 3px; }
-        .form-field label {
-            font-size: 9px;
-            font-weight: 700;
-            color: var(--label);
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-        }
-        .form-field input,
-        .form-field select {
-            padding: 5px 6px;
-            background: var(--bg-input);
-            color: var(--text);
-            border: 1px solid var(--border);
-            border-radius: 3px;
-            font-family: inherit;
-            font-size: 12px;
-        }
-        .form-field input:focus, .form-field select:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-        .form-field input[type=color] { height: 27px; padding: 2px 3px; cursor: pointer; }
-        /* Details/summary removed - no visual customization needed */
-        /* Buttons */
-        button {
-            padding: 5px 11px;
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: 600;
-            transition: background 0.15s;
-        }
-        button:hover { background: var(--accent-h); }
-        button.btn-success { background: var(--success); }
-        button.btn-success:hover { background: #27ae60; }
-        button.btn-danger  { background: var(--danger); }
-        button.btn-danger:hover  { background: #e74c3c; }
-        button.btn-neutral { background: #444; color: var(--text); }
-        button.btn-neutral:hover { background: #555; }
-        button.btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--label); }
-        button.btn-outline:hover { background: rgba(14,99,156,0.15); }
-        /* Waves */
-        #tab-waves { overflow: hidden; }
-        .waves-list { display: flex; flex-direction: column; gap: 5px; flex: 1; min-height: 0; overflow-y: auto; }
-        .waves-list::-webkit-scrollbar { width: 5px; }
-        .waves-list::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
-        .wave-card {
-            background: #2e2e2e;
-            border-left: 3px solid var(--accent);
-            border-radius: 3px;
-            padding: 6px 9px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 6px;
-        }
-        .wave-card-info { flex: 1; }
-        .wave-card-title { font-size: 12px; font-weight: 700; color: #58c4dc; margin-bottom: 2px; }
-        .wave-card-meta { font-size: 10px; color: var(--text-dim); }
-        .wave-card-actions { display: flex; gap: 3px; }
-        /* Code output */
-        .output-code {
-            background: #111;
-            border: 1px solid var(--border);
-            border-radius: 3px;
-            padding: 6px;
-            font-family: 'Courier New', monospace;
-            font-size: 9px;
-            max-height: 150px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-            color: #90b890;
-        }
-        .status-msg { padding: 6px 9px; border-radius: 3px; font-size: 11px; text-align: center; }
-        .status-msg.ok  { background: #1a3020; color: #7ae860; }
-        .status-msg.err { background: #3a1818; color: #ff9090; }
-        /* Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.78);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-overlay.active { display: flex; }
-        .modal-box {
-            background: var(--bg-panel);
-            border: 2px solid var(--accent);
-            border-radius: 6px;
-            padding: 22px;
-            max-width: 560px;
-            width: 92%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 10px 50px rgba(0,0,0,0.9);
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 18px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border);
-        }
-        .modal-header h2 { font-size: 17px; color: #58c4dc; }
-        .modal-close { background: #383838; border: none; color: var(--text); width: 30px; height: 30px; border-radius: 3px; cursor: pointer; font-size: 16px; font-weight: 700; }
-        .modal-close:hover { background: var(--danger); color: #fff; }
-        .modal-body { display: flex; flex-direction: column; gap: 12px; }
-        .modal-field { display: flex; flex-direction: column; gap: 4px; }
-        .modal-field label { font-size: 11px; font-weight: 700; color: var(--label); }
-        .modal-field input, .modal-field select {
-            padding: 7px;
-            background: var(--bg-input);
-            color: var(--text);
-            border: 1px solid var(--border);
-            border-radius: 3px;
-            font-size: 13px;
-        }
-        .pattern-list {
-            background: #1a1a1a;
-            border: 1px solid var(--border);
-            border-radius: 3px;
-            padding: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            max-height: 180px;
-            overflow-y: auto;
-        }
-        .pattern-item { display: flex; gap: 7px; align-items: center; }
-        .pattern-item select { flex: 1; padding: 5px; font-size: 12px; }
-        .modal-footer {
-            display: flex;
-            gap: 7px;
-            justify-content: flex-end;
-            margin-top: 14px;
-            padding-top: 14px;
-            border-top: 1px solid var(--border);
-        }
-        .hint {
-            background: #19283a;
-            border-left: 3px solid #58c4dc;
-            padding: 6px 9px;
-            border-radius: 0 3px 3px 0;
-            font-size: 10px;
-            color: #8ab0cc;
-            line-height: 1.5;
-        }
-        .wave-card[draggable] { cursor: grab; user-select: none; }
-        .wave-card.wave-dragging { opacity: 0.4; }
-        .wave-card.wave-drop-target { border-left-color: #f0a030; box-shadow: inset 0 2px 0 #f0a030; }
-        .wave-drag-handle { color: var(--text-dim); font-size: 14px; padding-right: 6px; flex-shrink: 0; cursor: grab; }
+        body { background: #0a0603; overflow: hidden; height: 100vh; }
     </style>
 </head>
 <body>
-<div class="designer">
+<div class="ld-root designer">
 
     <!-- LEFT: Canvas section -->
     <div class="canvas-section">
-        <div class="designer-header">
+        <div class="header">
             <h1>Touwers Level Designer</h1>
             <div class="tool-group">
                 <button class="tool-btn" id="loadLevelBtn">Load Level</button>
@@ -331,14 +36,26 @@
                 <button class="tool-btn" id="drawWaterBtn"      title="Place water features [W]">Water</button>
                 <button class="tool-btn" id="deleteTerrainBtn"  title="Delete vegetation or rocks — click to remove [D]">Delete</button>
             </div>
-            <!-- Variant picker (visible when Trees or Rocks mode is active) -->
+            <!-- Placement mode (Trees only): a single Single/Brush choice, distinct from
+                 the Type picker below - picking Brush hands off to its own dedicated
+                 panel instead of silently repurposing the Type buttons. -->
+            <div class="tool-group" id="placementModeRow" style="display:none">
+                <div class="tool-sep"></div>
+                <span class="tool-label">Mode</span>
+                <div class="segmented">
+                    <button class="tool-btn active" id="placeSingleBtn" title="Click to place one tree at a time">Single</button>
+                    <button class="tool-btn" id="placeBrushBtn" title="Paint clusters of trees by dragging">Brush</button>
+                </div>
+            </div>
+            <!-- Type picker: single tree variant, or rock variant. Hidden while the
+                 tree brush is active (it has its own swatches). -->
             <div class="tool-group" id="variantPickerRow" style="display:none">
                 <div class="tool-sep"></div>
                 <span class="tool-label" id="variantPickerLabel">Type</span>
-                <button class="tool-btn" id="variantBtn0">1</button>
-                <button class="tool-btn" id="variantBtn1">2</button>
-                <button class="tool-btn" id="variantBtn2">3</button>
-                <button class="tool-btn" id="variantBtn3">4</button>
+                <button class="tool-btn variant-swatch" id="variantBtn0">1</button>
+                <button class="tool-btn variant-swatch" id="variantBtn1">2</button>
+                <button class="tool-btn variant-swatch" id="variantBtn2">3</button>
+                <button class="tool-btn variant-swatch" id="variantBtn3">4</button>
             </div>
             <!-- Water sub-tools (visible only when Water mode is active) -->
             <div class="tool-group" id="waterControls" style="display:none">
@@ -354,25 +71,6 @@
                     <span class="val" id="terrainSizeLabel">2.0</span>
                 </div>
             </div>
-            <div class="tool-group" id="treeBrushControls" style="display:none; align-items:center; gap:4px;">
-                <div class="tool-sep"></div>
-                <button class="tool-btn" id="treeBrushToggle" title="Toggle brush mode — paint multiple trees at once">Brush</button>
-                <div class="slider-row">
-                    <label style="font-size:10px;color:var(--text-dim);">Radius</label>
-                    <input type="range" id="treeBrushRadius" min="1" max="8" step="0.5" value="3">
-                    <span class="val" id="treeBrushRadiusLabel">3.0</span>
-                </div>
-                <div class="slider-row">
-                    <label style="font-size:10px;color:var(--text-dim);">Min</label>
-                    <input type="range" id="treeBrushMinSize" min="0.5" max="3" step="0.5" value="1">
-                    <span class="val" id="treeBrushMinSizeLabel">1.0</span>
-                </div>
-                <div class="slider-row">
-                    <label style="font-size:10px;color:var(--text-dim);">Max</label>
-                    <input type="range" id="treeBrushMaxSize" min="1" max="5" step="0.5" value="3">
-                    <span class="val" id="treeBrushMaxSizeLabel">3.0</span>
-                </div>
-            </div>
             <div class="tool-sep"></div>
             <div class="tool-group" id="finishPathControl" style="display:none">
                 <button class="tool-btn t-success" id="finishPathBtn">Finish Path</button>
@@ -384,6 +82,34 @@
             <div class="tool-group" style="margin-left:auto">
                 <button class="tool-btn" id="undoBtn" title="Undo last action [U]">Undo</button>
                 <button class="tool-btn t-danger" id="clearBtn" title="Clear all">Clear All</button>
+            </div>
+        </div>
+
+        <!-- Tree Brush panel: its own row, own accent colour, own multi-select swatches -
+             a self-contained tool that only appears once Brush mode is picked above. -->
+        <div class="brush-panel" id="brushPanel" style="display:none">
+            <span class="brush-panel-title">&#127795; Tree Brush</span>
+            <div class="tool-sep"></div>
+            <span class="tool-label">Paint</span>
+            <button class="tool-btn variant-swatch" id="brushVariantBtn0" title="Toggle tree type 1 in the paint mix">1</button>
+            <button class="tool-btn variant-swatch" id="brushVariantBtn1" title="Toggle tree type 2 in the paint mix">2</button>
+            <button class="tool-btn variant-swatch" id="brushVariantBtn2" title="Toggle tree type 3 in the paint mix">3</button>
+            <button class="tool-btn variant-swatch" id="brushVariantBtn3" title="Toggle tree type 4 in the paint mix">4</button>
+            <div class="tool-sep"></div>
+            <div class="slider-row">
+                <label>Radius</label>
+                <input type="range" id="treeBrushRadius" min="1" max="8" step="0.5" value="3">
+                <span class="val" id="treeBrushRadiusLabel">3.0</span>
+            </div>
+            <div class="slider-row">
+                <label>Min</label>
+                <input type="range" id="treeBrushMinSize" min="0.5" max="3" step="0.5" value="1">
+                <span class="val" id="treeBrushMinSizeLabel">1.0</span>
+            </div>
+            <div class="slider-row">
+                <label>Max</label>
+                <input type="range" id="treeBrushMaxSize" min="1" max="5" step="0.5" value="3">
+                <span class="val" id="treeBrushMaxSizeLabel">3.0</span>
             </div>
         </div>
 
@@ -453,7 +179,7 @@
         <!-- WAVES TAB -->
         <div class="tab-panel" id="tab-waves">
             <div class="sec-title">Wave Configuration</div>
-            <button id="addWaveBtn" class="btn-outline" style="margin-bottom:6px;">+ Add Wave</button>
+            <button id="addWaveBtn" class="btn btn-outline" style="margin-bottom:6px;">+ Add Wave</button>
             <div class="waves-list" id="wavesList"></div>
         </div>
 
@@ -461,8 +187,8 @@
         <div class="tab-panel" id="tab-export">
             <div class="sec-title">Generated Level Code</div>
             <div style="display:flex; gap:6px; margin-bottom:8px;">
-                <button id="copyCodeBtn"  style="flex:1">Copy Code</button>
-                <button id="exportBtn2"   class="btn-success" style="flex:1">Download .js</button>
+                <button id="copyCodeBtn"  class="btn" style="flex:1">Copy Code</button>
+                <button id="exportBtn2"   class="btn btn-success" style="flex:1">Download .js</button>
             </div>
             <div class="output-code" id="outputCode"></div>
             <div id="statusMessage" style="margin-top:6px;"></div>
@@ -493,12 +219,12 @@
             <div class="modal-field">
                 <label>Enemy Pattern (type + count per entry)</label>
                 <div class="pattern-list" id="modalPatternList"></div>
-                <button class="btn-outline" id="modalAddPatternBtn" style="margin-top:6px;">+ Add Enemy Type</button>
+                <button class="btn btn-outline" id="modalAddPatternBtn" style="margin-top:6px;">+ Add Enemy Type</button>
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn-neutral" id="modalCancelBtn">Cancel</button>
-            <button class="btn-success" id="modalSaveBtn">Save Wave</button>
+            <button class="btn btn-neutral" id="modalCancelBtn">Cancel</button>
+            <button class="btn btn-success" id="modalSaveBtn">Save Wave</button>
         </div>
     </div>
 </div>
@@ -526,8 +252,8 @@
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn-neutral" id="loadLevelCancelBtn">Cancel</button>
-            <button class="btn-success" id="loadLevelConfirmBtn">Load Level</button>
+            <button class="btn btn-neutral" id="loadLevelCancelBtn">Cancel</button>
+            <button class="btn btn-success" id="loadLevelConfirmBtn">Load Level</button>
         </div>
     </div>
 </div>
@@ -539,11 +265,11 @@
             <h2 id="confirmationTitle">Confirm</h2>
         </div>
         <div class="modal-body">
-            <p id="confirmationMessage" style="font-size:13px; line-height:1.6; color:var(--text);"></p>
+            <p id="confirmationMessage" style="font-size:13px; line-height:1.6; color:var(--ld-text-primary);"></p>
         </div>
         <div class="modal-footer">
-            <button class="btn-neutral" id="confirmationCancel">Cancel</button>
-            <button class="btn-success" id="confirmationOk">Confirm</button>
+            <button class="btn btn-neutral" id="confirmationCancel">Cancel</button>
+            <button class="btn btn-success" id="confirmationOk">Confirm</button>
         </div>
     </div>
 </div>

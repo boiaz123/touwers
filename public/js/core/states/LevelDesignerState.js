@@ -53,7 +53,7 @@ export class LevelDesignerState {
         document.querySelectorAll('#designer-overlay .tab-btn').forEach(btn => {
             const handler = () => {
                 const tab = btn.dataset.tab;
-                document.querySelectorAll('#designer-overlay .dov-panel-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('#designer-overlay .panel-tabs .tab-btn').forEach(b => b.classList.remove('active'));
                 document.querySelectorAll('#designer-overlay .tab-panel').forEach(p => p.classList.remove('active'));
                 btn.classList.add('active');
                 document.getElementById('tab-' + tab)?.classList.add('active');
