@@ -780,6 +780,39 @@ export class AchievementSystem {
         }
     }
 
+    // ── Banner hit-testing ────────────────────────────────────────────────────
+    // Only clickable while fully settled ('hold' phase) — during slide-in/out
+    // the banner is animating away from this resting position, so we skip
+    // hit-testing rather than duplicate the animation offset math.
+
+    _bannerGeometry(canvas) {
+        const sf          = canvas.width / 1920;
+        const bannerW     = 500 * sf;
+        const bannerH     = 80 * sf;
+        const bannerX     = canvas.width / 2 - bannerW / 2;
+        const bannerBaseY = 16 * sf;
+        return { x: bannerX, y: bannerBaseY, width: bannerW, height: bannerH };
+    }
+
+    isBannerHovered(x, y, canvas) {
+        if (!this._banner || this._bannerPhase !== 'hold') return false;
+        const b = this._bannerGeometry(canvas);
+        return x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height;
+    }
+
+    /**
+     * Returns the id of the achievement whose banner was clicked (and dismisses
+     * that banner immediately so the panel can take over), or null otherwise.
+     */
+    handleBannerClick(x, y, canvas) {
+        if (!this.isBannerHovered(x, y, canvas)) return null;
+        const id = this._banner.id;
+        this._banner      = null;
+        this._bannerPhase = 'none';
+        this._bannerTimer = 0;
+        return id;
+    }
+
     // ── Banner rendering ──────────────────────────────────────────────────────
 
     render(ctx, canvas) {

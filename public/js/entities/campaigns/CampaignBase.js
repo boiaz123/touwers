@@ -1,3 +1,5 @@
+import { AchievementPanel } from '../../core/AchievementPanel.js';
+
 /**
  * CampaignBase
  * Base class for all campaigns. Extend this to create new campaign maps.
@@ -11,20 +13,26 @@ export class CampaignBase {
         this.stateManager = stateManager;
         this.selectedLevel = null;
         this.hoveredLevel = -1;
-        
+
         // Campaign metadata - override in subclasses
         this.campaignId = 'campaign-unknown';
         this.campaignName = 'Unknown Campaign';
         this.levels = [];
-        
+
         // Nav buttons (top-right)
         this.hoveredCampaignBtn = false;
         this.hoveredSettlementBtn = false;
-        
+
         // Terrain and visuals - override in subclasses
         this.terrainData = null;
         this.pathPoints = [];
         this.levelSlots = [];
+
+        // Achievement panel popup — lets the "achievement unlocked" banner (which can
+        // pop up here just as easily as on the Settlement Hub, e.g. right after a
+        // level-complete "RETURN TO CAMPAIGN MAP") be clicked without leaving this screen.
+        this.activePopup = null;
+        this.achievementPanel = null;
     }
     
     enter() {
@@ -165,6 +173,39 @@ export class CampaignBase {
         };
     }
     
+    /** Opens the standalone Achievement Panel without leaving this campaign map. */
+    openAchievementPanel(focusAchievementId = null) {
+        this.activePopup = 'achievementPanel';
+        if (!this.achievementPanel) {
+            this.achievementPanel = new AchievementPanel(this.stateManager, this);
+        }
+        this.achievementPanel.open(focusAchievementId);
+    }
+
+    closePopup() {
+        this.activePopup = null;
+    }
+
+    /** Drives the achievement banner + any open popup; call from update() every frame. */
+    updateSharedUI(deltaTime) {
+        if (this.stateManager.achievementSystem) {
+            this.stateManager.achievementSystem.update(deltaTime);
+        }
+        if (this.activePopup === 'achievementPanel' && this.achievementPanel) {
+            this.achievementPanel.update(deltaTime);
+        }
+    }
+
+    /** Draws any open popup, then the achievement banner on top; call last from render(). */
+    renderSharedUI(ctx) {
+        if (this.activePopup === 'achievementPanel' && this.achievementPanel) {
+            this.achievementPanel.render(ctx);
+        }
+        if (this.stateManager.achievementSystem) {
+            this.stateManager.achievementSystem.render(ctx, this.stateManager.canvas);
+        }
+    }
+
     getLevelSlotBounds(index) {
         if (!this.levelSlots || index >= this.levelSlots.length) return null;
         const slot = this.levelSlots[index];
@@ -185,7 +226,20 @@ export class CampaignBase {
         const scaleY = this.stateManager.canvas.height / rect.height;
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
-        
+
+        // Achievement banner sits on top of everything (including open popups)
+        if (this.stateManager.achievementSystem &&
+            this.stateManager.achievementSystem.isBannerHovered(x, y, this.stateManager.canvas)) {
+            this.stateManager.canvas.style.cursor = 'pointer';
+            return;
+        }
+
+        // If the achievement panel is open, delegate hover state to it
+        if (this.activePopup === 'achievementPanel' && this.achievementPanel) {
+            this.achievementPanel.updateHoverState(x, y);
+            return;
+        }
+
         this.hoveredLevel = -1;
         this.hoveredCampaignBtn = false;
         this.hoveredSettlementBtn = false;
@@ -227,6 +281,22 @@ export class CampaignBase {
     }
     
     handleClick(x, y) {
+        // If the achievement panel is open, it intercepts all clicks
+        if (this.activePopup === 'achievementPanel' && this.achievementPanel) {
+            this.achievementPanel.handleClick(x, y);
+            return;
+        }
+
+        // Achievement banner sits on top of everything and intercepts clicks first —
+        // opens straight to that achievement's detail view, staying on this campaign map.
+        if (this.stateManager.achievementSystem) {
+            const clickedId = this.stateManager.achievementSystem.handleBannerClick(x, y, this.stateManager.canvas);
+            if (clickedId) {
+                this.openAchievementPanel(clickedId);
+                return;
+            }
+        }
+
         // Check nav buttons
         const campaignBtn = this.getCampaignBtnBounds();
         if (x >= campaignBtn.x && x <= campaignBtn.x + campaignBtn.width &&
@@ -295,8 +365,11 @@ export class CampaignBase {
 
         // Render nav buttons
         this.renderNavButtons(ctx);
+
+        // Achievement panel popup + unlock banner, always drawn on top
+        this.renderSharedUI(ctx);
     }
-    
+
     renderBackground(ctx, canvas) {
         // Default background - override in subclasses
         const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -682,5 +755,6 @@ export class CampaignBase {
     
     update(deltaTime) {
         // Override in subclasses for animations
+        this.updateSharedUI(deltaTime);
     }
 }

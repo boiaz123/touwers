@@ -1,6 +1,7 @@
 import { SaveSystem } from '../SaveSystem.js';
 import { GameStatistics } from '../GameStatistics.js';
 import { AchievementSystem } from '../AchievementSystem.js';
+import { AchievementPanel } from '../AchievementPanel.js';
 import { LootRegistry } from '../../entities/loot/LootRegistry.js';
 import { TrainingGrounds } from '../../entities/buildings/TrainingGrounds.js';
 import { TowerForge } from '../../entities/buildings/TowerForge.js';
@@ -56,6 +57,7 @@ export class SettlementHub {
         this.optionsPopup = null;
         this.arcaneLibraryPopup = null;
         this.musicalScoresPopup = null;
+        this.achievementPanelPopup = null;
         this.buildingPositions = {};
         
         // Animation state
@@ -228,6 +230,9 @@ export class SettlementHub {
         if (this.arcaneLibraryPopup && this.arcaneLibraryPopup.tabs) {
             this.arcaneLibraryPopup.tabs = this.arcaneLibraryPopup.tabs.map(b => ({ ...b, hovered: false }));
             this.arcaneLibraryPopup.closeButtonHovered = false;
+        }
+        if (this.achievementPanelPopup) {
+            this.achievementPanelPopup.closeButtonHovered = false;
         }
         
         // Play settlement theme music - pick random settlement song and loop it
@@ -409,6 +414,13 @@ export class SettlementHub {
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
 
+        // Achievement banner sits on top of everything (including open popups)
+        if (this.stateManager.achievementSystem &&
+            this.stateManager.achievementSystem.isBannerHovered(x, y, this.stateManager.canvas)) {
+            this.stateManager.canvas.style.cursor = 'pointer';
+            return;
+        }
+
         // If popup is active, update its hover state
         if (this.activePopup === 'upgrades' && this.upgradesPopup) {
             this.upgradesPopup.updateHoverState(x, y);
@@ -418,6 +430,8 @@ export class SettlementHub {
             this.arcaneLibraryPopup.updateHoverState(x, y);
         } else if (this.activePopup === 'musicalScores' && this.musicalScoresPopup) {
             this.musicalScoresPopup.updateHoverState(x, y);
+        } else if (this.activePopup === 'achievementPanel' && this.achievementPanelPopup) {
+            this.achievementPanelPopup.updateHoverState(x, y);
         } else {
             // Check settlement building hover states
             const sf = this._sf || 1;
@@ -470,6 +484,16 @@ export class SettlementHub {
     }
 
     handleClick(x, y) {
+        // Achievement banner sits on top of everything (including open popups)
+        // and intercepts clicks first — opens straight to that achievement's detail view.
+        if (this.stateManager.achievementSystem) {
+            const clickedId = this.stateManager.achievementSystem.handleBannerClick(x, y, this.stateManager.canvas);
+            if (clickedId) {
+                this.openAchievementPanel(clickedId);
+                return;
+            }
+        }
+
         // Sir Frogerty intercepts clicks first
         if (this.sirFrogerty && this.sirFrogerty.visible && !this.activePopup) {
             if (this.sirFrogerty.handleClick(x, y, this.stateManager.canvas)) {
@@ -495,6 +519,9 @@ export class SettlementHub {
             return;
         } else if (this.activePopup === 'musicalScores' && this.musicalScoresPopup) {
             this.musicalScoresPopup.handleClick(x, y);
+            return;
+        } else if (this.activePopup === 'achievementPanel' && this.achievementPanelPopup) {
+            this.achievementPanelPopup.handleClick(x, y);
             return;
         }
 
@@ -568,6 +595,16 @@ export class SettlementHub {
 
     closePopup() {
         this.activePopup = null;
+    }
+
+    /** Opens the standalone Achievement Panel, optionally jumping straight to a
+     *  specific achievement's detail view (e.g. when its unlock banner is clicked). */
+    openAchievementPanel(focusAchievementId = null) {
+        this.activePopup = 'achievementPanel';
+        if (!this.achievementPanelPopup) {
+            this.achievementPanelPopup = new AchievementPanel(this.stateManager, this);
+        }
+        this.achievementPanelPopup.open(focusAchievementId);
     }
 
     renderBard(ctx, x, y) {
@@ -1029,6 +1066,8 @@ export class SettlementHub {
             this.arcaneLibraryPopup.update(deltaTime);
         } else if (this.activePopup === 'musicalScores' && this.musicalScoresPopup) {
             this.musicalScoresPopup.update(deltaTime);
+        } else if (this.activePopup === 'achievementPanel' && this.achievementPanelPopup) {
+            this.achievementPanelPopup.update(deltaTime);
         }
 
         // Update Sir Frogerty adviser
@@ -1099,6 +1138,8 @@ export class SettlementHub {
                 this.arcaneLibraryPopup.render(ctx);
             } else if (this.activePopup === 'musicalScores' && this.musicalScoresPopup) {
                 this.musicalScoresPopup.render(ctx);
+            } else if (this.activePopup === 'achievementPanel' && this.achievementPanelPopup) {
+                this.achievementPanelPopup.render(ctx);
             }
 
             // Professional fade-in overlay effect (soft, from dark to transparent)
@@ -8089,7 +8130,7 @@ class ManageSettlementMenu {
  * Arcane Knowledge Menu
  * Placeholder menu for tracking magical knowledge, enemy encounters and statistics
  */
-class ArcaneLibraryMenu {
+export class ArcaneLibraryMenu {
     constructor(stateManager, settlementHub) {
         this.stateManager = stateManager;
         this.settlementHub = settlementHub;
@@ -8121,23 +8162,21 @@ class ArcaneLibraryMenu {
         this.enemyImageCache = {};
         this._loadEnemyImages();
         
-        // Achievement pagination (3 cols × 2 rows = 6 per page)
-        this.achievementCurrentPage = 0;
-        this.achievementLeftArrowHovered  = false;
-        this.achievementRightArrowHovered = false;
-
         this.closeButtonHovered = false;
         this.leftArrowHovered = false;
         this.rightArrowHovered = false;
     }
 
-    open() {
+    /**
+     * @param {Object} [options]
+     * @param {string} [options.tab] - tab id to open on ('statistics' by default)
+     */
+    open(options = {}) {
         this.isOpen = true;
         this.animationProgress = 0;
         this.openTime = Date.now(); // Record when menu was opened
-        this.activeTab = 'statistics';
+        this.activeTab = options.tab || 'statistics';
         this.intelCurrentPage = 0;
-        this.achievementCurrentPage = 0;
         this.selectedEnemyId = null;
         this.hoveredEnemyId = null;
     }
@@ -8200,7 +8239,7 @@ class ArcaneLibraryMenu {
         const { menuX, menuY, menuWidth, menuHeight } = this._menuDimensions();
         const canvas = this.stateManager.canvas;
         const {
-            tabHeight, tabStartY, tabButtonWidth,
+            uiSf, tabHeight, tabStartY, tabButtonWidth,
             contentX, contentY, contentWidth, contentHeight,
             closeButtonSize, closeButtonX, closeButtonY
         } = this._getTabLayout(menuX, menuY, menuWidth, menuHeight);
@@ -8272,29 +8311,6 @@ class ArcaneLibraryMenu {
             return;
         }
         
-        // Achievement tab arrow hover detection
-        if (this.activeTab === 'achievements') {
-            this.achievementLeftArrowHovered  = false;
-            this.achievementRightArrowHovered = false;
-            const achievementList = this.stateManager.achievementSystem
-                ? this.stateManager.achievementSystem.getAchievements(
-                    this.stateManager.gameStatistics, this.stateManager.currentSaveData)
-                : [];
-            const totalPages = Math.ceil(achievementList.length / 8);
-            if (totalPages > 1) {
-                const arrowY    = contentY + contentHeight - 30;
-                const leftArrX  = contentX + 10;
-                const rightArrX = contentX + contentWidth - 36;
-                const arrW      = 26;
-                const arrH      = 22;
-                this.achievementLeftArrowHovered  = x >= leftArrX  && x <= leftArrX  + arrW && y >= arrowY && y <= arrowY + arrH && this.achievementCurrentPage > 0;
-                this.achievementRightArrowHovered = x >= rightArrX && x <= rightArrX + arrW && y >= arrowY && y <= arrowY + arrH && this.achievementCurrentPage < totalPages - 1;
-            }
-            this.stateManager.canvas.style.cursor =
-                (this.tabs.some(t => t.hovered) || this.closeButtonHovered || this.achievementLeftArrowHovered || this.achievementRightArrowHovered) ? 'pointer' : 'default';
-            return;
-        }
-
         // Default cursor for other tabs
         this.stateManager.canvas.style.cursor = (this.tabs.some(t => t.hovered) || this.closeButtonHovered) ? 'pointer' : 'default';
     }
@@ -8327,36 +8343,16 @@ class ArcaneLibraryMenu {
             
             if (x >= tabX && x <= tabX + tabButtonWidth &&
                 y >= tabY && y <= tabY + tabHeight) {
+                // Achievements is a launcher, not an inline tab — it opens the
+                // standalone Achievement Panel and closes the Library behind it.
+                if (tab.id === 'achievements') {
+                    this.close();
+                    this.settlementHub.openAchievementPanel();
+                    return;
+                }
                 this.activeTab = tab.id;
                 return;
             }
-        }
-        
-        // Handle achievement tab pagination clicks
-        if (this.activeTab === 'achievements') {
-            const { contentX, contentY, contentWidth, contentHeight } =
-                this._getTabLayout(menuX, menuY, menuWidth, menuHeight);
-            const achievementList = this.stateManager.achievementSystem
-                ? this.stateManager.achievementSystem.getAchievements(
-                    this.stateManager.gameStatistics, this.stateManager.currentSaveData)
-                : [];
-            const totalPages = Math.ceil(achievementList.length / 8);
-            if (totalPages > 1) {
-                const arrowY    = contentY + contentHeight - 30;
-                const leftArrX  = contentX + 10;
-                const rightArrX = contentX + contentWidth - 36;
-                const arrW      = 26;
-                const arrH      = 22;
-                if (x >= leftArrX && x <= leftArrX + arrW && y >= arrowY && y <= arrowY + arrH && this.achievementCurrentPage > 0) {
-                    this.achievementCurrentPage--;
-                    return;
-                }
-                if (x >= rightArrX && x <= rightArrX + arrW && y >= arrowY && y <= arrowY + arrH && this.achievementCurrentPage < totalPages - 1) {
-                    this.achievementCurrentPage++;
-                    return;
-                }
-            }
-            return;
         }
 
         // Handle enemy intel tab clicks
@@ -8527,8 +8523,6 @@ class ArcaneLibraryMenu {
         // Render active tab content
         if (this.activeTab === 'statistics') {
             this.renderStatisticsTab(ctx, contentX, contentY, contentWidth, contentHeight);
-        } else if (this.activeTab === 'achievements') {
-            this.renderAchievementsTab(ctx, contentX, contentY, contentWidth, contentHeight, uiSf);
         } else if (this.activeTab === 'enemy-intel') {
             this.renderEnemyIntelTab(ctx, contentX, contentY, contentWidth, contentHeight);
         }
@@ -8632,434 +8626,6 @@ class ArcaneLibraryMenu {
             
             currentY += lineHeight;
         });
-    }
-
-    wrapText(text, maxCharsPerLine) {
-        const words = text.split(' ');
-        const lines = [];
-        let currentLine = '';
-        
-        for (const word of words) {
-            if ((currentLine + word).length <= maxCharsPerLine) {
-                currentLine += (currentLine ? ' ' : '') + word;
-            } else {
-                if (currentLine) {
-                    lines.push(currentLine);
-                }
-                currentLine = word;
-            }
-        }
-        
-        if (currentLine) {
-            lines.push(currentLine);
-        }
-        
-        return lines;
-    }
-
-    renderAchievementsTab(ctx, x, y, width, height, uiSf = 1) {
-        const achievementSystem = this.stateManager.achievementSystem;
-        const stats    = this.stateManager.gameStatistics;
-        const saveData = this.stateManager.currentSaveData;
-
-        const achievements = achievementSystem
-            ? achievementSystem.getAchievements(stats, saveData)
-            : [];
-        const scoreSummary = achievementSystem
-            ? achievementSystem.getScoreSummary()
-            : { earnedPoints: 0, totalPoints: 1000, unlockedCount: 0, totalCount: achievements.length };
-
-        // ── Summary header (two rows: achievements unlocked, arcane score) ─────
-        const unlockedCount = scoreSummary.unlockedCount;
-        const totalCount    = scoreSummary.totalCount;
-        const rowH          = Math.round(34 * uiSf);
-        const rowGap        = Math.round(4 * uiSf);
-        const headerH       = rowH * 2 + rowGap;
-
-        const hdrGrad = ctx.createLinearGradient(x, y, x, y + headerH);
-        hdrGrad.addColorStop(0, 'rgba(70, 42, 8, 0.7)');
-        hdrGrad.addColorStop(1, 'rgba(30, 16, 4, 0.4)');
-        ctx.fillStyle = hdrGrad;
-        ctx.fillRect(x, y, width, headerH);
-
-        ctx.strokeStyle = 'rgba(180, 130, 40, 0.3)';
-        ctx.lineWidth   = 1;
-        ctx.beginPath();
-        ctx.moveTo(x, y + headerH);
-        ctx.lineTo(x + width, y + headerH);
-        ctx.stroke();
-
-        // Faint divider between the two header rows
-        const hdrPad = Math.round(14 * uiSf);
-        ctx.strokeStyle = 'rgba(180, 130, 40, 0.15)';
-        ctx.lineWidth   = 1;
-        ctx.beginPath();
-        ctx.moveTo(x + hdrPad, y + rowH);
-        ctx.lineTo(x + width - hdrPad, y + rowH);
-        ctx.stroke();
-
-        // Shared bar geometry — both rows align on the same offset so the
-        // two progress bars read as a coherent pair.
-        const barOffX = Math.round(270 * uiSf);
-        const barX    = x + barOffX;
-        const barW    = width - barOffX - Math.round(10 * uiSf);
-        const barH    = Math.round(14 * uiSf);
-
-        // ── Row 1: achievements unlocked ────────────────────────────────────
-        const row1CY = y + rowH / 2;
-        ctx.font         = `bold ${Math.round(16 * uiSf)}px Trebuchet MS, sans-serif`;
-        ctx.fillStyle    = '#f5d070';
-        ctx.textAlign    = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(`${unlockedCount}`, x + hdrPad, row1CY);
-
-        ctx.font      = `${Math.round(13 * uiSf)}px Trebuchet MS, sans-serif`;
-        ctx.fillStyle = '#8b7355';
-        ctx.fillText(` / ${totalCount}  ACHIEVEMENTS UNLOCKED`, x + hdrPad + ctx.measureText(`${unlockedCount}`).width + 2, row1CY);
-
-        const oBarY = row1CY - barH / 2;
-        const oRatio = totalCount > 0 ? unlockedCount / totalCount : 0;
-
-        ctx.fillStyle = '#0d0805';
-        ctx.fillRect(barX, oBarY, barW, barH);
-        if (oRatio > 0) {
-            const oGrad = ctx.createLinearGradient(barX, oBarY, barX + barW, oBarY);
-            oGrad.addColorStop(0, '#5a3a0a');
-            oGrad.addColorStop(oRatio, '#d4af37');
-            oGrad.addColorStop(1, '#2a1a05');
-            ctx.fillStyle = oGrad;
-            ctx.fillRect(barX, oBarY, Math.round(barW * oRatio), barH);
-        }
-        ctx.strokeStyle = '#4a3a1a';
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(barX, oBarY, barW, barH);
-        ctx.font         = `bold ${Math.round(10 * uiSf)}px Trebuchet MS, sans-serif`;
-        ctx.fillStyle    = oRatio >= 1 ? '#ffd700' : '#8b7355';
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(`${unlockedCount}/${totalCount}`, barX + barW / 2, oBarY + barH / 2);
-
-        // ── Row 2: title progress — counts up toward the next title threshold
-        // rather than the flat 1000-point total, so the bar always reflects
-        // how close the commander is to their next honorary rank.
-        const row2CY = y + rowH + rowGap + rowH / 2;
-        const bracketStart = scoreSummary.currentThreshold || 0;
-        const bracketEnd   = scoreSummary.isMaxTitle ? bracketStart : scoreSummary.nextThreshold;
-        const bracketSize  = Math.max(1, bracketEnd - bracketStart);
-        const intoBracket  = Math.max(0, scoreSummary.earnedPoints - bracketStart);
-        const tRatio        = scoreSummary.isMaxTitle ? 1 : Math.min(intoBracket / bracketSize, 1);
-
-        // Title name only on the left (kept short so it never collides with
-        // the bar); the "→ next title" detail lives inside the bar label
-        // below, where there's room for the full text either way.
-        ctx.font         = `bold ${Math.round(15 * uiSf)}px Trebuchet MS, sans-serif`;
-        ctx.fillStyle    = '#a8d4f5';
-        ctx.textAlign    = 'left';
-        ctx.textBaseline = 'middle';
-        const maxTitleChars = Math.max(8, Math.round(barOffX / (7 * uiSf)));
-        const titleDisplay  = scoreSummary.title.length > maxTitleChars
-            ? scoreSummary.title.slice(0, maxTitleChars - 1) + '…'
-            : scoreSummary.title;
-        ctx.fillText(titleDisplay, x + hdrPad, row2CY);
-
-        const sBarY = row2CY - barH / 2;
-
-        ctx.fillStyle = '#070b10';
-        ctx.fillRect(barX, sBarY, barW, barH);
-        if (tRatio > 0) {
-            const sGrad = ctx.createLinearGradient(barX, sBarY, barX + barW, sBarY);
-            sGrad.addColorStop(0, '#0f2a4a');
-            sGrad.addColorStop(tRatio, '#5fb0e8');
-            sGrad.addColorStop(1, '#0a1a2e');
-            ctx.fillStyle = sGrad;
-            ctx.fillRect(barX, sBarY, Math.round(barW * tRatio), barH);
-        }
-        ctx.strokeStyle = '#1d3a52';
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(barX, sBarY, barW, barH);
-        ctx.font         = `bold ${Math.round(10 * uiSf)}px Trebuchet MS, sans-serif`;
-        ctx.fillStyle    = tRatio >= 1 ? '#d8f0ff' : '#6f8aa3';
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'middle';
-        const barLabel = scoreSummary.isMaxTitle
-            ? `${scoreSummary.earnedPoints} / ${scoreSummary.totalPoints} pts  •  Highest title attained`
-            : `${scoreSummary.earnedPoints} / ${scoreSummary.nextThreshold} pts  →  ${scoreSummary.nextTitle}`;
-        ctx.fillText(barLabel, barX + barW / 2, sBarY + barH / 2);
-
-        // ── Card grid ─────────────────────────────────────────────────────────
-        const PER_PAGE   = 8; // 2 cols × 4 rows
-        const totalPages = Math.max(1, Math.ceil(achievements.length / PER_PAGE));
-        const page       = Math.min(this.achievementCurrentPage, totalPages - 1);
-        const startIdx   = page * PER_PAGE;
-        const pageItems  = achievements.slice(startIdx, startIdx + PER_PAGE);
-
-        const paginationH = Math.round(40 * uiSf);
-        const cardAreaY   = y + headerH + Math.round(6 * uiSf);
-        const cardAreaH   = height - headerH - Math.round(6 * uiSf) - paginationH;
-        const COLS        = 2;
-        const ROWS        = 4;
-        const gapX        = Math.round(10 * uiSf);
-        const gapY        = Math.round(8 * uiSf);
-        const padX        = Math.round(8 * uiSf);
-        const cardW       = (width - 2 * padX - gapX) / COLS;
-        const cardH       = Math.floor((cardAreaH - (ROWS - 1) * gapY) / ROWS);
-
-        pageItems.forEach((achievement, i) => {
-            const col   = i % COLS;
-            const row   = Math.floor(i / COLS);
-            const cardX = x + padX + col * (cardW + gapX);
-            const cardY = cardAreaY + row * (cardH + gapY);
-            this._drawAchievementCard(ctx, achievement, cardX, cardY, cardW, cardH, uiSf);
-        });
-
-        // ── Empty state ───────────────────────────────────────────────────────
-        if (achievements.length === 0) {
-            ctx.font         = '13px Trebuchet MS, sans-serif';
-            ctx.fillStyle    = '#6a5a4a';
-            ctx.textAlign    = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('No achievements found', x + width / 2, y + height / 2);
-            return;
-        }
-
-        // ── Pagination ────────────────────────────────────────────────────────
-        if (totalPages > 1) {
-            const arrowY    = y + height - 28;
-            const leftArrX  = x + 10;
-            const rightArrX = x + width - 36;
-            const arrW      = 26;
-            const arrH      = 22;
-
-            const leftEnabled = page > 0;
-            ctx.fillStyle   = leftEnabled ? (this.achievementLeftArrowHovered ? '#c9922a' : '#5a3a10') : '#1e130a';
-            ctx.fillRect(leftArrX, arrowY, arrW, arrH);
-            ctx.strokeStyle = leftEnabled ? '#d4af37' : '#3a2a1a';
-            ctx.lineWidth   = 1;
-            ctx.strokeRect(leftArrX, arrowY, arrW, arrH);
-            ctx.font         = 'bold 16px Arial';
-            ctx.fillStyle    = leftEnabled ? '#ffd700' : '#4a3a2a';
-            ctx.textAlign    = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('‹', leftArrX + arrW / 2, arrowY + arrH / 2);
-
-            ctx.font      = 'bold 11px Trebuchet MS, sans-serif';
-            ctx.fillStyle = '#a08050';
-            ctx.textAlign = 'center';
-            ctx.fillText(`${page + 1}  /  ${totalPages}`, x + width / 2, arrowY + arrH / 2);
-
-            const rightEnabled = page < totalPages - 1;
-            ctx.fillStyle   = rightEnabled ? (this.achievementRightArrowHovered ? '#c9922a' : '#5a3a10') : '#1e130a';
-            ctx.fillRect(rightArrX, arrowY, arrW, arrH);
-            ctx.strokeStyle = rightEnabled ? '#d4af37' : '#3a2a1a';
-            ctx.lineWidth   = 1;
-            ctx.strokeRect(rightArrX, arrowY, arrW, arrH);
-            ctx.font         = 'bold 16px Arial';
-            ctx.fillStyle    = rightEnabled ? '#ffd700' : '#4a3a2a';
-            ctx.textAlign    = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('›', rightArrX + arrW / 2, arrowY + arrH / 2);
-        }
-    }
-
-    _drawAchievementCard(ctx, achievement, cx, cy, cw, ch, uiSf = 1) {
-        const CAT_COLORS = {
-            combat:     '#8b1a1a',
-            victory:    '#8b6914',
-            resilience: '#5a2a8b',
-            builder:    '#1a6b3a',
-            spending:   '#1a3a8b',
-            trading:    '#1a6b5a',
-            alchemy:    '#8b4a1a',
-            loot:       '#5a1a8b',
-            campaign:   '#4a4a5a',
-            playtime:   '#2a3a6b',
-            superweapon:'#7a1a8b',
-        };
-        // Tier ladder — the badge ring/glow upgrades through these ranks as an
-        // achievement's position within its category climbs, so e.g. "slay
-        // 100,000 enemies" reads as a visibly grander emblem than "slay your
-        // first enemy" even though both share the combat icon.
-        const TIER_STYLES = [
-            { ring: '#a9694a', glow: 'rgba(169, 105, 74, 0.55)',  inner: '#7a4a30' }, // Bronze
-            { ring: '#b9c0c6', glow: 'rgba(185, 192, 198, 0.55)', inner: '#7c8389' }, // Silver
-            { ring: '#d4af37', glow: 'rgba(212, 175, 55, 0.6)',   inner: '#6b4018' }, // Gold
-            { ring: '#7fd8c4', glow: 'rgba(127, 216, 196, 0.6)',  inner: '#1f5a4d' }, // Platinum
-            { ring: '#7fdfff', glow: 'rgba(127, 223, 255, 0.65)', inner: '#155a6b' }, // Diamond
-            { ring: '#c77dff', glow: 'rgba(199, 125, 255, 0.7)',  inner: '#4a1f6b' }  // Mythic
-        ];
-
-        const unlocked  = achievement.unlocked;
-        const catColor  = CAT_COLORS[achievement.category] || '#3a2a1a';
-        const prog      = achievement.progress || { current: 0, max: 1 };
-        const ratio     = prog.max > 0 ? Math.min(prog.current / prog.max, 1) : 0;
-        const tier      = achievement.tier || 0;
-        const tierMax   = achievement.tierMax || 0;
-        const tierStyle = tier > 0 ? TIER_STYLES[Math.min(tier - 1, TIER_STYLES.length - 1)] : null;
-
-        const stripe = 3 * uiSf;
-        const pad    = 8 * uiSf;
-        const iconR  = 21 * uiSf;
-
-        // ── Background ────────────────────────────────────────────────────────
-        if (unlocked) {
-            const bg = ctx.createLinearGradient(cx, cy, cx + cw, cy + ch);
-            bg.addColorStop(0,   '#3d2210');
-            bg.addColorStop(0.5, '#4a2c14');
-            bg.addColorStop(1,   '#3a200e');
-            ctx.fillStyle = bg;
-        } else {
-            ctx.fillStyle = '#1a1008';
-        }
-        ctx.fillRect(cx, cy, cw, ch);
-
-        // ── Category colour stripe (left edge) ────────────────────────────────
-        ctx.fillStyle = unlocked ? catColor : catColor + '66';
-        ctx.fillRect(cx, cy, stripe, ch);
-
-        // ── Border ────────────────────────────────────────────────────────────
-        if (unlocked) {
-            ctx.fillStyle = 'rgba(255, 215, 80, 0.12)';
-            ctx.fillRect(cx, cy, cw, 2 * uiSf);
-            ctx.strokeStyle = '#c9922a';
-            ctx.lineWidth   = 1.5;
-        } else {
-            ctx.strokeStyle = '#2a1a0a';
-            ctx.lineWidth   = 1;
-        }
-        ctx.strokeRect(cx, cy, cw, ch);
-
-        // ── Points badge (top-right corner) ─────────────────────────────────
-        const ptsText = `+${achievement.points || 0}`;
-        ctx.font = `bold ${Math.round(9 * uiSf)}px Trebuchet MS, sans-serif`;
-        const ptsPadX = 5 * uiSf;
-        const ptsW    = ctx.measureText(ptsText).width + ptsPadX * 2;
-        const ptsH    = 13 * uiSf;
-        const ptsX    = cx + cw - ptsW - 5 * uiSf;
-        const ptsY    = cy + 5 * uiSf;
-        ctx.fillStyle = unlocked ? 'rgba(212, 175, 55, 0.22)' : 'rgba(60, 50, 40, 0.2)';
-        ctx.fillRect(ptsX, ptsY, ptsW, ptsH);
-        ctx.strokeStyle = unlocked ? '#c9922a' : '#2a1a0a';
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(ptsX, ptsY, ptsW, ptsH);
-        ctx.font         = `bold ${Math.round(9 * uiSf)}px Trebuchet MS, sans-serif`;
-        ctx.fillStyle    = unlocked ? '#ffd700' : '#4a3a2a';
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(ptsText, ptsX + ptsW / 2, ptsY + ptsH / 2);
-
-        // ── Icon badge ────────────────────────────────────────────────────────
-        const iconCX = cx + stripe + pad + iconR;
-        const iconCY = cy + ch / 2;
-
-        // Rank glow behind the badge — only for unlocked, tiered achievements,
-        // and grows brighter/thicker at higher tiers.
-        if (unlocked && tierStyle) {
-            ctx.beginPath();
-            ctx.arc(iconCX, iconCY, iconR + 3 * uiSf, 0, Math.PI * 2);
-            ctx.strokeStyle = tierStyle.glow;
-            ctx.lineWidth   = (1.5 + tier * 0.4) * uiSf;
-            ctx.stroke();
-        }
-
-        ctx.beginPath();
-        ctx.arc(iconCX, iconCY, iconR, 0, Math.PI * 2);
-        if (unlocked) {
-            const iconBg = ctx.createRadialGradient(iconCX - 5, iconCY - 5, 3, iconCX, iconCY, iconR);
-            iconBg.addColorStop(0, tierStyle ? tierStyle.inner : '#6b4018');
-            iconBg.addColorStop(1, '#2e1508');
-            ctx.fillStyle = iconBg;
-        } else {
-            ctx.fillStyle = '#150e06';
-        }
-        ctx.fill();
-
-        ctx.strokeStyle = unlocked ? (tierStyle ? tierStyle.ring : '#c9922a') : '#1e1408';
-        ctx.lineWidth   = unlocked ? 1.5 : 1;
-        ctx.stroke();
-
-        ctx.font         = `${unlocked ? 'bold ' : ''}${Math.round(20 * uiSf)}px Trebuchet MS, sans-serif`;
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle    = unlocked ? '#f5d070' : '#2e2018';
-        ctx.fillText(achievement.icon || '●', iconCX, iconCY + 1);
-
-        // Rank pips beneath the badge — filled count shows this achievement's
-        // tier out of its category's ladder (e.g. ●●●○○○ = rank 3 of 6).
-        if (tierMax > 0) {
-            const pipR    = 1.6 * uiSf;
-            const pipGap  = 5 * uiSf;
-            const pipsW   = (tierMax - 1) * pipGap;
-            const pipY    = iconCY + iconR + 6 * uiSf;
-            let pipX0     = iconCX - pipsW / 2;
-            for (let p = 0; p < tierMax; p++) {
-                ctx.beginPath();
-                ctx.arc(pipX0 + p * pipGap, pipY, pipR, 0, Math.PI * 2);
-                if (p < tier) {
-                    ctx.fillStyle = unlocked ? (tierStyle ? tierStyle.ring : catColor) : (catColor + '88');
-                    ctx.fill();
-                } else {
-                    ctx.strokeStyle = unlocked ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)';
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                }
-            }
-        }
-
-        // ── Text area ─────────────────────────────────────────────────────────
-        const textX = cx + stripe + pad + iconR * 2 + pad;
-        const textW = cw - (textX - cx) - pad;
-
-        ctx.textAlign    = 'left';
-        ctx.textBaseline = 'top';
-
-        // Name
-        ctx.font      = `bold ${Math.round(12 * uiSf)}px Trebuchet MS, sans-serif`;
-        ctx.fillStyle = unlocked ? '#f5d070' : '#4a3a2a';
-        ctx.fillText(achievement.name, textX, cy + 8 * uiSf);
-
-        // Description
-        ctx.font      = `${Math.round(10 * uiSf)}px Trebuchet MS, sans-serif`;
-        ctx.fillStyle = unlocked ? '#c8a070' : '#2e2018';
-        const maxChars = Math.round(42 / uiSf);
-        const desc    = achievement.description.length > maxChars
-            ? achievement.description.slice(0, maxChars - 2) + '…'
-            : achievement.description;
-        ctx.fillText(desc, textX, cy + 24 * uiSf);
-
-        // ── Progress bar ──────────────────────────────────────────────────────
-        const barH = 12 * uiSf;
-        const barX = textX;
-        const barY = cy + ch - barH - 4 * uiSf;
-        const barW = textW;
-
-        ctx.fillStyle = '#0a0704';
-        ctx.fillRect(barX, barY, barW, barH);
-
-        if (ratio > 0) {
-            const fillW = Math.round(barW * ratio);
-            if (unlocked) {
-                const barGrad = ctx.createLinearGradient(barX, barY, barX + barW, barY);
-                barGrad.addColorStop(0, '#7a5510');
-                barGrad.addColorStop(1, '#f5c040');
-                ctx.fillStyle = barGrad;
-            } else {
-                ctx.fillStyle = '#2a4a1a';
-            }
-            ctx.fillRect(barX, barY, fillW, barH);
-        }
-
-        ctx.strokeStyle = unlocked ? '#8b6914' : '#1e1408';
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(barX, barY, barW, barH);
-
-        ctx.font         = `bold ${Math.round(8 * uiSf)}px Trebuchet MS, sans-serif`;
-        ctx.fillStyle    = unlocked ? '#ffd700' : '#4a3a2a';
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'middle';
-        const progLabel  = unlocked
-            ? '✓  COMPLETE'
-            : `${prog.current.toLocaleString()} / ${prog.max.toLocaleString()}`;
-        ctx.fillText(progLabel, barX + barW / 2, barY + barH / 2);
     }
 
     renderEnemyIntelTab(ctx, x, y, width, height) {

@@ -174,6 +174,19 @@ export class PlayerWorkshop extends CampaignBase {
         const x = (e.clientX - rect.left) * scaleX;
         const y = (e.clientY - rect.top) * scaleY;
 
+        // Achievement banner sits on top of everything (including open popups)
+        if (this.stateManager.achievementSystem &&
+            this.stateManager.achievementSystem.isBannerHovered(x, y, canvas)) {
+            canvas.style.cursor = 'pointer';
+            return;
+        }
+
+        // If the achievement panel is open, delegate hover state to it
+        if (this.activePopup === 'achievementPanel' && this.achievementPanel) {
+            this.achievementPanel.updateHoverState(x, y);
+            return;
+        }
+
         this.hoveredCard = -1;
         this.hoveredDesignerBtn = false;
         this.hoveredCampaignBtn = false;
@@ -224,6 +237,21 @@ export class PlayerWorkshop extends CampaignBase {
     }
 
     handleClick(x, y) {
+        // If the achievement panel is open, it intercepts all clicks
+        if (this.activePopup === 'achievementPanel' && this.achievementPanel) {
+            this.achievementPanel.handleClick(x, y);
+            return;
+        }
+
+        // Achievement banner sits on top of everything and intercepts clicks first
+        if (this.stateManager.achievementSystem) {
+            const clickedId = this.stateManager.achievementSystem.handleBannerClick(x, y, this.stateManager.canvas);
+            if (clickedId) {
+                this.openAchievementPanel(clickedId);
+                return;
+            }
+        }
+
         const dbtn = this._getDesignerBtnBounds();
         if (x >= dbtn.x && x <= dbtn.x + dbtn.width && y >= dbtn.y && y <= dbtn.y + dbtn.height) {
             if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
@@ -293,6 +321,9 @@ export class PlayerWorkshop extends CampaignBase {
         this._drawSandboxButton(ctx);
         this._drawDesignerButton(ctx);
         this.renderNavButtons(ctx);
+
+        // Achievement panel popup + unlock banner, always drawn on top
+        this.renderSharedUI(ctx);
     }
 
     _drawBackground(ctx, W, H) {
@@ -617,5 +648,7 @@ export class PlayerWorkshop extends CampaignBase {
         ctx.fillText('LEVEL DESIGNER', btn.x + btn.width / 2, btn.y + btn.height / 2);
     }
 
-    update(deltaTime) {}
+    update(deltaTime) {
+        this.updateSharedUI(deltaTime);
+    }
 }

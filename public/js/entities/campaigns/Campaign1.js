@@ -530,6 +530,9 @@ export class Campaign1 extends CampaignBase {
         this.renderAllLevelLabels(ctx);
         this.renderTitle(ctx, canvas);
         this.renderNavButtons(ctx);
+
+        // Achievement panel popup + unlock banner, always drawn on top
+        this.renderSharedUI(ctx);
     }
 
 
@@ -1614,9 +1617,11 @@ export class Campaign1 extends CampaignBase {
     update(deltaTime) {
         // Update animation for castle flags
         this.animationTime += deltaTime;
-        
+
         // Update falling leaves
         this.updateFallingLeaves(deltaTime);
+
+        this.updateSharedUI(deltaTime);
     }
     
     updateFallingLeaves(deltaTime) {

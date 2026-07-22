@@ -570,6 +570,9 @@ export class Campaign2 extends CampaignBase {
         this.renderAllLevelLabels(ctx);
         this.renderTitle(ctx);
         this.renderNavButtons(ctx);
+
+        // Achievement panel popup + unlock banner, always drawn on top
+        this.renderSharedUI(ctx);
     }
 
     drawFullMountainRange(ctx, canvas) {
