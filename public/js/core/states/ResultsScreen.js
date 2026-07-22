@@ -68,9 +68,10 @@ export class ResultsScreen {
 
         // Button state
         this.buttons = [];
-        // -1 = no button pre-highlighted; only keyboard/gamepad navigation (if wired up)
-        // should ever cause one button to render in the gold "selected" style, since
-        // the buttons are otherwise meant to look identical (see renderButtons()).
+        // -1 = no button pre-highlighted; keyboard/gamepad navigation (if wired up) is the
+        // only other thing that should cause a button to render in the gold "selected" style -
+        // buttons are otherwise meant to look identical, except a button flagged `special`
+        // (see renderButtons()), which always renders gold regardless of focus.
         this.selectedButtonIndex = -1;
 
         // Particle effects
@@ -138,9 +139,10 @@ export class ResultsScreen {
         // Setup buttons
         if (type === 'levelComplete') {
             if (data.noNextLevel) {
-                // Last level of campaign - only return to settlement
+                // Last level of campaign - only return to settlement, styled gold to
+                // draw the player back to the settlement for Sir Frogerty's messaging
                 this.buttons = [
-                    { label: 'RETURN TO SETTLEMENT', action: 'settlement' }
+                    { label: 'RETURN TO SETTLEMENT', action: 'settlement', special: true }
                 ];
             } else {
                 this.buttons = [
@@ -1958,7 +1960,7 @@ export class ResultsScreen {
 
         this.buttons.forEach((button, index) => {
             const x = startX + index * (bW + bGap);
-            const isSelected = index === this.selectedButtonIndex;
+            const isSelected = index === this.selectedButtonIndex || !!button.special;
 
             ctx.save();
 

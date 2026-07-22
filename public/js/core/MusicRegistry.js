@@ -362,7 +362,7 @@ export function initializeMusicRegistry() {
         }
     );
 
-    // Frog King boss fanfare - plays once when he spawns in the space campaign's final level (Alien Outpost)
+    // Frog King boss fanfare - plays once when he spawns in the space campaign's final level (Frog King's Domain)
     MusicRegistry.registerMusic(
         'frog-king-theme',
         'assets/audio/music/CampaignSongs/SpaceSongs/FrogKingTheme.mp3',

@@ -2,7 +2,7 @@ import { LevelBase } from '../LevelBase.js';
 
 export class SpaceLevel8 extends LevelBase {
     static levelMetadata = {
-        name: 'Alien Outpost',
+        name: "Frog King's Domain",
         difficulty: 'Medium',
         order: 8,
         campaign: 'space'

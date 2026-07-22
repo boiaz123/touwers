@@ -1776,6 +1776,20 @@ export class GameplayState {
         // victory screen shows a clean battlefield instead of a stuck-open menu
         this.cancelSelection();
 
+        // --- Campaign completion detection (single source of truth for this whole method) ---
+        // Derived from SaveSystem.getCampaignLevelSequence(), the same ordered level list
+        // that already drives level-unlocking, so there's one place to update per campaign.
+        const campaignSequence = this.currentCampaignId
+            ? SaveSystem.getCampaignLevelSequence(this.currentCampaignId)
+            : [];
+        const lastLevelForCampaign = campaignSequence[campaignSequence.length - 1];
+        const isLastLevel = !!lastLevelForCampaign && (this.currentLevel === lastLevelForCampaign) && !this.isSandbox;
+        // Only trigger the Frogerty "campaign complete" narrative and unlock toast the first
+        // time this campaign is completed - replaying the last level shouldn't re-fire it.
+        const wasAlreadyCompleted = !!(this.stateManager.currentSaveData
+            && this.stateManager.currentSaveData.completedCampaigns
+            && this.stateManager.currentSaveData.completedCampaigns.includes(this.currentCampaignId));
+
         // Update save data with level completion (only level progress, not mid-game state)
         if (this.stateManager.currentSaveData) {
             const saveData = this.stateManager.currentSaveData;
@@ -1845,16 +1859,7 @@ export class GameplayState {
             // Update last played level
             saveData.lastPlayedLevel = this.currentLevel;
 
-            // --- Campaign completion detection ---
-            // Last level varies per campaign: Forest/Mountain = 12, Desert = 10, Space = 8
-            const campaignLastLevel = {
-                'campaign-1': 'level12',
-                'campaign-2': 'level12',
-                'campaign-3': 'level10',
-                'campaign-4': 'frog-kings-realm'
-            };
-            const lastLevelForCampaign = campaignLastLevel[this.currentCampaignId] || 'level12';
-            const isLastLevel = (this.currentLevel === lastLevelForCampaign) && !this.isSandbox;
+            // --- Campaign completion (uses isLastLevel/wasAlreadyCompleted computed above) ---
             if (isLastLevel && this.currentCampaignId) {
                 if (!saveData.completedCampaigns) saveData.completedCampaigns = [];
                 if (!saveData.unlockedCampaigns) saveData.unlockedCampaigns = ['campaign-1'];
@@ -1872,8 +1877,11 @@ export class GameplayState {
                     );
                 }
 
-                // Signal to SettlementHub that a campaign was just completed
-                this.stateManager.justCompletedCampaignId = this.currentCampaignId;
+                // Signal to SettlementHub that a campaign was just completed - only on the
+                // first-ever completion, so replays don't re-trigger Sir Frogerty's dialogue
+                if (!wasAlreadyCompleted) {
+                    this.stateManager.justCompletedCampaignId = this.currentCampaignId;
+                }
             }
             // --- End campaign completion ---
             
@@ -1896,14 +1904,6 @@ export class GameplayState {
         }
 
         // Show custom results screen with statistics
-        const campaignLastLevel2 = {
-            'campaign-1': 'level12',
-            'campaign-2': 'level12',
-            'campaign-3': 'level10',
-            'campaign-4': 'frog-kings-realm'
-        };
-        const lastLevelForCampaign2 = campaignLastLevel2[this.currentCampaignId] || 'level12';
-        const isLastLevel2 = (this.currentLevel === lastLevelForCampaign2) && !this.isSandbox;
         this.resultsScreen.show('levelComplete', {
             level: this.currentLevel,
             wavesCompleted: this.maxWavesForLevel,
@@ -1913,7 +1913,7 @@ export class GameplayState {
             goldEarned: this.goldEarnedThisLevel,
             currentGold: this.gameState.gold,
             timeTaken: Math.round((Date.now() / 1000) - this.levelStartTime),
-            noNextLevel: isLastLevel2
+            noNextLevel: isLastLevel
         }, this.lootManager.getCollectedLoot(), this.lootManager);
     }
     
