@@ -77,6 +77,15 @@ fn open_external_url(app: tauri::AppHandle, url: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to open URL: {}", e))
 }
 
+// Placeholder for Steamworks achievement unlocks — see apps/desktop/STEAM_ACHIEVEMENTS.md.
+// Currently just logs; swap in a real `steamworks::Client` call once an App ID
+// and the Steamworks SDK are available.
+#[tauri::command]
+fn steam_unlock_achievement(id: String) -> Result<(), String> {
+    println!("[steam] would unlock achievement: {}", id);
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -87,7 +96,8 @@ pub fn run() {
             read_save_file,
             delete_save_file,
             get_saves_path,
-            open_external_url
+            open_external_url,
+            steam_unlock_achievement
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

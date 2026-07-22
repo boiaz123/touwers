@@ -668,8 +668,22 @@ export class AchievementSystem {
         }
         if (newlyUnlocked.length > 0) {
             this.pendingBanners.push(...newlyUnlocked);
+            for (const def of newlyUnlocked) {
+                AchievementSystem.notifyPlatformUnlock(def);
+            }
         }
         return newlyUnlocked;
+    }
+
+    /**
+     * Fire-and-forget notification to the native platform layer (Steam, etc.)
+     * that an achievement was unlocked. No-op outside Tauri; see
+     * apps/desktop/STEAM_ACHIEVEMENTS.md for the Steamworks wiring this feeds.
+     */
+    static notifyPlatformUnlock(def) {
+        if (typeof window === 'undefined' || window.__TAURI_INTERNALS__ == null) return;
+        window.__TAURI_INTERNALS__.invoke('steam_unlock_achievement', { id: def.id })
+            .catch(() => {}); // platform layer may not be wired up yet
     }
 
     /**
