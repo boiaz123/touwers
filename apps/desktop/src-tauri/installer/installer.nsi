@@ -41,12 +41,20 @@ ${StrLoc}
 ; against a warm parchment tone but would disappear against near-black, so
 ; those pages get the lighter half of the palette instead of the full
 ; dark/gold Welcome-Finish treatment.
-!define MUI_DIRECTORYPAGE_BGCOLOR "C9A876"
-!define MUI_DIRECTORYPAGE_TEXTCOLOR "1A0F0A"
-!define MUI_STARTMENUPAGE_BGCOLOR "C9A876"
-!define MUI_STARTMENUPAGE_TEXTCOLOR "1A0F0A"
 !define TOUWERS_PAGE_BGCOLOR "C9A876"
 !define TOUWERS_PAGE_TEXTCOLOR "1A0F0A"
+; Text color for the Finish page's Run/desktop-shortcut checkboxes -
+; MUI_TEXTCOLOR (gold) is used everywhere else on that dark page, but plain
+; white reads more clearly for these two small checkbox labels.
+!define TOUWERS_FINISH_CHECKBOX_TEXTCOLOR "FFFFFF"
+; NB: MUI_STARTMENUPAGE_BGCOLOR/TEXTCOLOR are intentionally NOT defined.
+; Setting them triggers MUI2's own StartMenu.nsh recolor code, which has an
+; upstream typo (references the undeclared var "mui.StartMenuMenu.FolderList"
+; instead of "mui.StartMenuPage.FolderList") and emits a harmless but noisy
+; "unknown variable/constant" warning at compile time for no visual benefit
+; - the folder list never actually gets recolored either way because of the
+; bug. The Start Menu page still gets its outer canvas themed by
+; TouwersThemePageCanvas below.
 
 {{#if installer_hooks}}
 !include "{{installer_hooks}}"
@@ -100,6 +108,12 @@ Var TouwersWelcomeImageHandle
 Var TouwersInstallButton
 Var TouwersInstallButtonFont
 Var TouwersThemeTemp
+
+; Touwers custom Destination Folder page
+Var TouwersDirInner
+Var TouwersDirCtl
+Var TouwersDesktopCheckbox
+Var TouwersDesktopCheckboxState
 
 Name "${PRODUCTNAME}"
 BrandingText "${COPYRIGHT}"
@@ -204,6 +218,84 @@ Function TouwersThemePageCanvas
   ; the documented/correct call for dialogs where it does take effect.
   FindWindow $TouwersThemeTemp "#32770" "" $HWNDPARENT
   SetCtlColors $TouwersThemeTemp "${TOUWERS_PAGE_TEXTCOLOR}" "${TOUWERS_PAGE_BGCOLOR}"
+FunctionEnd
+
+; ---- Touwers custom Destination Folder page ----------------------------
+; Unlike the page margin trick above, every visible control on this page
+; (group box, Browse button, path box, space labels) is recolored to the
+; full dark/gold palette. The group box and Browse button ignore
+; SetCtlColors under themed rendering - the same fix used for the INSTALL
+; button on the welcome page (force classic control drawing first) makes
+; the colors actually apply. This also adds the "Create desktop shortcut"
+; checkbox, since this page - not the finish page's hijacked "show readme"
+; slot - is where users expect that option to live. The checkbox is added
+; via raw CreateWindowEx (as un.ConfirmShow does for its own checkbox
+; below) because this is a native PageEx dialog, not an nsDialogs page.
+!define /ifndef WS_EX_LAYOUTRTL 0x00400000
+Function TouwersDirectoryPageShow
+  FindWindow $TouwersDirInner "#32770" "" $HWNDPARENT
+  SetCtlColors $TouwersDirInner "${MUI_TEXTCOLOR}" "${MUI_BGCOLOR}"
+
+  ; Top instructional text
+  GetDlgItem $TouwersDirCtl $TouwersDirInner 1006
+  SetCtlColors $TouwersDirCtl "${MUI_TEXTCOLOR}" "${MUI_BGCOLOR}"
+
+  ; "Destination Folder" group box
+  GetDlgItem $TouwersDirCtl $TouwersDirInner 1020
+  System::Call 'uxtheme::SetWindowTheme(p $TouwersDirCtl, w " ", w " ")'
+  SetCtlColors $TouwersDirCtl "${MUI_TEXTCOLOR}" "${MUI_BGCOLOR}"
+
+  ; Path edit box
+  GetDlgItem $TouwersDirCtl $TouwersDirInner 1019
+  SetCtlColors $TouwersDirCtl "${MUI_TEXTCOLOR}" "${MUI_BGCOLOR}"
+
+  ; Browse button
+  GetDlgItem $TouwersDirCtl $TouwersDirInner 1001
+  System::Call 'uxtheme::SetWindowTheme(p $TouwersDirCtl, w " ", w " ")'
+  SetCtlColors $TouwersDirCtl "${MUI_TEXTCOLOR}" "${MUI_BGCOLOR}"
+
+  ; Space required / available labels
+  GetDlgItem $TouwersDirCtl $TouwersDirInner 1023
+  SetCtlColors $TouwersDirCtl "${MUI_TEXTCOLOR}" "${MUI_BGCOLOR}"
+  GetDlgItem $TouwersDirCtl $TouwersDirInner 1024
+  SetCtlColors $TouwersDirCtl "${MUI_TEXTCOLOR}" "${MUI_BGCOLOR}"
+
+  ; The wizard recreates the page's inner dialog (and every child control
+  ; on it) each time it's shown, so a stale HWND from a previous visit
+  ; (e.g. Back then forward again) has to be detected and rebuilt rather
+  ; than assumed to still be alive.
+  System::Call 'user32::IsWindow(p $TouwersDesktopCheckbox) i .r0'
+  ${If} $0 = 0
+    System::Call "user32::GetDpiForWindow(p $TouwersDirInner) i .r1"
+    ${If} $(^RTL) = 1
+      StrCpy $2 "${__NSD_CheckBox_EXSTYLE} | ${WS_EX_LAYOUTRTL}"
+    ${Else}
+      StrCpy $2 "${__NSD_CheckBox_EXSTYLE}"
+    ${EndIf}
+    IntOp $3 125 * $1
+    IntOp $3 $3 / 96
+    IntOp $4 400 * $1
+    IntOp $4 $4 / 96
+    IntOp $5 20 * $1
+    IntOp $5 $5 / 96
+    System::Call 'user32::CreateWindowEx(i r2, w "${__NSD_CheckBox_CLASS}", w "$(createDesktop)", i ${__NSD_CheckBox_STYLE}, i 0, i r3, i r4, i r5, p $TouwersDirInner, i0, i0, i0) i .s'
+    Pop $TouwersDesktopCheckbox
+    SendMessage $HWNDPARENT ${WM_GETFONT} 0 0 $1
+    SendMessage $TouwersDesktopCheckbox ${WM_SETFONT} $1 1
+    ; Restore the user's previous choice (defaults to checked - see .onInit)
+    ; instead of always resetting to checked when the page is revisited.
+    ${If} $TouwersDesktopCheckboxState = 1
+      SendMessage $TouwersDesktopCheckbox ${BM_SETCHECK} ${BST_CHECKED} 0
+    ${EndIf}
+  ${EndIf}
+  System::Call 'uxtheme::SetWindowTheme(p $TouwersDesktopCheckbox, w " ", w " ")'
+  SetCtlColors $TouwersDesktopCheckbox "${MUI_TEXTCOLOR}" "${MUI_BGCOLOR}"
+FunctionEnd
+
+Function TouwersDirectoryPageLeave
+  ${If} $TouwersDesktopCheckbox != ""
+    SendMessage $TouwersDesktopCheckbox ${BM_GETCHECK} 0 0 $TouwersDesktopCheckboxState
+  ${EndIf}
 FunctionEnd
 
 ; ---- Touwers custom Welcome / INSTALL page -----------------------------
@@ -486,7 +578,8 @@ FunctionEnd
 
 ; 5. Choose install directory page
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
-!define MUI_PAGE_CUSTOMFUNCTION_SHOW TouwersThemePageCanvas
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW TouwersDirectoryPageShow
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE TouwersDirectoryPageLeave
 !insertmacro MUI_PAGE_DIRECTORY
 
 ; 6. Start menu shortcut page
@@ -501,7 +594,11 @@ Var AppStartMenuFolder
 !insertmacro MUI_PAGE_STARTMENU Application $AppStartMenuFolder
 
 ; 7. Installation page
-!define MUI_PAGE_CUSTOMFUNCTION_SHOW TouwersThemePageCanvas
+;
+; Left unthemed: the details/log list box on this page is a native
+; white-background control that dominates the page, so recoloring the
+; canvas around it just produced a jarring brown/white split with no
+; actual benefit.
 !insertmacro MUI_PAGE_INSTFILES
 
 ; 8. Finish page
@@ -509,18 +606,31 @@ Var AppStartMenuFolder
 ; Don't auto jump to finish page after installation page,
 ; because the installation page has useful info that can be used debug any issues with the installer.
 !define MUI_FINISHPAGE_NOAUTOCLOSE
-; Use show readme button in the finish page as a button create a desktop shortcut
-!define MUI_FINISHPAGE_SHOWREADME
-!define MUI_FINISHPAGE_SHOWREADME_TEXT "$(createDesktop)"
-!define MUI_FINISHPAGE_SHOWREADME_FUNCTION CreateOrUpdateDesktopShortcut
+; The desktop-shortcut opt-in now lives on the Destination Folder page
+; (TouwersDirectoryPageShow) instead of hijacking the "show readme" slot
+; here - see Section Install below for where its state is consumed.
 ; Show run app after installation.
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_FUNCTION RunMainBinary
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW TouwersFinishPageFixCheckboxColor
 !insertmacro MUI_PAGE_FINISH
 
 Function RunMainBinary
   nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" ""
+FunctionEnd
+
+; MUI2's finish page does call SetCtlColors on the Run checkbox, but under
+; themed (non-classic) rendering Windows ignores the requested text color
+; for checkbox/radio labels - a documented NSIS/MUI2 limitation (see the
+; "bug #443" comment in MUI2's own Finish.nsh, which only works around it
+; when Windows high-contrast mode is active). That's why "Run Touwers"
+; rendered in illegible black text on the dark page background. Forcing
+; classic control drawing first - the same trick used for the INSTALL
+; button on the welcome page - makes the color actually take effect.
+Function TouwersFinishPageFixCheckboxColor
+  System::Call 'uxtheme::SetWindowTheme(p $mui.FinishPage.Run, w " ", w " ")'
+  SetCtlColors $mui.FinishPage.Run "${TOUWERS_FINISH_CHECKBOX_TEXTCOLOR}" "${MUI_BGCOLOR}"
 FunctionEnd
 
 ; Uninstaller Pages
@@ -578,6 +688,9 @@ FunctionEnd
 {{/each}}
 
 Function .onInit
+  ; Defaults to checked, matching the checkbox's initial state when created
+  StrCpy $TouwersDesktopCheckboxState 1
+
   ${GetOptions} $CMDLINE "/P" $PassiveMode
   ${IfNot} ${Errors}
     StrCpy $PassiveMode 1
@@ -826,10 +939,13 @@ Section Install
     Call CreateOrUpdateStartMenuShortcut
   !insertmacro MUI_STARTMENU_WRITE_END
 
-  ; Create desktop shortcut for silent and passive installers
-  ; because finish page will be skipped
+  ; Create desktop shortcut for silent and passive installers (their
+  ; Destination Folder page - and its checkbox - is skipped), otherwise
+  ; respect the "Create desktop shortcut" checkbox from that page.
   ${If} $PassiveMode = 1
   ${OrIf} ${Silent}
+    Call CreateOrUpdateDesktopShortcut
+  ${ElseIf} $TouwersDesktopCheckboxState = 1
     Call CreateOrUpdateDesktopShortcut
   ${EndIf}
 
