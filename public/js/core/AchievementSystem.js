@@ -21,7 +21,7 @@ const ACHIEVEMENT_DEFS = [
     {
         id: 'getting-started',
         name: 'Getting Started',
-        description: 'Slay your first enemy',
+        description: 'Slay 500 enemies',
         icon: '⚔︎',
         category: 'combat',
         tier: 1,
