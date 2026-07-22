@@ -1,7 +1,7 @@
 TOUWERS - END USER LICENSE AGREEMENT
 =====================================
 
-Copyright (c) 2026 Touwers. All rights reserved.
+Copyright (c) 2026 Lily's Little Adventures. All rights reserved.
 
 PLEASE READ THIS END USER LICENSE AGREEMENT ("AGREEMENT") CAREFULLY BEFORE
 INSTALLING OR USING TOUWERS (THE "SOFTWARE"). BY INSTALLING, COPYING, OR
@@ -10,16 +10,17 @@ AGREEMENT. IF YOU DO NOT AGREE TO THE TERMS OF THIS AGREEMENT, DO NOT
 INSTALL OR USE THE SOFTWARE.
 
 1. GRANT OF LICENSE
-   Subject to the terms of this Agreement, Touwers grants you a personal,
-   non-exclusive, non-transferable, limited license to install and use one
-   copy of the Software for your own personal, non-commercial use on
-   devices that you own or control.
+   Subject to the terms of this Agreement, Lily's Little Adventures grants
+   you a personal, non-exclusive, non-transferable, limited license to
+   install and use one copy of the Software for your own personal,
+   non-commercial use on devices that you own or control.
 
 2. OWNERSHIP
-   The Software is licensed, not sold. Touwers and its licensors retain
-   all right, title, and interest in and to the Software, including all
-   intellectual property rights therein. This Agreement does not grant you
-   any rights to trademarks, service marks, or trade names of Touwers.
+   The Software is licensed, not sold. Lily's Little Adventures and its
+   licensors retain all right, title, and interest in and to the Software,
+   including all intellectual property rights therein. This Agreement does
+   not grant you any rights to trademarks, service marks, or trade names of
+   Lily's Little Adventures.
 
 3. RESTRICTIONS
    You may not, and may not permit others to:
@@ -39,9 +40,10 @@ INSTALL OR USE THE SOFTWARE.
    device and is not transmitted elsewhere by the Software.
 
 5. UPDATES
-   Touwers may, but is not obligated to, provide updates, patches, or new
-   versions of the Software. Such updates may be subject to additional or
-   different terms, which will be presented to you at the time of update.
+   Lily's Little Adventures may, but is not obligated to, provide updates,
+   patches, or new versions of the Software. Such updates may be subject to
+   additional or different terms, which will be presented to you at the
+   time of update.
 
 6. TERMINATION
    This Agreement is effective until terminated. Your rights under this
@@ -53,21 +55,22 @@ INSTALL OR USE THE SOFTWARE.
    THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES
    OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
-   NON-INFRINGEMENT. TOUWERS DOES NOT WARRANT THAT THE SOFTWARE WILL BE
-   ERROR-FREE OR THAT OPERATION OF THE SOFTWARE WILL BE UNINTERRUPTED.
+   NON-INFRINGEMENT. LILY'S LITTLE ADVENTURES DOES NOT WARRANT THAT THE
+   SOFTWARE WILL BE ERROR-FREE OR THAT OPERATION OF THE SOFTWARE WILL BE
+   UNINTERRUPTED.
 
 8. LIMITATION OF LIABILITY
    TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL
-   TOUWERS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL,
-   OR PUNITIVE DAMAGES, OR ANY LOSS OF DATA, PROFITS, OR REVENUE, ARISING
-   OUT OF OR IN CONNECTION WITH YOUR USE OF, OR INABILITY TO USE, THE
-   SOFTWARE, EVEN IF TOUWERS HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
-   DAMAGES.
+   LILY'S LITTLE ADVENTURES BE LIABLE FOR ANY INDIRECT, INCIDENTAL,
+   SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF DATA,
+   PROFITS, OR REVENUE, ARISING OUT OF OR IN CONNECTION WITH YOUR USE OF,
+   OR INABILITY TO USE, THE SOFTWARE, EVEN IF LILY'S LITTLE ADVENTURES HAS
+   BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
 9. ENTIRE AGREEMENT
-   This Agreement constitutes the entire agreement between you and Touwers
-   relating to the Software and supersedes all prior or contemporaneous
-   understandings regarding such subject matter.
+   This Agreement constitutes the entire agreement between you and Lily's
+   Little Adventures relating to the Software and supersedes all prior or
+   contemporaneous understandings regarding such subject matter.
 
 10. ACCEPTANCE
     By clicking "I Agree" or by installing or using the Software, you
