@@ -19,7 +19,7 @@ export class PoisonArcherTower extends Tower {
         // compaction loop below.
         this._poisonArrowPool = new ObjectPool(() => ({
             x: 0, y: 0, vx: 0, vy: 0, rotation: 0, life: 0,
-            targetX: 0, targetY: 0, target: null, fallbackX: 0, fallbackY: 0
+            targetX: 0, targetY: 0, target: null
         }));
         
         // Poison state tracking - track which enemies are poisoned to avoid creating duplicate splatters
@@ -170,17 +170,21 @@ export class PoisonArcherTower extends Tower {
             arrow.vy += 180 * deltaTime; // Gravity
             arrow.life -= deltaTime;
             arrow.rotation = Math.atan2(arrow.vy, arrow.vx);
-            
-            let targetX = arrow.targetX;
-            let targetY = arrow.targetY;
-            if (arrow.target) {
-                targetX = arrow.target.x;
-                targetY = arrow.target.y;
-            } else if (arrow.fallbackX != null) {
-                targetX = arrow.fallbackX;
-                targetY = arrow.fallbackY;
+
+            // If the enemy it was aimed at has already died or reached the end, cancel
+            // it immediately instead of finishing the flight to a now-meaningless point.
+            if (arrow.target && (arrow.target.isDead() || arrow.target.reachedEnd)) {
+                this._poisonArrowPool.release(arrow);
+                continue;
             }
-            
+
+            // Fly toward the fixed point the archer aimed at, not the enemy's live
+            // position - otherwise a fast-moving enemy keeps outrunning the arrival
+            // radius and the arrow visibly strays across the screen for its whole
+            // life timer instead of landing where it was shot at.
+            const targetX = arrow.targetX;
+            const targetY = arrow.targetY;
+
             if (arrow.life <= 0 || Math.hypot(arrow.x - targetX, arrow.y - targetY) < 15) {
                 let hitTarget = null;
                 let minDistSq = 400; // 20^2
@@ -332,8 +336,6 @@ export class PoisonArcherTower extends Tower {
             arrow.targetX = predicted.x;
             arrow.targetY = predicted.y;
             arrow.target = this.target;
-            arrow.fallbackX = this.target.x;
-            arrow.fallbackY = this.target.y;
             this.poisonArrows.push(arrow);
         }
     }

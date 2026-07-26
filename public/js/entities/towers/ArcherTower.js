@@ -21,7 +21,7 @@ export class ArcherTower extends Tower {
         // compaction loop below.
         this._arrowPool = new ObjectPool(() => ({
             x: 0, y: 0, vx: 0, vy: 0, rotation: 0, life: 0, maxLife: 0,
-            target: null, fallbackX: 0, fallbackY: 0
+            targetX: 0, targetY: 0, target: null
         }));
         this.archers = [
             { angle: 0, drawback: 0, shootTimer: 0 },
@@ -65,10 +65,25 @@ export class ArcherTower extends Tower {
             arrow.vy += 200 * deltaTime; // Gravity effect
             arrow.life -= deltaTime;
             arrow.rotation = Math.atan2(arrow.vy, arrow.vx);
-            
+
+            // If the enemy it was aimed at has already died or reached the end (from
+            // this shot's own damage, another tower, etc), there's nothing left to fly
+            // toward - cancel it immediately instead of finishing the flight to a now-
+            // meaningless point.
+            if (arrow.target && (arrow.target.isDead() || arrow.target.reachedEnd)) {
+                this._arrowPool.release(arrow);
+                continue;
+            }
+
+            // Damage is already applied when the arrow is fired (see shoot()) - this
+            // flight is purely visual, so "hit" here just means "arrived at the point
+            // it was aimed at", not the enemy's live position. Chasing the enemy's
+            // current position instead of the fixed aim point let arrows fired at
+            // fast-moving enemies fly on-screen for their whole life timer, since a
+            // fast enemy can keep outrunning the 15px arrival radius indefinitely.
             let hit = false;
-            const targetX = arrow.target ? arrow.target.x : arrow.fallbackX;
-            const targetY = arrow.target ? arrow.target.y : arrow.fallbackY;
+            const targetX = arrow.targetX;
+            const targetY = arrow.targetY;
             if (targetX != null) {
                 const dist = Math.hypot(arrow.x - targetX, arrow.y - targetY);
                 if (dist <= 15) {
@@ -156,9 +171,9 @@ export class ArcherTower extends Tower {
             arrow.rotation = shooter.angle;
             arrow.life = Math.min(distance / Math.max(arrowSpeed, 1) + 0.5, 3.0);
             arrow.maxLife = arrow.life;
+            arrow.targetX = predicted.x;
+            arrow.targetY = predicted.y;
             arrow.target = this.target;
-            arrow.fallbackX = this.target.x;
-            arrow.fallbackY = this.target.y;
             this.arrows.push(arrow);
         }
     }

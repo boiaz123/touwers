@@ -17,7 +17,7 @@ export class BasicTower extends Tower {
         // compaction loop below.
         this._rockPool = new ObjectPool(() => ({
             x: 0, y: 0, vx: 0, vy: 0, rotation: 0, rotationSpeed: 0, life: 0, size: 0,
-            target: null, fallbackX: 0, fallbackY: 0
+            targetX: 0, targetY: 0, target: null
         }));
         this.defenders = [
             { angle: 0, armRaised: 0, throwCooldown: 0 },
@@ -69,26 +69,28 @@ export class BasicTower extends Tower {
             rock.vy += 200 * deltaTime;
             rock.rotation += rock.rotationSpeed * deltaTime;
             rock.life -= deltaTime;
-            
+
+            // If the enemy it was thrown at has already died or reached the end, cancel
+            // it immediately instead of finishing the flight to a now-meaningless point.
+            if (rock.target && (rock.target.isDead() || rock.target.reachedEnd)) {
+                this._rockPool.release(rock);
+                continue;
+            }
+
             const collisionRadius = Math.max(15, Math.hypot(rock.vx, rock.vy) * deltaTime * 0.5);
             
+            // Damage is already applied when the rock is thrown (see shoot()) - this
+            // flight is purely visual, so "hit" means "arrived at the point it was
+            // thrown at", not the enemy's live position. Chasing the enemy's current
+            // position instead of the fixed aim point let rocks thrown at fast-moving
+            // enemies fly on-screen for their whole life timer.
             let hit = false;
-            if (rock.target) {
-                const dist = Math.hypot(rock.x - rock.target.x, rock.y - rock.target.y);
-                if (dist <= collisionRadius) {
-                    hit = true;
-                } else {
-                    const segmentDist = this.distanceToSegment(rock.target.x, rock.target.y, oldX, oldY, rock.x, rock.y);
-                    if (segmentDist <= collisionRadius) hit = true;
-                }
-            } else if (rock.fallbackX != null) {
-                const dist = Math.hypot(rock.x - rock.fallbackX, rock.y - rock.fallbackY);
-                if (dist <= collisionRadius) {
-                    hit = true;
-                } else {
-                    const segmentDist = this.distanceToSegment(rock.fallbackX, rock.fallbackY, oldX, oldY, rock.x, rock.y);
-                    if (segmentDist <= collisionRadius) hit = true;
-                }
+            const dist = Math.hypot(rock.x - rock.targetX, rock.y - rock.targetY);
+            if (dist <= collisionRadius) {
+                hit = true;
+            } else {
+                const segmentDist = this.distanceToSegment(rock.targetX, rock.targetY, oldX, oldY, rock.x, rock.y);
+                if (segmentDist <= collisionRadius) hit = true;
             }
             
             if (!hit && rock.life > 0) {
@@ -167,9 +169,9 @@ export class BasicTower extends Tower {
                 rock.rotationSpeed = Math.random() * 10 + 5;
                 rock.life = distance / Math.max(throwSpeed, 1) + 1;
                 rock.size = Math.random() * 2 + 3;
+                rock.targetX = predicted.x;
+                rock.targetY = predicted.y;
                 rock.target = this.target;
-                rock.fallbackX = this.target.x;
-                rock.fallbackY = this.target.y;
                 this.rocks.push(rock);
             }
         }

@@ -34,7 +34,7 @@ export class CannonTower extends Tower {
         // entry is dropped from the respective compaction loop below.
         this._fireballPool = new ObjectPool(() => ({
             x: 0, y: 0, vx: 0, vy: 0, gravity: 0, flameAnimation: 0, life: 0, maxLife: 0,
-            targetX: 0, targetY: 0, target: null, fallbackX: 0, fallbackY: 0
+            targetX: 0, targetY: 0
         }));
         this._explosionPool = new ObjectPool(() => ({
             x: 0, y: 0, radius: 0, maxRadius: 0, life: 0, maxLife: 0
@@ -117,16 +117,12 @@ export class CannonTower extends Tower {
             fireball.life -= deltaTime;
             fireball.flameAnimation += deltaTime * 8;
             
-            let targetX = fireball.targetX;
-            let targetY = fireball.targetY;
-            if (fireball.target) {
-                targetX = fireball.target.x;
-                targetY = fireball.target.y;
-            } else if (fireball.fallbackX != null) {
-                targetX = fireball.fallbackX;
-                targetY = fireball.fallbackY;
-            }
-            
+            // Fly toward the fixed point aimed at, not a live enemy position - it's a
+            // splash weapon, so it should land where it was aimed even if that enemy is
+            // no longer there, rather than chase a moving position indefinitely.
+            const targetX = fireball.targetX;
+            const targetY = fireball.targetY;
+
             if (fireball.life <= 0 ||
                 (fireball.life < fireball.maxLife * 0.5 &&
                  Math.hypot(fireball.x - targetX, fireball.y - targetY) < 20)) {
@@ -191,9 +187,6 @@ export class CannonTower extends Tower {
             fireball.maxLife = flightTime;
             fireball.targetX = predicted.x;
             fireball.targetY = predicted.y;
-            fireball.target = this.target;
-            fireball.fallbackX = this.target.x;
-            fireball.fallbackY = this.target.y;
             this.fireballs.push(fireball);
         }
     }

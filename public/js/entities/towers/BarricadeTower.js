@@ -18,8 +18,13 @@ export class BarricadeTower extends Tower {
         // is dropped from its compaction loop below.
         this._barrelPool = new ObjectPool(() => ({
             x: 0, y: 0, vx: 0, vy: 0, rotation: 0, rotationSpeed: 0, life: 0,
-            targetX: 0, targetY: 0, size: 0, target: null, fallbackX: 0, fallbackY: 0
+            targetX: 0, targetY: 0, size: 0
         }));
+        // Guarantees the enemy directly targeted by a thrown barrel gets slowed the
+        // instant it's targeted, regardless of where it moves before or after the
+        // barrel physically lands - the barrel's landing spot only needs to exist so
+        // the smoke zone's area effect can catch OTHER enemies that later walk over it.
+        this.directSlows = new Map(); // enemy -> remaining slow duration
         this._smokeZonePool = new ObjectPool(() => ({
             x: 0, y: 0, radius: 0, life: 0, maxLife: 0, smokeIntensity: 0, maxEnemiesSlowed: 0
         }));
@@ -83,20 +88,16 @@ export class BarricadeTower extends Tower {
             barrel.y += barrel.vy * deltaTime;
             barrel.rotation += barrel.rotationSpeed * deltaTime;
             barrel.life -= deltaTime;
-            
-            let targetX = barrel.targetX;
-            let targetY = barrel.targetY;
-            if (barrel.target) {
-                targetX = barrel.target.x;
-                targetY = barrel.target.y;
-            } else if (barrel.fallbackX != null) {
-                targetX = barrel.fallbackX;
-                targetY = barrel.fallbackY;
-            }
-            
-            const distanceToTarget = Math.hypot(barrel.x - targetX, barrel.y - targetY);
+
+            // The barrel always rolls in a straight line to the fixed point it was
+            // aimed at (set in rollBarrel(), never a live enemy position), so it always
+            // arrives - no dependency on any enemy still being alive or nearby. The slow
+            // effect on the enemy that was actually targeted is applied instantly in
+            // rollBarrel() already; this landing spot's only remaining job is to spawn
+            // the smoke zone for other enemies that walk through it later.
+            const distanceToTarget = Math.hypot(barrel.x - barrel.targetX, barrel.y - barrel.targetY);
             if (barrel.life <= 0 || distanceToTarget < 20) {
-                this.createSmokeZone(targetX, targetY);
+                this.createSmokeZone(barrel.targetX, barrel.targetY);
                 this._barrelPool.release(barrel);
             } else {
                 this.rollingBarrels[barrelWrite++] = barrel;
@@ -109,7 +110,35 @@ export class BarricadeTower extends Tower {
         // OPTIMIZATION: Track slowed enemies in a Set to avoid O(n*k) nested loop
         if (!this._slowedSet) this._slowedSet = new Set();
         this._slowedSet.clear();
-        
+
+        // Directly-targeted enemies (see rollBarrel()) get slowed here every frame for
+        // the full duration, independent of the zone loop below and of where the
+        // barrel's landing spot ends up - this is what guarantees the actual target
+        // gets the effect even if it has already walked away from (or died after) the
+        // point the barrel was aimed at.
+        if (this.directSlows.size > 0) {
+            const slowRate = 1 - Math.pow(0.05, deltaTime);
+            for (const [enemy, remaining] of this.directSlows) {
+                if (enemy.isDead() || enemy.reachedEnd) {
+                    this.directSlows.delete(enemy);
+                    continue;
+                }
+                const newRemaining = remaining - deltaTime;
+                if (newRemaining <= 0) {
+                    this.directSlows.delete(enemy);
+                    continue;
+                }
+                this.directSlows.set(enemy, newRemaining);
+
+                if (!enemy.hasOwnProperty('originalSpeed')) {
+                    enemy.originalSpeed = enemy.speed;
+                }
+                const targetSpeed = Math.min(enemy.speed, enemy.originalSpeed * 0.25);
+                enemy.speed = enemy.speed + (targetSpeed - enemy.speed) * slowRate;
+                this._slowedSet.add(enemy);
+            }
+        }
+
         for (let zi = 0; zi < this.slowZones.length; zi++) {
             const zone = this.slowZones[zi];
             zone.life -= deltaTime;
@@ -203,19 +232,22 @@ export class BarricadeTower extends Tower {
                 defender.hasBarrel = false;
                 
                 const rollSpeed = 200;
-                
-                // Predict where the target will be when the barrel arrives
-                const predicted = this.predictEnemyPosition(this.target, rollSpeed);
-                const targetX = predicted ? predicted.x : this.target.x;
-                const targetY = predicted ? predicted.y : this.target.y;
-                
+
+                // Aim at the enemy's actual position right now, not a predicted future
+                // spot - predicting ahead is what let barrels land somewhere the enemy
+                // never actually reached for fast-moving enemies. The slow effect
+                // itself is registered immediately below, independent of where the
+                // barrel visually ends up landing.
+                const targetX = this.target.x;
+                const targetY = this.target.y;
+
                 const dx = targetX - this.x;
                 const dy = targetY - this.y;
                 const distance = Math.hypot(dx, dy);
-                
-                // Barrel life is time to reach predicted target + small buffer
+
+                // Barrel life is time to reach the aimed-at point + small buffer
                 const barrelLife = distance / rollSpeed + 0.3;
-                
+
                 const barrel = this._barrelPool.acquire();
                 barrel.x = this.x + Math.cos(defender.angle) * 25;
                 barrel.y = this.y + Math.sin(defender.angle) * 25;
@@ -227,12 +259,18 @@ export class BarricadeTower extends Tower {
                 barrel.targetX = targetX;
                 barrel.targetY = targetY;
                 barrel.size = 8;
-                barrel.target = this.target;
-                barrel.fallbackX = this.target.x;
-                barrel.fallbackY = this.target.y;
                 this.rollingBarrels.push(barrel);
-                
+
                 defender.barrelReloadTimer = 1.5 + Math.random();
+
+                // Register the hit on the targeted enemy right now, at its current
+                // position - guarantees it gets slowed even if it's long gone from
+                // this spot (or dead/off the path) by the time the barrel visually
+                // arrives.
+                if (!this.target.hasOwnProperty('originalSpeed')) {
+                    this.target.originalSpeed = this.target.speed;
+                }
+                this.directSlows.set(this.target, this.slowDuration);
             }
         }
     }

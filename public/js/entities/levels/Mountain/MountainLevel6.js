@@ -309,21 +309,21 @@ export class MountainLevel6 extends LevelBase {
         }
         // Wave 5
         , { 
-            enemyHealth_multiplier: 3, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 1.57, 
             spawnInterval: 1.2, 
-            pattern: [{ type: 'shieldknight', count: 12 }] 
+            pattern: [{ type: 'shieldknight', count: 10 }] 
         }
         // Wave 6
         , { 
-            enemyHealth_multiplier: 5, 
+            enemyHealth_multiplier: 3, 
             speedMultiplier: 1.29, 
             spawnInterval: 0.5, 
             pattern: [{ type: 'shieldknight', count: 3 }, { type: 'knight', count: 1 }] 
         }
         // Wave 7
         , { 
-            enemyHealth_multiplier: 9, 
+            enemyHealth_multiplier: 7, 
             speedMultiplier: 1.13, 
             spawnInterval: 1.2, 
             pattern: [{ type: 'knight', count: 1 }] 
