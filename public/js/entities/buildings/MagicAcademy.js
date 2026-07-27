@@ -6,12 +6,15 @@ export class MagicAcademy extends Building {
         this.magicParticles = [];
         this.isSelected = false;
         
-        // Elemental upgrade system - CORRECTED elements
+        // Elemental upgrade system - unlocked at Academy Level 2 (see calculateElementalCost).
+        // maxLevel 20 (up from an earlier 5-level cap) - per-level bonuses are correspondingly
+        // smaller so the same max-level totals as the old 5-level cap are reached, just spread
+        // across a much longer, more gradual grind instead of five big jumps.
         this.elementalUpgrades = {
-            fire: { level: 0, maxLevel: 5, baseCost: 150, damageBonus: 5 },
-            water: { level: 0, maxLevel: 5, baseCost: 150, slowBonus: 0.1 },
-            air: { level: 0, maxLevel: 5, baseCost: 150, chainRange: 20 },
-            earth: { level: 0, maxLevel: 5, baseCost: 150, armorPiercing: 3 }
+            fire: { level: 0, maxLevel: 20, baseCost: 150, damageBonus: 1 },
+            water: { level: 0, maxLevel: 20, baseCost: 150, slowBonus: 0.02 },
+            air: { level: 0, maxLevel: 20, baseCost: 150, chainRange: 5 },
+            earth: { level: 0, maxLevel: 20, baseCost: 150, armorPiercing: 1 }
         };
         
         // New: Gem storage for each element
@@ -1362,12 +1365,14 @@ export class MagicAcademy extends Building {
             options.push(this.getAcademyUpgradeOption());
         }
         
-        // Add elemental upgrades
+        // Add elemental upgrades - these are how Magic Towers are "leveled up" (up to level
+        // 20 each), gated behind Academy Level 2 via calculateElementalCost() returning null
+        // until then, same locking convention as Tower Forge's own tower upgrades.
         options.push(
             {
                 id: 'fire',
                 name: 'Fire Mastery',
-                description: `Increase Magic Tower fire damage by ${this.elementalUpgrades.fire.damageBonus} per level`,
+                description: `Increase Magic Tower fire damage by ${this.elementalUpgrades.fire.damageBonus} per level (up to Level ${this.elementalUpgrades.fire.maxLevel})`,
                 level: this.elementalUpgrades.fire.level,
                 maxLevel: this.elementalUpgrades.fire.maxLevel,
                 cost: this.calculateElementalCost('fire'),
@@ -1376,8 +1381,8 @@ export class MagicAcademy extends Building {
             },
             {
                 id: 'water',
-                name: 'Water Mastery', 
-                description: `Increase Magic Tower water slow effect by ${(this.elementalUpgrades.water.slowBonus * 100).toFixed(0)}% per level`,
+                name: 'Water Mastery',
+                description: `Increase Magic Tower water slow effect by ${(this.elementalUpgrades.water.slowBonus * 100).toFixed(0)}% per level (up to Level ${this.elementalUpgrades.water.maxLevel})`,
                 level: this.elementalUpgrades.water.level,
                 maxLevel: this.elementalUpgrades.water.maxLevel,
                 cost: this.calculateElementalCost('water'),
@@ -1387,7 +1392,7 @@ export class MagicAcademy extends Building {
             {
                 id: 'air',
                 name: 'Air Mastery',
-                description: `Increase Magic Tower air chain range by ${this.elementalUpgrades.air.chainRange}px per level`,
+                description: `Increase Magic Tower air chain range by ${this.elementalUpgrades.air.chainRange}px per level (up to Level ${this.elementalUpgrades.air.maxLevel})`,
                 level: this.elementalUpgrades.air.level,
                 maxLevel: this.elementalUpgrades.air.maxLevel,
                 cost: this.calculateElementalCost('air'),
@@ -1397,7 +1402,7 @@ export class MagicAcademy extends Building {
             {
                 id: 'earth',
                 name: 'Earth Mastery',
-                description: `Increase Magic Tower earth armor piercing by ${this.elementalUpgrades.earth.armorPiercing} per level`,
+                description: `Increase Magic Tower earth armor piercing by ${this.elementalUpgrades.earth.armorPiercing} per level (up to Level ${this.elementalUpgrades.earth.maxLevel})`,
                 level: this.elementalUpgrades.earth.level,
                 maxLevel: this.elementalUpgrades.earth.maxLevel,
                 cost: this.calculateElementalCost('earth'),
@@ -1406,9 +1411,9 @@ export class MagicAcademy extends Building {
                 color: '#8B6F47'
             }
         );
-        
-        // Note: Gem mining is automatically unlocked at Academy Level 1
-        
+
+        // Note: Magic Tower + Gem Mining are automatically unlocked at Academy Level 1 (on build)
+
         return options;
     }
     
@@ -1418,36 +1423,40 @@ export class MagicAcademy extends Building {
         let description = '';
         let nextUnlock = '';
         let cost = 0;
-        
+        let diamondCost = 0;
+
         const isMaxed = this.academyLevel >= this.maxAcademyLevel;
-        
+
         if (isMaxed) {
             return {
                 id: 'academy_upgrade',
                 name: `Academy Level ${this.academyLevel} - MAXED`,
                 description: 'Maximum academy power achieved!',
-                nextUnlock: 'MAX LEVEL - All features unlocked!\nMagic Tower Upgrades Available\nSuper Weapon Lab Buildable',
+                nextUnlock: 'MAX LEVEL - All features unlocked!\nMagic Tower Leveling (up to Level 20) Available\nSuper Weapon Lab Buildable',
                 level: this.academyLevel,
                 maxLevel: this.maxAcademyLevel,
                 cost: null,
+                diamondCost: 0,
                 icon: '◈',
                 isAcademyUpgrade: true
             };
         }
-        
+
         switch(nextLevel) {
             case 2:
-                description = 'Unlock Magic Tower Upgrades to strengthen Magic Towers with gems.';
-                nextUnlock = 'Unlocks: Magic Tower Upgrades (cost elemental gems)';
-                cost = 1000;
+                description = 'Unlock the ability to level up Magic Towers with elemental gems, up to Level 20.';
+                nextUnlock = 'Unlocks: Magic Tower Leveling (up to Level 20, costs elemental gems)';
+                cost = 1500;
+                diamondCost = 1;
                 break;
             case 3:
                 description = 'Achieve maximum academy power to unlock Super Weapon Lab construction with diamond resources.';
                 nextUnlock = 'Unlocks: Super Weapon Lab building (costs diamonds + gold)';
-                cost = 2000;
+                cost = 3000;
+                diamondCost = 5;
                 break;
         }
-        
+
         return {
             id: 'academy_upgrade',
             name: `Academy Level ${nextLevel}`,
@@ -1456,48 +1465,62 @@ export class MagicAcademy extends Building {
             level: this.academyLevel,
             maxLevel: this.maxAcademyLevel,
             cost: cost,
+            diamondCost: diamondCost,
             icon: '◈',
             isAcademyUpgrade: true
         };
     }
-    
-    // Purchase academy upgrade
+
+    // Purchase academy upgrade - costs both gold and diamonds (see getAcademyUpgradeOption),
+    // same dual-currency pattern as SuperWeaponLab.purchaseLabUpgrade().
     purchaseAcademyUpgrade(gameState) {
         if (this.academyLevel >= this.maxAcademyLevel) {
             return false;
         }
-        
+
         const upgradeOption = this.getAcademyUpgradeOption();
         const cost = upgradeOption.cost;
-        
+        const diamondCost = upgradeOption.diamondCost || 0;
+
         if (!gameState.canAfford(cost)) {
             return false;
         }
-        
+
+        if ((this.gems.diamond || 0) < diamondCost) {
+            return false;
+        }
+
         gameState.spend(cost);
+        this.gems.diamond -= diamondCost;
         this.academyLevel++;
-        
+
         // Apply unlocks based on new level
         switch(this.academyLevel) {
             case 2:
-                // Level 2: Magic Tower upgrades become available
+                // Level 2: Magic Tower leveling (elemental upgrades) becomes available
                 break;
             case 3:
                 // Level 3: Super Weapon Lab becomes buildable
                 this.superWeaponUnlocked = true;
                 break;
         }
-        
+
         return true;
     }
-    
+
+    // Cost (in that element's own gems) to raise one elemental mastery track by one level.
+    // Locked entirely until Academy Level 2 (returns null, same "locked" convention Tower
+    // Forge uses for its own tower upgrades - see TowerForge.calculateUpgradeCost). The first
+    // 5 levels keep the original cost curve; levels beyond that continue on a gentler, more
+    // gradual ramp so a 20-level track doesn't explode into an unreasonable gem cost.
     calculateElementalCost(element) {
         const upgrade = this.elementalUpgrades[element];
         if (upgrade.level >= upgrade.maxLevel) return null;
-        
-        // Progressive cost: 1, 3, 7, 15, 30
+        if (this.academyLevel < 2) return null;
+
         const costs = [1, 3, 7, 15, 30];
-        return costs[upgrade.level] || null;
+        if (upgrade.level < costs.length) return costs[upgrade.level];
+        return 30 + (upgrade.level - (costs.length - 1)) * 10;
     }
     
     purchaseElementalUpgrade(element, gameState) {

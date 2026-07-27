@@ -795,8 +795,9 @@ export class UIManager {
                     <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
                 specialHTML = `<div style="color: #aad4ff;">
-                    Unlocks Magic Towers and elemental upgrades (Fire/Water/Air/Earth).
-                    Higher levels unlock gem mining, combination spells, and the Super Weapon Lab.
+                    Level 1 (on build) unlocks Magic Towers and Gem Mining.
+                    Level 2 unlocks Magic Tower Leveling (Fire/Water/Air/Earth, up to Level 20 each) using elemental gems.
+                    Level 3 unlocks the Super Weapon Lab.
                 </div>`;
                 if (!unlockSystem.unlockedBuildings.has('academy')) {
                     unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 4</div>';
@@ -2327,8 +2328,10 @@ export class UIManager {
         
         // BUILD ACADEMY HEADER SECTION - Like forge header
         const isMaxed = academy.academyLevel >= academy.maxAcademyLevel;
-        const canAfford = academyUpgrade && academyUpgrade.cost && this.gameState.gold >= academyUpgrade.cost;
-        
+        const canAfford = academyUpgrade && academyUpgrade.cost
+            && this.gameState.gold >= academyUpgrade.cost
+            && (academy.gems.diamond || 0) >= (academyUpgrade.diamondCost || 0);
+
         // Calculate academy effects badges
         const effectsList = [];
         if (academy.elementalUpgrades.fire.level > 0) {
@@ -2364,8 +2367,16 @@ export class UIManager {
                         </div>
                         <div class="forge-benefits-list">
                             <div class="forge-benefit-item">
+                                <span class="forge-benefit-label">Magic Tower:</span>
+                                <span class="forge-benefit-value">Unlocked</span>
+                            </div>
+                            <div class="forge-benefit-item">
                                 <span class="forge-benefit-label">Gem Mining:</span>
                                 <span class="forge-benefit-value">Unlocked</span>
+                            </div>
+                            <div class="forge-benefit-item">
+                                <span class="forge-benefit-label">Tower Leveling:</span>
+                                <span class="forge-benefit-value">${academy.academyLevel >= 2 ? 'Unlocked (Max Lv 20)' : 'Locked'}</span>
                             </div>
                             ${academy.academyLevel >= 3 ? `<div class="forge-benefit-item">
                                 <span class="forge-benefit-label">Super Weapon Lab:</span>
@@ -2374,14 +2385,14 @@ export class UIManager {
                         </div>
                     </div>
                 </div>
-                <button class="forge-upgrade-btn forge-level-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}" 
-                        data-upgrade="academy_upgrade" 
+                <button class="forge-upgrade-btn forge-level-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}"
+                        data-upgrade="academy_upgrade"
                         data-forge-level="true"
                         ${!isMaxed && !canAfford ? 'disabled' : ''}
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
                         ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">ACADEMY UPGRADE</span>'}
-                        <span class="btn-cost">${isMaxed ? 'LV ' + academy.academyLevel : (academyUpgrade && academyUpgrade.cost ? '<span class="coin-xs"></span> ' + academyUpgrade.cost : '—')}</span>
+                        <span class="btn-cost">${isMaxed ? 'LV ' + academy.academyLevel : (academyUpgrade && academyUpgrade.cost ? '<span class="coin-xs"></span> ' + academyUpgrade.cost + ' + ◆' + (academyUpgrade.diamondCost || 0) : '—')}</span>
                     </div>
                 </button>
             </div>
@@ -2393,13 +2404,17 @@ export class UIManager {
             
             if (elementalUpgrades.length > 0) {
                 contentHTML += `<div class="upgrade-category compact-upgrades">
-                    <div class="upgrade-category-header">ELEMENTAL MASTERIES</div>`;
-                
+                    <div class="upgrade-category-header">MAGIC TOWER LEVELING</div>`;
+
                 elementalUpgrades.forEach(upgrade => {
                     const isMaxed = upgrade.level >= upgrade.maxLevel;
+                    // calculateElementalCost() returns null both once maxed AND while the
+                    // Academy hasn't reached Level 2 yet - same "locked" convention Tower
+                    // Forge uses for its own gated tower upgrades (calculateUpgradeCost()).
+                    const isLocked = !isMaxed && !upgrade.cost;
                     const gemCount = academy.gems[upgrade.gemType] || 0;
-                    const canUpgrade = upgrade.cost && gemCount >= upgrade.cost;
-                    
+                    const canUpgrade = upgrade.cost && gemCount >= upgrade.cost && !isLocked;
+
                     // Current and next values for elemental upgrades
                     let currentValue = '';
                     let nextValue = '';
@@ -2460,25 +2475,30 @@ export class UIManager {
                         }
                         if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;">${upgrade.icon}${upgrade.cost}</span></div>`;
                         tooltipText += `</div>`;
+                    } else if (isLocked) {
+                        tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #ff9999;">`;
+                        tooltipText += `<div style="font-weight: bold;">\ud83d\udd12 Locked</div>`;
+                        tooltipText += `<div>Upgrade the Magic Academy to Level 2 to unlock</div>`;
+                        tooltipText += `</div>`;
                     }
                     tooltipText += `</div>`;
-                    
+
                     contentHTML += `
-                        <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''}" data-upgrade-id="${upgrade.id}" data-tooltip="${tooltipText.replace(/"/g, '&quot;')}">
+                        <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''} ${isLocked ? 'locked' : ''}" data-upgrade-id="${upgrade.id}" data-tooltip="${tooltipText.replace(/"/g, '&quot;')}">
                             <div class="compact-upgrade-left">
                                 <span class="compact-upgrade-icon">${this.getElementGemHTML(upgrade.id, '18px')}</span>
                                 <div class="compact-upgrade-info">
                                     <div class="compact-upgrade-name">${upgrade.name}</div>
                                     <div class="compact-upgrade-values">
                                         <span class="current-value">${currentValue}</span>
-                                        ${!isMaxed && nextValue ? `<span class="next-value-arrow">\u2192</span><span class="next-value">${nextValue}</span>` : '<span class="maxed-text">MAX</span>'}
+                                        ${!isMaxed && !isLocked && nextValue ? `<span class="next-value-arrow">\u2192</span><span class="next-value">${nextValue}</span>` : (isMaxed ? '<span class="maxed-text">MAX</span>' : '')}
                                     </div>
                                 </div>
                             </div>
-                            <button class="compact-upgrade-btn panel-upgrade-btn" 
-                                    data-upgrade="${upgrade.id}" 
-                                    ${isMaxed || !canUpgrade ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : (upgrade.cost ? `${this.getElementGemHTML(upgrade.id, '11px')} ${upgrade.cost}` : '\u2014')}
+                            <button class="compact-upgrade-btn panel-upgrade-btn"
+                                    data-upgrade="${upgrade.id}"
+                                    ${isMaxed || !canUpgrade || isLocked ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : (isLocked ? '\u2014' : (upgrade.cost ? `${this.getElementGemHTML(upgrade.id, '11px')} ${upgrade.cost}` : '\u2014'))}
                             </button>
                         </div>
                     `;
