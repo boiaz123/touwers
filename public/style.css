@@ -2339,26 +2339,21 @@ body.orientation-portrait .side-panel {
         inset 0 1px 0 rgba(160, 120, 70, 0.08);
 }
 
-.compact-upgrade-item:hover:not(.maxed) {
+.compact-upgrade-item:hover:not(.maxed):not(.locked) {
     border-color: var(--primary-gold);
     background: linear-gradient(135deg, rgba(68, 50, 30, 0.95), rgba(52, 36, 20, 0.95));
     box-shadow: 0 3px 10px rgba(212, 175, 55, 0.25), inset 0 1px 0 rgba(180, 140, 80, 0.1);
 }
 
-.compact-upgrade-item.maxed {
+/* Locked (training-level-gated, not yet reached) renders identically to maxed - Tower Forge
+ * never shows a "visible but not yet purchasable" row (it simply omits the item from the list
+ * until its forge-level gate is met), so the closest equivalent look it does have is the
+ * dimmed/neutral MAX state. Keeping locked visually distinct (previously a reddish tint) read
+ * as an error state Forge never produces. */
+.compact-upgrade-item.maxed,
+.compact-upgrade-item.locked {
     opacity: 0.55;
     border-color: rgba(100, 100, 100, 0.5);
-}
-
-.compact-upgrade-item.locked {
-    opacity: 0.45;
-    border-color: rgba(255, 107, 107, 0.3);
-}
-
-.compact-upgrade-item.locked:hover {
-    border-color: rgba(255, 107, 107, 0.3);
-    background: linear-gradient(135deg, rgba(50, 34, 20, 0.88), rgba(36, 22, 12, 0.88));
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(160, 120, 70, 0.08);
 }
 
 .compact-upgrade-left {

@@ -1680,7 +1680,7 @@ export class UIManager {
             let effectsList = [];
             
             if (forge.upgrades.basic.level > 0) {
-                effectsList.push(`Basic: +${forge.upgrades.basic.level * 8}`);
+                effectsList.push(`Watch Tower: +${forge.upgrades.basic.level * 8}`);
             }
             
             if (forge.upgrades.archer.level > 0) {
@@ -1780,6 +1780,10 @@ export class UIManager {
             
             forgeData.upgrades.forEach(upgrade => {
                 const isMaxed = upgrade.level >= upgrade.maxLevel;
+                // calculateUpgradeCost() returns null once this tower's own upgrade level
+                // catches up to the forge's level - the next tier is gated behind raising the
+                // forge level itself, same as Training Grounds gates behind its own level.
+                const isLocked = !isMaxed && !upgrade.cost;
                 const canAfford = upgrade.cost && this.gameState.gold >= upgrade.cost;
                 const forge = forgeData.forge;
                 
@@ -1866,7 +1870,7 @@ export class UIManager {
                     tooltipText += `<div>◯ Blast Radius: <span style="color: #FFD700;">${baseRad + curRad}px</span></div>`;
                 }
                 
-                if (!isMaxed) {
+                if (!isMaxed && !isLocked) {
                     tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
                     tooltipText += `<div style="font-weight: bold;">Next Upgrade (+1):</div>`;
                     if (upgrade.id === 'basic') {
@@ -1887,25 +1891,30 @@ export class UIManager {
                     }
                     if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;"><span class="coin-xs"></span>${upgrade.cost}</span></div>`;
                     tooltipText += `</div>`;
+                } else if (isLocked) {
+                    tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #ff9999;">`;
+                    tooltipText += `<div style="font-weight: bold;">🔒 Locked</div>`;
+                    tooltipText += `<div>Upgrade the Tower Forge to unlock</div>`;
+                    tooltipText += `</div>`;
                 }
                 tooltipText += `</div>`;
                 
                 contentHTML += `
-                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''}" data-upgrade-id="${upgrade.id}" data-tooltip="${tooltipText.replace(/"/g, '&quot;')}">
+                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''} ${isLocked ? 'locked' : ''}" data-upgrade-id="${upgrade.id}" data-tooltip="${tooltipText.replace(/"/g, '&quot;')}">
                         <div class="compact-upgrade-left">
                             <span class="compact-upgrade-icon">${upgrade.icon}</span>
                             <div class="compact-upgrade-info">
                                 <div class="compact-upgrade-name">${upgrade.name}</div>
                                 <div class="compact-upgrade-values">
                                     <span class="current-value">${currentValue}</span>
-                                    ${!isMaxed && nextValue ? `<span class="next-value-arrow">→</span><span class="next-value">${nextValue}</span>` : '<span class="maxed-text">MAX</span>'}
+                                    ${!isMaxed && !isLocked && nextValue ? `<span class="next-value-arrow">→</span><span class="next-value">${nextValue}</span>` : (isMaxed ? '<span class="maxed-text">MAX</span>' : '')}
                                 </div>
                             </div>
                         </div>
-                        <button class="compact-upgrade-btn panel-upgrade-btn" 
-                                data-upgrade="${upgrade.id}" 
-                                ${isMaxed || !canAfford ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : (upgrade.cost ? `<span class="coin-xs"></span>${upgrade.cost}` : '—')}
+                        <button class="compact-upgrade-btn panel-upgrade-btn"
+                                data-upgrade="${upgrade.id}"
+                                ${isMaxed || !canAfford || isLocked ? 'disabled' : ''}>
+                            ${isMaxed ? 'MAX' : (isLocked ? '—' : (upgrade.cost ? `<span class="coin-xs"></span>${upgrade.cost}` : '—'))}
                         </button>
                     </div>
                 `;
@@ -4186,12 +4195,12 @@ export class UIManager {
                                 <div class="compact-upgrade-name">${upgrade.name}</div>
                                 <div class="compact-upgrade-values">
                                     <span class="current-value">${currentValue}</span>
-                                    ${!isMaxed && nextValue ? `<span class="next-value-arrow">\u2192</span><span class="next-value">${nextValue}</span>` : '<span class="maxed-text">MAX</span>'}
+                                    ${!isMaxed && !isLocked && nextValue ? `<span class="next-value-arrow">\u2192</span><span class="next-value">${nextValue}</span>` : (isMaxed ? '<span class="maxed-text">MAX</span>' : '')}
                                 </div>
                             </div>
                         </div>
-                        <button class="compact-upgrade-btn panel-upgrade-btn" 
-                                data-upgrade="${upgrade.id}" 
+                        <button class="compact-upgrade-btn panel-upgrade-btn"
+                                data-upgrade="${upgrade.id}"
                                 ${isMaxed || !canAfford || isLocked ? 'disabled' : ''}>
                             ${isMaxed ? 'MAX' : (isLocked ? '\u2014' : (upgrade.cost ? `<span class="coin-xs"></span>${upgrade.cost}` : '\u2014'))}
                         </button>
