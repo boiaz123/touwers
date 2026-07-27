@@ -2,7 +2,7 @@ import { LevelBase } from '../LevelBase.js';
 
 export class ForestLevel3 extends LevelBase {
     static levelMetadata = {
-        name: 'The Reach',
+        name: 'Gaerolan',
         difficulty: 'Easy',
         order: 3,
         campaign: 'forest'
@@ -20,64 +20,113 @@ export class ForestLevel3 extends LevelBase {
         // Set terrain elements (prevent tower placement on these areas)
         this.terrainElements = [
             { type: 'water', gridX: 29.00, gridY: 34.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 29.00, gridY: 34.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 28.00, gridY: 33.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 28.00, gridY: 33.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 28.00, gridY: 32.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 28.00, gridY: 32.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 28.00, gridY: 32.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 27.00, gridY: 31.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 27.00, gridY: 31.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 27.00, gridY: 31.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 26.00, gridY: 30.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 26.00, gridY: 30.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 26.00, gridY: 30.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 25.00, gridY: 29.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 25.00, gridY: 29.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 25.00, gridY: 28.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 25.00, gridY: 28.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 25.00, gridY: 28.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 24.00, gridY: 27.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 24.00, gridY: 27.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 24.00, gridY: 27.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 23.00, gridY: 26.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 23.00, gridY: 26.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 23.00, gridY: 25.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 23.00, gridY: 25.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 23.00, gridY: 24.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 23.00, gridY: 24.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 22.00, gridY: 24.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 22.00, gridY: 24.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 22.00, gridY: 23.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 22.00, gridY: 23.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 22.00, gridY: 22.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 22.00, gridY: 22.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 23.00, gridY: 22.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 23.00, gridY: 21.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 23.00, gridY: 21.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 23.00, gridY: 20.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 23.00, gridY: 20.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 23.00, gridY: 19.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 23.00, gridY: 19.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 23.00, gridY: 18.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 23.00, gridY: 18.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 24.00, gridY: 18.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 24.00, gridY: 17.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 24.00, gridY: 17.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 25.00, gridY: 17.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 25.00, gridY: 17.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 26.00, gridY: 17.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 26.00, gridY: 17.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 27.00, gridY: 17.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 27.00, gridY: 16.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 27.00, gridY: 16.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 28.00, gridY: 16.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 28.00, gridY: 16.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 29.00, gridY: 16.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 29.00, gridY: 15.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 29.00, gridY: 15.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 30.00, gridY: 15.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 30.00, gridY: 15.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 31.00, gridY: 15.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 31.00, gridY: 14.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 31.00, gridY: 14.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 32.00, gridY: 14.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 32.00, gridY: 14.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 33.00, gridY: 14.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 33.00, gridY: 14.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 34.00, gridY: 14.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 34.00, gridY: 14.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 35.00, gridY: 14.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 35.00, gridY: 13.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 35.00, gridY: 13.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 36.00, gridY: 13.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 36.00, gridY: 13.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 37.00, gridY: 13.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 37.00, gridY: 13.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 38.00, gridY: 13.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 38.00, gridY: 13.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 39.00, gridY: 13.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 39.00, gridY: 12.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 39.00, gridY: 12.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 40.00, gridY: 12.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 40.00, gridY: 12.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 40.00, gridY: 11.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 40.00, gridY: 11.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 41.00, gridY: 11.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 41.00, gridY: 11.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 41.00, gridY: 10.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 41.00, gridY: 10.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 42.00, gridY: 10.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 42.00, gridY: 9.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 42.00, gridY: 9.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 42.00, gridY: 8.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 42.00, gridY: 8.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 43.00, gridY: 8.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 43.00, gridY: 7.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 43.00, gridY: 7.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 43.00, gridY: 6.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 43.00, gridY: 6.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 43.00, gridY: 5.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 43.00, gridY: 5.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 44.00, gridY: 5.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 44.00, gridY: 4.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 44.00, gridY: 4.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 44.00, gridY: 3.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 44.00, gridY: 3.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 44.00, gridY: 2.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 44.00, gridY: 2.00, size: 1.5, waterType: 'river' },
+            { type: 'water', gridX: 44.00, gridY: 1.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 44.00, gridY: 1.00, size: 1.5, waterType: 'river' },
             { type: 'water', gridX: 44.00, gridY: 0.00, size: 1.5, waterType: 'river' },
             { type: 'vegetation', gridX: 46.00, gridY: 27.00, size: 3, variant: 0 },
@@ -284,30 +333,30 @@ export class ForestLevel3 extends LevelBase {
         // Wave 1
         { 
             enemyHealth_multiplier: 1, 
-            speedMultiplier: 0.60, 
+            speedMultiplier: 0.6, 
             spawnInterval: 2, 
             pattern: [{ type: 'basic', count: 6 }, { type: 'villager', count: 6 }] 
         }
         // Wave 2
         , { 
             enemyHealth_multiplier: 1, 
-            speedMultiplier: 0.60, 
+            speedMultiplier: 0.6, 
             spawnInterval: 1.8, 
             pattern: [{ type: 'basic', count: 7 }, { type: 'villager', count: 7 }] 
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 1.2, 
-            speedMultiplier: 0.70, 
-            spawnInterval: 1.5, 
+            enemyHealth_multiplier: 1, 
+            speedMultiplier: 0.7, 
+            spawnInterval: 2, 
             pattern: [{ type: 'basic', count: 10 }, { type: 'villager', count: 10 }] 
         }
         // Wave 4
         , { 
-            enemyHealth_multiplier: 1.5, 
+            enemyHealth_multiplier: 1, 
             speedMultiplier: 0.58, 
             spawnInterval: 6, 
-            pattern: [{ type: 'beefyenemy', count: 4 }] 
+            pattern: [{ type: 'beefyenemy', count: 5 }] 
         }
         // Wave 5
         , { 
@@ -319,27 +368,27 @@ export class ForestLevel3 extends LevelBase {
         // Wave 6
         , { 
             enemyHealth_multiplier: 1.5, 
-            speedMultiplier: 1.00, 
+            speedMultiplier: 1, 
             spawnInterval: 2, 
-            pattern: [{ type: 'basic', count: 5 }, { type: 'villager', count: 5 }, { type: 'archer', count: 4 }, { type: 'beefyenemy', count: 4 }] 
+            pattern: [{ type: 'basic', count: 5 }, { type: 'villager', count: 5 }, { type: 'archer', count: 4 }, { type: 'beefyenemy', count: 4, healthMultiplier: 1 }] 
         }
         // Wave 7
         , { 
-            enemyHealth_multiplier: 1.8, 
-            speedMultiplier: 1.4, 
+            enemyHealth_multiplier: 1.4, 
+            speedMultiplier: 1.2, 
             spawnInterval: 2, 
             pattern: [{ type: 'archer', count: 15 }] 
         }
         // Wave 8
         , { 
             enemyHealth_multiplier: 1.5, 
-            speedMultiplier: 0.90, 
+            speedMultiplier: 0.9, 
             spawnInterval: 2, 
             pattern: [{ type: 'basic', count: 13 }, { type: 'villager', count: 12 }] 
         }
         // Wave 9
         , { 
-            enemyHealth_multiplier: 2.2, 
+            enemyHealth_multiplier: 1.4, 
             speedMultiplier: 0.83, 
             spawnInterval: 2.5, 
             pattern: [{ type: 'beefyenemy', count: 11 }] 
@@ -360,15 +409,15 @@ export class ForestLevel3 extends LevelBase {
         }
         // Wave 12
         , { 
-            enemyHealth_multiplier: 3, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 0.92, 
-            spawnInterval: 1.5, 
+            spawnInterval: 2, 
             pattern: [{ type: 'beefyenemy', count: 10 }] 
         }
         // Wave 13
         , { 
             enemyHealth_multiplier: 2, 
-            speedMultiplier: 0.70, 
+            speedMultiplier: 0.7, 
             spawnInterval: 1, 
             pattern: [{ type: 'basic', count: 18 }, { type: 'villager', count: 17 }] 
         }

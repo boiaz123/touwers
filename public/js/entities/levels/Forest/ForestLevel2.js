@@ -314,21 +314,21 @@ export class ForestLevel2 extends LevelBase {
         // Wave 1
         { 
             enemyHealth_multiplier: 0.8, 
-            speedMultiplier: 0.60, 
+            speedMultiplier: 0.6, 
             spawnInterval: 2, 
             pattern: [{ type: 'basic', count: 5 }, { type: 'villager', count: 8 }] 
         }
         // Wave 2
         , { 
             enemyHealth_multiplier: 0.9, 
-            speedMultiplier: 0.60, 
+            speedMultiplier: 0.6, 
             spawnInterval: 1.8, 
             pattern: [{ type: 'basic', count: 7 }, { type: 'villager', count: 5 }] 
         }
         // Wave 3
         , { 
             enemyHealth_multiplier: 1, 
-            speedMultiplier: 0.70, 
+            speedMultiplier: 0.7, 
             spawnInterval: 1.5, 
             pattern: [{ type: 'basic', count: 9 }, { type: 'villager', count: 8 }] 
         }
@@ -341,15 +341,15 @@ export class ForestLevel2 extends LevelBase {
         }
         // Wave 5
         , { 
-            enemyHealth_multiplier: 1.2, 
+            enemyHealth_multiplier: 1, 
             speedMultiplier: 0.58, 
             spawnInterval: 3, 
             pattern: [{ type: 'beefyenemy', count: 6 }] 
         }
         // Wave 6
         , { 
-            enemyHealth_multiplier: 1, 
-            speedMultiplier: 1.10, 
+            enemyHealth_multiplier: 0.8, 
+            speedMultiplier: 1, 
             spawnInterval: 2.5, 
             pattern: [{ type: 'basic', count: 15 }, { type: 'villager', count: 15 }] 
         }
@@ -363,13 +363,13 @@ export class ForestLevel2 extends LevelBase {
         // Wave 8
         , { 
             enemyHealth_multiplier: 1, 
-            speedMultiplier: 0.90, 
+            speedMultiplier: 0.9, 
             spawnInterval: 1.4, 
             pattern: [{ type: 'basic', count: 13 }, { type: 'villager', count: 12 }] 
         }
         // Wave 9
         , { 
-            enemyHealth_multiplier: 1.8, 
+            enemyHealth_multiplier: 1.2, 
             speedMultiplier: 0.83, 
             spawnInterval: 2.5, 
             pattern: [{ type: 'beefyenemy', count: 8 }] 
@@ -383,8 +383,8 @@ export class ForestLevel2 extends LevelBase {
         }
         // Wave 11
         , { 
-            enemyHealth_multiplier: 1.8, 
-            speedMultiplier: 1.6, 
+            enemyHealth_multiplier: 1.3, 
+            speedMultiplier: 1.2, 
             spawnInterval: 3, 
             pattern: [{ type: 'archer', count: 35 }] 
         }
