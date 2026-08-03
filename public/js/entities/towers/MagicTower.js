@@ -399,14 +399,14 @@ export class MagicTower extends Tower {
      *  for) since CanvasGraphicsShim's ellipse() silently drops rotation - varying each
      *  rock's size/shade/highlight offset instead keeps the Canvas2D and in-game Pixi
      *  renders identical. */
-    _renderBaseRocks(ctx, g) {
+    _renderBaseRocks(ctx, g, centerY = this.y, radius = g.baseRadius, flat = g.baseFlat) {
         const rockCount = 10;
         for (let i = 0; i < rockCount; i++) {
             const hash = (i * 53 % 29) / 29;
             const angle = (i / rockCount) * Math.PI * 2 + hash * 0.3;
-            const rx = this.x + Math.cos(angle) * g.baseRadius * (0.9 + hash * 0.14);
-            const ry = this.y + Math.sin(angle) * g.baseFlat * (0.9 + hash * 0.14);
-            const rs = g.baseRadius * (0.1 + hash * 0.06);
+            const rx = this.x + Math.cos(angle) * radius * (0.9 + hash * 0.14);
+            const ry = centerY + Math.sin(angle) * flat * (0.9 + hash * 0.14);
+            const rs = radius * (0.1 + hash * 0.06);
 
             ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
             ctx.beginPath();
@@ -516,21 +516,85 @@ export class MagicTower extends Tower {
         // (renderCobblestoneBase) instead of the tower floating on bare colored ground.
         const plinthRx = g.baseRadius * 1.2;
         const plinthRy = g.baseFlat * 1.15;
+        const plinthTopY = this.y + g.baseFlat * 0.18;
         ctx.fillStyle = '#3c3934';
         ctx.strokeStyle = '#18160f';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.ellipse(this.x, this.y + g.baseFlat * 0.18, plinthRx, plinthRy, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x, plinthTopY, plinthRx, plinthRy, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        // Boulders anchoring the foundation into the plinth, half-embedded around the rim -
-        // breaks up what used to be a clean colored polygon edge and reads as the tower
-        // being built from/into solid rock, matching MagicAcademy's moat-bank boulders
-        // (_renderMoatBankDetail) rather than a smooth flat-filled shape. Drawn before the
-        // foundation polygon so the polygon's own edge overlaps their inner half, seating
-        // them rather than having them float on top of a finished edge.
-        this._renderBaseRocks(ctx, g);
+        // Coursed-brick plinth wall giving the base actual standing height - previously the
+        // plinth was a single flat ellipse with no visible wall face, so the tower read as
+        // painted onto the ground rather than standing on a raised platform. Only the front
+        // arc (sin(angle) > 0, the half facing the camera) is built as a filled band between
+        // the plinth rim and a matching lower ellipse - the only part of a wall on a
+        // flattened top-down ellipse a viewer would ever actually see, same convention as
+        // the flat 2-facet tower body above it.
+        const wallH = towerSize * 0.07;
+        const plinthBottomY = plinthTopY + wallH;
+        const wallSteps = 20;
+        const wallGradient = ctx.createLinearGradient(this.x, plinthTopY, this.x, plinthBottomY);
+        wallGradient.addColorStop(0, '#5a5650');
+        wallGradient.addColorStop(1, '#2c2a24');
+        ctx.fillStyle = wallGradient;
+        ctx.beginPath();
+        ctx.moveTo(this.x + plinthRx, plinthTopY);
+        ctx.lineTo(this.x + plinthRx, plinthBottomY);
+        for (let s = 1; s <= wallSteps; s++) {
+            const a = (s / wallSteps) * Math.PI;
+            ctx.lineTo(this.x + Math.cos(a) * plinthRx, plinthBottomY + Math.sin(a) * plinthRy);
+        }
+        for (let s = wallSteps; s >= 0; s--) {
+            const a = (s / wallSteps) * Math.PI;
+            ctx.lineTo(this.x + Math.cos(a) * plinthRx, plinthTopY + Math.sin(a) * plinthRy);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(15, 13, 9, 0.6)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Brick coursing on the wall band: a mid-height seam plus staggered (running-bond)
+        // vertical joints on each course, so the wall reads as individual brick units rather
+        // than a flat gradient-filled strip.
+        const brickCourseY = plinthTopY + wallH * 0.5;
+        ctx.strokeStyle = 'rgba(10, 9, 6, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let s = 0; s <= wallSteps; s++) {
+            const a = (s / wallSteps) * Math.PI;
+            const px = this.x + Math.cos(a) * plinthRx;
+            const py = brickCourseY + Math.sin(a) * plinthRy;
+            if (s === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        const wallBricksPerCourse = 12;
+        for (let row = 0; row < 2; row++) {
+            const rowTopY = row === 0 ? plinthTopY : brickCourseY;
+            const rowBotY = row === 0 ? brickCourseY : plinthBottomY;
+            const offset = row === 0 ? 0 : 0.5;
+            for (let b = 1; b < wallBricksPerCourse; b++) {
+                const a = ((b + offset) / wallBricksPerCourse) * Math.PI;
+                if (a <= 0.02 || a >= Math.PI - 0.02) continue;
+                const topPx = this.x + Math.cos(a) * plinthRx;
+                const topPy = rowTopY + Math.sin(a) * plinthRy;
+                const botPx = this.x + Math.cos(a) * plinthRx;
+                const botPy = rowBotY + Math.sin(a) * plinthRy;
+                ctx.beginPath();
+                ctx.moveTo(topPx, topPy);
+                ctx.lineTo(botPx, botPy);
+                ctx.stroke();
+            }
+        }
+
+        // Boulders anchoring the wall into the ground, half-embedded around its bottom rim -
+        // breaks up what used to be a clean colored edge and reads as the tower being built
+        // from/into solid rock, matching MagicAcademy's moat-bank boulders
+        // (_renderMoatBankDetail) rather than a smooth flat-filled shape.
+        this._renderBaseRocks(ctx, g, plinthBottomY, plinthRx, plinthRy);
 
         // Octagonal stone foundation, flattened into a floor-plan ellipse ratio so it reads
         // as ground the tower actually stands on. Neutral quarried-stone palette (matching
@@ -583,18 +647,22 @@ export class MagicTower extends Tower {
         ctx.lineWidth = Math.max(1, towerSize * 0.007);
         this._strokeEllipseArc(ctx, this.x, this.y - g.baseFlat * 0.05, g.baseRadius * 0.6, g.baseFlat * 0.6, 0, Math.PI * 2, 24);
 
-        // Stone collar bridging the (narrower, purple) tower body down into the (wider,
-        // neutral-stone) foundation - a warm cut-stone trim band, the same role
-        // MagicAcademy's belt course (_wallBeltY / renderCobblestoneBase) plays marking a
-        // storey division, so the join reads as a deliberate architectural transition
-        // rather than the body's fill just stopping abruptly over the foundation.
+        // Brick collar flaring the (narrower, purple) tower body down into the (wider,
+        // neutral-stone) foundation - the same storey-division role MagicAcademy's belt
+        // course (_wallBeltY / renderCobblestoneBase) plays, so the join reads as a
+        // deliberate architectural transition rather than the body's fill just stopping
+        // abruptly over the foundation. Previously this tapered backwards - the bottom
+        // (baseRadius * 1.5) was actually NARROWER than the top (wallRx * 2 * 1.05) once
+        // wallRx's own 0.82 factor is applied, so the skirt pinched inward toward the
+        // foundation instead of flaring out to meet it, reading as a wedge glued onto the
+        // base. Bottom is now wider than the foundation itself so it genuinely flares.
         const collarTopW = g.wallRx * 2 * 1.05;
-        const collarBottomW = g.baseRadius * 1.5;
-        const collarHeight = towerSize * 0.07;
+        const collarBottomW = g.baseRadius * 2.15;
+        const collarHeight = towerSize * 0.1;
         const collarGradient = ctx.createLinearGradient(this.x, g.bodyBaseY, this.x, g.bodyBaseY + collarHeight);
-        collarGradient.addColorStop(0, '#d8d0bc');
-        collarGradient.addColorStop(0.5, '#b8ac8e');
-        collarGradient.addColorStop(1, '#8a7d5e');
+        collarGradient.addColorStop(0, '#ada89e');
+        collarGradient.addColorStop(0.5, '#8c8880');
+        collarGradient.addColorStop(1, '#615d54');
         ctx.fillStyle = collarGradient;
         ctx.strokeStyle = '#3a3428';
         ctx.lineWidth = 1.5;
@@ -606,6 +674,38 @@ export class MagicTower extends Tower {
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
+
+        // Brick joints on the collar - individual radiating voussoir lines plus a mid-course
+        // seam with a darkened lower band, so the flared skirt reads as two rings of coursed
+        // brick rather than one flat-filled wedge.
+        const collarMidT = 0.52;
+        const collarMidW = collarTopW + (collarBottomW - collarTopW) * collarMidT;
+        const collarMidY = g.bodyBaseY + collarHeight * collarMidT;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.beginPath();
+        ctx.moveTo(this.x - collarMidW / 2, collarMidY);
+        ctx.lineTo(this.x - collarBottomW / 2, g.bodyBaseY + collarHeight);
+        ctx.lineTo(this.x + collarBottomW / 2, g.bodyBaseY + collarHeight);
+        ctx.lineTo(this.x + collarMidW / 2, collarMidY);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(45, 38, 26, 0.55)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(this.x - collarMidW / 2, collarMidY);
+        ctx.lineTo(this.x + collarMidW / 2, collarMidY);
+        ctx.stroke();
+        const collarJoints = 7;
+        for (let i = 1; i < collarJoints; i++) {
+            const t = i / collarJoints;
+            const topX = this.x - collarTopW / 2 + collarTopW * t;
+            const botX = this.x - collarBottomW / 2 + collarBottomW * t;
+            ctx.beginPath();
+            ctx.moveTo(topX, g.bodyBaseY);
+            ctx.lineTo(botX, g.bodyBaseY + collarHeight);
+            ctx.stroke();
+        }
 
         // Tower body - each facet is its own light-to-dark gradient (not a flat fill), so the
         // prism reads as genuinely rounded instead of two flat colored panels meeting at a
@@ -705,6 +805,27 @@ export class MagicTower extends Tower {
             ctx.stroke();
         }
 
+        // Running-bond brick joints within each course - short vertical strokes, offset by
+        // half a brick on alternating rows, so the body reads as individual coursed brick
+        // units rather than plain horizontal bands with no vertical joints at all.
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.lineWidth = 1;
+        const bricksPerCourse = 4;
+        const brickW = (g.wallRx * 2) / bricksPerCourse;
+        for (let c = 0; c < courseCount; c++) {
+            const rowTopY = g.bodyTopY + c * courseH;
+            const rowBotY = rowTopY + courseH - 1;
+            const offset = c % 2 === 0 ? 0 : brickW * 0.5;
+            for (let b = 1; b < bricksPerCourse; b++) {
+                const jx = this.x - g.wallRx + offset + b * brickW;
+                if (jx <= this.x - g.wallRx + 1 || jx >= this.x + g.wallRx - 1) continue;
+                ctx.beginPath();
+                ctx.moveTo(jx, rowTopY);
+                ctx.lineTo(jx, rowBotY);
+                ctx.stroke();
+            }
+        }
+
         // Thin arcane tick-marks down each facet - a static (non-animated) carved conduit
         // motif tying the body back to the inlaid rune circle on the foundation below,
         // without adding another moving light source. Built from short discrete segments
@@ -740,7 +861,35 @@ export class MagicTower extends Tower {
         ctx.fill();
         ctx.stroke();
 
-        // Tesla coil base platform + column + rings, mounted on the parapet cap.
+        // Shared flatness ratio for every ellipse belonging to the coil apparatus (base
+        // platform, bolt ring, coil bands, gem seat) - the top circle (this parapet cap) is
+        // the one true "camera angle" for this tower, so anything sitting on it needs the
+        // same rx:ry squash or it reads as tilted at a different angle than the surface it's
+        // resting on (previously each used its own fixed ratio - 0.4, 0.32, 0.35 - none of
+        // which matched the cap's actual capRy/capRx, so the coil never looked properly
+        // seated/centered on top of it).
+        const capSquash = g.capRy / g.capRx;
+
+        // Battlement merlons around the parapet rim - a smooth ellipse disc alone reads as a
+        // hovering lid/flying-saucer glued onto the body; alternating raised stone teeth turn
+        // it into a crenellated parapet the coil is mounted inside of instead. Skips merlons
+        // on the near-front arc so they don't crowd the coil base platform drawn on top.
+        const merlonCount = 10;
+        for (let i = 0; i < merlonCount; i++) {
+            const a = (i / merlonCount) * Math.PI * 2;
+            if (Math.sin(a) > 0.5) continue;
+            const mx = this.x + Math.cos(a) * g.capRx * 0.94;
+            const my = g.bodyTopY + Math.sin(a) * g.capRy * 0.94;
+            const mw = towerSize * 0.026;
+            const mh = towerSize * 0.018;
+            ctx.fillStyle = '#3a2f66';
+            ctx.fillRect(mx - mw / 2, my - mh / 2, mw, mh);
+            ctx.strokeStyle = '#1E0F3A';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(mx - mw / 2, my - mh / 2, mw, mh);
+        }
+
+        // Tesla coil base platform + iron cage + rings, mounted on the parapet cap.
         const coilBaseRadius = g.coilWidth * 2.6;
         const coilBaseGradient = ctx.createLinearGradient(this.x - coilBaseRadius, g.coilBaseY, this.x + coilBaseRadius, g.coilBaseY);
         coilBaseGradient.addColorStop(0, '#1A1A1A');
@@ -750,28 +899,74 @@ export class MagicTower extends Tower {
         ctx.strokeStyle = '#0A0A0A';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.ellipse(this.x, g.coilBaseY, coilBaseRadius, coilBaseRadius * 0.4, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x, g.coilBaseY, coilBaseRadius, coilBaseRadius * capSquash, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        const coilGradient = ctx.createLinearGradient(this.x - g.coilWidth, 0, this.x + g.coilWidth, 0);
+        // Bolt heads ringing the base platform - reinforces the "riveted iron hardware" read
+        // established by the strut/band rivets above, rather than a bare cast disc.
+        const platformBolts = 8;
+        for (let i = 0; i < platformBolts; i++) {
+            const a = (i / platformBolts) * Math.PI * 2;
+            ctx.fillStyle = '#0E0E0E';
+            ctx.beginPath();
+            ctx.arc(this.x + Math.cos(a) * coilBaseRadius * 0.8, g.coilBaseY + Math.sin(a) * coilBaseRadius * 0.8 * capSquash, coilBaseRadius * 0.09, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Iron cage struts flanking the coil rod - gives the apparatus real riveted metal
+        // mass instead of reading as a bare thin rod with wire rings floating around it.
+        // Lighter whitish-steel palette (matching the rod itself) rather than near-black iron,
+        // so the whole coil still reads as a bright metal apparatus overall.
+        const rodHalfW = g.coilWidth * 1.3;
+        const strutW = g.coilWidth * 0.5;
+        [-1, 1].forEach(side => {
+            const sx = this.x + side * (rodHalfW + strutW * 0.5 + 1);
+            const strutGradient = ctx.createLinearGradient(sx - strutW / 2, 0, sx + strutW / 2, 0);
+            strutGradient.addColorStop(0, '#5A5A5A');
+            strutGradient.addColorStop(0.5, '#C4C4C4');
+            strutGradient.addColorStop(1, '#5A5A5A');
+            ctx.fillStyle = strutGradient;
+            ctx.strokeStyle = '#2A2A2A';
+            ctx.lineWidth = 1;
+            ctx.fillRect(sx - strutW / 2, g.coilBaseY - g.coilHeight, strutW, g.coilHeight);
+            ctx.strokeRect(sx - strutW / 2, g.coilBaseY - g.coilHeight, strutW, g.coilHeight);
+
+            const rivetCount = 4;
+            for (let r = 0; r < rivetCount; r++) {
+                const ry = g.coilBaseY - g.coilHeight + (r + 0.5) * g.coilHeight / rivetCount;
+                ctx.fillStyle = '#5E5E5E';
+                ctx.beginPath();
+                ctx.arc(sx, ry, strutW * 0.24, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.arc(sx - strutW * 0.07, ry - strutW * 0.07, strutW * 0.08, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+
+        const coilGradient = ctx.createLinearGradient(this.x - rodHalfW, 0, this.x + rodHalfW, 0);
         coilGradient.addColorStop(0, '#3A3A3A');
         coilGradient.addColorStop(0.5, '#B0B0B0');
         coilGradient.addColorStop(1, '#3A3A3A');
         ctx.fillStyle = coilGradient;
         ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 2;
-        ctx.fillRect(this.x - g.coilWidth, g.coilBaseY - g.coilHeight, g.coilWidth * 2, g.coilHeight);
-        ctx.strokeRect(this.x - g.coilWidth, g.coilBaseY - g.coilHeight, g.coilWidth * 2, g.coilHeight);
+        ctx.fillRect(this.x - rodHalfW, g.coilBaseY - g.coilHeight, rodHalfW * 2, g.coilHeight);
+        ctx.strokeRect(this.x - rodHalfW, g.coilBaseY - g.coilHeight, rodHalfW * 2, g.coilHeight);
 
-        // Rings around the coil rod, flattened into ellipses (the coil is a vertical rod, so a
-        // ring around it should project as a flattened ellipse at this camera angle, not a full
-        // top-down circle like the original).
+        // Bands around the coil rod, flattened into ellipses at the same squash ratio as the
+        // parapet cap (capSquash) rather than each ring inventing its own fixed ratio (was
+        // 0.32, independent of tower proportions and of the cap it's mounted on) - keeps every
+        // ellipse in the coil apparatus reading as the same camera angle as the surface it
+        // stands on. Bright whitish-steel tone (matching the rod), with rivets around each
+        // band's rim for detail without darkening the overall coil.
         const ringCount = 5;
         for (let i = 0; i < ringCount; i++) {
             const ringY = g.coilBaseY - g.coilHeight + (i + 1) * g.coilHeight / (ringCount + 1);
             const ringRx = g.coilWidth * (2 + Math.sin(i * 0.5));
-            const ringRy = ringRx * 0.32;
+            const ringRy = ringRx * capSquash;
 
             ctx.strokeStyle = '#A0A0A0';
             ctx.lineWidth = 3;
@@ -782,6 +977,15 @@ export class MagicTower extends Tower {
             ctx.strokeStyle = '#E8E8E8';
             ctx.lineWidth = 1;
             this._strokeEllipseArc(ctx, this.x, ringY, ringRx, ringRy, -Math.PI / 3, Math.PI / 3);
+
+            const bandRivets = 5;
+            for (let r = 0; r < bandRivets; r++) {
+                const a = (r / bandRivets) * Math.PI * 2;
+                ctx.fillStyle = '#5E5E5E';
+                ctx.beginPath();
+                ctx.arc(this.x + Math.cos(a) * ringRx, ringY + Math.sin(a) * ringRy, ringRx * 0.08, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
 
         // Small metallic mounting platform seating the gem on the coil, so it reads as
@@ -806,7 +1010,7 @@ export class MagicTower extends Tower {
         for (let i = 0; i < 6; i++) {
             const angle = (i / 6) * Math.PI * 2;
             const x = this.x + Math.cos(angle) * platformRadius;
-            const y = g.sphereY + Math.sin(angle) * platformRadius * 0.35;
+            const y = g.sphereY + Math.sin(angle) * platformRadius * capSquash;
             if (i === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
         }
@@ -886,7 +1090,7 @@ export class MagicTower extends Tower {
             ctx.fillStyle = `rgba(190, 110, 255, ${glowStrength * 0.85})`;
             ctx.fillRect(windowX - winW / 2 + 1, windowY - winH / 2 + 1, winW - 2, winH * 0.65);
             ctx.beginPath();
-            ctx.arc(windowX, windowY - winH / 2 + 1, archR - 1, Math.PI, 0);
+            ctx.arc(windowX, windowY - winH / 2 + 1, Math.max(0.5, archR - 1), Math.PI, 0);
             ctx.fill();
 
             // Keystone and sill for a finished carved look
