@@ -78,6 +78,12 @@ export class SuperWeaponLab extends Building {
             }
         };
         
+        // Cooldown Reduction upgrade path - unlocked at Lab Level 3 (the same point that used
+        // to grant a flat, unimplemented "20% cooldown reduction" - see getLabUpgradeOption's
+        // old level-3 text). 5 levels, paid with gold + diamonds, ramping up to a 50% reduction
+        // on all spell cooldowns at max level instead of one fixed bonus.
+        this.cooldownReduction = { level: 0, maxLevel: 5 };
+
         // Combination spells system - 7 upgrade levels per spell, paid for with elemental gems.
         // Each level is additionally gated behind the Magic Academy's own elemental mastery
         // (see getCombinationUpgradeOptions's requiredElementLevel: level 8/10/12/14/16/18/20
@@ -936,8 +942,8 @@ export class SuperWeaponLab extends Building {
             return null;
         }
         
-        spell.currentCooldown = spell.cooldown;
-        
+        spell.currentCooldown = spell.cooldown * (1 - this.getCooldownReductionFraction());
+
         // Trigger visual effect
         this.spellCastEffect = {
             spell: spell,
@@ -1012,8 +1018,8 @@ export class SuperWeaponLab extends Building {
                 nextUnlock = 'Unlocks: Frozen Nova + Combination Tower upgrades + Diamond Press building';
                 break;
             case 3:
-                description = 'Unlock Meteor Strike spell. Reduce all spell cooldowns by 20%.';
-                nextUnlock = 'Unlocks: Meteor Strike + 20% cooldown reduction';
+                description = 'Unlock Meteor Strike spell and the Cooldown Reduction upgrade path (spend gold + diamonds across 5 levels to reduce all spell cooldowns, up to 50% at max).';
+                nextUnlock = 'Unlocks: Meteor Strike + Cooldown Reduction upgrade path';
                 break;
             case 4:
                 description = 'Unlock Chain Lightning, the final Super Weapon spell.';
@@ -1093,6 +1099,66 @@ export class SuperWeaponLab extends Building {
         return true;
     }
     
+    // Fraction of spell cooldown currently shaved off by the Cooldown Reduction upgrade path
+    // (10% per level, 5 levels, capping at 50% at max level).
+    getCooldownReductionFraction() {
+        return this.cooldownReduction.level * 0.1;
+    }
+
+    // Describe the next Cooldown Reduction level (or the maxed-out state) for the UI panel.
+    // Unlocks at the same point the old flat 20% reduction used to (Lab Level 3).
+    getCooldownReductionOption() {
+        if (this.labLevel < 3) return null;
+
+        const level = this.cooldownReduction.level;
+        const isMaxed = level >= this.cooldownReduction.maxLevel;
+        const nextLevel = level + 1;
+
+        return {
+            id: 'cooldown_reduction',
+            name: 'Cooldown Reduction',
+            description: 'Permanently reduces the cooldown of all Super Weapon spells (Arcane Blast, Frozen Nova, Meteor Strike, Chain Lightning).',
+            level: level,
+            maxLevel: this.cooldownReduction.maxLevel,
+            currentReduction: this.getCooldownReductionFraction(),
+            nextReduction: isMaxed ? null : nextLevel * 0.1,
+            // Costs ramp with each level: 500/1000/1500/2000/2500 gold, 1/2/3/4/5 diamonds.
+            goldCost: isMaxed ? 0 : 500 * nextLevel,
+            diamondCost: isMaxed ? 0 : nextLevel,
+            isMaxed: isMaxed
+        };
+    }
+
+    purchaseCooldownReductionUpgrade(gameState) {
+        if (this.labLevel < 3) {
+            console.error('SuperWeaponLab: Cooldown Reduction unlocks at Lab Level 3');
+            return false;
+        }
+
+        if (this.cooldownReduction.level >= this.cooldownReduction.maxLevel) {
+            console.error('SuperWeaponLab: Cooldown Reduction already at maximum level');
+            return false;
+        }
+
+        const option = this.getCooldownReductionOption();
+
+        if (!gameState.canAfford(option.goldCost)) {
+            console.error('SuperWeaponLab: Cannot afford Cooldown Reduction upgrade');
+            return false;
+        }
+
+        if (!this.academy || (this.academy.gems.diamond || 0) < option.diamondCost) {
+            console.error('SuperWeaponLab: Insufficient diamonds for Cooldown Reduction upgrade');
+            return false;
+        }
+
+        gameState.spend(option.goldCost);
+        this.academy.gems.diamond -= option.diamondCost;
+        this.cooldownReduction.level++;
+
+        return true;
+    }
+
     // Upgrade main spell using diamonds (only available at level 5+ - see maxLabLevel's comment)
     upgradeMainSpell(spellId, diamondCost) {
         if (this.labLevel < 5) {

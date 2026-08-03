@@ -919,12 +919,24 @@ export class UIManager {
         let statsHTML = '';
         const inputManager = this.stateManager.inputManager;
 
+        // Show the effective cooldown (after the Cooldown Reduction upgrade path's bonus, see
+        // SuperWeaponLab.getCooldownReductionFraction) so the hotbar tooltip matches what
+        // actually happens when the spell is cast, not just its unreduced base value.
+        const superWeaponLab = this.towerManager.buildingManager.buildings.find(
+            b => b.constructor.name === 'SuperWeaponLab'
+        );
+        const cdReduction = superWeaponLab ? superWeaponLab.getCooldownReductionFraction() : 0;
+        const effectiveCooldown = spell.cooldown * (1 - cdReduction);
+        const cooldownHTML = cdReduction > 0
+            ? `<div><span>Cooldown:</span> <span style="color: #FFD700;">${effectiveCooldown.toFixed(1)}s</span> <span style="color: #aaffaa; font-size: 0.7rem;">(-${Math.round(cdReduction * 100)}%)</span></div>`
+            : `<div><span>Cooldown:</span> <span style="color: #FFD700;">${spell.cooldown}s</span></div>`;
+
         switch (spell.id) {
             case 'arcaneBlast':
                 statsHTML = `
                     <div><span>Damage:</span> <span style="color: #FFD700;">${spell.damage}</span></div>
                     <div><span>Radius:</span> <span style="color: #FFD700;">${spell.radius}</span></div>
-                    <div><span>Cooldown:</span> <span style="color: #FFD700;">${spell.cooldown}s</span></div>
+                    ${cooldownHTML}
                 `;
                 break;
             case 'frostNova':
@@ -932,21 +944,21 @@ export class UIManager {
                     <div><span>Damage:</span> <span style="color: #FFD700;">${spell.damage}</span></div>
                     <div><span>Freeze:</span> <span style="color: #FFD700;">${spell.freezeDuration}s</span></div>
                     <div><span>Radius:</span> <span style="color: #FFD700;">${spell.radius}</span></div>
-                    <div><span>Cooldown:</span> <span style="color: #FFD700;">${spell.cooldown}s</span></div>
+                    ${cooldownHTML}
                 `;
                 break;
             case 'meteorStrike':
                 statsHTML = `
                     <div><span>Damage:</span> <span style="color: #FFD700;">${spell.damage}</span></div>
                     <div><span>Burn:</span> <span style="color: #FFD700;">${spell.burnDamage}/s for ${spell.burnDuration}s</span></div>
-                    <div><span>Cooldown:</span> <span style="color: #FFD700;">${spell.cooldown}s</span></div>
+                    ${cooldownHTML}
                 `;
                 break;
             case 'chainLightning':
                 statsHTML = `
                     <div><span>Damage:</span> <span style="color: #FFD700;">${spell.damage}</span></div>
                     <div><span>Chains:</span> <span style="color: #FFD700;">${spell.chainCount} targets</span></div>
-                    <div><span>Cooldown:</span> <span style="color: #FFD700;">${spell.cooldown}s</span></div>
+                    ${cooldownHTML}
                 `;
                 break;
         }
@@ -2104,9 +2116,12 @@ export class UIManager {
             });
         });
         
-        // Forge level upgrade button hover
+        // Forge level upgrade button hover - only show when a further upgrade is actually
+        // available; at max level there's nothing informative left to say (see SuperWeaponLab's
+        // matching fix for why this matters).
         const forgeLevelBtn = panel.querySelector('.forge-level-upgrade-btn');
-        if (forgeLevelBtn && forgeData.forgeUpgrade) {
+        const forgeIsMaxed = forgeData.forge && forgeData.forge.forgeLevel >= forgeData.forge.maxForgeLevel;
+        if (forgeLevelBtn && forgeData.forgeUpgrade && !forgeIsMaxed) {
             forgeLevelBtn.addEventListener('mouseenter', () => {
                 // Clear existing tooltips
                 const existingTooltips = document.querySelectorAll('[data-forge-tooltip]');
@@ -2597,9 +2612,10 @@ export class UIManager {
             }, { once: true });
         });
         
-        // Add hover info listener for main academy upgrade button
+        // Add hover info listener for main academy upgrade button - only when not maxed, since
+        // a maxed button has no further upgrade info to show (see SuperWeaponLab's matching fix).
         const academyUpgradeBtn = panel.querySelector('.forge-level-upgrade-btn');
-        if (academyUpgradeBtn && academyUpgrade) {
+        if (academyUpgradeBtn && academyUpgrade && !isMaxed) {
             academyUpgradeBtn.addEventListener('mouseenter', () => {
                 if (!academyUpgrade || !academyUpgrade.description) return;
                 
@@ -3426,7 +3442,17 @@ export class UIManager {
                 if (spell.freezeDuration) tooltipText += `<div>Freeze: <span style="color: #FFD700;">${spell.freezeDuration.toFixed(1)}s</span></div>`;
                 if (spell.burnDuration) tooltipText += `<div>Burn: <span style="color: #FFD700;">${spell.burnDuration}s</span> (${Math.floor(spell.burnDamage)}/s)</div>`;
                 if (spell.chainCount) tooltipText += `<div>Chains: <span style="color: #FFD700;">${spell.chainCount}</span></div>`;
-                tooltipText += `<div>Cooldown: <span style="color: #FFD700;">${spell.cooldown.toFixed(1)}s</span></div>`;
+
+                // Show effective cooldown (base cooldown minus the Cooldown Reduction upgrade
+                // path's current bonus, see SuperWeaponLab.getCooldownReductionFraction) so this
+                // matches what actually happens when the spell is cast, not just its base value.
+                const cdReduction = superWeaponLab.getCooldownReductionFraction();
+                const effectiveCooldown = spell.cooldown * (1 - cdReduction);
+                if (cdReduction > 0) {
+                    tooltipText += `<div>Cooldown: <span style="color: #FFD700;">${effectiveCooldown.toFixed(1)}s</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base ${spell.cooldown.toFixed(1)}s &minus; ${Math.round(cdReduction * 100)}%)</span></div>`;
+                } else {
+                    tooltipText += `<div>Cooldown: <span style="color: #FFD700;">${spell.cooldown.toFixed(1)}s</span></div>`;
+                }
                 tooltipText += `<div style="font-size: 0.7rem; color: #aaa;">Level: <span style="color: #FFD700;">${spell.upgradeLevel}/${spell.maxUpgradeLevel}</span></div>`;
                 
                 // Show spell-specific per-level upgrade effects
@@ -3494,6 +3520,60 @@ export class UIManager {
             contentHTML += `</div></div>`;
         }
         
+        // BUILD COOLDOWN REDUCTION UPGRADE SECTION - Only shown once unlocked (Lab Level 3+).
+        // Replaces the old flat, unimplemented "20% cooldown reduction" text with a real
+        // 5-level upgrade path (gold + diamonds) ramping up to 50% cooldown reduction at max.
+        if (superWeaponLab.labLevel >= 3) {
+            const cdOption = superWeaponLab.getCooldownReductionOption();
+            const cdIsMaxed = cdOption.isMaxed;
+            const cdCanAfford = !cdIsMaxed && this.gameState.gold >= cdOption.goldCost && (menuData.academy && (menuData.academy.gems.diamond || 0) >= cdOption.diamondCost);
+
+            let cdTooltip = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${cdOption.name}</div>`;
+            cdTooltip += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.4rem;">${cdOption.description}</div>`;
+            cdTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
+            cdTooltip += `<div>Current Reduction: <span style="color: #FFD700;">${Math.round(cdOption.currentReduction * 100)}%</span></div>`;
+            cdTooltip += `<div>Level: <span style="color: #FFD700;">${cdOption.level}/${cdOption.maxLevel}</span></div>`;
+
+            if (!cdIsMaxed) {
+                cdTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
+                cdTooltip += `<div style="font-weight: bold;">Next Level:</div>`;
+                cdTooltip += `<div>Reduction: ${Math.round(cdOption.currentReduction * 100)}% &rarr; ${Math.round(cdOption.nextReduction * 100)}%</div>`;
+                cdTooltip += `</div>`;
+                cdTooltip += `<div style="margin-top: 0.3rem; color: #aaffaa; font-weight: bold;">Cost for Level ${cdOption.level + 1}:</div>`;
+                cdTooltip += `<div><span class="coin-xs"></span> ${cdOption.goldCost} gold</div>`;
+                cdTooltip += `<div>◆ ${cdOption.diamondCost} diamond${cdOption.diamondCost > 1 ? 's' : ''}</div>`;
+            } else {
+                cdTooltip += `<div style="margin-top: 0.3rem; color: #FFD700; font-weight: bold;">MAX LEVEL — 50% cooldown reduction active on all spells</div>`;
+            }
+            cdTooltip += `</div>`;
+
+            const cdProgress = (cdOption.level / cdOption.maxLevel) * 100;
+
+            contentHTML += `<div class="upgrade-category compact-upgrades">
+                <div class="upgrade-category-header">COOLDOWN REDUCTION</div>
+                <div class="compact-upgrade-item ${cdIsMaxed ? 'maxed' : ''}" data-tooltip="${cdTooltip.replace(/"/g, '&quot;')}">
+                    <div class="compact-upgrade-left">
+                        <span class="compact-upgrade-icon">⏱</span>
+                        <div class="compact-upgrade-info">
+                            <div class="compact-upgrade-name">Spell Cooldowns</div>
+                            <div style="height: 10px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden; border: 1px solid #666; position: relative; margin: 0.3rem 0;">
+                                <div style="height: 100%; width: ${cdProgress}%; background: linear-gradient(90deg, #60D5FA, #3B82F6); transition: width 0.3s ease;"></div>
+                            </div>
+                            <div style="font-size: 0.65rem; color: #aaa;">${cdOption.level}/${cdOption.maxLevel} &middot; -${Math.round(cdOption.currentReduction * 100)}% cooldown</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.2rem;">
+                        ${cdIsMaxed ? '<span style="font-size: 0.7rem; color: #FFD700;">MAX</span>' : `<span style="font-size: 0.7rem; ${cdCanAfford ? 'color:#aaffaa;' : 'color:#ff9999;'}"><span class="coin-xs"></span> ${cdOption.goldCost} + ◆${cdOption.diamondCost}</span>`}
+                    </div>
+                    <button class="compact-upgrade-btn panel-upgrade-btn"
+                            data-cooldown-reduction="true"
+                            ${cdIsMaxed || !cdCanAfford ? 'disabled' : ''}>
+                        ${cdIsMaxed ? 'MAX' : 'Upgrade'}
+                    </button>
+                </div>
+            </div>`;
+        }
+
         // BUILD COMBINATION TOWER UPGRADES SECTION - Only show at level 2+
         if (superWeaponLab.labLevel >= 2) {
             const combinationUpgrades = superWeaponLab.getCombinationUpgradeOptions(menuData.academy);
@@ -3804,9 +3884,18 @@ export class UIManager {
                     this.updateUI();
                     this.showSuperWeaponMenu(menuData);
                 }
+            } else if (btn.dataset.cooldownReduction === 'true') {
+                // Cooldown Reduction upgrade - gold + diamonds, 5 levels, up to 50% reduction
+                if (menuData.building.purchaseCooldownReductionUpgrade(this.gameState)) {
+                    if (this.stateManager.audioManager) {
+                        this.stateManager.audioManager.playSFX('upgrade');
+                    }
+                    this.updateUI();
+                    this.showSuperWeaponMenu(menuData);
+                }
             }
         };
-        
+
         // Remove any previous handler and add fresh one (using stored reference)
         if (panel._upgradeClickHandler) {
             panel.removeEventListener('click', panel._upgradeClickHandler);
@@ -3814,10 +3903,12 @@ export class UIManager {
         panel._upgradeClickHandler = handleUpgradeClick;
         panel.addEventListener('click', panel._upgradeClickHandler);
         
-        // Lab level upgrade button hover
+        // Lab level upgrade button hover - only when not maxed, since a maxed button has no
+        // further upgrade info to show (the panel used to show a hollow "already at max" tooltip).
         const labLevelBtn = panel.querySelector('.forge-level-upgrade-btn');
         const labUpgrade = menuData.building.getLabUpgradeOption();
-        if (labLevelBtn && labUpgrade) {
+        const labIsMaxed = menuData.building.labLevel >= menuData.building.maxLabLevel;
+        if (labLevelBtn && labUpgrade && !labIsMaxed) {
             labLevelBtn.addEventListener('mouseenter', () => {
                 // Clear existing tooltips
                 const existingTooltips = document.querySelectorAll('[data-superweapon-tooltip]');
@@ -4396,9 +4487,11 @@ export class UIManager {
             });
         });
         
-        // Training level upgrade button hover
+        // Training level upgrade button hover - only when not maxed (see SuperWeaponLab's
+        // matching fix - a maxed button has no further upgrade info to show).
         const trainingLevelBtn = panel.querySelector('.forge-level-upgrade-btn');
-        if (trainingLevelBtn && trainingData.trainingUpgrade) {
+        const trainingIsMaxed = trainingData.trainingGrounds && trainingData.trainingGrounds.trainingLevel >= trainingData.trainingGrounds.maxTrainingLevel;
+        if (trainingLevelBtn && trainingData.trainingUpgrade && !trainingIsMaxed) {
             trainingLevelBtn.addEventListener('mouseenter', () => {
                 // Clear existing tooltips
                 const existingTooltips = document.querySelectorAll('[data-forge-tooltip]');
