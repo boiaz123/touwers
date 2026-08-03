@@ -561,28 +561,35 @@ export class TowerManager {
                     meteor: { chainRange: 0, piercingBonus: 0 }
                 };
                 
-                // Apply bonuses based on combination spell upgrade levels
+                // Apply bonuses based on combination spell upgrade levels. Each spell has 7
+                // levels (gated behind Magic Academy elemental mastery 8/10/12/14/16/18/20 -
+                // see SuperWeaponLab.getCombinationUpgradeOptions), so these are deliberately
+                // large, late-game payoffs rather than the old 5-level scheme's small ticks:
+                // slowBonus is tuned to exactly floor out enemy speed (BASE_SLOW_EFFECT 0.7 -
+                // slowBonus, floored at 0.3 in CombinationTower.shoot()) right at level 7.
+                const COMBO_MAX_LEVEL = 7;
+                const COMBO_SLOW_PER_LEVEL = 0.4 / COMBO_MAX_LEVEL;
                 for (let i = 0; i < combinationSpells.length; i++) {
                     const spell = combinationSpells[i];
                     if (spell.upgradeLevel > 0) {
-                        const upgradeBonus = spell.upgradeLevel; // Each upgrade level = +1 bonus
-                        
+                        const upgradeBonus = spell.upgradeLevel;
+
                         switch(spell.id) {
                             case 'steam':
-                                comboSpellBonuses.steam.damageBonus += upgradeBonus * 5;
-                                comboSpellBonuses.steam.slowBonus += upgradeBonus * 0.05;
+                                comboSpellBonuses.steam.damageBonus += upgradeBonus * 10;
+                                comboSpellBonuses.steam.slowBonus += upgradeBonus * COMBO_SLOW_PER_LEVEL;
                                 break;
                             case 'magma':
-                                comboSpellBonuses.magma.damageBonus += upgradeBonus * 5;
-                                comboSpellBonuses.magma.piercingBonus += upgradeBonus * 1;
+                                comboSpellBonuses.magma.damageBonus += upgradeBonus * 12;
+                                comboSpellBonuses.magma.piercingBonus += upgradeBonus * 3;
                                 break;
                             case 'tempest':
-                                comboSpellBonuses.tempest.chainRange += upgradeBonus * 15;
-                                comboSpellBonuses.tempest.slowBonus += upgradeBonus * 0.05;
+                                comboSpellBonuses.tempest.chainRange += upgradeBonus * 20;
+                                comboSpellBonuses.tempest.slowBonus += upgradeBonus * COMBO_SLOW_PER_LEVEL;
                                 break;
                             case 'meteor':
-                                comboSpellBonuses.meteor.chainRange += upgradeBonus * 15;
-                                comboSpellBonuses.meteor.piercingBonus += upgradeBonus * 1;
+                                comboSpellBonuses.meteor.chainRange += upgradeBonus * 20;
+                                comboSpellBonuses.meteor.piercingBonus += upgradeBonus * 3;
                                 break;
                         }
                     }

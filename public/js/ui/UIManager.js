@@ -1962,6 +1962,26 @@ export class UIManager {
         return `<div class="gem ${gemClass}" style="width:${size};height:${size};display:inline-block;flex-shrink:0;vertical-align:middle;margin:0 2px;"></div>`;
     }
 
+    /**
+     * Per-level combination-tower bonus text for the Super Weapon Lab's combo spell tooltips -
+     * mirrors the per-level bonus values applied in TowerManager.applyAcademyUpgrades so the
+     * tooltip always matches what a purchase actually does.
+     */
+    getComboSpellEffectPreview(spellId) {
+        switch (spellId) {
+            case 'steam':
+                return `<div>Fire Damage: +10</div><div>Slow Strength: +5.7% (maxes out at Lv 7)</div>`;
+            case 'magma':
+                return `<div>Fire Damage: +12</div><div>Armor Piercing: +3</div>`;
+            case 'tempest':
+                return `<div>Chain Range: +20px</div><div>Slow Strength: +5.7% (maxes out at Lv 7)</div>`;
+            case 'meteor':
+                return `<div>Chain Range: +20px</div><div>Armor Piercing: +3</div>`;
+            default:
+                return '';
+        }
+    }
+
     setupForgePanelListeners(forgeData, unlockSystem) {
         const panel = document.getElementById('forge-panel');
         if (!panel) return;
@@ -3390,10 +3410,11 @@ export class UIManager {
                 <div class="spell-section-header">SPELL UPGRADES</div>
                 <div class="spell-bars-container">`;
             
+            const spellPowerUnlocked = superWeaponLab.labLevel >= 5;
             unlockedMainSpells.forEach(spell => {
                 const isMaxed = spell.upgradeLevel >= spell.maxUpgradeLevel;
-                const canUpgrade = superWeaponLab.labLevel >= 4 && spell.upgradeLevel < spell.maxUpgradeLevel && (menuData.academy && (menuData.academy.gems.diamond || 0) >= 1);
-                
+                const canUpgrade = spellPowerUnlocked && spell.upgradeLevel < spell.maxUpgradeLevel && (menuData.academy && (menuData.academy.gems.diamond || 0) >= 1);
+
                 // Build tooltip for spelling hover info
                 let tooltipText = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${spell.name}</div>`;
                 tooltipText += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.4rem;">${spell.description || ''}</div>`;
@@ -3433,15 +3454,22 @@ export class UIManager {
                         tooltipText += `<div style="color: #ffff88;">Bypasses frogs (use vs normal enemies)</div>`;
                     }
                     tooltipText += `</div>`;
+
+                    if (!spellPowerUnlocked) {
+                        tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #ff9999;">`;
+                        tooltipText += `<div style="font-weight: bold;">🔒 Locked</div>`;
+                        tooltipText += `<div>Upgrade the Lab to Level 5 to unlock Spell Power</div>`;
+                        tooltipText += `</div>`;
+                    }
                 }
-                
+
                 tooltipText += `</div>`;
-                
+
                 const progressPercent = (spell.upgradeLevel / spell.maxUpgradeLevel) * 100;
-                
+
                 // Create compact spell bar item with progress on the bar itself
                 contentHTML += `
-                    <div class="compact-spell-bar ${isMaxed ? 'maxed' : ''}" data-spell-id="${spell.id}">
+                    <div class="compact-spell-bar ${isMaxed ? 'maxed' : ''} ${!spellPowerUnlocked && !isMaxed ? 'locked' : ''}" data-spell-id="${spell.id}">
                         <div class="compact-spell-info">
                             <span class="compact-spell-icon">${spell.icon}</span>
                             <span class="compact-spell-name">${spell.name}</span>
@@ -3453,11 +3481,11 @@ export class UIManager {
                                 </div>
                             </div>
                         </div>
-                        ${spell.upgradeLevel < spell.maxUpgradeLevel ? `<button class="compact-spell-upgrade-btn panel-upgrade-btn spell-icon-hover" 
-                                data-main-spell="${spell.id}" 
+                        ${spell.upgradeLevel < spell.maxUpgradeLevel ? `<button class="compact-spell-upgrade-btn panel-upgrade-btn spell-icon-hover"
+                                data-main-spell="${spell.id}"
                                 data-tooltip="${tooltipText.replace(/"/g, '&quot;')}"
                                 ${isMaxed || !canUpgrade ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : '+'}
+                            ${isMaxed ? 'MAX' : (!spellPowerUnlocked ? '🔒' : '+')}
                         </button>` : `<button class="compact-spell-upgrade-btn panel-upgrade-btn" disabled>MAX</button>`}
                     </div>
                 `;
@@ -3474,24 +3502,42 @@ export class UIManager {
             
             combinationUpgrades.forEach(upgrade => {
                 const isMaxed = upgrade.upgradeLevel >= upgrade.maxUpgradeLevel;
+                const isLocked = !isMaxed && !upgrade.elementLevelMet;
                 const canAfford = upgrade.canAfford;
-                
-                // Build tooltip for combination spell hover info
+                const elementNames = (upgrade.elements || []).map(el => el.charAt(0).toUpperCase() + el.slice(1)).join(' & ');
+
+                // Build tooltip for combination spell hover info - same structure/CSS as Tower
+                // Forge's compact-upgrade-item tooltip (see setupForgePanelListeners) so both
+                // panels read as one consistent hover-info system rather than two bespoke ones.
                 let comboTooltip = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${upgrade.name}</div>`;
                 comboTooltip += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.3rem;">${upgrade.description || ''}</div>`;
                 comboTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
                 comboTooltip += `<div>Current Level: <span style="color: #FFD700;">${upgrade.upgradeLevel}/${upgrade.maxUpgradeLevel}</span></div>`;
+
                 if (!isMaxed) {
+                    comboTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
+                    comboTooltip += `<div style="font-weight: bold;">Next Level Effect:</div>`;
+                    comboTooltip += this.getComboSpellEffectPreview(upgrade.id);
+                    comboTooltip += `</div>`;
+
                     comboTooltip += `<div style="margin-top: 0.3rem; color: #aaffaa; font-weight: bold;">Cost for Level ${upgrade.upgradeLevel + 1}:</div>`;
                     for (const [gemType, cost] of Object.entries(upgrade.gemsRequired)) {
                         comboTooltip += `<div>${this.getElementGemHTML(gemType, '12px')} ${gemType.charAt(0).toUpperCase() + gemType.slice(1)}: ${cost}</div>`;
                     }
-                    comboTooltip += `<div style="color: #aaffaa; margin-top: 0.3rem;">Next upgrade adds more power</div>`;
+
+                    if (isLocked) {
+                        comboTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #ff9999;">`;
+                        comboTooltip += `<div style="font-weight: bold;">🔒 Locked</div>`;
+                        comboTooltip += `<div>Requires ${elementNames} Mastery Level ${upgrade.requiredElementLevel}+ in the Magic Academy</div>`;
+                        comboTooltip += `</div>`;
+                    }
+                } else {
+                    comboTooltip += `<div style="margin-top: 0.3rem; color: #FFD700; font-weight: bold;">MAX LEVEL</div>`;
                 }
                 comboTooltip += `</div>`;
-                
+
                 const progressPercent = (upgrade.upgradeLevel / upgrade.maxUpgradeLevel) * 100;
-                
+
                 // Build gem cost display
                 let gemCostDisplay = '';
                 for (const [gemType, cost] of Object.entries(upgrade.gemsRequired)) {
@@ -3499,27 +3545,26 @@ export class UIManager {
                     const style = hasGem ? 'color: #aaffaa;' : 'color: #ff9999;';
                     gemCostDisplay += `<div style="font-size: 0.7rem; ${style};">${this.getElementGemHTML(gemType, '12px')} ${cost}</div>`;
                 }
-                
+
                 contentHTML += `
-                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''}" data-upgrade-id="${upgrade.id}">
+                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''} ${isLocked ? 'locked' : ''}" data-upgrade-id="${upgrade.id}" data-tooltip="${comboTooltip.replace(/"/g, '&quot;')}">
                         <div class="compact-upgrade-left">
-                            <span class="compact-upgrade-icon" style="cursor: help;" data-combo-tooltip="${comboTooltip.replace(/"/g, '&quot;')}">${upgrade.icon}</span>
+                            <span class="compact-upgrade-icon">${upgrade.icon}</span>
                             <div class="compact-upgrade-info">
                                 <div class="compact-upgrade-name">${upgrade.name}</div>
                                 <div style="height: 10px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden; border: 1px solid #666; position: relative; margin: 0.3rem 0;">
                                     <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FF6BA6, #FF1493); transition: width 0.3s ease;"></div>
                                 </div>
-                                <div style="font-size: 0.65rem; color: #aaa;">${upgrade.upgradeLevel}/${upgrade.maxUpgradeLevel}</div>
+                                <div style="font-size: 0.65rem; color: #aaa;">${upgrade.upgradeLevel}/${upgrade.maxUpgradeLevel}${isLocked ? ` &middot; <span style="color:#ff9999;">🔒 needs Lv ${upgrade.requiredElementLevel}</span>` : ''}</div>
                             </div>
                         </div>
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 0.2rem;">
-                            ${!isMaxed ? gemCostDisplay : '<span style="font-size: 0.7rem; color: #FFD700;">MAX</span>'}
+                            ${isMaxed ? '<span style="font-size: 0.7rem; color: #FFD700;">MAX</span>' : (isLocked ? `<span style="font-size: 0.65rem; color: #ff9999;">🔒 Lv ${upgrade.requiredElementLevel}</span>` : gemCostDisplay)}
                         </div>
-                        <button class="compact-upgrade-btn panel-upgrade-btn combo-upgrade-btn" 
-                                data-combo-spell="${upgrade.id}" 
-                                data-combo-tooltip="${comboTooltip.replace(/"/g, '&quot;')}"
-                                ${isMaxed || !canAfford ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : 'Upgrade'}
+                        <button class="compact-upgrade-btn panel-upgrade-btn combo-upgrade-btn"
+                                data-combo-spell="${upgrade.id}"
+                                ${isMaxed || isLocked || !canAfford ? 'disabled' : ''}>
+                            ${isMaxed ? 'MAX' : (isLocked ? '🔒' : 'Upgrade')}
                         </button>
                     </div>
                 `;
@@ -3607,21 +3652,23 @@ export class UIManager {
         
         setupSpellTooltips();
         
-        // Setup combination spell hover tooltips (for both icons and buttons)
+        // Combination spell hover tooltips - hovering the whole card triggers it, same
+        // data-tooltip attribute and listener shape as Tower Forge's compact-upgrade-item
+        // (see setupForgePanelListeners) so both panels share one consistent hover-info system.
         const setupComboTooltips = () => {
-            const comboElements = upgradesContainer.querySelectorAll('[data-combo-tooltip]');
-            
+            const comboElements = upgradesContainer.querySelectorAll('.compact-upgrade-item[data-tooltip]');
+
             comboElements.forEach(element => {
                 let tooltipTimeout;
-                
+
                 element.addEventListener('mouseenter', (e) => {
                     clearTimeout(tooltipTimeout);
-                    
+
                     // Remove existing tooltips first
                     const existingTooltips = document.querySelectorAll('[data-panel-tooltip]');
                     existingTooltips.forEach(tooltip => tooltip.remove());
-                    
-                    const tooltipHTML = element.dataset.comboTooltip;
+
+                    const tooltipHTML = element.dataset.tooltip;
                     if (!tooltipHTML) return;
                     
                     // Create tooltip element
@@ -3723,55 +3770,39 @@ export class UIManager {
                     this.showSuperWeaponMenu(menuData);
                 }
             } else if (btn.dataset.comboSpell) {
-                // Combination spell upgrade - uses elemental gems
+                // Combination spell upgrade - uses elemental gems, gated by Magic Academy
+                // elemental mastery level (see SuperWeaponLab.getCombinationUpgradeOptions,
+                // the single source of truth for cost/eligibility so this can't drift from
+                // what the panel displayed).
                 const spellId = btn.dataset.comboSpell;
-                
-                // Find the academy reference (could be from menuData or from the building itself)
+
                 let academy = menuData.academy;
                 if (!academy && menuData.building.academy) {
                     academy = menuData.building.academy;
                 }
-                
+
                 const spell = menuData.building.combinationSpells.find(s => s.id === spellId);
-                
-                if (spell && spell.upgradeLevel < spell.maxUpgradeLevel && academy) {
-                    // Get the gem requirements for the next upgrade
-                    const nextLevel = spell.upgradeLevel + 1;
-                    const gemsRequired = {};
-                    for (const [gemType, baseCost] of Object.entries(spell.gems)) {
-                        gemsRequired[gemType] = baseCost * nextLevel;
+                const option = menuData.building.getCombinationUpgradeOptions(academy).find(o => o.id === spellId);
+
+                if (spell && option && option.canAfford && academy) {
+                    for (const [gemType, cost] of Object.entries(option.gemsRequired)) {
+                        academy.gems[gemType] -= cost;
                     }
-                    
-                    // Check if player has enough gems
-                    let canAfford = true;
-                    for (const [gemType, cost] of Object.entries(gemsRequired)) {
-                        if ((academy.gems[gemType] || 0) < cost) {
-                            canAfford = false;
-                            break;
+
+                    spell.upgradeLevel++;
+
+                    // Refresh all combination towers to apply the new upgrades
+                    this.towerManager.towers.forEach(tower => {
+                        if (tower.constructor.name === 'CombinationTower') {
+                            this.towerManager.applyTowerBonuses(tower);
                         }
+                    });
+
+                    if (this.stateManager.audioManager) {
+                        this.stateManager.audioManager.playSFX('upgrade');
                     }
-                    
-                    if (canAfford) {
-                        // Deduct gems
-                        for (const [gemType, cost] of Object.entries(gemsRequired)) {
-                            academy.gems[gemType] -= cost;
-                        }
-                        
-                        spell.upgradeLevel++;
-                        
-                        // Refresh all combination towers to apply the new upgrades
-                        this.towerManager.towers.forEach(tower => {
-                            if (tower.constructor.name === 'CombinationTower') {
-                                this.towerManager.applyTowerBonuses(tower);
-                            }
-                        });
-                        
-                        if (this.stateManager.audioManager) {
-                            this.stateManager.audioManager.playSFX('upgrade');
-                        }
-                        this.updateUI();
-                        this.showSuperWeaponMenu(menuData);
-                    }
+                    this.updateUI();
+                    this.showSuperWeaponMenu(menuData);
                 }
             }
         };

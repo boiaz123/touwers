@@ -1510,17 +1510,18 @@ export class MagicAcademy extends Building {
 
     // Cost (in that element's own gems) to raise one elemental mastery track by one level.
     // Locked entirely until Academy Level 2 (returns null, same "locked" convention Tower
-    // Forge uses for its own tower upgrades - see TowerForge.calculateUpgradeCost). The first
-    // 5 levels keep the original cost curve; levels beyond that continue on a gentler, more
-    // gradual ramp so a 20-level track doesn't explode into an unreasonable gem cost.
+    // Forge uses for its own tower upgrades - see TowerForge.calculateUpgradeCost). Costs
+    // ramp up linearly from FIRST_UPGRADE_COST at level 0 to LAST_UPGRADE_COST at the final
+    // upgrade (maxLevel - 1), so the level 20 upgrade costs exactly 50 gems.
     calculateElementalCost(element) {
         const upgrade = this.elementalUpgrades[element];
         if (upgrade.level >= upgrade.maxLevel) return null;
         if (this.academyLevel < 2) return null;
 
-        const costs = [1, 3, 7, 15, 30];
-        if (upgrade.level < costs.length) return costs[upgrade.level];
-        return 30 + (upgrade.level - (costs.length - 1)) * 10;
+        const FIRST_UPGRADE_COST = 1;
+        const LAST_UPGRADE_COST = 50;
+        const t = upgrade.level / (upgrade.maxLevel - 1);
+        return Math.round(FIRST_UPGRADE_COST + (LAST_UPGRADE_COST - FIRST_UPGRADE_COST) * t);
     }
     
     purchaseElementalUpgrade(element, gameState) {

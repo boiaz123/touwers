@@ -10,7 +10,11 @@ export class SuperWeaponLab extends Building {
         
         // Building upgrade system - starts at level 1 on build
         this.labLevel = 1;
-        this.maxLabLevel = 4;
+        // Level 5 doesn't unlock a new spell (all 4 are unlocked by level 4) - it unlocks the
+        // ability to spend diamonds on Spell Power upgrades instead (see upgradeMainSpell),
+        // giving the last spell (Chain Lightning) a moment to stand on its own before power
+        // upgrades open up, rather than bundling both into the same level-4 purchase.
+        this.maxLabLevel = 5;
         
         // Spell system with individual upgrade levels (0-100 using diamonds)
         this.spells = {
@@ -20,7 +24,7 @@ export class SuperWeaponLab extends Building {
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><polygon points="10,1 11.3,6.8 16.4,3.6 13.2,8.7 19,10 13.2,11.3 16.4,16.4 11.3,13.2 10,19 8.7,13.2 3.6,16.4 6.8,11.3 1,10 6.8,8.7 3.6,3.6 8.7,6.8" fill="#A855F7"/><circle cx="10" cy="10" r="2.5" fill="white" opacity="0.9"/></svg>',
                 description: 'Deals massive arcane damage to all enemies in radius (classless magic, not elemental)',
                 baseLevel: 1,  // Unlocked at lab level 1
-                upgradeLevel: 0,  // 0-50 using diamonds (at lab level 4+)
+                upgradeLevel: 0,  // 0-50 using diamonds (at lab level 5+)
                 maxUpgradeLevel: 50,
                 damage: 150,
                 radius: 120,
@@ -74,42 +78,46 @@ export class SuperWeaponLab extends Building {
             }
         };
         
-        // Combination spells system - max 5 upgrade levels per spell, uses elemental gems
+        // Combination spells system - 7 upgrade levels per spell, paid for with elemental gems.
+        // Each level is additionally gated behind the Magic Academy's own elemental mastery
+        // (see getCombinationUpgradeOptions's requiredElementLevel: level 8/10/12/14/16/18/20
+        // for both parent elements) - combination tower power is deliberately an extension of
+        // how far the academy's elemental grind has gone, not a separate track.
         this.combinationSpells = [
             {
                 id: 'steam',
                 name: 'Steam',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M7 19 Q5 15.5 7 12.5 Q9 9.5 7 6.5 Q5 3.5 7 1" stroke="#60A5FA"/><path d="M13 19 Q11 15.5 13 12.5 Q15 9.5 13 6.5 Q11 3.5 13 1" stroke="#F97316"/></svg>',
-                description: 'Fire + Water: Burn + Slow',
-                upgradeLevel: 0,  // 0-5 upgrades
-                maxUpgradeLevel: 5,
+                description: 'Fire + Water fusion: scalds enemies with burning steam that also slows them - damage and slow both deepen with every upgrade.',
+                upgradeLevel: 0,  // 0-7 upgrades
+                maxUpgradeLevel: 7,
                 gems: { fire: 1, water: 1 }  // Required gems for each upgrade level
             },
             {
                 id: 'magma',
                 name: 'Magma',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M10 1 Q15.5 6 15.5 11.5 Q15.5 17.5 10 19 Q4.5 17.5 4.5 11.5 Q4.5 6 10 1Z" fill="#EF4444"/><path d="M10 5 Q13 8.5 13 12 Q13 15.5 10 17 Q7 15.5 7 12 Q7 8.5 10 5Z" fill="#FBBF24" opacity="0.7"/></svg>',
-                description: 'Fire + Earth: Burn + Piercing',
+                description: 'Fire + Earth fusion: molten armor-piercing damage that burns on impact - shreds heavily-armored enemies more with every upgrade.',
                 upgradeLevel: 0,
-                maxUpgradeLevel: 5,
+                maxUpgradeLevel: 7,
                 gems: { fire: 1, earth: 1 }
             },
             {
                 id: 'tempest',
                 name: 'Tempest',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#60D5FA" stroke-linecap="round" stroke-width="2"><path d="M10 10 Q13 5 17 8 Q20 12 16 15 Q12 18 8 16 Q4 14 4 10 Q4 6 8 3 Q13 0 18 4"/><circle cx="10" cy="10" r="1.5" fill="#7DD3FC" stroke="none"/></svg>',
-                description: 'Air + Water: Chain + Slow',
+                description: 'Air + Water fusion: chains lightning-fast between enemies while slowing them - chain range and slow both grow with every upgrade.',
                 upgradeLevel: 0,
-                maxUpgradeLevel: 5,
+                maxUpgradeLevel: 7,
                 gems: { air: 1, water: 1 }
             },
             {
                 id: 'meteor',
                 name: 'Meteor',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="3.5" fill="#F97316"/><circle cx="3" cy="5" r="1.5" fill="#78716C"/><circle cx="17" cy="5" r="1.5" fill="#78716C"/><circle cx="3" cy="15" r="1.5" fill="#78716C"/><circle cx="17" cy="15" r="1.5" fill="#78716C"/><line x1="6.5" y1="7" x2="7" y2="8" stroke="#78716C" stroke-width="1.2" stroke-linecap="round"/><line x1="13.5" y1="7" x2="13" y2="8" stroke="#78716C" stroke-width="1.2" stroke-linecap="round"/><line x1="6.5" y1="13" x2="7" y2="12" stroke="#78716C" stroke-width="1.2" stroke-linecap="round"/><line x1="13.5" y1="13" x2="13" y2="12" stroke="#78716C" stroke-width="1.2" stroke-linecap="round"/></svg>',
-                description: 'Air + Earth: Chain + Piercing',
+                description: 'Air + Earth fusion: piercing impact that chains outward to nearby enemies - chain range and piercing both grow with every upgrade.',
                 upgradeLevel: 0,
-                maxUpgradeLevel: 5,
+                maxUpgradeLevel: 7,
                 gems: { air: 1, earth: 1 }
             }
         ];
@@ -1008,8 +1016,12 @@ export class SuperWeaponLab extends Building {
                 nextUnlock = 'Unlocks: Meteor Strike + 20% cooldown reduction';
                 break;
             case 4:
-                description = 'Unlock Chain Lightning spell + Main Spell Diamond Upgrades (0-100).';
-                nextUnlock = 'Unlocks: Chain Lightning + Main Spell upgrades with diamonds';
+                description = 'Unlock Chain Lightning, the final Super Weapon spell.';
+                nextUnlock = 'Unlocks: Chain Lightning spell';
+                break;
+            case 5:
+                description = 'Master the lab to unlock Spell Power - spend diamonds to permanently empower Arcane Blast, Frozen Nova, Meteor Strike and Chain Lightning (0-50 levels each).';
+                nextUnlock = 'Unlocks: Spell Power upgrades (diamonds) for all 4 Super Weapon spells';
                 break;
             default:
                 description = `Lab is at maximum level.`;
@@ -1081,10 +1093,10 @@ export class SuperWeaponLab extends Building {
         return true;
     }
     
-    // Upgrade main spell using diamonds (only available at level 4+)
+    // Upgrade main spell using diamonds (only available at level 5+ - see maxLabLevel's comment)
     upgradeMainSpell(spellId, diamondCost) {
-        if (this.labLevel < 4) {
-            console.error('SuperWeaponLab: Main spell upgrades only available at level 4+');
+        if (this.labLevel < 5) {
+            console.error('SuperWeaponLab: Main spell upgrades only available at level 5+');
             return false;
         }
         
@@ -1260,40 +1272,59 @@ export class SuperWeaponLab extends Building {
     }
     
     /**
+     * The Magic Academy elemental mastery level each parent element must reach before the
+     * next combination-spell upgrade level can be bought - level 8/10/12/14/16/18/20 for
+     * upgrade steps 1-7, tying combination tower power to the academy's own elemental grind
+     * instead of a separate, disconnected currency sink.
+     */
+    static comboElementLevelRequirement(nextLevel) {
+        return 6 + nextLevel * 2;
+    }
+
+    /**
      * Get combination tower upgrade options when lab is level 2+
      * These allow empowering the combination tower with elemental effects
      */
     getCombinationUpgradeOptions(academy) {
         const options = [];
-        
+
         // Only show combination upgrades if lab is level 2+
         if (this.labLevel >= 2) {
-            // Return combination spell upgrade options (max 5 levels each)
+            const academyReference = academy || this.academy;
+
+            // Return combination spell upgrade options (max 7 levels each)
             this.combinationSpells.forEach(spell => {
-                // Calculate gem costs - increases with each upgrade level
-                const gemsRequired = {};
+                const isMaxed = spell.upgradeLevel >= spell.maxUpgradeLevel;
                 const nextLevel = spell.upgradeLevel + 1;
-                
-                // Gems required scale with upgrade level (1, 2, 3, 4, 5)
-                for (const [gemType, baseCost] of Object.entries(spell.gems)) {
-                    gemsRequired[gemType] = baseCost * nextLevel;
+                const elements = Object.keys(spell.gems);
+
+                // Gem costs scale with upgrade level, doubled up (x2) versus the old 5-level
+                // scheme so the cost keeps pace with the elemental-mastery gate below - by the
+                // time a step unlocks, the player is already deep into that element's own gem
+                // economy (see MagicAcademy.calculateElementalCost).
+                const gemsRequired = {};
+                if (!isMaxed) {
+                    for (const [gemType, baseCost] of Object.entries(spell.gems)) {
+                        gemsRequired[gemType] = baseCost * nextLevel * 2;
+                    }
                 }
-                
+
+                const requiredElementLevel = isMaxed ? null : SuperWeaponLab.comboElementLevelRequirement(nextLevel);
+                const elementLevelMet = isMaxed
+                    ? true
+                    : !!academyReference && elements.every(el => (academyReference.elementalUpgrades[el]?.level || 0) >= requiredElementLevel);
+
                 // Check if player can afford this upgrade
-                // Use this.academy as fallback if academy parameter is not provided
-                const academyReference = academy || this.academy;
-                let canAfford = spell.upgradeLevel < spell.maxUpgradeLevel;
-                if (canAfford && academyReference) {
+                let canAfford = !isMaxed && elementLevelMet;
+                if (canAfford) {
                     for (const [gemType, cost] of Object.entries(gemsRequired)) {
                         if ((academyReference.gems[gemType] || 0) < cost) {
                             canAfford = false;
                             break;
                         }
                     }
-                } else if (spell.upgradeLevel >= spell.maxUpgradeLevel) {
-                    canAfford = false;
                 }
-                
+
                 options.push({
                     id: spell.id,
                     name: spell.name,
@@ -1303,6 +1334,9 @@ export class SuperWeaponLab extends Building {
                     maxUpgradeLevel: spell.maxUpgradeLevel,
                     gemsRequired: gemsRequired,
                     canAfford: canAfford,
+                    elements: elements,
+                    requiredElementLevel: requiredElementLevel,
+                    elementLevelMet: elementLevelMet,
                     type: 'comboSpellUpgrade'
                 });
             });

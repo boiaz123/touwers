@@ -2625,13 +2625,14 @@ body.orientation-portrait .side-panel {
     transition: all 0.2s ease;
 }
 
-.compact-spell-bar:hover:not(.maxed) {
+.compact-spell-bar:hover:not(.maxed):not(.locked) {
     border-color: var(--primary-gold);
     background: linear-gradient(135deg, rgba(60, 55, 45, 0.95), rgba(50, 45, 35, 0.95));
     box-shadow: 0 2px 6px rgba(212, 175, 55, 0.15);
 }
 
-.compact-spell-bar.maxed {
+.compact-spell-bar.maxed,
+.compact-spell-bar.locked {
     opacity: 0.5;
     border-color: rgba(100, 100, 100, 0.3);
 }

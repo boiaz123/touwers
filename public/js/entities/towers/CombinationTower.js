@@ -243,8 +243,8 @@ export class CombinationTower extends Tower {
         this.lightningBolts.push(bolt);
     }
 
-    chainToNearbyEnemies(originalTarget, damage, damageType) {
-        const chainRange = 100;
+    chainToNearbyEnemies(originalTarget, damage, damageType, range = 100) {
+        const chainRange = range;
         if (!this.enemies) return;
 
         // OPTIMIZATION: use the spatial grid (injected by TowerManager every frame, same
@@ -331,15 +331,15 @@ export class CombinationTower extends Tower {
                         if (this.target.speed > 20) {
                             this.target.speed *= slowEffect;
                         }
-                        // Chain to nearby enemies
-                        this.chainToNearbyEnemies(this.target, finalDamage, 'air');
+                        // Chain to nearby enemies - upgraded Tempest widens the chain radius
+                        this.chainToNearbyEnemies(this.target, finalDamage, 'air', 100 + spell.chainRange);
                         break;
-                        
+
                     case 'meteor':
                         const meteorPiercingDamage = finalDamage + spell.piercingBonus;
                         this.target.takeDamage(meteorPiercingDamage, 100, 'earth'); // Earth damage with armor piercing
-                        // Chain to nearby enemies (splash damage)
-                        this.chainToNearbyEnemies(this.target, meteorPiercingDamage, 'earth');
+                        // Chain to nearby enemies (splash damage) - upgraded Meteor widens the blast radius
+                        this.chainToNearbyEnemies(this.target, meteorPiercingDamage, 'earth', 100 + spell.chainRange);
                         break;
                 }
                 
