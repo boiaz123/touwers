@@ -3,6 +3,41 @@ import { ObjectPool } from '../../core/ObjectPool.js';
 
 const BASE_SLOW_EFFECT = 0.7;
 
+// Hard ceiling on live per-instance particles/bolts - a safety net on top of the per-shot
+// counts below. Without it, a rapid-fire spell (tempest fires at 1.1/sec) whose particle
+// lifetimes outlast the gap between shots stacks batches faster than they expire, so the
+// array can grow unbounded under sustained fire. Lowered from an earlier 60/20 pass that
+// turned out to still be the dominant per-frame cost during sustained combat (confirmed by
+// profiling: frame time tracked particle count almost 1:1, and the post-combat "lingering
+// dip" the caps were meant to bound was itself just this count decaying back to 0 over the
+// particles' own lifetime) - short lifetimes (see each createXEffect below) keep the real
+// steady-state well under this ceiling during normal single-tower fire rates; this is only
+// the worst-case backstop for many towers/rapid fire at once.
+const MAX_MAGIC_PARTICLES = 20;
+const MAX_LIGHTNING_BOLTS = 8;
+
+// Spire silhouette as a profile of (height-fraction, width-fraction-of-towerSize) keyframes,
+// walked base(t=0)->tip(t=1) in renderDynamicParts to draw a tiered, stepped tower instead
+// of one continuous cone (the previous single 2-facet taper read as a smooth "party hat" at
+// a glance, with no structural breaks). Consecutive keyframes are always linearly tapered
+// between - a "cornice ledge" is simply a keyframe pair that widens then immediately steps
+// back in, exactly like a real capital/stringcourse ring, rather than a separate shape type.
+// tone:'brick' segments (the three tiers) and tone:'stone' segments (the cornice ledges)
+// are BOTH fixed masonry colors, independent of selectedSpell - only the crystal cluster,
+// window glow, and rune symbols ("the jewels") carry the active spell's color now, so the
+// structure itself always reads as the same brick-and-iron tower regardless of which spell
+// is loaded.
+const SPIRE_KEYFRAMES = [
+    { t: 0.00, w: 0.46 },
+    { t: 0.34, w: 0.33, tone: 'brick' },  // tier 1 taper
+    { t: 0.40, w: 0.40, tone: 'stone' },  // cornice 1 (flares out)
+    { t: 0.68, w: 0.19, tone: 'brick' },  // steps back in, tier 2 taper
+    { t: 0.73, w: 0.24, tone: 'stone' },  // cornice 2 (flares out)
+    { t: 1.00, w: 0.15, tone: 'brick' },  // steps back in, tier 3 taper to the tip
+];
+const SPIRE_STONE_FACETS = { light: '#8a8690', dark: '#332f38' };
+const SPIRE_BRICK_FACETS = { light: '#a8624f', dark: '#4a231c' };
+
 export class CombinationTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
@@ -188,6 +223,26 @@ export class CombinationTower extends Tower {
         }
     }
     
+    /** Capped push - see MAX_MAGIC_PARTICLES. Every createXEffect() below pushes through this
+     *  instead of `this.magicParticles.push()` directly, so a rapid-fire spell's batches can
+     *  never stack past the ceiling regardless of fire rate vs. particle lifetime. */
+    _pushParticle(particle) {
+        if (this.magicParticles.length >= MAX_MAGIC_PARTICLES) {
+            this._magicParticlePool.release(particle);
+            return;
+        }
+        this.magicParticles.push(particle);
+    }
+
+    /** Capped push - see MAX_LIGHTNING_BOLTS, same rationale as _pushParticle above. */
+    _pushBolt(bolt) {
+        if (this.lightningBolts.length >= MAX_LIGHTNING_BOLTS) {
+            this._lightningBoltPool.release(bolt);
+            return;
+        }
+        this.lightningBolts.push(bolt);
+    }
+
     chainToNearbyEnemies(originalTarget, damage, damageType) {
         const chainRange = 100;
         if (!this.enemies) return;
@@ -320,55 +375,56 @@ export class CombinationTower extends Tower {
     
     createBasicArcaneEffect() {
         if (!this.target) return;
-        
-        // Blue arcane bolt from tower to target
-        const segments = 4;
-        for (let i = 0; i < segments; i++) {
-            const progress = i / segments;
-            const delay = progress * 0.3;
-            
-            const bolt = this._lightningBoltPool.acquire();
-            bolt.startX = this.x;
-            bolt.startY = this.y;
-            bolt.endX = this.target.x;
-            bolt.endY = this.target.y;
-            bolt.life = 0.3 - delay;
-            bolt.maxLife = 0.3;
-            const seg = bolt.segments[0];
-            seg.fromX = this.x + (this.target.x - this.x) * progress;
-            seg.fromY = this.y + (this.target.y - this.y) * progress;
-            seg.toX = this.x + (this.target.x - this.x) * (progress + 0.25);
-            seg.toY = this.y + (this.target.y - this.y) * (progress + 0.25);
-            bolt.segmentCount = 1;
-            bolt.color = 'rgba(100, 150, 255, ';
-            bolt.size = 6;
-            bolt.isMagma = false;
-            bolt.isTempest = false;
-            bolt.isMeteor = false;
-            this.lightningBolts.push(bolt);
-        }
+
+        // Blue arcane bolt from tower to target. Counts and lifetimes across every effect
+        // below were cut hard in this pass - profiling showed frame cost tracked live
+        // particle/bolt count almost 1:1, and the "lingering fps dip after combat ends"
+        // some players hit was just that count decaying back to 0 over the particles' own
+        // (previously 1-2.5s) lifetime. Shorter lifetimes both lower the steady-state count
+        // during sustained fire AND make any post-combat dip resolve within well under a
+        // second instead of several. MagicTower's equivalent single-target effect (1 bolt +
+        // 6 particles) is still the reference point these aim to stay close to.
+        const bolt = this._lightningBoltPool.acquire();
+        bolt.startX = this.x;
+        bolt.startY = this.y;
+        bolt.endX = this.target.x;
+        bolt.endY = this.target.y;
+        bolt.life = 0.2;
+        bolt.maxLife = 0.2;
+        const seg = bolt.segments[0];
+        seg.fromX = this.x;
+        seg.fromY = this.y;
+        seg.toX = this.target.x;
+        seg.toY = this.target.y;
+        bolt.segmentCount = 1;
+        bolt.color = 'rgba(100, 150, 255, ';
+        bolt.size = 6;
+        bolt.isMagma = false;
+        bolt.isTempest = false;
+        bolt.isMeteor = false;
+        this._pushBolt(bolt);
 
         // Arcane burst at target
-        for (let i = 0; i < 12; i++) {
-            const angle = (i / 12) * Math.PI * 2;
+        for (let i = 0; i < 5; i++) {
+            const angle = (i / 5) * Math.PI * 2;
             const speed = 50 + Math.random() * 40;
             const particle = this._magicParticlePool.acquire();
             particle.x = this.target.x;
             particle.y = this.target.y;
             particle.vx = Math.cos(angle) * speed;
             particle.vy = Math.sin(angle) * speed - 20;
-            particle.life = 1;
-            particle.maxLife = 1;
+            particle.life = 0.5;
+            particle.maxLife = 0.5;
             particle.size = 0;
             particle.maxSize = 5 + Math.random() * 4;
             particle.color = 'rgba(100, 150, 255, ';
-            this.magicParticles.push(particle);
+            this._pushParticle(particle);
         }
     }
-    
+
     createSteamEffect() {
         // Swirling steam clouds from tower to target
-        const cloudCount = 8;
+        const cloudCount = 3;
         for (let i = 0; i < cloudCount; i++) {
             const progress = i / cloudCount;
             const x = this.x + (this.target.x - this.x) * progress;
@@ -380,37 +436,37 @@ export class CombinationTower extends Tower {
             particle.y = y;
             particle.vx = (Math.random() - 0.5) * 30;
             particle.vy = -Math.random() * 20;
-            particle.life = 1.5;
-            particle.maxLife = 1.5;
+            particle.life = 0.7;
+            particle.maxLife = 0.7;
             particle.size = 0;
             particle.maxSize = 12 + Math.random() * 8;
             particle.color = i % 2 === 0 ? 'rgba(100, 200, 255, ' : 'rgba(255, 100, 50, ';
-            this.magicParticles.push(particle);
+            this._pushParticle(particle);
         }
 
         // Impact steam burst
-        for (let i = 0; i < 15; i++) {
-            const angle = (i / 15) * Math.PI * 2;
+        for (let i = 0; i < 5; i++) {
+            const angle = (i / 5) * Math.PI * 2;
             const speed = 80 + Math.random() * 40;
             const particle = this._magicParticlePool.acquire();
             particle.x = this.target.x;
             particle.y = this.target.y;
             particle.vx = Math.cos(angle) * speed;
             particle.vy = Math.sin(angle) * speed - 30;
-            particle.life = 2;
-            particle.maxLife = 2;
+            particle.life = 0.8;
+            particle.maxLife = 0.8;
             particle.size = 0;
             particle.maxSize = 10 + Math.random() * 6;
             particle.color = 'rgba(200, 220, 255, ';
-            this.magicParticles.push(particle);
+            this._pushParticle(particle);
         }
     }
-    
+
     createMagmaEffect() {
         // Molten projectile
-        const projectileLife = 0.5;
-        const segments = 6;
-        
+        const projectileLife = 0.4;
+        const segments = 2;
+
         for (let i = 0; i < segments; i++) {
             const progress = i / segments;
             const delay = progress * projectileLife;
@@ -429,12 +485,12 @@ export class CombinationTower extends Tower {
             bolt.isTempest = false;
             bolt.isMeteor = false;
             bolt.size = 8;
-            this.lightningBolts.push(bolt);
+            this._pushBolt(bolt);
         }
 
         // Lava splatter on impact
-        for (let i = 0; i < 20; i++) {
-            const angle = (i / 20) * Math.PI * 2;
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
             const speed = 60 + Math.random() * 80;
             const size = 6 + Math.random() * 6;
 
@@ -443,17 +499,17 @@ export class CombinationTower extends Tower {
             particle.y = this.target.y;
             particle.vx = Math.cos(angle) * speed;
             particle.vy = Math.sin(angle) * speed - 40;
-            particle.life = 1.5;
-            particle.maxLife = 1.5;
+            particle.life = 0.7;
+            particle.maxLife = 0.7;
             particle.size = 0;
             particle.maxSize = size;
             particle.color = i % 3 === 0 ? 'rgba(255, 69, 0, ' : (i % 3 === 1 ? 'rgba(255, 140, 0, ' : 'rgba(139, 69, 19, ');
-            this.magicParticles.push(particle);
+            this._pushParticle(particle);
         }
 
         // Ground burn effect
-        for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
+        for (let i = 0; i < 3; i++) {
+            const angle = (i / 3) * Math.PI * 2;
             const distance = 15 + Math.random() * 10;
 
             const particle = this._magicParticlePool.acquire();
@@ -461,40 +517,36 @@ export class CombinationTower extends Tower {
             particle.y = this.target.y + Math.sin(angle) * distance;
             particle.vx = 0;
             particle.vy = -10;
-            particle.life = 2;
-            particle.maxLife = 2;
+            particle.life = 0.8;
+            particle.maxLife = 0.8;
             particle.size = 0;
             particle.maxSize = 8;
             particle.color = 'rgba(255, 50, 0, ';
-            this.magicParticles.push(particle);
+            this._pushParticle(particle);
         }
     }
-    
+
     createTempestEffect() {
-        // Lightning bolts with jagged path
-        const boltCount = 3;
-        for (let b = 0; b < boltCount; b++) {
-            const offset = (b - 1) * 15;
-            const bolt = this._lightningBoltPool.acquire();
-            bolt.startX = this.x;
-            bolt.startY = this.y;
-            bolt.endX = this.target.x + offset;
-            bolt.endY = this.target.y;
-            bolt.life = 0.4;
-            bolt.maxLife = 0.4;
-            this.generateLightningSegments(this.x, this.y, this.target.x + offset, this.target.y, bolt.segments);
-            bolt.segmentCount = 8; // full chain - reset in case this pooled slot was last a 1-segment arcane bolt
-            bolt.color = 'rgba(255, 255, 100, ';
-            bolt.isMagma = false;
-            bolt.isTempest = true;
-            bolt.isMeteor = false;
-            this.lightningBolts.push(bolt);
-        }
+        // Lightning bolt with jagged path
+        const bolt = this._lightningBoltPool.acquire();
+        bolt.startX = this.x;
+        bolt.startY = this.y;
+        bolt.endX = this.target.x;
+        bolt.endY = this.target.y;
+        bolt.life = 0.3;
+        bolt.maxLife = 0.3;
+        this.generateLightningSegments(this.x, this.y, this.target.x, this.target.y, bolt.segments);
+        bolt.segmentCount = 8; // full chain - reset in case this pooled slot was last a 1-segment arcane bolt
+        bolt.color = 'rgba(255, 255, 100, ';
+        bolt.isMagma = false;
+        bolt.isTempest = true;
+        bolt.isMeteor = false;
+        this._pushBolt(bolt);
 
         // Wind swirl particles
-        for (let i = 0; i < 25; i++) {
-            const angle = (i / 25) * Math.PI * 4; // Multiple spirals
-            const radius = (i / 25) * 80;
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 4; // Multiple spirals
+            const radius = (i / 6) * 80;
             const x = this.target.x + Math.cos(angle) * radius;
             const y = this.target.y + Math.sin(angle) * radius;
 
@@ -503,16 +555,16 @@ export class CombinationTower extends Tower {
             particle.y = y;
             particle.vx = Math.cos(angle + Math.PI / 2) * 120;
             particle.vy = Math.sin(angle + Math.PI / 2) * 120 - 20;
-            particle.life = 1;
-            particle.maxLife = 1;
+            particle.life = 0.5;
+            particle.maxLife = 0.5;
             particle.size = 0;
             particle.maxSize = 4;
             particle.color = 'rgba(200, 220, 255, ';
-            this.magicParticles.push(particle);
+            this._pushParticle(particle);
         }
 
         // Water droplets
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < 5; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = 50 + Math.random() * 60;
 
@@ -521,22 +573,22 @@ export class CombinationTower extends Tower {
             particle.y = this.target.y;
             particle.vx = Math.cos(angle) * speed;
             particle.vy = Math.sin(angle) * speed - 30;
-            particle.life = 1.5;
-            particle.maxLife = 1.5;
+            particle.life = 0.6;
+            particle.maxLife = 0.6;
             particle.size = 0;
             particle.maxSize = 6;
             particle.color = 'rgba(100, 150, 255, ';
-            this.magicParticles.push(particle);
+            this._pushParticle(particle);
         }
     }
-    
+
     createMeteorEffect() {
         // Falling meteor from above
         const meteorStartY = this.target.y - 200;
-        
+
         // Meteor trail
-        for (let i = 0; i < 10; i++) {
-            const progress = i / 10;
+        for (let i = 0; i < 3; i++) {
+            const progress = i / 3;
             const trailX = this.target.x + (Math.random() - 0.5) * 20;
             const trailY = meteorStartY + (this.target.y - meteorStartY) * progress;
 
@@ -545,12 +597,12 @@ export class CombinationTower extends Tower {
             particle.y = trailY;
             particle.vx = (Math.random() - 0.5) * 20;
             particle.vy = 100 + Math.random() * 50;
-            particle.life = 0.8;
-            particle.maxLife = 0.8;
+            particle.life = 0.5;
+            particle.maxLife = 0.5;
             particle.size = 0;
             particle.maxSize = 8 + Math.random() * 6;
             particle.color = i % 2 === 0 ? 'rgba(255, 140, 0, ' : 'rgba(139, 69, 19, ';
-            this.magicParticles.push(particle);
+            this._pushParticle(particle);
         }
 
         // Meteor body (large projectile)
@@ -559,8 +611,8 @@ export class CombinationTower extends Tower {
         meteorBolt.startY = meteorStartY;
         meteorBolt.endX = this.target.x;
         meteorBolt.endY = this.target.y;
-        meteorBolt.life = 0.5;
-        meteorBolt.maxLife = 0.5;
+        meteorBolt.life = 0.4;
+        meteorBolt.maxLife = 0.4;
         // No segments needed - the render loop's isMeteor branch draws a falling-rock sprite
         // interpolated from startX/Y+endX/Y+life progress only, never reads bolt.segments.
         meteorBolt.color = 'rgba(200, 100, 50, ';
@@ -568,33 +620,30 @@ export class CombinationTower extends Tower {
         meteorBolt.isTempest = false;
         meteorBolt.isMeteor = true;
         meteorBolt.size = 15;
-        this.lightningBolts.push(meteorBolt);
+        this._pushBolt(meteorBolt);
 
-        // Impact crater effect
-        for (let ring = 0; ring < 3; ring++) {
-            const particleCount = 12 + ring * 6;
-            const ringRadius = 30 + ring * 20;
+        // Impact crater effect - a single ring (was 3 rings of 12/18/24 = 54 particles,
+        // then 2 rings of 8/12 = 20; now one ring of 8)
+        const particleCount = 8;
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (i / particleCount) * Math.PI * 2;
+            const speed = 70;
 
-            for (let i = 0; i < particleCount; i++) {
-                const angle = (i / particleCount) * Math.PI * 2;
-                const speed = 60 + ring * 30;
-
-                const particle = this._magicParticlePool.acquire();
-                particle.x = this.target.x;
-                particle.y = this.target.y;
-                particle.vx = Math.cos(angle) * speed;
-                particle.vy = Math.sin(angle) * speed - 20;
-                particle.life = 1.5 + ring * 0.3;
-                particle.maxLife = 1.5 + ring * 0.3;
-                particle.size = 0;
-                particle.maxSize = 8 - ring * 2;
-                particle.color = ring % 2 === 0 ? 'rgba(139, 90, 43, ' : 'rgba(160, 82, 45, ';
-                this.magicParticles.push(particle);
-            }
+            const particle = this._magicParticlePool.acquire();
+            particle.x = this.target.x;
+            particle.y = this.target.y;
+            particle.vx = Math.cos(angle) * speed;
+            particle.vy = Math.sin(angle) * speed - 20;
+            particle.life = 0.8;
+            particle.maxLife = 0.8;
+            particle.size = 0;
+            particle.maxSize = 7;
+            particle.color = i % 2 === 0 ? 'rgba(139, 90, 43, ' : 'rgba(160, 82, 45, ';
+            this._pushParticle(particle);
         }
 
         // Dust cloud
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 4; i++) {
             const angle = Math.random() * Math.PI * 2;
             const distance = 20 + Math.random() * 30;
 
@@ -603,15 +652,15 @@ export class CombinationTower extends Tower {
             particle.y = this.target.y + Math.sin(angle) * distance;
             particle.vx = Math.cos(angle) * 30;
             particle.vy = -40 - Math.random() * 20;
-            particle.life = 2;
-            particle.maxLife = 2;
+            particle.life = 0.8;
+            particle.maxLife = 0.8;
             particle.size = 0;
             particle.maxSize = 12;
             particle.color = 'rgba(139, 115, 85, ';
-            this.magicParticles.push(particle);
+            this._pushParticle(particle);
         }
     }
-    
+
     setSpell(spellId) {
         if (this.availableSpells.some(s => s.id === spellId)) {
             this.selectedSpell = spellId;
@@ -680,33 +729,78 @@ export class CombinationTower extends Tower {
         ctx.stroke();
     }
 
+    /** Deeper, jewel-toned variants of each spell's color - the old flat pastel tones
+     *  (near-pure cyan/orange/yellow) read as gaudy/plasticky against the tower's stone
+     *  and iron; these sit closer to real gemstones (sapphire, garnet, topaz, bronze) so
+     *  the crystal/runes/windows look like enchanted mineral rather than a neon sign. */
     getCombinationColor() {
         switch(this.selectedSpell) {
-            case 'steam': return 'rgba(100, 200, 255, ';
-            case 'magma': return 'rgba(255, 100, 50, ';
-            case 'tempest': return 'rgba(255, 255, 100, ';
-            case 'meteor': return 'rgba(200, 100, 50, ';
-            default: return 'rgba(138, 43, 226, ';
+            case 'steam': return 'rgba(58, 168, 196, ';
+            case 'magma': return 'rgba(214, 84, 24, ';
+            case 'tempest': return 'rgba(216, 172, 44, ';
+            case 'meteor': return 'rgba(163, 72, 30, ';
+            default: return 'rgba(102, 44, 160, ';
         }
     }
 
-    /** Splits a getCombinationColor() 'rgba(r, g, b, ' prefix into a lightened and a darkened
-     *  flat variant for the spire's two-facet fill in renderDynamicParts - cached by color
-     *  string since the color only changes on setSpell(), not every frame. */
-    _getFacetColors(combinationColor) {
-        if (this._facetColorsKey === combinationColor) return this._facetColorsCache;
-        const m = /rgba\((\d+), (\d+), (\d+), $/.exec(combinationColor);
-        const [r, g, b] = m ? [+m[1], +m[2], +m[3]] : [138, 43, 226];
-        const lighten = (v) => Math.round(v + (255 - v) * 0.4);
-        const darken = (v) => Math.round(v * 0.55);
-        this._facetColorsKey = combinationColor;
-        this._facetColorsCache = {
-            light: `rgba(${lighten(r)}, ${lighten(g)}, ${lighten(b)}, 1)`,
-            dark: `rgba(${darken(r)}, ${darken(g)}, ${darken(b)}, 1)`
-        };
-        return this._facetColorsCache;
+    /** Silhouette width (in px) at height-fraction `t` (0=base, 1=tip), linearly interpolated
+     *  through SPIRE_KEYFRAMES - shared by the tier-segment drawing loop and by window/rune
+     *  placement below so every decorative element sits flush against the actual tiered
+     *  profile instead of a smooth-taper approximation that no longer matches it. */
+    _spireWidthAt(t, towerSize) {
+        const kf = SPIRE_KEYFRAMES;
+        for (let i = 1; i < kf.length; i++) {
+            if (t <= kf[i].t || i === kf.length - 1) {
+                const span = kf[i].t - kf[i - 1].t;
+                const local = span > 0 ? (t - kf[i - 1].t) / span : 0;
+                return (kf[i - 1].w + (kf[i].w - kf[i - 1].w) * local) * towerSize;
+            }
+        }
+        return kf[kf.length - 1].w * towerSize;
     }
-    
+
+    /** One tapered segment of the tiered spire - two flat facets (light/dark) meeting at a
+     *  bright center ridge, the same technique the old single-taper body used, just called
+     *  once per SPIRE_KEYFRAMES segment instead of once for the whole height. Flat fills/
+     *  strokes only (no gradients) to keep the added tiering cheap - see CanvasGraphicsShim's
+     *  createLinearGradient/createRadialGradient doc comment for why gradients are the thing
+     *  to avoid in a per-instance, every-frame render path, not raw fill/stroke call count. */
+    _drawSpireSegment(ctx, bottomY, topY, bottomWidth, topWidth, colors, towerSize) {
+        ctx.fillStyle = colors.light;
+        ctx.beginPath();
+        ctx.moveTo(this.x - bottomWidth / 2, bottomY);
+        ctx.lineTo(this.x - topWidth / 2, topY);
+        ctx.lineTo(this.x, topY);
+        ctx.lineTo(this.x, bottomY);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = colors.dark;
+        ctx.beginPath();
+        ctx.moveTo(this.x, bottomY);
+        ctx.lineTo(this.x, topY);
+        ctx.lineTo(this.x + topWidth / 2, topY);
+        ctx.lineTo(this.x + bottomWidth / 2, bottomY);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(this.x - bottomWidth / 2, bottomY);
+        ctx.lineTo(this.x - topWidth / 2, topY);
+        ctx.lineTo(this.x + topWidth / 2, topY);
+        ctx.lineTo(this.x + bottomWidth / 2, bottomY);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = Math.max(1, towerSize * 0.01);
+        ctx.beginPath();
+        ctx.moveTo(this.x, bottomY);
+        ctx.lineTo(this.x, topY);
+        ctx.stroke();
+    }
+
     render(ctx) {
         const cellSize = this.getCellSize(ctx);
         const towerSize = cellSize * 2;
@@ -868,47 +962,28 @@ export class CombinationTower extends Tower {
 
             ctx.restore();
         });
-    }
 
-    /** Idle ambient dust - see the ambientParticles split in update()/constructor. Drawn as
-     *  the first thing in renderDynamicParts, before the body fill, so it sits behind the
-     *  tower rather than drifting over it. */
-    renderAmbientDust(ctx) {
-        for (let i = 0; i < this.ambientParticles.length; i++) {
-            const particle = this.ambientParticles[i];
-            const alpha = particle.life / particle.maxLife;
-            ctx.fillStyle = particle.color + alpha + ')';
-            ctx.beginPath();
-            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    }
-
-    /** Strategy B (per-instance Graphics, redrawn every frame): tapered spire body, windows,
-     *  rune bands, floating runes, and the fused crystal cluster on top - all colored by
-     *  selectedSpell (runtime-changeable) and pulse-animated. The body is a single tapered
-     *  polygon (SuperWeaponLab's spire shape, not MagicTower's stacked octagon+cylinder), so
-     *  there's no separate ring texture and nothing that needs circle-containment math. */
-    renderDynamicParts(ctx, towerSize) {
-        // Ambient dust drawn first, before the spire fill, so it sits behind the tower instead
-        // of drifting over it (see the ambientParticles split in update()).
-        this.renderAmbientDust(ctx);
-
-        const combinationColor = this.getCombinationColor();
-
+        // Spire collar + crystal mounting platform - both fixed stone/metal colors,
+        // independent of selectedSpell/crystalPulse, so they're baked here (once per
+        // campaign, shared across every Combination Tower instance) rather than in
+        // renderDynamicParts. A createLinearGradient() call there would rebuild a real
+        // GPU-backed FillGradient texture on every ~33ms redraw *per tower instance*
+        // (see CanvasGraphicsShim's createLinearGradient/createRadialGradient doc
+        // comment) - with several Combination Towers on screen that per-frame texture
+        // churn is what was actually behind the "massive performance hit" reported
+        // against this tower (the same class of bug already fixed once for MagicTower's
+        // window-glow gradient).
         const spireHeight = towerSize * 0.8;
         const spireBaseWidth = towerSize * 0.46;
-        const spireTopWidth = towerSize * 0.15;
-        const spireBaseY = this.y - towerSize * 0.02;
+        // Anchored close to the platform's own center (baseY in renderStaticBack = this.y +
+        // towerSize*0.08), not this.y itself - the spire's foot used to sit ~0.10*towerSize
+        // north of the platform's center, toward its back edge, so it read as standing at
+        // the rear of the platform (spilling past the buttress ring toward the viewer)
+        // rather than centered within it.
+        const spireBaseY = this.y + towerSize * 0.05;
         const spireTopY = spireBaseY - spireHeight;
+        const gemRadius = towerSize * 0.10;
 
-        // Stone collar bridging the spire's own (narrower) foot down into the wider octagonal
-        // foundation below. Without it the spire's fill just starts abruptly over the
-        // foundation's top face with nothing spanning the width gap between them (spire foot
-        // is 0.46*towerSize wide, the foundation is 0.9*towerSize) - the two pieces read as
-        // separately-drawn objects rather than one structure. Neutral stone/metal (not
-        // spell-colored) since it's part of the fixed structure, matching the buttresses/
-        // struts above rather than the spire's spell-dependent facets below.
         const collarTopWidth = spireBaseWidth * 1.05;
         const collarBottomWidth = spireBaseWidth * 1.75;
         const collarHeight = towerSize * 0.09;
@@ -927,115 +1002,166 @@ export class CombinationTower extends Tower {
         ctx.fill();
         ctx.stroke();
 
-        // Tapered spire body, split into two flat facets (a lightened left half, a darkened
-        // right half, meeting at a bright center ridge) instead of one smooth gradient fill.
-        // A smooth gradient across such a thin taper reads as flat/2D at typical in-game
-        // size - the hard facet seam is what actually sells "angular faceted column" at a
-        // glance, the same reason SuperWeaponLab/MagicTower lean on strong rim strokes rather
-        // than gradients alone. Colors are derived once per spell via _getFacetColors below
-        // rather than rebuilt as a fresh CanvasGradient every frame.
-        const facetColors = this._getFacetColors(combinationColor);
-
-        ctx.fillStyle = facetColors.light;
-        ctx.beginPath();
-        ctx.moveTo(this.x - spireBaseWidth / 2, spireBaseY);
-        ctx.lineTo(this.x - spireTopWidth / 2, spireTopY);
-        ctx.lineTo(this.x, spireTopY);
-        ctx.lineTo(this.x, spireBaseY);
-        ctx.closePath();
-        ctx.fill();
-
-        ctx.fillStyle = facetColors.dark;
-        ctx.beginPath();
-        ctx.moveTo(this.x, spireBaseY);
-        ctx.lineTo(this.x, spireTopY);
-        ctx.lineTo(this.x + spireTopWidth / 2, spireTopY);
-        ctx.lineTo(this.x + spireBaseWidth / 2, spireBaseY);
-        ctx.closePath();
-        ctx.fill();
-
-        // Full silhouette outline drawn on top of both facets, so the center seam doesn't
-        // read as a line poking past the tower's actual edge.
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(this.x - spireBaseWidth / 2, spireBaseY);
-        ctx.lineTo(this.x - spireTopWidth / 2, spireTopY);
-        ctx.lineTo(this.x + spireTopWidth / 2, spireTopY);
-        ctx.lineTo(this.x + spireBaseWidth / 2, spireBaseY);
-        ctx.closePath();
-        ctx.stroke();
-
-        // Center ridge crease - brighter than either facet, reading as the lit edge where the
-        // two faces meet rather than a flat crack down the middle.
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
-        ctx.lineWidth = Math.max(1, towerSize * 0.012);
-        ctx.beginPath();
-        ctx.moveTo(this.x, spireBaseY);
-        ctx.lineTo(this.x, spireTopY);
-        ctx.stroke();
-
-        // Outer silhouette edges kept dark - both facets already carry their own light/dark
-        // value, so these just crisp the silhouette against the background.
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
-        ctx.lineWidth = Math.max(1, towerSize * 0.012);
-        ctx.beginPath();
-        ctx.moveTo(this.x - spireBaseWidth / 2, spireBaseY);
-        ctx.lineTo(this.x - spireTopWidth / 2, spireTopY);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(this.x + spireBaseWidth / 2, spireBaseY);
-        ctx.lineTo(this.x + spireTopWidth / 2, spireTopY);
-        ctx.stroke();
-
-        // Carved block lines - straight segments sampled from the SAME width-interpolation
-        // formula as the spire polygon above, so they are geometrically guaranteed to stay
-        // inside it at every height. Replaces the old circular ring texture entirely (that
-        // geometry could never be reliably contained through CanvasGraphicsShim, which has no
-        // working ctx.clip() - a straight line derived from the shape's own width formula has
-        // no such containment problem to begin with).
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        const platformGradient = ctx.createLinearGradient(this.x, spireTopY - gemRadius * 0.22, this.x, spireTopY + gemRadius * 0.22);
+        platformGradient.addColorStop(0, '#6b667a');
+        platformGradient.addColorStop(1, '#232028');
+        ctx.fillStyle = platformGradient;
+        ctx.strokeStyle = '#15131b';
         ctx.lineWidth = 1;
-        for (let i = 1; i < 7; i++) {
-            const t = i / 7;
-            const y = spireBaseY - spireHeight * t;
-            const width = spireBaseWidth - (spireBaseWidth - spireTopWidth) * t;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const x = this.x + Math.cos(angle) * gemRadius * 0.55;
+            const y = spireTopY + Math.sin(angle) * gemRadius * 0.22;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    /** Idle ambient dust - see the ambientParticles split in update()/constructor. Drawn as
+     *  the first thing in renderDynamicParts, before the body fill, so it sits behind the
+     *  tower rather than drifting over it. */
+    renderAmbientDust(ctx) {
+        for (let i = 0; i < this.ambientParticles.length; i++) {
+            const particle = this.ambientParticles[i];
+            const alpha = particle.life / particle.maxLife;
+            ctx.fillStyle = particle.color + alpha + ')';
             ctx.beginPath();
-            ctx.moveTo(this.x - width / 2, y);
-            ctx.lineTo(this.x + width / 2, y);
-            ctx.stroke();
+            ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    /** Strategy B (per-instance Graphics, redrawn every frame): tiered spire body, windows,
+     *  rune bands, floating runes, and the fused crystal cluster on top - all colored by
+     *  selectedSpell (runtime-changeable) and pulse-animated. The body is three tapered
+     *  segments separated by stone cornice ledges (see SPIRE_KEYFRAMES/_drawSpireSegment),
+     *  not one continuous cone - so there's still no separate ring texture and nothing that
+     *  needs circle-containment math, just more silhouette breaks along the same taper. */
+    renderDynamicParts(ctx, towerSize) {
+        // Ambient dust drawn first, before the spire fill, so it sits behind the tower instead
+        // of drifting over it (see the ambientParticles split in update()).
+        this.renderAmbientDust(ctx);
+
+        const combinationColor = this.getCombinationColor();
+
+        const spireHeight = towerSize * 0.8;
+        const spireBaseWidth = towerSize * 0.46;
+        // Anchored close to the platform's own center (baseY in renderStaticBack = this.y +
+        // towerSize*0.08), not this.y itself - the spire's foot used to sit ~0.10*towerSize
+        // north of the platform's center, toward its back edge, so it read as standing at
+        // the rear of the platform (spilling past the buttress ring toward the viewer)
+        // rather than centered within it.
+        const spireBaseY = this.y + towerSize * 0.05;
+        const spireTopY = spireBaseY - spireHeight;
+
+        // Stone collar bridging the spire's own (narrower) foot down into the wider octagonal
+        // foundation below - baked once per campaign in renderStaticBack (see the comment
+        // there) since it's a fixed structural piece, not spell-colored.
+
+        // Tiered spire body - walks SPIRE_KEYFRAMES base-to-tip, drawing each segment as a
+        // two-facet taper (see _drawSpireSegment). The 'stone' segments are short cornice
+        // ledges that flare out then step back in, breaking the silhouette into three
+        // distinct tiers instead of one continuous cone - this is what actually reads as a
+        // built, tiered tower rather than a smooth party-hat shape at a glance. Both the
+        // brick tiers and the stone cornices are fixed masonry colors regardless of
+        // selectedSpell now - only the crystal/window-glow/runes ("the jewels") carry the
+        // active spell's color, so the structure itself always looks like the same
+        // brick-and-iron tower no matter which spell is loaded.
+        for (let i = 1; i < SPIRE_KEYFRAMES.length; i++) {
+            const prev = SPIRE_KEYFRAMES[i - 1];
+            const kf = SPIRE_KEYFRAMES[i];
+            const bottomY = spireBaseY - spireHeight * prev.t;
+            const topY = spireBaseY - spireHeight * kf.t;
+            const bottomWidth = prev.w * towerSize;
+            const topWidth = kf.w * towerSize;
+            const segColors = kf.tone === 'stone' ? SPIRE_STONE_FACETS : SPIRE_BRICK_FACETS;
+            this._drawSpireSegment(ctx, bottomY, topY, bottomWidth, topWidth, segColors, towerSize);
         }
 
-        // Magical window openings - radial-gradient glow tinted by the active spell, proportional
-        // to towerSize/spireHeight throughout so they stay correctly placed on the taper at any
-        // resolution instead of relying on fixed pixel offsets.
+        // Crenellation strip along cornice 2's flared lip (just under the crystal mount) -
+        // a small row of alternating raised/lowered merlons, echoing a castle parapet gallery
+        // rather than a bare ring, and giving the topmost tier a clearly "capped" transition
+        // into the crystal focus above.
+        const cornice2Y = spireBaseY - spireHeight * 0.73;
+        const cornice2Width = this._spireWidthAt(0.73, towerSize);
+        const merlonCount = 5;
+        const merlonW = cornice2Width / (merlonCount * 2 - 1);
+        ctx.fillStyle = SPIRE_STONE_FACETS.dark;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < merlonCount; i++) {
+            const mx = this.x - cornice2Width / 2 + i * merlonW * 2;
+            ctx.fillRect(mx, cornice2Y - towerSize * 0.03, merlonW, towerSize * 0.03);
+            ctx.strokeRect(mx, cornice2Y - towerSize * 0.03, merlonW, towerSize * 0.03);
+        }
+
+        // Magical window openings - iron-ringed and glow-tinted by the active spell,
+        // proportional to towerSize/spireHeight throughout so they stay correctly placed
+        // on the taper at any resolution instead of relying on fixed pixel offsets.
         const windowSpecs = [
-            { t: 0.30, size: towerSize * 0.05 },
-            { t: 0.53, size: towerSize * 0.042 },
-            { t: 0.75, size: towerSize * 0.034 }
+            { t: 0.15, size: towerSize * 0.04 },
+            { t: 0.53, size: towerSize * 0.034 },
+            { t: 0.87, size: towerSize * 0.028 }
         ];
         windowSpecs.forEach(win => {
             const wy = spireBaseY - spireHeight * win.t;
 
+            // Peaked stone pediment above the window - a small triangular hood, like a real
+            // gothic window lintel, so the opening reads as a carved architectural feature
+            // instead of a hole floating on the facet with nothing framing it from above.
+            ctx.fillStyle = SPIRE_STONE_FACETS.dark;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(this.x - win.size * 1.3, wy - win.size * 1.1);
+            ctx.lineTo(this.x, wy - win.size * 2.1);
+            ctx.lineTo(this.x + win.size * 1.3, wy - win.size * 1.1);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Iron-ringed porthole surround (rivet-studded), read as forged metal set into
+            // the stone rather than a bare glowing hole - part of the "more medieval" pass.
             ctx.fillStyle = '#15131b';
             ctx.beginPath();
-            ctx.arc(this.x, wy, win.size + 2, 0, Math.PI * 2);
+            ctx.arc(this.x, wy, win.size + 3, 0, Math.PI * 2);
             ctx.fill();
+            ctx.strokeStyle = '#3a3440';
+            ctx.lineWidth = Math.max(1, win.size * 0.16);
+            ctx.beginPath();
+            ctx.arc(this.x, wy, win.size + 1.5, 0, Math.PI * 2);
+            ctx.stroke();
+            const rivetCount = 6;
+            ctx.fillStyle = '#57505f';
+            for (let r = 0; r < rivetCount; r++) {
+                const rAngle = (r / rivetCount) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.arc(this.x + Math.cos(rAngle) * (win.size + 1.5), wy + Math.sin(rAngle) * (win.size + 1.5), Math.max(0.6, win.size * 0.09), 0, Math.PI * 2);
+                ctx.fill();
+            }
 
-            // Rebuilt every frame (not cached like the spire gradient above) because its color
-            // stops bake in crystalPulse directly - CanvasGraphicsShim's globalAlpha maps to
-            // the whole per-instance Graphics object's alpha (reset() sets it once at the start
-            // of the frame; it isn't part of the save/restore transform stack or scoped to an
-            // individual fill() the way real Canvas2D's globalAlpha is), so it can't be used
-            // here to fake the pulse on top of a cached, pulse-independent gradient without the
-            // glow silently stopping animating once rendered through Pixi.
-            const glow = ctx.createRadialGradient(this.x, wy, 0, this.x, wy, win.size * 2.2);
-            glow.addColorStop(0, combinationColor + `${this.crystalPulse})`);
-            glow.addColorStop(0.5, combinationColor + `${this.crystalPulse * 0.5})`);
-            glow.addColorStop(1, combinationColor + '0)');
-            ctx.fillStyle = glow;
+            // Glow approximated with a few flat alpha-blended circles instead of a radial
+            // gradient - a FillGradient rebuilt every ~33ms per tower instance allocates a
+            // real GPU texture each time it's recreated (see CanvasGraphicsShim's
+            // createRadialGradient doc comment), which is cheap for one tower but adds up
+            // fast with several Combination Towers on screen. This was the actual source of
+            // the reported "massive performance hit" (and the flashing render error that
+            // came with it) - the same fix already applied to MagicTower's window glow.
+            ctx.fillStyle = combinationColor + `${this.crystalPulse * 0.35})`;
             ctx.beginPath();
             ctx.arc(this.x, wy, win.size * 2.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = combinationColor + `${this.crystalPulse * 0.6})`;
+            ctx.beginPath();
+            ctx.arc(this.x, wy, win.size * 1.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = combinationColor + `${this.crystalPulse})`;
+            ctx.beginPath();
+            ctx.arc(this.x, wy, win.size * 0.85, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.fillStyle = `rgba(255, 255, 255, ${this.crystalPulse * 0.7})`;
@@ -1046,13 +1172,13 @@ export class CombinationTower extends Tower {
 
         // Carved rune bands - thin glowing line + symbol, proportional positions along the taper.
         const runeBands = [
-            { t: 0.40, symbol: '◇' },
-            { t: 0.60, symbol: '✧' },
-            { t: 0.82, symbol: '❋' }
+            { t: 0.26, symbol: '◇' },
+            { t: 0.58, symbol: '✧' },
+            { t: 0.95, symbol: '❋' }
         ];
         runeBands.forEach(band => {
             const by = spireBaseY - spireHeight * band.t;
-            const bandWidth = (spireBaseWidth - (spireBaseWidth - spireTopWidth) * band.t) - towerSize * 0.04;
+            const bandWidth = this._spireWidthAt(band.t, towerSize) - towerSize * 0.04;
 
             ctx.strokeStyle = combinationColor + `${this.crystalPulse})`;
             ctx.lineWidth = 1.5;
@@ -1062,7 +1188,7 @@ export class CombinationTower extends Tower {
             ctx.stroke();
 
             ctx.fillStyle = `rgba(255, 255, 255, ${this.crystalPulse})`;
-            ctx.font = `${Math.round(towerSize * 0.075)}px serif`;
+            ctx.font = `${Math.round(towerSize * 0.06)}px serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(band.symbol, this.x, by);
@@ -1079,11 +1205,11 @@ export class CombinationTower extends Tower {
 
             ctx.fillStyle = combinationColor + `${this.crystalPulse * 0.4})`;
             ctx.beginPath();
-            ctx.arc(runeX, runeY, towerSize * 0.03, 0, Math.PI * 2);
+            ctx.arc(runeX, runeY, towerSize * 0.024, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.fillStyle = `rgba(255, 255, 255, ${this.crystalPulse})`;
-            ctx.font = `bold ${Math.round(towerSize * 0.035)}px serif`;
+            ctx.font = `bold ${Math.round(towerSize * 0.028)}px serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(rune.symbol, runeX, runeY);
@@ -1095,33 +1221,15 @@ export class CombinationTower extends Tower {
         // tempest/meteor) fused into one focus. ---
         const cx = this.x;
         const sphereY = spireTopY - towerSize * 0.16;
-        const gemRadius = towerSize * 0.13;
+        const gemRadius = towerSize * 0.10;
         const glowSize = towerSize * 0.03 + this.crystalPulse * towerSize * 0.05;
         const gw = gemRadius;
         const gt = gemRadius * 1.2;
         const gb = gemRadius * 0.7;
 
-        // Small mounting platform at the spire tip, seating the crystal - given a metallic
-        // gradient (was a single flat #2a2732, nearly invisible against the spire tip's own
-        // color) so the crystal reads as seated on a distinct cap rather than glued directly
-        // onto the spire.
-        const platformGradient = ctx.createLinearGradient(cx, spireTopY - gemRadius * 0.22, cx, spireTopY + gemRadius * 0.22);
-        platformGradient.addColorStop(0, '#6b667a');
-        platformGradient.addColorStop(1, '#232028');
-        ctx.fillStyle = platformGradient;
-        ctx.strokeStyle = '#15131b';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const x = cx + Math.cos(angle) * gemRadius * 0.55;
-            const y = spireTopY + Math.sin(angle) * gemRadius * 0.22;
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
+        // Small mounting platform at the spire tip, seating the crystal - baked once per
+        // campaign in renderStaticBack (see the comment there) since its colors are fixed,
+        // not spell-dependent.
 
         ctx.save();
 
