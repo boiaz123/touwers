@@ -1,9 +1,13 @@
 /**
  * AchievementPanel — standalone popup listing achievements, with a per-achievement
- * detail view (full description + progress). Unlike the Arcane Library (which bundles
- * Statistics/Achievements/Enemy Intel behind tabs), this is its own self-contained
- * window so it can be opened directly from anywhere an achievement banner can appear
- * (Settlement Hub, campaign maps, etc.) without dragging the whole Library along.
+ * detail view (full description + progress). This is used when an achievement needs
+ * to be shown on its own (e.g. clicking an unlock banner from anywhere — Settlement
+ * Hub, campaign maps, etc.) without dragging any other UI along.
+ *
+ * The actual grid/detail rendering + input handling lives in AchievementsContentView
+ * below, which is also embedded directly inside the Arcane Library's ACHIEVEMENTS tab
+ * (see ArcaneLibraryMenu in SettlementHub.js) so the two never drift out of sync and
+ * achievements never need their own duplicate implementation.
  *
  * `host` just needs to implement closePopup() — whichever screen owns this popup
  * instance (SettlementHub, CampaignBase, ...) clears its own activePopup flag there.
@@ -42,19 +46,20 @@ const TIER_STYLES = [
     { ring: '#c77dff', glow: 'rgba(199, 125, 255, 0.7)',  inner: '#4a1f6b' }  // Mythic
 ];
 
-export class AchievementPanel {
-    constructor(stateManager, host) {
+/**
+ * The achievements grid/detail view itself — header stat bars, the paginated card
+ * grid, and the per-achievement detail screen. Renders into whatever content rect
+ * it's given, so it works equally well as the body of the standalone AchievementPanel
+ * popup or embedded under the Arcane Library's own tab bar.
+ */
+export class AchievementsContentView {
+    constructor(stateManager) {
         this.stateManager = stateManager;
-        this.host = host;
-        this.isOpen = false;
-        this.animationProgress = 0;
-        this.openTime = 0; // prevents click-through the instant it opens
 
         this.achievementCurrentPage = 0;
         // Set to an achievement id to show its full detail view instead of the grid.
         this.selectedAchievementId = null;
 
-        this.closeButtonHovered = false;
         this.leftArrowHovered   = false;
         this.rightArrowHovered  = false;
         this.backButtonHovered  = false;
@@ -62,12 +67,13 @@ export class AchievementPanel {
     }
 
     /** @param {string} [focusAchievementId] - jump straight to this achievement's detail view */
-    open(focusAchievementId = null) {
-        this.isOpen = true;
-        this.animationProgress = 0;
-        this.openTime = Date.now();
+    reset(focusAchievementId = null) {
         this.achievementCurrentPage = 0;
         this.selectedAchievementId = null;
+        this.leftArrowHovered  = false;
+        this.rightArrowHovered = false;
+        this.backButtonHovered = false;
+        this.hoveredCardId     = null;
 
         if (focusAchievementId) {
             this.selectedAchievementId = focusAchievementId;
@@ -81,40 +87,11 @@ export class AchievementPanel {
         }
     }
 
-    close() {
-        this.isOpen = false;
-        this.host.closePopup();
-    }
-
-    update(deltaTime) {
-        if (this.isOpen && this.animationProgress < 1) {
-            this.animationProgress += deltaTime * 2;
-        }
-    }
-
-    _menuDimensions() {
-        const canvas = this.stateManager.canvas;
-        const menuWidth  = Math.min(Math.round(canvas.width  * 0.70), 1100);
-        const menuHeight = Math.min(Math.round(canvas.height * 0.75), 700);
-        const menuX = Math.round(canvas.width  / 2 - menuWidth  / 2);
-        const menuY = Math.round(canvas.height / 2 - menuHeight / 2);
-        return { menuX, menuY, menuWidth, menuHeight };
-    }
-
-    // Shared geometry — used by render(), updateHoverState() and handleClick() so
-    // hitboxes always match what's drawn, regardless of uiSf scale.
-    _getLayout(menuX, menuY, menuWidth, menuHeight) {
-        const uiSf   = menuWidth / 800; // internal scale factor relative to base 800px popup
-        const titleH = Math.round(60 * uiSf);
-        const pad    = Math.round(20 * uiSf);
-        const contentX = menuX + pad;
-        const contentY = menuY + titleH + pad;
-        const contentWidth  = menuWidth - pad * 2;
-        const contentHeight = menuHeight - titleH - pad - Math.round(20 * uiSf);
-        const closeButtonSize = Math.round(28 * uiSf);
-        const closeButtonX = menuX + menuWidth - closeButtonSize - Math.round(8 * uiSf);
-        const closeButtonY = menuY + Math.round(8 * uiSf);
-        return { uiSf, contentX, contentY, contentWidth, contentHeight, closeButtonSize, closeButtonX, closeButtonY };
+    _getAchievements() {
+        const achievementSystem = this.stateManager.achievementSystem;
+        return achievementSystem
+            ? achievementSystem.getAchievements(this.stateManager.gameStatistics, this.stateManager.currentSaveData)
+            : [];
     }
 
     // The header (score summary bars) sits above the grid/detail body. This is the
@@ -133,23 +110,13 @@ export class AchievementPanel {
         return { x: contentX, y: contentY + headerH + gap, width: contentWidth, height: contentHeight - headerH - gap };
     }
 
-    _getAchievements() {
-        const achievementSystem = this.stateManager.achievementSystem;
-        return achievementSystem
-            ? achievementSystem.getAchievements(this.stateManager.gameStatistics, this.stateManager.currentSaveData)
-            : [];
-    }
-
     // ── Input handling ────────────────────────────────────────────────────────
+    // x/y are canvas coordinates; contentX/contentY/contentWidth/contentHeight is
+    // the content rect this view is rendering into (below whatever chrome/tabs the
+    // host draws above it).
 
-    updateHoverState(x, y) {
-        const { menuX, menuY, menuWidth, menuHeight } = this._menuDimensions();
-        const { uiSf, contentX, contentY, contentWidth, contentHeight, closeButtonSize, closeButtonX, closeButtonY } =
-            this._getLayout(menuX, menuY, menuWidth, menuHeight);
-
-        this.closeButtonHovered = x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
-                                  y >= closeButtonY && y <= closeButtonY + closeButtonSize;
-
+    /** @returns {boolean} whether a pointer cursor should be shown */
+    updateHover(x, y, contentX, contentY, contentWidth, contentHeight, uiSf) {
         this.leftArrowHovered  = false;
         this.rightArrowHovered = false;
         this.backButtonHovered = false;
@@ -160,10 +127,10 @@ export class AchievementPanel {
         if (this.selectedAchievementId) {
             const back = this._getBackButtonBounds(body.x, body.y, uiSf);
             this.backButtonHovered = x >= back.x && x <= back.x + back.w && y >= back.y && y <= back.y + back.h;
-            this.stateManager.canvas.style.cursor = (this.closeButtonHovered || this.backButtonHovered) ? 'pointer' : 'default';
-            return;
+            return this.backButtonHovered;
         }
 
+        let pointerNeeded = false;
         const achievements = this._getAchievements();
         const layout = this._getCardLayout(achievements, body.x, body.y, body.width, body.height, uiSf);
         if (layout.totalPages > 1) {
@@ -173,40 +140,29 @@ export class AchievementPanel {
             const arrW = 26, arrH = 22;
             this.leftArrowHovered  = x >= leftArrX  && x <= leftArrX  + arrW && y >= arrowY && y <= arrowY + arrH && this.achievementCurrentPage > 0;
             this.rightArrowHovered = x >= rightArrX && x <= rightArrX + arrW && y >= arrowY && y <= arrowY + arrH && this.achievementCurrentPage < layout.totalPages - 1;
+            if (this.leftArrowHovered || this.rightArrowHovered) pointerNeeded = true;
         }
         for (const rect of layout.cardRects) {
             if (x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h) {
                 this.hoveredCardId = rect.achievement.id;
+                pointerNeeded = true;
                 break;
             }
         }
-        this.stateManager.canvas.style.cursor =
-            (this.closeButtonHovered || this.leftArrowHovered || this.rightArrowHovered || this.hoveredCardId) ? 'pointer' : 'default';
+        return pointerNeeded;
     }
 
-    handleClick(x, y) {
-        // Prevent registering clicks for 200ms after opening to avoid click-through
-        // from whatever click opened this panel (e.g. the achievement banner itself).
-        if (Date.now() - this.openTime < 200) return;
-
-        const { menuX, menuY, menuWidth, menuHeight } = this._menuDimensions();
-        const { uiSf, contentX, contentY, contentWidth, contentHeight, closeButtonSize, closeButtonX, closeButtonY } =
-            this._getLayout(menuX, menuY, menuWidth, menuHeight);
-
-        if (x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
-            y >= closeButtonY && y <= closeButtonY + closeButtonSize) {
-            this.close();
-            return;
-        }
-
+    /** @returns {boolean} whether the click was consumed by this view */
+    handleClick(x, y, contentX, contentY, contentWidth, contentHeight, uiSf) {
         const body = this._getBodyRect(contentX, contentY, contentWidth, contentHeight, uiSf);
 
         if (this.selectedAchievementId) {
             const back = this._getBackButtonBounds(body.x, body.y, uiSf);
             if (x >= back.x && x <= back.x + back.w && y >= back.y && y <= back.y + back.h) {
                 this.selectedAchievementId = null;
+                return true;
             }
-            return;
+            return false;
         }
 
         const achievements = this._getAchievements();
@@ -218,11 +174,11 @@ export class AchievementPanel {
             const arrW = 26, arrH = 22;
             if (x >= leftArrX && x <= leftArrX + arrW && y >= arrowY && y <= arrowY + arrH && this.achievementCurrentPage > 0) {
                 this.achievementCurrentPage--;
-                return;
+                return true;
             }
             if (x >= rightArrX && x <= rightArrX + arrW && y >= arrowY && y <= arrowY + arrH && this.achievementCurrentPage < layout.totalPages - 1) {
                 this.achievementCurrentPage++;
-                return;
+                return true;
             }
         }
 
@@ -230,46 +186,15 @@ export class AchievementPanel {
         for (const rect of layout.cardRects) {
             if (x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h) {
                 this.selectedAchievementId = rect.achievement.id;
-                return;
+                return true;
             }
         }
+        return false;
     }
 
     // ── Rendering ─────────────────────────────────────────────────────────────
 
-    render(ctx) {
-        const canvas = this.stateManager.canvas;
-        const { menuX, menuY, menuWidth, menuHeight } = this._menuDimensions();
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const { uiSf, contentX, contentY, contentWidth, contentHeight, closeButtonSize, closeButtonX, closeButtonY } =
-            this._getLayout(menuX, menuY, menuWidth, menuHeight);
-
-        ctx.fillStyle = '#2a1a0f';
-        ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
-        ctx.strokeStyle = '#8b7355';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
-
-        this.drawCornerTrim(ctx, menuX, menuY, 15, true, false, false, false);
-        this.drawCornerTrim(ctx, menuX + menuWidth, menuY, 15, false, true, false, false);
-        this.drawCornerTrim(ctx, menuX, menuY + menuHeight, 15, false, false, true, false);
-        this.drawCornerTrim(ctx, menuX + menuWidth, menuY + menuHeight, 15, false, false, false, true);
-
-        ctx.font = `bold ${Math.round(24 * uiSf)}px serif`;
-        ctx.fillStyle = '#d4af37';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText('ACHIEVEMENTS', menuX + menuWidth / 2, menuY + Math.round(16 * uiSf));
-
-        ctx.fillStyle = '#1a0f0a';
-        ctx.fillRect(contentX, contentY, contentWidth, contentHeight);
-        ctx.strokeStyle = '#8b7355';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(contentX, contentY, contentWidth, contentHeight);
-
+    render(ctx, contentX, contentY, contentWidth, contentHeight, uiSf) {
         const achievements = this._getAchievements();
         const achievementSystem = this.stateManager.achievementSystem;
         const scoreSummary = achievementSystem
@@ -289,21 +214,6 @@ export class AchievementPanel {
         } else {
             this._renderGrid(ctx, achievements, body.x, body.y, body.width, body.height, uiSf);
         }
-
-        // Close button
-        ctx.save();
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
-        ctx.fillRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${Math.round(18 * uiSf)}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('×', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2 + 1);
-        ctx.restore();
     }
 
     _renderHeader(ctx, x, y, width, uiSf, scoreSummary) {
@@ -476,7 +386,7 @@ export class AchievementPanel {
         }
     }
 
-    // Shared by _renderGrid() (drawing) and handleClick()/updateHoverState() (hit-testing)
+    // Shared by _renderGrid() (drawing) and handleClick()/updateHover() (hit-testing)
     // so the grid geometry can never drift between the two. x/y here is already the body
     // origin (below the header) — no header math involved.
     _getCardLayout(achievements, x, y, width, height, uiSf) {
@@ -904,6 +814,149 @@ export class AchievementPanel {
         if (currentLine) lines.push(currentLine);
 
         return lines;
+    }
+}
+
+export class AchievementPanel {
+    constructor(stateManager, host) {
+        this.stateManager = stateManager;
+        this.host = host;
+        this.isOpen = false;
+        this.animationProgress = 0;
+        this.openTime = 0; // prevents click-through the instant it opens
+
+        this.content = new AchievementsContentView(stateManager);
+
+        this.closeButtonHovered = false;
+    }
+
+    /** @param {string} [focusAchievementId] - jump straight to this achievement's detail view */
+    open(focusAchievementId = null) {
+        this.isOpen = true;
+        this.animationProgress = 0;
+        this.openTime = Date.now();
+        this.content.reset(focusAchievementId);
+    }
+
+    close() {
+        this.isOpen = false;
+        this.host.closePopup();
+    }
+
+    update(deltaTime) {
+        if (this.isOpen && this.animationProgress < 1) {
+            this.animationProgress += deltaTime * 2;
+        }
+    }
+
+    _menuDimensions() {
+        const canvas = this.stateManager.canvas;
+        const menuWidth  = Math.min(Math.round(canvas.width  * 0.70), 1100);
+        const menuHeight = Math.min(Math.round(canvas.height * 0.75), 700);
+        const menuX = Math.round(canvas.width  / 2 - menuWidth  / 2);
+        const menuY = Math.round(canvas.height / 2 - menuHeight / 2);
+        return { menuX, menuY, menuWidth, menuHeight };
+    }
+
+    // Shared geometry — used by render(), updateHoverState() and handleClick() so
+    // hitboxes always match what's drawn, regardless of uiSf scale.
+    _getLayout(menuX, menuY, menuWidth, menuHeight) {
+        const uiSf   = menuWidth / 800; // internal scale factor relative to base 800px popup
+        const titleH = Math.round(60 * uiSf);
+        const pad    = Math.round(20 * uiSf);
+        const contentX = menuX + pad;
+        const contentY = menuY + titleH + pad;
+        const contentWidth  = menuWidth - pad * 2;
+        const contentHeight = menuHeight - titleH - pad - Math.round(20 * uiSf);
+        const closeButtonSize = Math.round(28 * uiSf);
+        const closeButtonX = menuX + menuWidth - closeButtonSize - Math.round(8 * uiSf);
+        const closeButtonY = menuY + Math.round(8 * uiSf);
+        return { uiSf, contentX, contentY, contentWidth, contentHeight, closeButtonSize, closeButtonX, closeButtonY };
+    }
+
+    // ── Input handling ────────────────────────────────────────────────────────
+
+    updateHoverState(x, y) {
+        const { menuX, menuY, menuWidth, menuHeight } = this._menuDimensions();
+        const { uiSf, contentX, contentY, contentWidth, contentHeight, closeButtonSize, closeButtonX, closeButtonY } =
+            this._getLayout(menuX, menuY, menuWidth, menuHeight);
+
+        this.closeButtonHovered = x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
+                                  y >= closeButtonY && y <= closeButtonY + closeButtonSize;
+
+        const pointerNeeded = this.content.updateHover(x, y, contentX, contentY, contentWidth, contentHeight, uiSf);
+        this.stateManager.canvas.style.cursor = (this.closeButtonHovered || pointerNeeded) ? 'pointer' : 'default';
+    }
+
+    handleClick(x, y) {
+        // Prevent registering clicks for 200ms after opening to avoid click-through
+        // from whatever click opened this panel (e.g. the achievement banner itself).
+        if (Date.now() - this.openTime < 200) return;
+
+        const { menuX, menuY, menuWidth, menuHeight } = this._menuDimensions();
+        const { uiSf, contentX, contentY, contentWidth, contentHeight, closeButtonSize, closeButtonX, closeButtonY } =
+            this._getLayout(menuX, menuY, menuWidth, menuHeight);
+
+        if (x >= closeButtonX && x <= closeButtonX + closeButtonSize &&
+            y >= closeButtonY && y <= closeButtonY + closeButtonSize) {
+            this.close();
+            return;
+        }
+
+        this.content.handleClick(x, y, contentX, contentY, contentWidth, contentHeight, uiSf);
+    }
+
+    // ── Rendering ─────────────────────────────────────────────────────────────
+
+    render(ctx) {
+        const canvas = this.stateManager.canvas;
+        const { menuX, menuY, menuWidth, menuHeight } = this._menuDimensions();
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const { uiSf, contentX, contentY, contentWidth, contentHeight, closeButtonSize, closeButtonX, closeButtonY } =
+            this._getLayout(menuX, menuY, menuWidth, menuHeight);
+
+        ctx.fillStyle = '#2a1a0f';
+        ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
+        ctx.strokeStyle = '#8b7355';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
+
+        this.drawCornerTrim(ctx, menuX, menuY, 15, true, false, false, false);
+        this.drawCornerTrim(ctx, menuX + menuWidth, menuY, 15, false, true, false, false);
+        this.drawCornerTrim(ctx, menuX, menuY + menuHeight, 15, false, false, true, false);
+        this.drawCornerTrim(ctx, menuX + menuWidth, menuY + menuHeight, 15, false, false, false, true);
+
+        ctx.font = `bold ${Math.round(24 * uiSf)}px serif`;
+        ctx.fillStyle = '#d4af37';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('ACHIEVEMENTS', menuX + menuWidth / 2, menuY + Math.round(16 * uiSf));
+
+        ctx.fillStyle = '#1a0f0a';
+        ctx.fillRect(contentX, contentY, contentWidth, contentHeight);
+        ctx.strokeStyle = '#8b7355';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(contentX, contentY, contentWidth, contentHeight);
+
+        this.content.render(ctx, contentX, contentY, contentWidth, contentHeight, uiSf);
+
+        // Close button
+        ctx.save();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = this.closeButtonHovered ? '#ff6666' : '#cc0000';
+        ctx.fillRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(closeButtonX, closeButtonY, closeButtonSize, closeButtonSize);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${Math.round(18 * uiSf)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('×', closeButtonX + closeButtonSize / 2, closeButtonY + closeButtonSize / 2 + 1);
+        ctx.restore();
     }
 
     /** Draw decorative golden corner trim on panel corners */

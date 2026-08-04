@@ -2018,40 +2018,36 @@ body.orientation-portrait .side-panel {
     transform: scale(0.95);
 }
 
-/* Medieval cross / close button for pause-menu modals - top-right corner */
+/* Close button for pause-menu modals - top-right corner. Matches the red square
+   close button used by the Settlement Hub's canvas popups (Arcane Library,
+   Achievements, ...) so in-game menus and hub menus share one close affordance. */
 .pause-menu-close-btn {
     position: absolute;
-    top: 0.85rem;
-    right: 0.85rem;
-    width: 2.7rem;
-    height: 2.7rem;
-    background: linear-gradient(135deg, rgba(72, 50, 20, 0.95), rgba(55, 38, 14, 0.95));
-    border: 2px solid rgba(212, 175, 55, 0.52);
-    border-radius: 3px;
-    color: rgba(212, 175, 55, 0.92);
-    font-size: 1.55rem;
+    top: 0.7rem;
+    right: 0.7rem;
+    width: 2.15rem;
+    height: 2.15rem;
+    background: #cc0000;
+    border: 2px solid #ffffff;
+    border-radius: 0;
+    color: #ffffff;
+    font-size: 1.2rem;
     font-weight: bold;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    transition: background 0.15s ease;
     z-index: 10;
     line-height: 1;
 }
 
 .pause-menu-close-btn:hover {
-    background: linear-gradient(135deg, rgba(95, 70, 30, 0.98), rgba(78, 56, 22, 0.98));
-    border-color: var(--primary-gold-light);
-    color: var(--primary-gold-light);
-    transform: scale(1.06);
-    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.7), 0 0 12px rgba(212, 175, 55, 0.3);
+    background: #ff6666;
 }
 
 .pause-menu-close-btn:active {
-    transform: scale(0.94);
+    background: #cc0000;
 }
 
 /* Small inline gem for menus/content areas */
@@ -3148,6 +3144,10 @@ button[style*="#ff4444"]:hover:not(:disabled) {
 }
 
 /* ============ PAUSE MENU MODAL ============ */
+/* Styled to match the Settlement Hub's canvas-drawn popups (Arcane Library,
+   Achievements, Marketplace, ...): a flat parchment-brown panel, a thin bronze
+   border, gold corner trim, and a red square close button. Kept as one visual
+   language so hub menus and in-game menus never look like two different games. */
 .pause-menu-modal {
     position: fixed;
     top: 0;
@@ -3170,8 +3170,7 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(3px);
+    background: rgba(0, 0, 0, 0.7);
     z-index: -1;
     animation: fadeIn 0.3s ease;
 }
@@ -3186,123 +3185,60 @@ button[style*="#ff4444"]:hover:not(:disabled) {
 }
 
 .pause-menu-content {
-    background: 
-        /* Subtle parchment texture */
-        repeating-linear-gradient(2deg,
-            transparent 0px,
-            transparent 4px,
-            rgba(0, 0, 0, 0.03) 4px,
-            rgba(0, 0, 0, 0.03) 5px,
-            transparent 5px,
-            transparent 10px),
-        linear-gradient(135deg, 
-            rgba(52, 34, 18, 0.99) 0%,
-            rgba(38, 22, 12, 0.99) 40%,
-            rgba(44, 28, 14, 0.99) 70%,
-            rgba(36, 20, 10, 0.99) 100%);
-    border: 2px solid rgba(155, 125, 60, 0.7);
-    border-radius: 0.4rem;
-    padding: clamp(2rem, 5vh, 3rem) clamp(2.5rem, 6vw, 4rem);
-    box-shadow: 
-        0 30px 80px rgba(0, 0, 0, 0.95),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    background: #2a1a0f;
+    border: 2px solid #8b7355;
+    padding: clamp(1.75rem, 4.5vh, 2.5rem) clamp(2rem, 5vw, 3rem);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85);
     max-width: clamp(320px, 85vw, 550px);
-    animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: scaleIn 0.25s ease;
     position: relative;
     z-index: 1001;
 }
 
 @keyframes scaleIn {
     from {
-        transform: scale(0.7) rotateX(10deg);
+        transform: scale(0.94);
         opacity: 0;
     }
     to {
-        transform: scale(1) rotateX(0deg);
+        transform: scale(1);
         opacity: 1;
     }
 }
 
-/* Iron frame with rivets */
+/* Gold corner trim — the CSS equivalent of the Settlement Hub popups'
+   drawCornerTrim(): a small L-shaped bar and gem dot in each corner. */
 .pause-menu-content::before {
     content: '';
     position: absolute;
-    top: -8px;
-    left: -8px;
-    right: -8px;
-    bottom: -8px;
-    background: linear-gradient(135deg, rgba(100, 80, 55, 0.5), rgba(58, 42, 31, 0.5));
-    border: 3px solid #6b5540;
-    border-radius: 0.4rem;
-    z-index: -1;
-    box-shadow: 
-        inset 0 0 20px rgba(0, 0, 0, 0.9),
-        0 0 30px rgba(0, 0, 0, 0.7),
-        /* Corner rivet top-left */
-        8px 8px 0 0 rgba(90, 85, 75, 0.35),
-        /* Corner rivet top-right */
-        calc(100% - 13px) 8px 0 0 rgba(90, 85, 75, 0.35),
-        /* Corner rivet bottom-left */
-        8px calc(100% - 13px) 0 0 rgba(90, 85, 75, 0.35),
-        /* Corner rivet bottom-right */
-        calc(100% - 13px) calc(100% - 13px) 0 0 rgba(90, 85, 75, 0.35);
-}
-
-.pause-menu-content::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border: 1px solid rgba(212, 175, 55, 0.35);
-    border-radius: 0.4rem;
+    inset: 0;
     pointer-events: none;
-    box-shadow: 
-        inset 0 1px 0 rgba(255, 255, 255, 0.12),
-        inset 0 0 25px rgba(212, 175, 55, 0.06),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+    background:
+        linear-gradient(#d4af37, #d4af37) top left / 15px 3px no-repeat,
+        linear-gradient(#d4af37, #d4af37) top left / 3px 15px no-repeat,
+        linear-gradient(#d4af37, #d4af37) top right / 15px 3px no-repeat,
+        linear-gradient(#d4af37, #d4af37) top right / 3px 15px no-repeat,
+        linear-gradient(#d4af37, #d4af37) bottom left / 15px 3px no-repeat,
+        linear-gradient(#d4af37, #d4af37) bottom left / 3px 15px no-repeat,
+        linear-gradient(#d4af37, #d4af37) bottom right / 15px 3px no-repeat,
+        linear-gradient(#d4af37, #d4af37) bottom right / 3px 15px no-repeat,
+        radial-gradient(circle, #ffd700 45%, transparent 50%) top left / 9px 9px no-repeat,
+        radial-gradient(circle, #ffd700 45%, transparent 50%) top right / 9px 9px no-repeat,
+        radial-gradient(circle, #ffd700 45%, transparent 50%) bottom left / 9px 9px no-repeat,
+        radial-gradient(circle, #ffd700 45%, transparent 50%) bottom right / 9px 9px no-repeat;
 }
 
 .pause-menu-header {
     text-align: center;
-    margin-bottom: clamp(2rem, 4vh, 3rem);
-    position: relative;
-    padding-bottom: clamp(1.5rem, 3vh, 2rem);
-    border-bottom: 2px solid;
-    border-image: linear-gradient(90deg, 
-        transparent 0%, 
-        rgba(100, 80, 55, 0.6) 15%, 
-        #d4af37 40%, 
-        #f0d060 50%, 
-        #d4af37 60%, 
-        rgba(100, 80, 55, 0.6) 85%, 
-        transparent 100%) 1;
-}
-
-/* Center diamond ornament on header divider */
-.pause-menu-header::after {
-    content: '';
-    position: absolute;
-    bottom: -5px;
-    left: 50%;
-    width: 8px;
-    height: 8px;
-    background: #d4af37;
-    transform: translateX(-50%) rotate(45deg);
-    border: 1px solid rgba(240, 208, 96, 0.6);
-    box-shadow: 0 0 6px rgba(212, 175, 55, 0.4);
+    margin-bottom: clamp(1.5rem, 3vh, 2rem);
+    padding-bottom: clamp(0.9rem, 2vh, 1.2rem);
+    border-bottom: 1px solid #8b7355;
 }
 
 .pause-menu-title {
-    font-size: clamp(1.8rem, 4.5vw, 2.8rem);
-    color: var(--primary-gold-light);
-    font-weight: 900;
-    text-shadow: 
-        0 3px 6px rgba(0, 0, 0, 0.9),
-        1px 1px 0 rgba(0, 0, 0, 0.7),
-        0 0 12px rgba(212, 175, 55, 0.15);
-    letter-spacing: 3px;
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
+    color: var(--primary-gold);
+    font-weight: bold;
     text-transform: uppercase;
     font-family: Georgia, 'Times New Roman', serif;
 }
@@ -3310,103 +3246,33 @@ button[style*="#ff4444"]:hover:not(:disabled) {
 .pause-menu-buttons {
     display: flex;
     flex-direction: column;
-    gap: clamp(1rem, 2vh, 1.5rem);
+    gap: clamp(0.7rem, 1.6vh, 1rem);
     position: relative;
     z-index: 1;
 }
 
 .pause-menu-btn {
-    padding: clamp(0.9rem, 1.8vh, 1.3rem) clamp(1.8rem, 4vw, 2.5rem);
-    background: 
-        /* Wood grain texture */
-        repeating-linear-gradient(1deg,
-            transparent 0px,
-            transparent 3px,
-            rgba(0, 0, 0, 0.04) 3px,
-            rgba(0, 0, 0, 0.04) 4px,
-            transparent 4px,
-            transparent 7px),
-        linear-gradient(135deg, rgba(82, 58, 38, 0.95) 0%, rgba(62, 44, 28, 0.95) 50%, rgba(70, 50, 32, 0.95) 100%);
-    border: 2px solid rgba(155, 125, 55, 0.55);
-    border-radius: 0.25rem;
-    color: var(--primary-gold-light);
-    font-size: clamp(1rem, 2.2vw, 1.3rem);
-    font-weight: 900;
+    padding: clamp(0.75rem, 1.6vh, 1.05rem) clamp(1.5rem, 3.5vw, 2.2rem);
+    background: #261200;
+    border: 1px solid #8b7355;
+    color: var(--primary-gold);
+    font-size: clamp(0.95rem, 2vw, 1.15rem);
+    font-weight: bold;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 0.5px;
     cursor: pointer;
-    transition: all 0.25s ease;
-    box-shadow: 
-        0 6px 14px rgba(0, 0, 0, 0.75),
-        inset 0 1px 2px rgba(255, 255, 255, 0.08),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.3);
-    position: relative;
-    overflow: hidden;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
-    font-family: Georgia, 'Times New Roman', serif;
-}
-
-.pause-menu-btn::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 8px;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(120, 115, 105, 0.5) 0%, rgba(80, 75, 65, 0.3) 60%, transparent 70%);
-    transform: translateY(-50%);
-    pointer-events: none;
-    z-index: 1;
-    box-shadow:
-        /* Right nail */
-        calc(100% - 21px) 0 0 0 rgba(120, 115, 105, 0.4);
-}
-
-.pause-menu-btn::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.4s ease;
-    z-index: 1;
-}
-
-.pause-menu-btn:hover::after {
-    opacity: 1;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    font-family: 'Trebuchet MS', sans-serif;
 }
 
 .pause-menu-btn:hover:not(:disabled) {
-    background: 
-        repeating-linear-gradient(1deg,
-            transparent 0px,
-            transparent 3px,
-            rgba(0, 0, 0, 0.04) 3px,
-            rgba(0, 0, 0, 0.04) 4px,
-            transparent 4px,
-            transparent 7px),
-        linear-gradient(135deg, rgba(100, 76, 50, 0.98) 0%, rgba(80, 62, 42, 0.98) 50%, rgba(88, 68, 46, 0.98) 100%);
-    border-color: rgba(212, 175, 55, 0.8);
-    box-shadow: 
-        0 12px 24px rgba(0, 0, 0, 0.9),
-        inset 0 1px 2px rgba(255, 255, 255, 0.12),
-        inset 0 -2px 4px rgba(0, 0, 0, 0.3),
-        0 0 8px rgba(212, 175, 55, 0.15);
-    transform: translateY(-2px);
+    background: #3d2817;
+    border-color: var(--primary-gold);
     color: var(--primary-gold-light);
 }
 
 .pause-menu-btn:active:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 
-        0 6px 12px rgba(0, 0, 0, 0.8),
-        inset 0 1px 2px rgba(255, 255, 255, 0.1),
-        inset 0 1px 3px rgba(0, 0, 0, 0.5);
+    background: #4a2c14;
 }
 
 .pause-menu-btn:disabled {
@@ -3414,21 +3280,16 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     cursor: not-allowed;
 }
 
-/* All pause menu buttons use the same medieval wood-plank style */
+/* All pause menu buttons share the same flat Settlement Hub tab/button styling */
 .resume-btn,
 .restart-btn,
 .quit-btn,
 .options-btn,
 .save-btn,
 .exit-btn {
-    background: 
-        repeating-linear-gradient(1deg,
-            transparent 0px, transparent 3px,
-            rgba(0, 0, 0, 0.04) 3px, rgba(0, 0, 0, 0.04) 4px,
-            transparent 4px, transparent 7px),
-        linear-gradient(135deg, rgba(82, 58, 38, 0.95) 0%, rgba(62, 44, 28, 0.95) 50%, rgba(70, 50, 32, 0.95) 100%) !important;
-    border-color: rgba(155, 125, 55, 0.55) !important;
-    color: var(--primary-gold-light) !important;
+    background: #261200 !important;
+    border-color: #8b7355 !important;
+    color: var(--primary-gold) !important;
 }
 
 .resume-btn:hover:not(:disabled),
@@ -3437,16 +3298,9 @@ button[style*="#ff4444"]:hover:not(:disabled) {
 .options-btn:hover:not(:disabled),
 .save-btn:hover:not(:disabled),
 .exit-btn:hover:not(:disabled) {
-    background: 
-        repeating-linear-gradient(1deg,
-            transparent 0px, transparent 3px,
-            rgba(0, 0, 0, 0.04) 3px, rgba(0, 0, 0, 0.04) 4px,
-            transparent 4px, transparent 7px),
-        linear-gradient(135deg, rgba(100, 76, 50, 0.98) 0%, rgba(80, 62, 42, 0.98) 50%, rgba(88, 68, 46, 0.98) 100%) !important;
-    border-color: rgba(190, 160, 70, 0.9) !important;
+    background: #3d2817 !important;
+    border-color: var(--primary-gold) !important;
     color: var(--primary-gold-light) !important;
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.9), inset 0 1px 2px rgba(255, 255, 255, 0.12), inset 0 -1px 2px rgba(0, 0, 0, 0.5) !important;
-    transform: translateY(-2px) !important;
 }
 
 /* ============ IN-GAME OPTIONS PANEL CONTENT ============ */
@@ -3519,54 +3373,23 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     display: block;
     width: 100%;
     padding: 0.75rem 1.2rem;
-    background:
-        repeating-linear-gradient(1deg,
-            transparent 0px, transparent 3px,
-            rgba(0, 0, 0, 0.04) 3px, rgba(0, 0, 0, 0.04) 4px,
-            transparent 4px, transparent 7px),
-        linear-gradient(135deg, rgba(82, 58, 38, 0.95) 0%, rgba(62, 44, 28, 0.95) 50%, rgba(70, 50, 32, 0.95) 100%);
-    border: 2px solid rgba(155, 125, 55, 0.55);
-    border-radius: 0.25rem;
-    color: var(--primary-gold-light);
+    background: #261200;
+    border: 1px solid #8b7355;
+    color: var(--primary-gold);
     font-size: 0.9rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
     cursor: pointer;
     text-align: center;
-    transition: all 0.25s ease;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.08);
-    font-family: Georgia, 'Times New Roman', serif;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
-    position: relative;
-    overflow: hidden;
-}
-
-.ingame-options-support-btn::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 8px;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(120, 115, 105, 0.5) 0%, rgba(80, 75, 65, 0.3) 60%, transparent 70%);
-    transform: translateY(-50%);
-    pointer-events: none;
-    box-shadow: calc(100% - 21px) 0 0 0 rgba(120, 115, 105, 0.4);
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    font-family: 'Trebuchet MS', sans-serif;
 }
 
 .ingame-options-support-btn:hover {
-    background:
-        repeating-linear-gradient(1deg,
-            transparent 0px, transparent 3px,
-            rgba(0, 0, 0, 0.04) 3px, rgba(0, 0, 0, 0.04) 4px,
-            transparent 4px, transparent 7px),
-        linear-gradient(135deg, rgba(100, 76, 50, 0.98) 0%, rgba(80, 62, 42, 0.98) 50%, rgba(88, 68, 46, 0.98) 100%);
-    border-color: rgba(212, 175, 55, 0.8);
+    background: #3d2817;
+    border-color: var(--primary-gold);
     color: var(--primary-gold-light);
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.1), 0 0 6px rgba(212, 175, 55, 0.12);
-    transform: translateY(-2px);
 }
 
 /* In-game options modal uses same styling as pause menu */
@@ -3592,8 +3415,7 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(3px);
+    background: rgba(0, 0, 0, 0.7);
     z-index: -1;
     animation: fadeIn 0.3s ease;
 }
@@ -3621,8 +3443,7 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(3px);
+    background: rgba(0, 0, 0, 0.7);
     z-index: -1;
     animation: fadeIn 0.3s ease;
 }
@@ -3650,8 +3471,7 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(3px);
+    background: rgba(0, 0, 0, 0.7);
     z-index: -1;
     animation: fadeIn 0.3s ease;
 }

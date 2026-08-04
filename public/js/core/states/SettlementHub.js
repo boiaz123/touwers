@@ -1,7 +1,7 @@
 import { SaveSystem } from '../SaveSystem.js';
 import { GameStatistics } from '../GameStatistics.js';
 import { AchievementSystem } from '../AchievementSystem.js';
-import { AchievementPanel } from '../AchievementPanel.js';
+import { AchievementPanel, AchievementsContentView } from '../AchievementPanel.js';
 import { LootRegistry } from '../../entities/loot/LootRegistry.js';
 import { TrainingGrounds } from '../../entities/buildings/TrainingGrounds.js';
 import { TowerForge } from '../../entities/buildings/TowerForge.js';
@@ -8150,7 +8150,12 @@ export class ArcaneLibraryMenu {
             { label: 'ENEMY INTEL', id: 'enemy-intel', hovered: false }
         ];
         this.activeTab = 'statistics';
-        
+
+        // Achievements tab content — embedded inline so the Library's own tab bar
+        // stays visible and usable while browsing achievements (rather than handing
+        // off to the standalone AchievementPanel popup, which has no way back here).
+        this.achievementsView = new AchievementsContentView(stateManager);
+
         // Pagination for enemy intel
         this.intelCurrentPage = 0;
         this.intelItemsPerPage = 9; // list view, up to 9 per page
@@ -8179,6 +8184,7 @@ export class ArcaneLibraryMenu {
         this.intelCurrentPage = 0;
         this.selectedEnemyId = null;
         this.hoveredEnemyId = null;
+        this.achievementsView.reset(options.achievementId || null);
     }
 
     close() {
@@ -8310,7 +8316,16 @@ export class ArcaneLibraryMenu {
             }
             return;
         }
-        
+
+        // Achievements tab hover detection (embedded content view)
+        if (this.activeTab === 'achievements') {
+            const pointerNeeded = this.achievementsView.updateHover(
+                x, y, contentX, contentY, contentWidth, contentHeight, uiSf);
+            this.stateManager.canvas.style.cursor =
+                (this.tabs.some(t => t.hovered) || this.closeButtonHovered || pointerNeeded) ? 'pointer' : 'default';
+            return;
+        }
+
         // Default cursor for other tabs
         this.stateManager.canvas.style.cursor = (this.tabs.some(t => t.hovered) || this.closeButtonHovered) ? 'pointer' : 'default';
     }
@@ -8343,16 +8358,17 @@ export class ArcaneLibraryMenu {
             
             if (x >= tabX && x <= tabX + tabButtonWidth &&
                 y >= tabY && y <= tabY + tabHeight) {
-                // Achievements is a launcher, not an inline tab — it opens the
-                // standalone Achievement Panel and closes the Library behind it.
-                if (tab.id === 'achievements') {
-                    this.close();
-                    this.settlementHub.openAchievementPanel();
-                    return;
-                }
                 this.activeTab = tab.id;
                 return;
             }
+        }
+
+        // Handle achievements tab clicks (embedded content view)
+        if (this.activeTab === 'achievements') {
+            const { contentX, contentY, contentWidth, contentHeight, uiSf } =
+                this._getTabLayout(menuX, menuY, menuWidth, menuHeight);
+            this.achievementsView.handleClick(x, y, contentX, contentY, contentWidth, contentHeight, uiSf);
+            return;
         }
 
         // Handle enemy intel tab clicks
@@ -8523,6 +8539,8 @@ export class ArcaneLibraryMenu {
         // Render active tab content
         if (this.activeTab === 'statistics') {
             this.renderStatisticsTab(ctx, contentX, contentY, contentWidth, contentHeight);
+        } else if (this.activeTab === 'achievements') {
+            this.achievementsView.render(ctx, contentX, contentY, contentWidth, contentHeight, uiSf);
         } else if (this.activeTab === 'enemy-intel') {
             this.renderEnemyIntelTab(ctx, contentX, contentY, contentWidth, contentHeight);
         }
