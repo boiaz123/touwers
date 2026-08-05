@@ -198,11 +198,12 @@ export class MageEnemy extends BaseEnemy {
             return;
         }
         
+        this.updateFacing(dx);
         const moveDistance = this.speed * deltaTime;
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;
     }
-    
+
     takeDamage(amount, armorPiercingPercent = 0, damageType = 'physical', followTarget = false) {
         super.takeDamage(amount, armorPiercingPercent, damageType, followTarget);
     }

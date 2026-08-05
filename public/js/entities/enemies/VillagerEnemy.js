@@ -115,6 +115,7 @@ export class VillagerEnemy extends BaseEnemy {
             return;
         }
 
+        this.updateFacing(dx);
         const moveDistance = this.speed * deltaTime;
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;

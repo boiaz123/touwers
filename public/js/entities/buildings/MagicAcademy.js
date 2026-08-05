@@ -1,6 +1,17 @@
 import { Building } from './Building.js';
 
 export class MagicAcademy extends Building {
+    /**
+     * The academy's towers/roof/moat/trees were originally sized and grounded to reach
+     * noticeably above and to the sides of its 4x4 placement square (see renderStaticBack's
+     * "no clip applied" comment). Shrinking everything by this factor and grounding the
+     * building lower in its square (see getVisualYOffset) keeps the water/trees within the
+     * tile's left/right bounds and stops the roof from poking so far above the tile's top
+     * edge, while still reading as a tall building overlapping its own footprint like every
+     * other building here.
+     */
+    static VISUAL_SCALE = 0.85;
+
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
         this.magicParticles = [];
@@ -74,16 +85,24 @@ export class MagicAcademy extends Building {
         // structure via Pixi (magic particles still draw here regardless - not yet migrated).
         this.skipCanvas2DBodyRender = false;
     }
-    
+
+    /** Grounds the academy lower in its placement square - see VISUAL_SCALE's doc comment. */
+    getVisualYOffset(buildingSize) {
+        return buildingSize * 0.12;
+    }
+
     update(deltaTime) {
         super.update(deltaTime);
         
         // Generate magic particles from spires
         if (Math.random() < deltaTime * 4) {
+            // Scaled by VISUAL_SCALE to match the now-smaller baked spires/tower (see that
+            // constant's doc comment) - these offsets were tuned for the unscaled artwork.
+            const S = MagicAcademy.VISUAL_SCALE;
             const spirePositions = [
-                { x: this.x - 30, y: this.y - 45 },
-                { x: this.x + 30, y: this.y - 45 },
-                { x: this.x, y: this.y - 60 }
+                { x: this.x - 30 * S, y: this.y - 45 * S },
+                { x: this.x + 30 * S, y: this.y - 45 * S },
+                { x: this.x, y: this.y - 60 * S }
             ];
             
             const spire = spirePositions[Math.floor(Math.random() * spirePositions.length)];
@@ -117,8 +136,8 @@ export class MagicAcademy extends Building {
         // Moat centered at (this.x, this.y - size*0.10)  outer (size*0.48 × size*0.20)
         this.nextRippleTime -= deltaTime;
         if (this.nextRippleTime <= 0) {
-            // nominal size=116 (scale=29 × 4)
-            const nomSize = 116;
+            // nominal size=116 (scale=29 × 4), scaled down to match VISUAL_SCALE
+            const nomSize = 116 * MagicAcademy.VISUAL_SCALE;
             const cx = this.x;
             const cy = this.y - nomSize * 0.10;
             const outerRX = nomSize * 0.48, outerRY = nomSize * 0.20;
@@ -186,6 +205,7 @@ export class MagicAcademy extends Building {
      * in-game Pixi adapter (GameplayState), so that distinction is moot for this path.
      */
     renderStaticBack(ctx, size) {
+        size *= MagicAcademy.VISUAL_SCALE;
         this.renderGroundFootprint(ctx, size);
 
         // Back-row trees/bushes (see VEGETATION_BACK_Y) render before the moat, so its
@@ -209,6 +229,7 @@ export class MagicAcademy extends Building {
 
     /** Strategy B (per-instance Graphics, redrawn every frame): water shimmer/ripples, pulsing spire crystals, pulsing tower-top orb - all continuous per-instance state. */
     renderDynamicParts(ctx, size) {
+        size *= MagicAcademy.VISUAL_SCALE;
         this.renderWaterMoatDynamic(ctx, size);
         this.renderSideSpiresDynamic(ctx, size);
         this.renderCentralTowerDynamic(ctx, size);

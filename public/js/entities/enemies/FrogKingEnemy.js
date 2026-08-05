@@ -331,6 +331,7 @@ export class FrogKingEnemy extends BaseEnemy {
         
         // JUMP-BASED MOVEMENT: Only move during jump phase
         if (this.jumpCycleTimer < this.jumpAnimationDuration) {
+            this.updateFacing(dx);
             const moveDistance = this.speed * deltaTime;
             this.x += (dx / distance) * moveDistance;
             this.y += (dy / distance) * moveDistance;

@@ -18,6 +18,12 @@ export class BaseEnemy {
         this.x = path && path.length > 0 ? path[0].x : 0;
         this.y = path && path.length > 0 ? path[0].y : 0;
         this.reachedEnd = false;
+
+        // Horizontal facing for sprite mirroring - every enemy is drawn facing right by
+        // default (see e.g. ArcherEnemy's bow/quiver on its +X side), so EnemyRenderAdapter
+        // mirrors the whole sprite when this is true rather than letting it walk "backwards"
+        // while moving right-to-left. Updated via updateFacing() wherever dx is computed.
+        this.facingLeft = false;
         
         // Path defenders (guard post defenders on the path)
         this.pathDefenders = [];
@@ -148,9 +154,9 @@ export class BaseEnemy {
         const dx = target.x - this.x;
         const dy = target.y - this.y;
         const distance = Math.hypot(dx, dy);
-        
+
         const reachThreshold = Math.max(5, this.speed * deltaTime * 2);
-        
+
         if (distance < reachThreshold) {
             this.currentPathIndex++;
             const snapPos = this.getOffsetWaypointAt(this.currentPathIndex);
@@ -160,12 +166,26 @@ export class BaseEnemy {
             }
             return;
         }
-        
+
+        this.updateFacing(dx);
         const moveDistance = this.speed * deltaTime;
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;
     }
     
+    /**
+     * Sets facingLeft from a movement/target delta-x, ignoring near-zero values (pure
+     * vertical movement) so the sprite doesn't flicker between orientations - it simply
+     * keeps whatever direction it last faced until horizontal movement resumes.
+     */
+    updateFacing(dx) {
+        if (dx > 0.01) {
+            this.facingLeft = false;
+        } else if (dx < -0.01) {
+            this.facingLeft = true;
+        }
+    }
+
     /**
      * Returns the laterally-offset position for a given path waypoint index.
      * Each enemy has a fixed pathOffsetAmount so they consistently spread

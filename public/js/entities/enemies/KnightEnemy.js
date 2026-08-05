@@ -90,6 +90,7 @@ export class KnightEnemy extends BaseEnemy {
             return;
         }
 
+        this.updateFacing(dx);
         const moveDistance = this.speed * deltaTime;
         this.x += (dx / distance) * moveDistance;
         this.y += (dy / distance) * moveDistance;

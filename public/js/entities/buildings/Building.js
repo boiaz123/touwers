@@ -29,6 +29,17 @@ export class Building {
     render(ctx, buildingSize) {
         // Override in subclasses
     }
+
+    /**
+     * Extra downward pixel offset (relative to buildingSize = cellSize * this.size) applied
+     * to this.y once, when the building is placed/repositioned - lets a subclass whose
+     * artwork is drawn "tall" (e.g. MagicAcademy's towers/roof) sit its ground plane lower
+     * within its placement square instead of at the exact grid-cell centre. Zero for
+     * everything else. See BuildingManager.placeBuilding/updatePositions.
+     */
+    getVisualYOffset(buildingSize) {
+        return 0;
+    }
     
     applyEffect(towerManager) {
         // Override in subclasses

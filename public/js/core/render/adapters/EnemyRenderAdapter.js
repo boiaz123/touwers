@@ -341,6 +341,10 @@ export class EnemyRenderAdapter {
         entry.entryContainer.x      = entity.x;
         entry.entryContainer.y      = entity.y;
         entry.entryContainer.zIndex = _zIndexFor(entity);
+        // Every enemy is drawn facing right by default (see BaseEnemy.facingLeft) - mirror
+        // the whole container horizontally so it visibly faces its direction of travel
+        // instead of appearing to walk backwards when moving right-to-left.
+        entry.entryContainer.scale.x = entity.facingLeft ? -1 : 1;
 
         if (entry.modeA) {
             this._syncModeA(entity, sizeHint, entry);

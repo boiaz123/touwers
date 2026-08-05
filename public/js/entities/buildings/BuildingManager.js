@@ -74,6 +74,10 @@ export class BuildingManager {
             if ('buildingManager' in building) {
                 building.buildingManager = this;
             }
+            if (typeof building.getVisualYOffset === 'function') {
+                const cellSize = this.level && this.level.cellSize ? this.level.cellSize : 32;
+                building.y += building.getVisualYOffset(cellSize * building.size);
+            }
             this.buildings.push(building);
             
             // Maintain sorted render order (insert-sorted by Y)
@@ -244,6 +248,9 @@ export class BuildingManager {
             const { screenX, screenY } = level.gridToScreen(building.gridX, building.gridY, 4);
             building.x = screenX;
             building.y = screenY;
+            if (typeof building.getVisualYOffset === 'function') {
+                building.y += building.getVisualYOffset(level.cellSize * building.size);
+            }
         });
     }
     
