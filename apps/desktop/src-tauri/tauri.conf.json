@@ -46,12 +46,6 @@
         "type": "embedBootstrapper",
         "silent": true
       },
-      "wix": {
-        "language": "en-US",
-        "upgradeCode": "3A7F2E91-B04C-4D1A-9C88-A6F53D2E7B40",
-        "bannerPath": "installer/wix-banner.bmp",
-        "dialogImagePath": "installer/wix-dialog.bmp"
-      },
       "nsis": {
         "template": "installer/installer.nsi",
         "sidebarImage": "installer/nsis-sidebar.bmp",

@@ -112,7 +112,8 @@ export class SettlementHub {
         // Load settlement data from the current save slot
         // This includes gold, inventory, upgrades, and unlock progression
         const currentSaveData = SaveSystem.getSave(this.stateManager.currentSaveSlot);
-        
+        this.commanderName = currentSaveData?.commanderName || 'Commander';
+
         // Detect if we've switched save slots
         const saveSlotChanged = this.lastLoadedSaveSlot !== this.stateManager.currentSaveSlot;
         const returningFromLevel = this.stateManager.previousState === 'game';
@@ -4459,18 +4460,15 @@ export class SettlementHub {
     }
 
     renderTitle(ctx, canvas) {
+        const title = `${this.commanderName || 'Commander'}'s Settlement`;
         ctx.globalAlpha = 0.8;
         ctx.textAlign = 'center';
         ctx.font = 'bold 36px serif';
         ctx.fillStyle = '#d4af37';
         ctx.strokeStyle = '#8b7355';
         ctx.lineWidth = 2;
-        ctx.fillText('SETTLEMENT', canvas.width / 2, 40);
-        ctx.strokeText('SETTLEMENT', canvas.width / 2, 40);
-
-        ctx.font = '16px serif';
-        ctx.fillStyle = '#c9a876';
-        ctx.fillText('Click buildings to interact', canvas.width / 2, 65);
+        ctx.fillText(title, canvas.width / 2, 40);
+        ctx.strokeText(title, canvas.width / 2, 40);
         ctx.globalAlpha = 1;
     }
 
@@ -7536,6 +7534,48 @@ class ManageSettlementMenu {
         this.buttonGap = 10;
     }
 
+    drawCornerTrim(ctx, x, y, size = 20, isTopLeft = true, isTopRight = false, isBottomLeft = false, isBottomRight = false) {
+        const cornerSize = size;
+
+        // Draw corner rectangle with golden color
+        ctx.fillStyle = '#d4af37';
+
+        if (isTopLeft) {
+            ctx.fillRect(x, y, cornerSize, 3);
+            ctx.fillRect(x, y, 3, cornerSize);
+        } else if (isTopRight) {
+            ctx.fillRect(x - cornerSize, y, cornerSize, 3);
+            ctx.fillRect(x - 3, y, 3, cornerSize);
+        } else if (isBottomLeft) {
+            ctx.fillRect(x, y - 3, cornerSize, 3);
+            ctx.fillRect(x, y - cornerSize, 3, cornerSize);
+        } else if (isBottomRight) {
+            ctx.fillRect(x - cornerSize, y - 3, cornerSize, 3);
+            ctx.fillRect(x - 3, y - cornerSize, 3, cornerSize);
+        }
+
+        // Add a small decorative gem/circle in each corner
+        ctx.fillStyle = '#ffd700';
+        const gemSize = 5;
+        if (isTopLeft) {
+            ctx.beginPath();
+            ctx.arc(x + gemSize, y + gemSize, gemSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (isTopRight) {
+            ctx.beginPath();
+            ctx.arc(x - gemSize, y + gemSize, gemSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (isBottomLeft) {
+            ctx.beginPath();
+            ctx.arc(x + gemSize, y - gemSize, gemSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (isBottomRight) {
+            ctx.beginPath();
+            ctx.arc(x - gemSize, y - gemSize, gemSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
     open() {
         this.isOpen = true;
         this.animationProgress = 0;
@@ -7894,39 +7934,13 @@ class ManageSettlementMenu {
         ctx.lineWidth = 3;
         ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
 
-        // Decorative corner accents
-        const accentSize = 15;
-        const accentColor = '#d4af37';
-        ctx.strokeStyle = accentColor;
-        ctx.lineWidth = 2;
-        
-        // Top-left
-        ctx.beginPath();
-        ctx.moveTo(menuX, menuY + accentSize);
-        ctx.lineTo(menuX, menuY);
-        ctx.lineTo(menuX + accentSize, menuY);
-        ctx.stroke();
-        
-        // Top-right
-        ctx.beginPath();
-        ctx.moveTo(menuX + menuWidth - accentSize, menuY);
-        ctx.lineTo(menuX + menuWidth, menuY);
-        ctx.lineTo(menuX + menuWidth, menuY + accentSize);
-        ctx.stroke();
-        
-        // Bottom-left
-        ctx.beginPath();
-        ctx.moveTo(menuX, menuY + menuHeight - accentSize);
-        ctx.lineTo(menuX, menuY + menuHeight);
-        ctx.lineTo(menuX + accentSize, menuY + menuHeight);
-        ctx.stroke();
-        
-        // Bottom-right
-        ctx.beginPath();
-        ctx.moveTo(menuX + menuWidth - accentSize, menuY + menuHeight);
-        ctx.lineTo(menuX + menuWidth, menuY + menuHeight);
-        ctx.lineTo(menuX + menuWidth, menuY + menuHeight - accentSize);
-        ctx.stroke();
+        // Decorative corner trim - same gold bracket + gem style used by the
+        // other settlement menus (Upgrades & Marketplace, Arcane Library,
+        // Musical Scores), so this panel reads as part of the same set.
+        this.drawCornerTrim(ctx, menuX, menuY, 20, true, false, false, false);
+        this.drawCornerTrim(ctx, menuX + menuWidth, menuY, 20, false, true, false, false);
+        this.drawCornerTrim(ctx, menuX, menuY + menuHeight, 20, false, false, true, false);
+        this.drawCornerTrim(ctx, menuX + menuWidth, menuY + menuHeight, 20, false, false, false, true);
 
         // Menu title
         ctx.font = 'bold 22px serif';

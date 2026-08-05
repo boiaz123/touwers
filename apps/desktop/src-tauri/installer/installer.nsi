@@ -47,6 +47,9 @@ ${StrLoc}
 ; MUI_TEXTCOLOR (gold) is used everywhere else on that dark page, but plain
 ; white reads more clearly for these two small checkbox labels.
 !define TOUWERS_FINISH_CHECKBOX_TEXTCOLOR "FFFFFF"
+; INSTALL button fill on the welcome page - the same dark brown used as the
+; base (unhovered) button color across the in-game settlement menus.
+!define TOUWERS_BUTTON_BGCOLOR "3A2410"
 ; NB: MUI_STARTMENUPAGE_BGCOLOR/TEXTCOLOR are intentionally NOT defined.
 ; Setting them triggers MUI2's own StartMenu.nsh recolor code, which has an
 ; upstream typo (references the undeclared var "mui.StartMenuMenu.FolderList"
@@ -106,6 +109,10 @@ Var TouwersWelcomeDlg
 Var TouwersWelcomeImage
 Var TouwersWelcomeImageHandle
 Var TouwersInstallButton
+Var TouwersInstallBorderTop
+Var TouwersInstallBorderBottom
+Var TouwersInstallBorderLeft
+Var TouwersInstallBorderRight
 Var TouwersInstallButtonFont
 Var TouwersThemeTemp
 
@@ -314,20 +321,56 @@ Function TouwersWelcomeShow
   ${IfThen} $(^RTL) = 1 ${|} nsDialogs::SetRTL $(^RTL) ${|}
   SetCtlColors $TouwersWelcomeDlg "" "${MUI_BGCOLOR}"
 
+  ; nsis-welcome.bmp is pre-cropped (see installer/ - source art is 883x784,
+  ; shipped here at 883x655) to match this page's own aspect ratio, so a
+  ; plain 100%/100% stretch fills the whole page with no visible distortion
+  ; and no runtime measurement needed.
   ${NSD_CreateBitmap} 0 0 100% 100% ""
   Pop $TouwersWelcomeImage
   ${NSD_SetStretchedImage} $TouwersWelcomeImage "$PLUGINSDIR\touwers-welcome.bmp" $TouwersWelcomeImageHandle
 
-  ${NSD_CreateButton} 35% 87% 30% 8% "INSTALL"
+  ; INSTALL control, positioned over the gate threshold in the welcome art
+  ; so clicking it looks like clicking the gate. Windows push buttons
+  ; (BS_PUSHBUTTON/BS_DEFPUSHBUTTON/BS_PUSHLIKE) hard-ignore any custom
+  ; color brush and always paint with system colors, so this is a label
+  ; instead - labels fully honor SetCtlColors, and nsDialogs creates them
+  ; with SS_NOTIFY so ${NSD_OnClick} still fires normally on them. The gold
+  ; "border" is four thin strip labels framing the face rather than one
+  ; bigger control layered behind it, so there's no inter-control z-order
+  ; to get wrong - each one only ever needs to sit above the background art.
+  ${NSD_CreateLabel} 32% 69.4% 36% 0.6% ""
+  Pop $TouwersInstallBorderTop
+  SetCtlColors $TouwersInstallBorderTop "" "${MUI_TEXTCOLOR}"
+  ${NSD_CreateLabel} 32% 78% 36% 0.6% ""
+  Pop $TouwersInstallBorderBottom
+  SetCtlColors $TouwersInstallBorderBottom "" "${MUI_TEXTCOLOR}"
+  ${NSD_CreateLabel} 32% 69.4% 0.6% 9.2% ""
+  Pop $TouwersInstallBorderLeft
+  SetCtlColors $TouwersInstallBorderLeft "" "${MUI_TEXTCOLOR}"
+  ${NSD_CreateLabel} 67.4% 69.4% 0.6% 9.2% ""
+  Pop $TouwersInstallBorderRight
+  SetCtlColors $TouwersInstallBorderRight "" "${MUI_TEXTCOLOR}"
+
+  ${NSD_CreateLabel} 32.5% 70% 35% 8% "INSTALL"
   Pop $TouwersInstallButton
-  ; The bitmap static control ends up above the button in z-order even
-  ; though it was created first, so force the button back to the front.
-  System::Call 'user32::SetWindowPos(p $TouwersInstallButton, p 0, i0, i0, i0, i0, i0x0003)'
-  SetCtlColors $TouwersInstallButton "${MUI_TEXTCOLOR}" "${MUI_BGCOLOR}"
-  System::Call 'uxtheme::SetWindowTheme(p $TouwersInstallButton, w " ", w " ")'
-  CreateFont $TouwersInstallButtonFont "$(^Font)" "12" "700"
+  ${NSD_AddStyle} $TouwersInstallButton ${SS_CENTER}
+  SetCtlColors $TouwersInstallButton "${MUI_TEXTCOLOR}" "${TOUWERS_BUTTON_BGCOLOR}"
+  CreateFont $TouwersInstallButtonFont "$(^Font)" "13" "700"
   SendMessage $TouwersInstallButton ${WM_SETFONT} $TouwersInstallButtonFont 0
+
+  ; The bitmap static control ends up above these in z-order even though it
+  ; was created first, so force every one of them back to the front.
+  System::Call 'user32::SetWindowPos(p $TouwersInstallBorderTop, p 0, i0, i0, i0, i0, i0x0003)'
+  System::Call 'user32::SetWindowPos(p $TouwersInstallBorderBottom, p 0, i0, i0, i0, i0, i0x0003)'
+  System::Call 'user32::SetWindowPos(p $TouwersInstallBorderLeft, p 0, i0, i0, i0, i0, i0x0003)'
+  System::Call 'user32::SetWindowPos(p $TouwersInstallBorderRight, p 0, i0, i0, i0, i0, i0x0003)'
+  System::Call 'user32::SetWindowPos(p $TouwersInstallButton, p 0, i0, i0, i0, i0, i0x0003)'
+
   ${NSD_OnClick} $TouwersInstallButton TouwersWelcomeInstallClick
+  ${NSD_OnClick} $TouwersInstallBorderTop TouwersWelcomeInstallClick
+  ${NSD_OnClick} $TouwersInstallBorderBottom TouwersWelcomeInstallClick
+  ${NSD_OnClick} $TouwersInstallBorderLeft TouwersWelcomeInstallClick
+  ${NSD_OnClick} $TouwersInstallBorderRight TouwersWelcomeInstallClick
 
   ; Hide the shared Back/Next buttons - the INSTALL button replaces Next
   GetDlgItem $0 $HWNDPARENT 1
