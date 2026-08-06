@@ -9,7 +9,7 @@ export class FrogKingEnemy extends BaseEnemy {
     static _colors = new EnemyColorCache(FROG_KING_COLOR_VARIANTS);
 
     static BASE_STATS = {
-        health: 45000,
+        health: 150000,
         speed: 20,
         armour: 22,
         magicResistance: 1.0

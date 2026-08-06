@@ -2,72 +2,108 @@ import { LevelBase } from '../LevelBase.js';
 
 export class SpaceLevel7 extends LevelBase {
     static levelMetadata = {
-        name: 'Alien Outpost',
-        difficulty: 'Medium',
+        name: 'Ooz\'Nal',
+        difficulty: 'Nightmare',
         order: 7,
         campaign: 'space'
     };
 
     constructor() {
         super();
+        // Derive instance properties from static metadata
         this.levelName = SpaceLevel7.levelMetadata.name;
         this.levelNumber = SpaceLevel7.levelMetadata.order;
         this.difficulty = SpaceLevel7.levelMetadata.difficulty;
         this.campaign = SpaceLevel7.levelMetadata.campaign;
         this.maxWaves = 57;
-        
-        this.setVisualConfig({
-            grassColors: {
-                top: '#1a3a5a',
-                upper: '#2a4a7a',
-                lower: '#1a5a8a',
-                bottom: '#0a3a6a'
-            },
-            grassPatchDensity: 9000,
-            pathBaseColor: '#5a7a9a',
-            edgeBushColor: '#3a6a5a',
-            edgeBushAccentColor: '#5a9a8a',
-            edgeRockColor: '#6a5a9a',
-            edgeGrassColor: '#4a8aaa',
-            flowerDensity: 30000
-        });
 
+        // Set terrain elements (prevent tower placement on these areas)
         this.terrainElements = [
-            // Space rocks (alien stone formations)
-            { type: 'rock', gridX: 8.00, gridY: 4.00, size: 1.0 },
-            { type: 'rock', gridX: 18.00, gridY: 12.00, size: 1.0 },
-            { type: 'rock', gridX: 28.00, gridY: 6.00, size: 1.0 },
-            { type: 'rock', gridX: 42.00, gridY: 10.00, size: 1.0 },
-            { type: 'rock', gridX: 52.00, gridY: 30.00, size: 1.0 },
-            { type: 'rock', gridX: 10.00, gridY: 28.00, size: 1.0 },
-            { type: 'rock', gridX: 35.00, gridY: 25.00, size: 1.0 },
-            { type: 'rock', gridX: 55.00, gridY: 8.00, size: 1.0 },
-            
-            // Space vegetation (crystals and alien growths)
-            { type: 'vegetation', gridX: 6.00, gridY: 22.00, size: 1.1 },
-            { type: 'vegetation', gridX: 22.00, gridY: 20.00, size: 1.0 },
-            { type: 'vegetation', gridX: 38.00, gridY: 32.00, size: 1.2 },
-            { type: 'vegetation', gridX: 48.00, gridY: 22.00, size: 1.1 },
-            { type: 'vegetation', gridX: 15.00, gridY: 5.00, size: 1.0 },
-            { type: 'vegetation', gridX: 45.00, gridY: 28.00, size: 1.3 },
-            
-            // More alien vegetation
-            { type: 'vegetation', gridX: 12.00, gridY: 8.00, size: 1.0 },
-            { type: 'vegetation', gridX: 30.00, gridY: 18.00, size: 1.2 },
-            { type: 'vegetation', gridX: 50.00, gridY: 5.00, size: 1.1 },
-            { type: 'vegetation', gridX: 24.00, gridY: 30.00, size: 1.0 },
-            { type: 'vegetation', gridX: 40.00, gridY: 14.00, size: 1.2 }
+            { type: 'vegetation', gridX: 54.00, gridY: 12.00, size: 1.1388278163641687, variant: 0 },
+            { type: 'vegetation', gridX: 55.00, gridY: 9.00, size: 1.7702458919593973, variant: 3 },
+            { type: 'vegetation', gridX: 57.00, gridY: 8.00, size: 2.9898138031444565, variant: 1 },
+            { type: 'vegetation', gridX: 47.00, gridY: 8.00, size: 1.244793821994297, variant: 2 },
+            { type: 'vegetation', gridX: 50.00, gridY: 12.00, size: 1.2007646142540904, variant: 2 },
+            { type: 'vegetation', gridX: 50.00, gridY: 7.00, size: 1.9868434198381821, variant: 2 },
+            { type: 'vegetation', gridX: 47.00, gridY: 9.00, size: 2.05681195754672, variant: 2 },
+            { type: 'vegetation', gridX: 49.00, gridY: 7.00, size: 2.1470152695258626, variant: 2 },
+            { type: 'vegetation', gridX: 53.00, gridY: 2.00, size: 2.7392971819090457, variant: 3 },
+            { type: 'vegetation', gridX: 49.00, gridY: 6.00, size: 1.5907800388094657, variant: 0 },
+            { type: 'vegetation', gridX: 52.00, gridY: 5.00, size: 1.2533736265411948, variant: 0 },
+            { type: 'vegetation', gridX: 56.00, gridY: 6.00, size: 2.221842678205449, variant: 2 },
+            { type: 'vegetation', gridX: 4.00, gridY: 6.00, size: 1.618280954651147, variant: 0 },
+            { type: 'vegetation', gridX: 2.00, gridY: 5.00, size: 2.4372144000781395, variant: 3 },
+            { type: 'vegetation', gridX: 3.00, gridY: 12.00, size: 1.309152693891279, variant: 1 },
+            { type: 'vegetation', gridX: 9.00, gridY: 4.00, size: 1.8540090940452276, variant: 0 },
+            { type: 'vegetation', gridX: 11.00, gridY: 5.00, size: 1.8291628001170461, variant: 1 },
+            { type: 'vegetation', gridX: 4.00, gridY: 3.00, size: 2.9715435896368465, variant: 1 },
+            { type: 'vegetation', gridX: 3.00, gridY: 9.00, size: 1.9824081767094393, variant: 1 },
+            { type: 'vegetation', gridX: 0.00, gridY: 6.00, size: 1.8053517273374389, variant: 2 },
+            { type: 'vegetation', gridX: 5.00, gridY: 13.00, size: 2.1712736965496426, variant: 2 },
+            { type: 'vegetation', gridX: 53.00, gridY: 32.75, size: 1.802842891915066, variant: 0 },
+            { type: 'vegetation', gridX: 53.00, gridY: 28.00, size: 1.4222602758621015, variant: 3 },
+            { type: 'vegetation', gridX: 53.00, gridY: 21.00, size: 1.6666646531582954, variant: 3 },
+            { type: 'vegetation', gridX: 55.00, gridY: 23.00, size: 2.792342360086819, variant: 0 },
+            { type: 'vegetation', gridX: 56.00, gridY: 23.00, size: 1.2010985284680802, variant: 1 },
+            { type: 'vegetation', gridX: 51.00, gridY: 23.00, size: 2.4042485893508596, variant: 1 },
+            { type: 'vegetation', gridX: 53.00, gridY: 32.75, size: 2.2777434602120215, variant: 3 },
+            { type: 'vegetation', gridX: 52.00, gridY: 23.00, size: 2.750683045798449, variant: 2 },
+            { type: 'vegetation', gridX: 57.00, gridY: 24.00, size: 2.749685193993777, variant: 3 },
+            { type: 'vegetation', gridX: 52.00, gridY: 24.00, size: 1.194981354996275, variant: 1 },
+            { type: 'vegetation', gridX: 56.00, gridY: 13.00, size: 1.290846105312895, variant: 3 },
+            { type: 'vegetation', gridX: 53.00, gridY: 9.00, size: 1.3350799525796706, variant: 3 },
+            { type: 'vegetation', gridX: 53.00, gridY: 15.00, size: 1.2976368708855877, variant: 1 },
+            { type: 'vegetation', gridX: 50.00, gridY: 12.00, size: 1.866140433751156, variant: 2 },
+            { type: 'vegetation', gridX: 51.00, gridY: 19.00, size: 2.211811080802609, variant: 3 },
+            { type: 'vegetation', gridX: 58.00, gridY: 14.00, size: 2.2749021201484174, variant: 3 },
+            { type: 'vegetation', gridX: 54.00, gridY: 20.00, size: 1.8430693323397418, variant: 2 },
+            { type: 'vegetation', gridX: 55.00, gridY: 15.00, size: 1.9130299220746634, variant: 3 },
+            { type: 'vegetation', gridX: 51.00, gridY: 15.00, size: 1.2174997107247036, variant: 1 },
+            { type: 'vegetation', gridX: 55.00, gridY: 8.00, size: 2.530293111627907, variant: 0 },
+            { type: 'vegetation', gridX: 53.00, gridY: 12.00, size: 2.2646443488606067, variant: 2 },
+            { type: 'vegetation', gridX: 9.00, gridY: 29.00, size: 2.3370699996297253, variant: 2 },
+            { type: 'vegetation', gridX: 8.00, gridY: 29.00, size: 2.5427327250714558, variant: 1 },
+            { type: 'vegetation', gridX: 2.00, gridY: 25.00, size: 1.623496166927006, variant: 1 },
+            { type: 'vegetation', gridX: 4.00, gridY: 24.00, size: 2.2847451070346696, variant: 0 },
+            { type: 'vegetation', gridX: 10.00, gridY: 25.00, size: 2.9071828207581216, variant: 2 },
+            { type: 'vegetation', gridX: 5.00, gridY: 32.75, size: 1.66448117129133, variant: 3 },
+            { type: 'vegetation', gridX: 3.00, gridY: 28.00, size: 2.745356430308726, variant: 1 },
+            { type: 'vegetation', gridX: 10.00, gridY: 27.00, size: 2.1223890451526652, variant: 1 },
+            { type: 'vegetation', gridX: 7.00, gridY: 31.00, size: 2.163352700010903, variant: 0 },
+            { type: 'water', gridX: 25.00, gridY: 18.00, size: 4, waterType: 'lake' },
+            { type: 'rock', gridX: 23.00, gridY: 16.00, size: 1.5, variant: 0 },
+            { type: 'rock', gridX: 21.00, gridY: 20.00, size: 1.5, variant: 1 },
+            { type: 'rock', gridX: 26.00, gridY: 21.00, size: 1.5, variant: 2 },
+            { type: 'rock', gridX: 29.00, gridY: 17.00, size: 1.5, variant: 2 },
+            { type: 'rock', gridX: 27.00, gridY: 12.00, size: 1.5, variant: 3 },
+            { type: 'vegetation', gridX: 45.00, gridY: 3.00, size: 1.8941159485225754, variant: 2 },
+            { type: 'vegetation', gridX: 45.00, gridY: 5.00, size: 1.786388881277018, variant: 2 },
+            { type: 'vegetation', gridX: 42.00, gridY: 4.00, size: 1.314158767387431, variant: 1 },
+            { type: 'vegetation', gridX: 39.00, gridY: 2.00, size: 2.058276178837248, variant: 2 },
+            { type: 'vegetation', gridX: 37.00, gridY: 4.00, size: 2.3932729114504783, variant: 1 },
+            { type: 'vegetation', gridX: 37.00, gridY: 2.00, size: 1.4461721126775382, variant: 2 },
+            { type: 'vegetation', gridX: 37.00, gridY: 5.00, size: 1.164162712642389, variant: 0 },
+            { type: 'vegetation', gridX: 50.00, gridY: 30.00, size: 2.4366136095129782, variant: 3 },
+            { type: 'vegetation', gridX: 45.00, gridY: 30.00, size: 2.6710637324927333, variant: 3 },
+            { type: 'vegetation', gridX: 46.00, gridY: 30.00, size: 2.5977913927717227, variant: 0 },
+            { type: 'vegetation', gridX: 50.00, gridY: 31.00, size: 1.2198561996242139, variant: 1 },
+            { type: 'vegetation', gridX: 49.00, gridY: 29.00, size: 1.5405513332292906, variant: 2 },
+            { type: 'vegetation', gridX: 57.00, gridY: 28.00, size: 1.1756081523281876, variant: 2 },
+            { type: 'vegetation', gridX: 57.00, gridY: 30.00, size: 2.905999685856063, variant: 2 },
+            { type: 'vegetation', gridX: 57.00, gridY: 28.00, size: 2.390434554560411, variant: 1 }
         ];
     }
 
-    createMeanderingPath() {
+    createMeanderingPath(canvasWidth, canvasHeight) {
+        const gridWidth = this.gridWidth || 60;
+        const gridHeight = this.gridHeight || 33.75;
+
         const pathInGridCoords = [
-            { gridX: 0, gridY: 16.875 },
-            { gridX: 12, gridY: 16.875 },
-            { gridX: 24, gridY: 8.4375 },
-            { gridX: 36, gridY: 25.3125 },
-            { gridX: 48, gridY: 16.875 },
-            { gridX: 60, gridY: 16.875 }
+            { gridX: 24.00, gridY: 34.00 },
+            { gridX: 7.00, gridY: 18.00 },
+            { gridX: 28.00, gridY: 5.00 },
+            { gridX: 45.00, gridY: 18.00 },
+            { gridX: 28.00, gridY: 29.00 }
         ];
 
         this.path = pathInGridCoords.map(point => ({
@@ -80,21 +116,21 @@ export class SpaceLevel7 extends LevelBase {
         const waveConfigs = [
         // Wave 1
         { 
-            enemyHealth_multiplier: 2.68, 
+            enemyHealth_multiplier: 1.2, 
             speedMultiplier: 1, 
             spawnInterval: 1.14, 
             pattern: [{ type: 'villager', count: 10 }, { type: 'villager', count: 12, healthMultiplier: 1.5 }, { type: 'basic', count: 8, healthMultiplier: 1.3 }] 
         }
         // Wave 2
         , { 
-            enemyHealth_multiplier: 2.68, 
+            enemyHealth_multiplier: 1.4, 
             speedMultiplier: 1, 
             spawnInterval: 0.86, 
-            pattern: [{ type: 'frog', count: 9 }, { type: 'frog', count: 10, healthMultiplier: 2, speedMultiplier: 1.2 }, { type: 'frog', count: 11, healthMultiplier: 3 }] 
+            pattern: [{ type: 'frog', count: 9 }, { type: 'frog', count: 10, healthMultiplier: 1.2, speedMultiplier: 1.2 }, { type: 'frog', count: 11, healthMultiplier: 1.5 }] 
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 3.75, 
+            enemyHealth_multiplier: 2.5, 
             speedMultiplier: 1, 
             spawnInterval: 0.96, 
             pattern: [{ type: 'villager', count: 10, healthMultiplier: 1.8, speedMultiplier: 0.6 }, { type: 'basic', count: 12, healthMultiplier: 1.8 }, { type: 'archer', count: 5, speedMultiplier: 1.5 }] 
@@ -115,7 +151,7 @@ export class SpaceLevel7 extends LevelBase {
         }
         // Wave 6
         , { 
-            enemyHealth_multiplier: 8.04, 
+            enemyHealth_multiplier: 7, 
             speedMultiplier: 1, 
             spawnInterval: 0.88, 
             pattern: [{ type: 'mage', count: 3, healthMultiplier: 2 }, { type: 'frog', count: 13 }] 
@@ -465,17 +501,17 @@ export class SpaceLevel7 extends LevelBase {
         }
         // Wave 56
         , { 
-            enemyHealth_multiplier: 51.59, 
-            speedMultiplier: 1, 
-            spawnInterval: 4, 
-            pattern: [{ type: 'firefrog', count: 1 }, { type: 'earthfrog', count: 1 }] 
-        }
-        // Wave 57
-        , { 
             enemyHealth_multiplier: 22.11, 
             speedMultiplier: 0.9, 
             spawnInterval: 0.9, 
             pattern: [{ type: 'knight', count: 10, healthMultiplier: 2.5 }, { type: 'shieldknight', count: 13, healthMultiplier: 2 }, { type: 'frog', count: 40, speedMultiplier: 1.3 }, { type: 'archer', count: 17, speedMultiplier: 1.4 }, { type: 'beefyenemy', count: 14 }, { type: 'villager', count: 14 }] 
+        }
+        // Wave 57
+        , { 
+            enemyHealth_multiplier: 60, 
+            speedMultiplier: 1, 
+            spawnInterval: 4, 
+            pattern: [{ type: 'firefrog', count: 1 }, { type: 'earthfrog', count: 1 }] 
         }
         ];
 

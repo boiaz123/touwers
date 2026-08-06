@@ -2,72 +2,58 @@ import { LevelBase } from '../LevelBase.js';
 
 export class SpaceLevel2 extends LevelBase {
     static levelMetadata = {
-        name: 'Alien Outpost',
-        difficulty: 'Medium',
+        name: 'Bogg\'Rii',
+        difficulty: 'Nightmare',
         order: 2,
         campaign: 'space'
     };
 
     constructor() {
         super();
+        // Derive instance properties from static metadata
         this.levelName = SpaceLevel2.levelMetadata.name;
         this.levelNumber = SpaceLevel2.levelMetadata.order;
         this.difficulty = SpaceLevel2.levelMetadata.difficulty;
         this.campaign = SpaceLevel2.levelMetadata.campaign;
         this.maxWaves = 42;
-        
-        this.setVisualConfig({
-            grassColors: {
-                top: '#1a3a5a',
-                upper: '#2a4a7a',
-                lower: '#1a5a8a',
-                bottom: '#0a3a6a'
-            },
-            grassPatchDensity: 9000,
-            pathBaseColor: '#5a7a9a',
-            edgeBushColor: '#3a6a5a',
-            edgeBushAccentColor: '#5a9a8a',
-            edgeRockColor: '#6a5a9a',
-            edgeGrassColor: '#4a8aaa',
-            flowerDensity: 30000
-        });
 
+        // Set terrain elements (prevent tower placement on these areas)
         this.terrainElements = [
-            // Space rocks (alien stone formations)
-            { type: 'rock', gridX: 8.00, gridY: 4.00, size: 1.0 },
-            { type: 'rock', gridX: 18.00, gridY: 12.00, size: 1.0 },
-            { type: 'rock', gridX: 28.00, gridY: 6.00, size: 1.0 },
-            { type: 'rock', gridX: 42.00, gridY: 10.00, size: 1.0 },
-            { type: 'rock', gridX: 52.00, gridY: 30.00, size: 1.0 },
-            { type: 'rock', gridX: 10.00, gridY: 28.00, size: 1.0 },
-            { type: 'rock', gridX: 35.00, gridY: 25.00, size: 1.0 },
-            { type: 'rock', gridX: 55.00, gridY: 8.00, size: 1.0 },
-            
-            // Space vegetation (crystals and alien growths)
+            { type: 'rock', gridX: 8.00, gridY: 4.00, size: 1 },
+            { type: 'rock', gridX: 18.00, gridY: 12.00, size: 1 },
+            { type: 'rock', gridX: 28.00, gridY: 6.00, size: 1 },
+            { type: 'rock', gridX: 42.00, gridY: 10.00, size: 1 },
+            { type: 'rock', gridX: 52.00, gridY: 30.00, size: 1 },
+            { type: 'rock', gridX: 10.00, gridY: 28.00, size: 1 },
+            { type: 'rock', gridX: 55.00, gridY: 8.00, size: 1 },
             { type: 'vegetation', gridX: 6.00, gridY: 22.00, size: 1.1 },
-            { type: 'vegetation', gridX: 22.00, gridY: 20.00, size: 1.0 },
+            { type: 'vegetation', gridX: 22.00, gridY: 20.00, size: 1 },
             { type: 'vegetation', gridX: 38.00, gridY: 32.00, size: 1.2 },
             { type: 'vegetation', gridX: 48.00, gridY: 22.00, size: 1.1 },
-            { type: 'vegetation', gridX: 15.00, gridY: 5.00, size: 1.0 },
+            { type: 'vegetation', gridX: 15.00, gridY: 5.00, size: 1 },
             { type: 'vegetation', gridX: 45.00, gridY: 28.00, size: 1.3 },
-            
-            // More alien vegetation
-            { type: 'vegetation', gridX: 12.00, gridY: 8.00, size: 1.0 },
+            { type: 'vegetation', gridX: 12.00, gridY: 8.00, size: 1 },
             { type: 'vegetation', gridX: 30.00, gridY: 18.00, size: 1.2 },
             { type: 'vegetation', gridX: 50.00, gridY: 5.00, size: 1.1 },
-            { type: 'vegetation', gridX: 24.00, gridY: 30.00, size: 1.0 },
-            { type: 'vegetation', gridX: 40.00, gridY: 14.00, size: 1.2 }
+            { type: 'vegetation', gridX: 24.00, gridY: 30.00, size: 1 },
+            { type: 'vegetation', gridX: 40.00, gridY: 14.00, size: 1.2 },
+            { type: 'water', gridX: 51.00, gridY: 7.00, size: 2, waterType: 'lake' },
+            { type: 'water', gridX: 4.00, gridY: 26.00, size: 2, waterType: 'lake' },
+            { type: 'water', gridX: 24.00, gridY: 13.00, size: 2, waterType: 'lake' }
         ];
     }
 
-    createMeanderingPath() {
+    createMeanderingPath(canvasWidth, canvasHeight) {
+        const gridWidth = this.gridWidth || 60;
+        const gridHeight = this.gridHeight || 33.75;
+
         const pathInGridCoords = [
-            { gridX: 0, gridY: 16.875 },
-            { gridX: 12, gridY: 16.875 },
-            { gridX: 24, gridY: 8.4375 },
-            { gridX: 36, gridY: 25.3125 },
-            { gridX: 48, gridY: 16.875 },
-            { gridX: 60, gridY: 16.875 }
+            { gridX: 0.00, gridY: 17.00 },
+            { gridX: 12.00, gridY: 17.00 },
+            { gridX: 24.00, gridY: 8.00 },
+            { gridX: 36.00, gridY: 25.00 },
+            { gridX: 48.00, gridY: 17.00 },
+            { gridX: 60.00, gridY: 17.00 }
         ];
 
         this.path = pathInGridCoords.map(point => ({

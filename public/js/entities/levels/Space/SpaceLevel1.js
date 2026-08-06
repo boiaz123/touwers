@@ -2,7 +2,7 @@ import { LevelBase } from '../LevelBase.js';
 
 export class SpaceLevel1 extends LevelBase {
     static levelMetadata = {
-        name: 'Alien Outpost',
+        name: 'Ur\'Xil\'Fen',
         difficulty: 'Nightmare',
         order: 1,
         campaign: 'space'
@@ -187,7 +187,7 @@ export class SpaceLevel1 extends LevelBase {
             enemyHealth_multiplier: 2.5, 
             speedMultiplier: 1, 
             spawnInterval: 1.95, 
-            pattern: [{ type: 'beefyenemy', count: 4 }, { type: 'knight', count: 2 }] 
+            pattern: [{ type: 'beefyenemy', count: 4 }, { type: 'knight', count: 2, healthMultiplier: 1 }] 
         }
         // Wave 10
         , { 
