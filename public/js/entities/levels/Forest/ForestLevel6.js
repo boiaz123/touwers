@@ -321,11 +321,11 @@ export class ForestLevel6 extends LevelBase {
             enemyHealth_multiplier: 1.2, 
             speedMultiplier: 0.8, 
             spawnInterval: 2, 
-            pattern: [{ type: 'basic', count: 17 }, { type: 'villager', count: 22 }, { type: 'archer', count: 13 }, { type: 'beefyenemy', count: 7 }] 
+            pattern: [{ type: 'basic', count: 17 }, { type: 'villager', count: 22 }, { type: 'archer', count: 13 }, { type: 'beefyenemy', count: 7, healthMultiplier: 2.5 }] 
         }
         // Wave 5
         , { 
-            enemyHealth_multiplier: 0.8, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 0.67, 
             spawnInterval: 2, 
             pattern: [{ type: 'beefyenemy', count: 17 }] 
@@ -339,7 +339,7 @@ export class ForestLevel6 extends LevelBase {
         }
         // Wave 7
         , { 
-            enemyHealth_multiplier: 2, 
+            enemyHealth_multiplier: 3, 
             speedMultiplier: 0.5, 
             spawnInterval: 1.5, 
             pattern: [{ type: 'knight', count: 1 }] 
