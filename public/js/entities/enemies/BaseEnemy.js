@@ -353,8 +353,15 @@ export class BaseEnemy {
      * Shared health bar renderer. Options let each subclass keep its historical
      * bar proportions/position (they varied slightly per type before this was
      * consolidated) while removing ~13 copies of this same fill/fill/stroke code.
+     *
+     * Draws onto `this._healthBarCtx` instead of the passed-in `ctx` when the render
+     * adapter has set one (Mode B / particle enemies - see EnemyRenderAdapter.js). That
+     * target is a separate, never-mirrored Graphics layer, so the health bar stays
+     * upright and fills in a consistent direction even though the body it's drawn
+     * alongside gets horizontally flipped to face the enemy's direction of travel.
      */
     renderHealthBar(ctx, baseSize, opts = {}) {
+        const target = this._healthBarCtx || ctx;
         const {
             widthMul = 3.0,
             heightMul = 0.4,
@@ -367,16 +374,16 @@ export class BaseEnemy {
         const barHeight = Math.max(minHeight, baseSize * heightMul);
         const barY = this.y + baseSize * yOffsetMul;
 
-        ctx.fillStyle = '#000';
-        ctx.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
+        target.fillStyle = '#000';
+        target.fillRect(this.x - barWidth/2, barY, barWidth, barHeight);
 
         const healthPercent = this.health / this.maxHealth;
-        ctx.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
-        ctx.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
+        target.fillStyle = healthPercent > 0.5 ? '#4CAF50' : (healthPercent > 0.25 ? '#FFC107' : '#F44336');
+        target.fillRect(this.x - barWidth/2, barY, barWidth * healthPercent, barHeight);
 
-        ctx.strokeStyle = '#2F2F2F';
-        ctx.lineWidth = strokeWidth;
-        ctx.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
+        target.strokeStyle = '#2F2F2F';
+        target.lineWidth = strokeWidth;
+        target.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
     }
     
     darkenColor(color, factor) { return darkenColor(color, factor); }

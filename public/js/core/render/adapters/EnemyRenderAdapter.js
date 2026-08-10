@@ -296,9 +296,24 @@ export class EnemyRenderAdapter {
 
             const shim = new CanvasGraphicsShim(dynamic);
 
+            // Health bar drawn on its own Graphics, separate from the body ("dynamic"),
+            // so it can be counter-flipped independently in sync() below - entity code
+            // draws body + health bar in one renderDynamicParts() call, but redirecting
+            // the health bar's draw calls here (via entity._healthBarCtx, see
+            // BaseEnemy.renderHealthBar) keeps it from mirroring along with the body.
+            // Skipped for entities with no health (e.g. LootBag/RealmShardDrop - see
+            // modeA comment above), which never call renderHealthBar in the first place.
+            let healthBar = null, healthBarShim = null;
+            if (typeof entity.maxHealth === 'number') {
+                healthBar = new Graphics();
+                entryContainer.addChild(healthBar);
+                healthBarShim = new CanvasGraphicsShim(healthBar);
+                entity._healthBarCtx = healthBarShim;
+            }
+
             entry = {
                 modeA:          false,
-                entryContainer, dynamic, shim,
+                entryContainer, dynamic, shim, healthBar, healthBarShim,
                 lastAnimKey:    -1,
                 // Per-instance offset into the ANIM_FPS bucket below (see _syncModeB) -
                 // entity.animationTime naturally staggers same-wave enemies somewhat since
@@ -327,7 +342,13 @@ export class EnemyRenderAdapter {
         // texture: false → baked textures in _frameCache are NOT destroyed here;
         // they are shared across instances and persist for the process lifetime.
         entry.entryContainer.destroy({ children: true, texture: false });
-        if (!entry.modeA) entry.shim.destroyGradients();
+        if (!entry.modeA) {
+            entry.shim.destroyGradients();
+            if (entry.healthBarShim) {
+                entry.healthBarShim.destroyGradients();
+                entity._healthBarCtx = null;
+            }
+        }
         this._entries.delete(entity);
         entity.skipCanvas2DBodyRender = false;
     }
@@ -345,6 +366,10 @@ export class EnemyRenderAdapter {
         // the whole container horizontally so it visibly faces its direction of travel
         // instead of appearing to walk backwards when moving right-to-left.
         entry.entryContainer.scale.x = entity.facingLeft ? -1 : 1;
+        // Counter-flip the health bar on its own scale so it composes back to +1 with the
+        // container flip above - only the body/model should mirror, the health bar (and
+        // its fill direction) must stay upright regardless of facing direction.
+        if (entry.healthBar) entry.healthBar.scale.x = entity.facingLeft ? -1 : 1;
 
         if (entry.modeA) {
             this._syncModeA(entity, sizeHint, entry);
@@ -404,6 +429,7 @@ export class EnemyRenderAdapter {
 
         try {
             entry.shim.reset();
+            if (entry.healthBarShim) entry.healthBarShim.reset();
             entity.renderDynamicParts(entry.shim, sizeHint);
         } finally {
             entity.x = savedX;
