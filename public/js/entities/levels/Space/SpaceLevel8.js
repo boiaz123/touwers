@@ -536,7 +536,7 @@ export class SpaceLevel8 extends LevelBase {
         , { 
             enemyHealth_multiplier: 24.42, 
             speedMultiplier: 1, 
-            spawnInterval: 1.4, 
+            spawnInterval: 3, 
             pattern: [{ type: 'earthfrog', count: 6 }, { type: 'waterfrog', count: 6 }, { type: 'firefrog', count: 6 }, { type: 'airfrog', count: 6 }, { type: 'frogking', count: 1, healthMultiplier: 1 }] 
         }
         ];

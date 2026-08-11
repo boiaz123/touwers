@@ -145,7 +145,7 @@ export class SpaceLevel1 extends LevelBase {
             enemyHealth_multiplier: 1.22, 
             speedMultiplier: 1, 
             spawnInterval: 0.96, 
-            pattern: [{ type: 'villager', count: 8, healthMultiplier: 1.8, speedMultiplier: 0.6 }, { type: 'basic', count: 10, healthMultiplier: 1.8 }, { type: 'ramcart', count: 3, speedMultiplier: 1.5 }] 
+            pattern: [{ type: 'villager', count: 8, healthMultiplier: 1.8, speedMultiplier: 0.6 }, { type: 'basic', count: 10, healthMultiplier: 1.8 }, { type: 'ramcart', count: 2, speedMultiplier: 1 }] 
         }
         // Wave 4
         , { 
