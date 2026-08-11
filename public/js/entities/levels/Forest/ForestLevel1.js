@@ -344,10 +344,9 @@ export class ForestLevel1 extends LevelBase {
         // Wave 1
         { 
             enemyHealth_multiplier: 0.8, 
-            speedMultiplier: 3, 
-            spawnInterval: 5, 
-            pattern: [{ type: 'walkingfrog', count: 1 }, { type: 'ramcart', count: 1 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }, { type: 'frogking', count: 1, healthMultiplier: 1 }] 
-        }
+            speedMultiplier: 0.70, 
+            spawnInterval: 2.2,
+            pattern: [{ type: 'basic', count: 12 }] }
         // Wave 2
         , { 
             enemyHealth_multiplier: 0.8, 
