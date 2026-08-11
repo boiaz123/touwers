@@ -366,10 +366,10 @@ export class SpaceLevel8 extends LevelBase {
         }
         // Wave 36
         , { 
-            enemyHealth_multiplier: 11.31, 
+            enemyHealth_multiplier: 6, 
             speedMultiplier: 1.7, 
             spawnInterval: 0.6, 
-            pattern: [{ type: 'archer', count: 18 }, { type: 'frog', count: 5 }] 
+            pattern: [{ type: 'archer', count: 18 }, { type: 'ramcart', count: 5 }] 
         }
         // Wave 37
         , { 
@@ -383,7 +383,7 @@ export class SpaceLevel8 extends LevelBase {
             enemyHealth_multiplier: 11.72, 
             speedMultiplier: 0.8, 
             spawnInterval: 1, 
-            pattern: [{ type: 'earthfrog', count: 1 }] 
+            pattern: [{ type: 'walkingfrog', count: 3 }] 
         }
         // Wave 39
         , { 
@@ -397,7 +397,7 @@ export class SpaceLevel8 extends LevelBase {
             enemyHealth_multiplier: 12.14, 
             speedMultiplier: 1, 
             spawnInterval: 4, 
-            pattern: [{ type: 'waterfrog', count: 1 }, { type: 'airfrog', count: 1 }, { type: 'earthfrog', count: 1 }] 
+            pattern: [{ type: 'waterfrog', count: 1 }, { type: 'ramcart', count: 1 }, { type: 'earthfrog', count: 1 }] 
         }
         // Wave 41
         , { 
@@ -443,10 +443,10 @@ export class SpaceLevel8 extends LevelBase {
         }
         // Wave 47
         , { 
-            enemyHealth_multiplier: 28.42, 
+            enemyHealth_multiplier: 15, 
             speedMultiplier: 0.8, 
             spawnInterval: 0.7, 
-            pattern: [{ type: 'shieldknight', count: 14 }, { type: 'waterfrog', count: 5 }] 
+            pattern: [{ type: 'shieldknight', count: 14 }, { type: 'walkingfrog', count: 5 }] 
         }
         // Wave 48
         , { 
@@ -460,7 +460,7 @@ export class SpaceLevel8 extends LevelBase {
             enemyHealth_multiplier: 29.84, 
             speedMultiplier: 1.2, 
             spawnInterval: 0.85, 
-            pattern: [{ type: 'knight', count: 9, healthMultiplier: 3 }, { type: 'archer', count: 19, speedMultiplier: 1.3 }, { type: 'basic', count: 17 }, { type: 'beefyenemy', count: 15, healthMultiplier: 2.5 }, { type: 'mage', count: 9 }, { type: 'frog', count: 48, healthMultiplier: 1.5 }, { type: 'shieldknight', count: 10, healthMultiplier: 4 }] 
+            pattern: [{ type: 'walkingfrog', count: 9, healthMultiplier: 5 }, { type: 'archer', count: 19, speedMultiplier: 1.3 }, { type: 'basic', count: 17 }, { type: 'beefyenemy', count: 15, healthMultiplier: 2.5 }, { type: 'mage', count: 9 }, { type: 'shieldknight', count: 10, healthMultiplier: 4 }] 
         }
         // Wave 50
         , { 

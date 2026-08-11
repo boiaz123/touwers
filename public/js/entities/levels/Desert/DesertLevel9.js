@@ -456,14 +456,14 @@ export class DesertLevel9 extends LevelBase {
             enemyHealth_multiplier: 4, 
             speedMultiplier: 0.8, 
             spawnInterval: 0.7, 
-            pattern: [{ type: 'shieldknight', count: 7 }] 
+            pattern: [{ type: 'walkingfrog', count: 7 }] 
         }
         // Wave 15
         , { 
             enemyHealth_multiplier: 5, 
             speedMultiplier: 1, 
             spawnInterval: 12.5, 
-            pattern: [{ type: 'knight', count: 3 }] 
+            pattern: [{ type: 'ramcart', count: 3 }] 
         }
         // Wave 16
         , { 
@@ -498,7 +498,7 @@ export class DesertLevel9 extends LevelBase {
             enemyHealth_multiplier: 5, 
             speedMultiplier: 1, 
             spawnInterval: 12, 
-            pattern: [{ type: 'knight', count: 4, speedMultiplier: 1.4 }] 
+            pattern: [{ type: 'ramcart', count: 4, speedMultiplier: 1.4 }] 
         }
         // Wave 21
         , { 

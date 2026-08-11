@@ -141,7 +141,7 @@ export class DesertLevel6 extends LevelBase {
             enemyHealth_multiplier: 4, 
             speedMultiplier: 1, 
             spawnInterval: 0.8, 
-            pattern: [{ type: 'beefyenemy', count: 3, healthMultiplier: 1 }, { type: 'archer', count: 1, healthMultiplier: 3, speedMultiplier: 1.5 }, { type: 'villager', count: 16 }] 
+            pattern: [{ type: 'ramcart', count: 3, healthMultiplier: 1 }, { type: 'archer', count: 1, healthMultiplier: 3, speedMultiplier: 1.5 }, { type: 'villager', count: 16 }] 
         }
         // Wave 6
         , { 
@@ -218,7 +218,7 @@ export class DesertLevel6 extends LevelBase {
             enemyHealth_multiplier: 1, 
             speedMultiplier: 1, 
             spawnInterval: 1, 
-            pattern: [{ type: 'knight', count: 1 }, { type: 'shieldknight', count: 2, healthMultiplier: 2 }, { type: 'mage', count: 1, healthMultiplier: 2 }, { type: 'shieldknight', count: 1, healthMultiplier: 4 }] 
+            pattern: [{ type: 'ramcart', count: 1 }, { type: 'shieldknight', count: 2, healthMultiplier: 2 }, { type: 'mage', count: 1, healthMultiplier: 2 }, { type: 'shieldknight', count: 1, healthMultiplier: 4 }] 
         }
         // Wave 17
         , { 
@@ -253,7 +253,7 @@ export class DesertLevel6 extends LevelBase {
             enemyHealth_multiplier: 4.4, 
             speedMultiplier: 1.1, 
             spawnInterval: 1, 
-            pattern: [{ type: 'shieldknight', count: 3, healthMultiplier: 3 }, { type: 'mage', count: 1 }, { type: 'villager', count: 12 }, { type: 'shieldknight', count: 2, healthMultiplier: 4 }, { type: 'beefyenemy', count: 10 }, { type: 'mage', count: 1 }, { type: 'frog', count: 14 }, { type: 'archer', count: 11, healthMultiplier: 5, speedMultiplier: 1.5 }, { type: 'shieldknight', count: 1, healthMultiplier: 6, speedMultiplier: 1 }] 
+            pattern: [{ type: 'shieldknight', count: 3, healthMultiplier: 3 }, { type: 'mage', count: 1 }, { type: 'villager', count: 12 }, { type: 'ramcart', count: 2, healthMultiplier: 4 }, { type: 'beefyenemy', count: 10 }, { type: 'mage', count: 1 }, { type: 'frog', count: 14 }, { type: 'archer', count: 11, healthMultiplier: 5, speedMultiplier: 1.5 }, { type: 'shieldknight', count: 1, healthMultiplier: 6, speedMultiplier: 1 }] 
         }
         // Wave 22
         , { 

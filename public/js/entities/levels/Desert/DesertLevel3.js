@@ -210,7 +210,7 @@ export class DesertLevel3 extends LevelBase {
             enemyHealth_multiplier: 3, 
             speedMultiplier: 1, 
             spawnInterval: 4, 
-            pattern: [{ type: 'shieldknight', count: 5 }] 
+            pattern: [{ type: 'ramcart', count: 5 }] 
         }
         // Wave 8
         , { 
@@ -280,7 +280,7 @@ export class DesertLevel3 extends LevelBase {
             enemyHealth_multiplier: 4, 
             speedMultiplier: 0.8, 
             spawnInterval: 0.5, 
-            pattern: [{ type: 'knight', count: 3 }] 
+            pattern: [{ type: 'ramcart', count: 3 }] 
         }
         // Wave 18
         , { 

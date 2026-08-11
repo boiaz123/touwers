@@ -208,7 +208,7 @@ export class DesertLevel2 extends LevelBase {
             enemyHealth_multiplier: 1.3, 
             speedMultiplier: 0.85, 
             spawnInterval: 0.9, 
-            pattern: [{ type: 'villager', count: 6 }, { type: 'basic', count: 8 }, { type: 'knight', count: 1 }] 
+            pattern: [{ type: 'villager', count: 6 }, { type: 'basic', count: 8 }, { type: 'ramcart', count: 1 }] 
         }
         // Wave 3
         , { 
@@ -285,7 +285,7 @@ export class DesertLevel2 extends LevelBase {
             enemyHealth_multiplier: 5, 
             speedMultiplier: 1.2, 
             spawnInterval: 0.5, 
-            pattern: [{ type: 'frog', count: 8 }, { type: 'basic', count: 7 }, { type: 'archer', count: 6, speedMultiplier: 1 }, { type: 'beefyenemy', count: 3, healthMultiplier: 2 }, { type: 'shieldknight', count: 2, healthMultiplier: 2 }] 
+            pattern: [{ type: 'frog', count: 8 }, { type: 'basic', count: 7 }, { type: 'archer', count: 6, speedMultiplier: 1 }, { type: 'beefyenemy', count: 3, healthMultiplier: 2 }, { type: 'ramcart', count: 2, healthMultiplier: 2 }] 
         }
         // Wave 14
         , { 
@@ -334,7 +334,7 @@ export class DesertLevel2 extends LevelBase {
             enemyHealth_multiplier: 8, 
             speedMultiplier: 0.8, 
             spawnInterval: 0.1, 
-            pattern: [{ type: 'knight', count: 1 }] 
+            pattern: [{ type: 'ramcart', count: 3 }] 
         }
         // Wave 21
         , { 

@@ -197,7 +197,7 @@ export class SpaceLevel5 extends LevelBase {
             enemyHealth_multiplier: 3.92, 
             speedMultiplier: 0.8, 
             spawnInterval: 0.7, 
-            pattern: [{ type: 'shieldknight', count: 10 }, { type: 'frog', count: 3 }] 
+            pattern: [{ type: 'shieldknight', count: 10 }, { type: 'walkingfrog', count: 3 }] 
         }
         // Wave 10
         , { 
@@ -239,7 +239,7 @@ export class SpaceLevel5 extends LevelBase {
             enemyHealth_multiplier: 4.98, 
             speedMultiplier: 1, 
             spawnInterval: 0.76, 
-            pattern: [{ type: 'archer', count: 10, healthMultiplier: 2.5, speedMultiplier: 1.1 }, { type: 'frog', count: 14, healthMultiplier: 1.8 }, { type: 'shieldknight', count: 5, healthMultiplier: 2 }, { type: 'archer', count: 6, healthMultiplier: 3, speedMultiplier: 1.5 }] 
+            pattern: [{ type: 'archer', count: 10, healthMultiplier: 2.5, speedMultiplier: 1.1 }, { type: 'frog', count: 14, healthMultiplier: 1.8 }, { type: 'walkingfrog', count: 5, healthMultiplier: 2 }, { type: 'archer', count: 6, healthMultiplier: 3, speedMultiplier: 1.5 }] 
         }
         // Wave 16
         , { 

@@ -325,7 +325,7 @@ export class MountainLevel10 extends LevelBase {
             enemyHealth_multiplier: 1.5, 
             speedMultiplier: 0.75, 
             spawnInterval: 0.6, 
-            pattern: [{ type: 'beefyenemy', count: 6 }] 
+            pattern: [{ type: 'ramcart', count: 3 }] 
         }
         // Wave 7
         , { 
@@ -367,7 +367,7 @@ export class MountainLevel10 extends LevelBase {
             enemyHealth_multiplier: 1.3, 
             speedMultiplier: 0.6, 
             spawnInterval: 0.4, 
-            pattern: [{ type: 'beefyenemy', count: 4 }, { type: 'knight', count: 2 }, { type: 'shieldknight', count: 1 }] 
+            pattern: [{ type: 'beefyenemy', count: 4 }, { type: 'ramcart', count: 2 }, { type: 'shieldknight', count: 1 }] 
         }
         // Wave 13
         , { 
@@ -423,7 +423,7 @@ export class MountainLevel10 extends LevelBase {
             enemyHealth_multiplier: 2.2, 
             speedMultiplier: 1.13, 
             spawnInterval: 0.7, 
-            pattern: [{ type: 'knight', count: 1 }, { type: 'mage', count: 1 }, { type: 'shieldknight', count: 1 }] 
+            pattern: [{ type: 'ramcart', count: 1 }, { type: 'mage', count: 1 }, { type: 'shieldknight', count: 1 }] 
         }
         // Wave 21
         , { 

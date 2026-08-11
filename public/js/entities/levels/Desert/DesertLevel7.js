@@ -119,7 +119,7 @@ export class DesertLevel7 extends LevelBase {
             enemyHealth_multiplier: 0.75, 
             speedMultiplier: 1, 
             spawnInterval: 1, 
-            pattern: [{ type: 'knight', count: 1 }] 
+            pattern: [{ type: 'walkingfrog', count: 1 }] 
         }
         // Wave 2
         , { 
@@ -182,7 +182,7 @@ export class DesertLevel7 extends LevelBase {
             enemyHealth_multiplier: 4, 
             speedMultiplier: 1, 
             spawnInterval: 0.6, 
-            pattern: [{ type: 'mage', count: 2 }, { type: 'frog', count: 14 }] 
+            pattern: [{ type: 'walkingfrog', count: 2 }, { type: 'frog', count: 14 }] 
         }
         // Wave 11
         , { 
@@ -249,10 +249,10 @@ export class DesertLevel7 extends LevelBase {
         }
         // Wave 20
         , { 
-            enemyHealth_multiplier: 6, 
+            enemyHealth_multiplier: 4, 
             speedMultiplier: 1, 
             spawnInterval: 8, 
-            pattern: [{ type: 'knight', count: 4 }] 
+            pattern: [{ type: 'walkingfrog', count: 4 }] 
         }
         // Wave 21
         , { 

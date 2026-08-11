@@ -16,7 +16,7 @@ export class RamCartEnemy extends BaseEnemy {
     static BASE_STATS = {
         health: 1100,
         speed: 30,
-        armour: 25,
+        armour: 50,
         magicResistance: 0
     };
 

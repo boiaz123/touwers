@@ -108,10 +108,10 @@ export class DesertLevel8 extends LevelBase {
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 2, 
+            enemyHealth_multiplier: 1, 
             speedMultiplier: 0.7, 
             spawnInterval: 1.4, 
-            pattern: [{ type: 'beefyenemy', count: 7 }] 
+            pattern: [{ type: 'walkingfrog', count: 3 }] 
         }
         // Wave 4
         , { 
@@ -132,7 +132,7 @@ export class DesertLevel8 extends LevelBase {
             enemyHealth_multiplier: 7, 
             speedMultiplier: 0.9, 
             spawnInterval: 14, 
-            pattern: [{ type: 'knight', count: 6 }] 
+            pattern: [{ type: 'ramcart', count: 6 }] 
         }
         // Wave 7
         , { 
@@ -174,7 +174,7 @@ export class DesertLevel8 extends LevelBase {
             enemyHealth_multiplier: 20, 
             speedMultiplier: 0.8, 
             spawnInterval: 1, 
-            pattern: [{ type: 'earthfrog', count: 1 }] 
+            pattern: [{ type: 'walkingfrog', count: 1 }] 
         }
         // Wave 13
         , { 

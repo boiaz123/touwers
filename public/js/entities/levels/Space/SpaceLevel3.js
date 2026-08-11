@@ -326,7 +326,7 @@ export class SpaceLevel3 extends LevelBase {
             enemyHealth_multiplier: 5.52, 
             speedMultiplier: 1, 
             spawnInterval: 4, 
-            pattern: [{ type: 'shieldknight', count: 1 }, { type: 'airfrog', count: 1 }] 
+            pattern: [{ type: 'ramcart', count: 1 }, { type: 'airfrog', count: 1 }] 
         }
         // Wave 33
         , { 
@@ -396,7 +396,7 @@ export class SpaceLevel3 extends LevelBase {
             enemyHealth_multiplier: 10.11, 
             speedMultiplier: 0.8, 
             spawnInterval: 1, 
-            pattern: [{ type: 'beefyenemy', count: 12, healthMultiplier: 3 }, { type: 'frog', count: 35 }, { type: 'mage', count: 6, healthMultiplier: 2 }, { type: 'basic', count: 14 }, { type: 'villager', count: 13 }, { type: 'shieldknight', count: 9 }, { type: 'archer', count: 12, healthMultiplier: 3, speedMultiplier: 2 }] 
+            pattern: [{ type: 'beefyenemy', count: 12, healthMultiplier: 3 }, { type: 'frog', count: 35 }, { type: 'ramcart', count: 6, healthMultiplier: 2 }, { type: 'basic', count: 14 }, { type: 'villager', count: 13 }, { type: 'shieldknight', count: 9 }, { type: 'archer', count: 12, healthMultiplier: 3, speedMultiplier: 2 }] 
         }
         // Wave 43
         , { 

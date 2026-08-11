@@ -19,7 +19,7 @@ export class WalkingFrogEnemy extends BaseEnemy {
     static _colors = new EnemyColorCache(FROG_COLOR_VARIANTS);
 
     static BASE_STATS = {
-        health: 420,
+        health: 2000,
         speed: 30,
         armour: 12,
         magicResistance: 0.4
