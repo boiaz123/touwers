@@ -26,12 +26,12 @@
                 <div id="speed-controls-group">
                     <div class="speed-label-top">Speed</div>
                     <div class="speed-circle-container">
-                        <button id="speed-pause-btn" class="speed-pause-btn" title="Pause/Resume Game">
+                        <button id="speed-pause-btn" class="speed-pause-btn">
                             <span class="pause-play-icon">⏸</span>
                         </button>
-                        <div class="speed-circle active" data-speed="1" title="Normal Speed (1x)">1x</div>
-                        <div class="speed-circle" data-speed="2" title="Double Speed (2x)">2x</div>
-                        <div class="speed-circle" data-speed="3" title="Triple Speed (3x)">3x</div>
+                        <div class="speed-circle active" data-speed="1">1x</div>
+                        <div class="speed-circle" data-speed="2">2x</div>
+                        <div class="speed-circle" data-speed="3">3x</div>
                     </div>
                 </div>
             </div>
@@ -55,15 +55,15 @@
                 <div class="stat gems-container">
                     <div class="stat-label">Gems</div>
                     <div class="gems-display">
-                        <div class="gem fire-gem" title="Fire Gem"></div>
+                        <div class="gem fire-gem"></div>
                         <span id="gems-fire">0</span>
-                        <div class="gem water-gem" title="Water Gem"></div>
+                        <div class="gem water-gem"></div>
                         <span id="gems-water">0</span>
-                        <div class="gem air-gem" title="Air Gem"></div>
+                        <div class="gem air-gem"></div>
                         <span id="gems-air">0</span>
-                        <div class="gem earth-gem" title="Earth Gem"></div>
+                        <div class="gem earth-gem"></div>
                         <span id="gems-earth">0</span>
-                        <div class="gem diamond-gem" title="Diamond Gem"></div>
+                        <div class="gem diamond-gem"></div>
                         <span id="gems-diamond">0</span>
                     </div>
                 </div>
@@ -178,7 +178,7 @@
                 <!-- Control Buttons Section -->
                 <div class="wooden-beam-separator"></div>
                 <div id="control-buttons-section">
-                    <button id="menu-btn" class="control-btn menu-btn" title="Open Menu">
+                    <button id="menu-btn" class="control-btn menu-btn">
                         <span class="control-btn-icon">☰</span>
                         <span class="control-btn-label">Menu</span>
                     </button>
@@ -191,7 +191,7 @@
     <div id="pause-menu-modal" class="pause-menu-modal">
         <div class="pause-menu-overlay" id="pause-menu-overlay"></div>
         <div class="pause-menu-content">
-            <button class="pause-menu-close-btn" id="resume-btn" title="Resume Game">✕</button>
+            <button class="pause-menu-close-btn" id="resume-btn">✕</button>
             <div class="pause-menu-header">
                 <div class="pause-menu-title">Menu</div>
             </div>
@@ -207,7 +207,7 @@
     <div id="ingame-options-modal" class="pause-menu-modal">
         <div class="pause-menu-overlay" id="ingame-options-overlay"></div>
         <div class="pause-menu-content">
-            <button class="pause-menu-close-btn" id="ingame-options-back-btn" title="Back">✕</button>
+            <button class="pause-menu-close-btn" id="ingame-options-back-btn">✕</button>
             <div class="pause-menu-header">
                 <div class="pause-menu-title">Options</div>
             </div>
@@ -219,7 +219,7 @@
     <div id="quit-warning-modal" class="pause-menu-modal">
         <div class="pause-menu-overlay" id="quit-warning-overlay"></div>
         <div class="pause-menu-content">
-            <button class="pause-menu-close-btn" id="quit-close-btn" title="Cancel">✕</button>
+            <button class="pause-menu-close-btn" id="quit-close-btn">✕</button>
             <div class="pause-menu-header">
                 <div class="pause-menu-title">Leave Level?</div>
             </div>
@@ -238,7 +238,7 @@
     <div id="restart-warning-modal" class="pause-menu-modal">
         <div class="pause-menu-overlay" id="restart-warning-overlay"></div>
         <div class="pause-menu-content">
-            <button class="pause-menu-close-btn" id="restart-close-btn" title="Cancel">✕</button>
+            <button class="pause-menu-close-btn" id="restart-close-btn">✕</button>
             <div class="pause-menu-header">
                 <div class="pause-menu-title">Warning</div>
             </div>
@@ -403,15 +403,15 @@
             <div class="toolbar">
                 <div class="tool-group">
                     <span class="tool-label">Draw</span>
-                    <button class="tool-btn active" id="drawPathBtn" title="Place waypoints to define the enemy path [P]">Path</button>
+                    <button class="tool-btn active" id="drawPathBtn">Path</button>
                 </div>
                 <div class="tool-sep"></div>
                 <div class="tool-group">
                     <span class="tool-label">Terrain</span>
-                    <button class="tool-btn" id="drawVegetationBtn" title="Place trees and vegetation [V]">Trees</button>
-                    <button class="tool-btn" id="drawRockBtn"       title="Place rocks and boulders [R]">Rocks</button>
-                    <button class="tool-btn" id="drawWaterBtn"      title="Place water features [W]">Water</button>
-                    <button class="tool-btn" id="deleteTerrainBtn"  title="Delete vegetation or rocks — click to remove [D]">Delete</button>
+                    <button class="tool-btn" id="drawVegetationBtn">Trees</button>
+                    <button class="tool-btn" id="drawRockBtn">Rocks</button>
+                    <button class="tool-btn" id="drawWaterBtn">Water</button>
+                    <button class="tool-btn" id="deleteTerrainBtn">Delete</button>
                 </div>
                 <!-- Placement mode (Trees only): a single Single/Brush choice, distinct from
                      the Type picker below - picking Brush hands off to its own dedicated
@@ -420,8 +420,8 @@
                     <div class="tool-sep"></div>
                     <span class="tool-label">Mode</span>
                     <div class="segmented">
-                        <button class="tool-btn active" id="placeSingleBtn" title="Click to place one tree at a time">Single</button>
-                        <button class="tool-btn" id="placeBrushBtn" title="Paint clusters of trees by dragging">Brush</button>
+                        <button class="tool-btn active" id="placeSingleBtn">Single</button>
+                        <button class="tool-btn" id="placeBrushBtn">Brush</button>
                     </div>
                 </div>
                 <!-- Type picker: single tree variant, or rock variant. Hidden while the
@@ -436,8 +436,8 @@
                 </div>
                 <div class="tool-group" id="waterControls" style="display:none">
                     <div class="tool-sep"></div>
-                    <button class="tool-btn" id="waterRiverBtn" title="Draw a river">River</button>
-                    <button class="tool-btn" id="waterLakeBtn"  title="Click and drag to paint lake cells">Lake</button>
+                    <button class="tool-btn" id="waterRiverBtn">River</button>
+                    <button class="tool-btn" id="waterLakeBtn">Lake</button>
                 </div>
                 <div class="tool-group" id="terrainSizeGroup" style="display:none; align-items:center; gap:4px;">
                     <div class="tool-sep"></div>
@@ -456,8 +456,8 @@
                 </div>
                 <div class="tool-sep"></div>
                 <div class="tool-group" style="margin-left:auto">
-                    <button class="tool-btn" id="undoBtn" title="Undo last action [U]">Undo</button>
-                    <button class="tool-btn t-danger" id="clearBtn" title="Clear all">Clear All</button>
+                    <button class="tool-btn" id="undoBtn">Undo</button>
+                    <button class="tool-btn t-danger" id="clearBtn">Clear All</button>
                 </div>
             </div>
 
@@ -467,10 +467,10 @@
                 <span class="brush-panel-title">&#127795; Tree Brush</span>
                 <div class="tool-sep"></div>
                 <span class="tool-label">Paint</span>
-                <button class="tool-btn variant-swatch" id="brushVariantBtn0" title="Toggle tree type 1 in the paint mix">1</button>
-                <button class="tool-btn variant-swatch" id="brushVariantBtn1" title="Toggle tree type 2 in the paint mix">2</button>
-                <button class="tool-btn variant-swatch" id="brushVariantBtn2" title="Toggle tree type 3 in the paint mix">3</button>
-                <button class="tool-btn variant-swatch" id="brushVariantBtn3" title="Toggle tree type 4 in the paint mix">4</button>
+                <button class="tool-btn variant-swatch" id="brushVariantBtn0">1</button>
+                <button class="tool-btn variant-swatch" id="brushVariantBtn1">2</button>
+                <button class="tool-btn variant-swatch" id="brushVariantBtn2">3</button>
+                <button class="tool-btn variant-swatch" id="brushVariantBtn3">4</button>
                 <div class="tool-sep"></div>
                 <div class="slider-row">
                     <label>Radius</label>

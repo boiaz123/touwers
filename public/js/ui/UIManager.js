@@ -358,7 +358,6 @@ export class UIManager {
             const icon = speedPauseBtn.querySelector('.pause-play-icon');
             if (icon) {
                 icon.textContent = '⏸';
-                speedPauseBtn.title = 'Pause Game';
             }
         }
 
@@ -5030,10 +5029,8 @@ export class UIManager {
             if (icon) {
                 if (wasPaused) {
                     icon.textContent = '▶';
-                    speedPauseBtn.title = 'Resume Game';
                 } else {
                     icon.textContent = '⏸';
-                    speedPauseBtn.title = 'Pause Game';
                 }
             }
         }
@@ -5052,10 +5049,9 @@ export class UIManager {
             const icon = speedPauseBtn.querySelector('.pause-play-icon');
             if (icon) {
                 icon.textContent = '▶';
-                speedPauseBtn.title = 'Resume Game';
             }
         }
-        
+
         const pauseMenuModal = document.getElementById('pause-menu-modal');
         if (pauseMenuModal) {
             pauseMenuModal.classList.add('show');
@@ -5085,7 +5081,6 @@ export class UIManager {
             const icon = speedPauseBtn.querySelector('.pause-play-icon');
             if (icon) {
                 icon.textContent = '⏸';
-                speedPauseBtn.title = 'Pause Game';
             }
         }
     }
