@@ -120,11 +120,11 @@ export class WalkingFrogEnemy extends BaseEnemy {
             this.cachedDarken2Color = WalkingFrogEnemy._colors.get(this.skinColor, 'darken_body');
         }
 
-        // Shadow - pulled up closer to the body (was 0.95, matching the old tall
-        // stance's much lower foot line) to match the now-crouched, belly-down pose.
+        // Shadow - wide and low, matching the sprawled stance's much wider foot
+        // spread (feet plant well outside the body silhouette on both sides).
         ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
         ctx.beginPath();
-        ctx.ellipse(this.x, this.y + baseSize * 0.82, baseSize * 0.85, baseSize * 0.22, 0, 0, Math.PI * 2);
+        ctx.ellipse(this.x, this.y + baseSize * 0.5, baseSize * 1.05, baseSize * 0.2, 0, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.save();
@@ -137,65 +137,47 @@ export class WalkingFrogEnemy extends BaseEnemy {
         // reading as a crooked/dizzy face rather than a hunched posture (heads in
         // this codebase are never drawn rotated, for exactly this reason).
         //
-        // A second attempt kept the body upright but planted the front feet far
-        // above the back feet's ground line to visually separate the two pairs -
-        // that gap put the front feet above the belly's own lowest point, reading
-        // as dangling in mid-air rather than touching ground.
-        //
-        // A third attempt gave all four legs a shared ground line by making the
-        // (high-hipped) FRONT legs the long ones, since they had the furthest to
-        // reach - anatomically backwards (a real frog's hind legs are the long,
-        // powerful ones; the front legs are short) and it looked it: gangly,
-        // over-long front limbs.
-        //
-        // Correct version: the ASYMMETRY that makes short front legs reach the
-        // ground isn't leg length, it's HIP HEIGHT. The back hip is mounted high
-        // (raised haunches - the classic crouched-frog silhouette) and gets long,
-        // powerful legs reaching far down to the ground line. The front hip is
-        // mounted low - i.e. the belly's own front end is already drooped down
-        // near the ground - so a genuinely SHORT leg from there still reaches the
-        // same line. Both pairs converge on ~0.72-0.75*baseSize (each pair's
-        // legUpper+legLower is picked so `hipY + (legUpper+legLower)*0.92` lands
-        // there - see drawFrogLeg's groundY formula), but via opposite means.
-
-        // --- BACK LEGS (long, powerful, high-mounted "haunches") - drawn before
-        // the body so the hip tucks under the body silhouette and only the long
-        // reaching-down portion shows. ---
-        this.drawFrogLeg(ctx, baseSize, -baseSize * 0.4, -baseSize * 0.05, {
-            legUpper: baseSize * 0.42, legLower: baseSize * 0.42, strideX: baseSize * 0.2,
-            liftY: baseSize * 0.17, limbWidth: baseSize * 0.28, footLen: baseSize * 0.42, footWidth: baseSize * 0.21
-        }, 1, false, anim);
-        this.drawFrogLeg(ctx, baseSize, baseSize * 0.4, -baseSize * 0.05, {
-            legUpper: baseSize * 0.42, legLower: baseSize * 0.42, strideX: baseSize * 0.2,
-            liftY: baseSize * 0.17, limbWidth: baseSize * 0.28, footLen: baseSize * 0.42, footWidth: baseSize * 0.21
-        }, -1, true, anim);
+        // The original "tall" build (body a portrait-oriented oval, legs hanging
+        // nearly straight down directly under narrow hips) read as a bobblehead
+        // sitting upright with a scribble of stick-legs hidden underneath it -
+        // the legs were mounted almost entirely INSIDE the body's own silhouette,
+        // so they had nowhere to be visible. Fixed by widening/flattening the body
+        // into a landscape oval and moving every hip OUTSIDE the body's rx, plus a
+        // constant outward lateral push on each foot target (`splay` below, added
+        // on top of the walk-cycle swing) - so the legs are permanently visible
+        // beside the body in a push-up sprawl, not tucked under it. Front/back hip
+        // Y was also pulled much closer together (was a 0.47*baseSize gap reading
+        // as a long upright torso; now ~0.30) so the torso reads wide, not tall.
 
         // --- EGG SAC (drawn behind the body, bulging out to the rear/upper) ---
         this.drawEggSac(ctx, baseSize, anim.t);
 
-        // --- MAIN BODY ---
+        // --- MAIN BODY --- flattened and widened landscape oval (was a portrait
+        // oval taller than it was wide, reading as an upright sitting posture)
+        // sitting low so the belly's edge nearly meets the ground line the legs
+        // plant on, for a genuine belly-down crouch.
         if (!this._bodyGradient || this._gradBaseSize !== baseSize || this._gradCtx !== ctx) {
             this._gradCtx = ctx;
             this._gradBaseSize = baseSize;
-            this._bodyGradient = ctx.createRadialGradient(-baseSize * 0.12, -baseSize * 0.1, baseSize * 0.15, 0, 0, baseSize * 0.5);
+            this._bodyGradient = ctx.createRadialGradient(-baseSize * 0.12, -baseSize * 0.06, baseSize * 0.15, 0, 0, baseSize * 0.5);
             this._bodyGradient.addColorStop(0, this.cachedLightenColor);
             this._bodyGradient.addColorStop(0.6, this.skinColor);
             this._bodyGradient.addColorStop(1, this.cachedDarken2Color);
         }
         ctx.fillStyle = this._bodyGradient;
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.08, baseSize * 0.5, baseSize * 0.58, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, baseSize * 0.14, baseSize * 0.6, baseSize * 0.34, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = this.cachedDarken2Color;
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.08, baseSize * 0.5, baseSize * 0.58, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, baseSize * 0.14, baseSize * 0.6, baseSize * 0.34, 0, 0, Math.PI * 2);
         ctx.stroke();
 
         // Belly
         ctx.fillStyle = WalkingFrogEnemy._colors.get(this.skinColor, 'lighten_body');
         ctx.beginPath();
-        ctx.ellipse(0, baseSize * 0.18, baseSize * 0.36, baseSize * 0.4, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, baseSize * 0.2, baseSize * 0.44, baseSize * 0.24, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Strap binding the egg sac on, drawn on top of the body so it visibly
@@ -203,26 +185,39 @@ export class WalkingFrogEnemy extends BaseEnemy {
         ctx.strokeStyle = '#5a4a2a';
         ctx.lineWidth = baseSize * 0.05;
         ctx.beginPath();
-        ctx.moveTo(baseSize * 0.22, baseSize * 0.32);
-        ctx.lineTo(-baseSize * 0.55, -baseSize * 0.1);
+        ctx.moveTo(baseSize * 0.22, baseSize * 0.3);
+        ctx.lineTo(-baseSize * 0.6, -baseSize * 0.08);
         ctx.stroke();
 
-        // --- FRONT LEGS (short) - drawn on top of the body since their hip is
-        // mounted low, at the belly's own front/bottom edge (0.42, well below the
-        // raised back hip at -0.05 above) - the belly itself is what's "bent over"
-        // down toward the ground here, so these short legs only need a small
-        // reach to plant on essentially the same ground line the long back legs
-        // reach (~0.71 vs ~0.72*baseSize). Smaller feet too, matching a real
-        // frog's dainty front hands vs its big hind feet. Diagonal-paired with the
-        // back legs above: front-left syncs with back-right, front-right with
-        // back-left. ---
-        this.drawFrogLeg(ctx, baseSize, -baseSize * 0.34, baseSize * 0.42, {
-            legUpper: baseSize * 0.16, legLower: baseSize * 0.16, strideX: baseSize * 0.1,
-            liftY: baseSize * 0.08, limbWidth: baseSize * 0.19, footLen: baseSize * 0.28, footWidth: baseSize * 0.15
+        // --- BIG LEGS (long, powerful "haunches") - drawn FIRST, before the
+        // small pair below, so wherever the two overlap the small pair renders
+        // on top and the big pair reads as sitting BEHIND them (further back),
+        // regardless of which one is anatomically labeled front/rear. A prior
+        // pass drew this pair last (on top of the small pair), which made the
+        // bigger, more outward-reaching legs look like they were rendered in
+        // front instead. Also trimmed down from earlier passes (shorter segments,
+        // thinner limb/foot) so the size gap against the small pair isn't so
+        // extreme - the two pairs read as a matched set, not mismatched. ---
+        this.drawFrogLeg(ctx, baseSize, -baseSize * 0.55, baseSize * 0.16, {
+            legUpper: baseSize * 0.23, legLower: baseSize * 0.23, strideX: baseSize * 0.1,
+            splay: baseSize * 0.11, reachRatio: 0.62, liftY: baseSize * 0.12, limbWidth: baseSize * 0.2, footLen: baseSize * 0.3, footWidth: baseSize * 0.16
+        }, 1, false, anim);
+        this.drawFrogLeg(ctx, baseSize, baseSize * 0.55, baseSize * 0.16, {
+            legUpper: baseSize * 0.23, legLower: baseSize * 0.23, strideX: baseSize * 0.1,
+            splay: baseSize * 0.11, reachRatio: 0.62, liftY: baseSize * 0.12, limbWidth: baseSize * 0.2, footLen: baseSize * 0.3, footWidth: baseSize * 0.16
         }, -1, true, anim);
-        this.drawFrogLeg(ctx, baseSize, baseSize * 0.34, baseSize * 0.42, {
-            legUpper: baseSize * 0.16, legLower: baseSize * 0.16, strideX: baseSize * 0.1,
-            liftY: baseSize * 0.08, limbWidth: baseSize * 0.19, footLen: baseSize * 0.28, footWidth: baseSize * 0.15
+
+        // --- SMALL LEGS (short) - drawn SECOND, on top of the big pair above,
+        // so they render in front at any overlap. Hip mounted close to the
+        // head/shoulder line (`hipY=0.05`). Diagonal-paired with the big legs
+        // above: this-left syncs with big-right, this-right with big-left. ---
+        this.drawFrogLeg(ctx, baseSize, -baseSize * 0.4, baseSize * 0.05, {
+            legUpper: baseSize * 0.19, legLower: baseSize * 0.19, strideX: baseSize * 0.07,
+            splay: baseSize * 0.08, reachRatio: 0.72, liftY: baseSize * 0.06, limbWidth: baseSize * 0.17, footLen: baseSize * 0.24, footWidth: baseSize * 0.14
+        }, -1, true, anim);
+        this.drawFrogLeg(ctx, baseSize, baseSize * 0.4, baseSize * 0.05, {
+            legUpper: baseSize * 0.19, legLower: baseSize * 0.19, strideX: baseSize * 0.07,
+            splay: baseSize * 0.08, reachRatio: 0.72, liftY: baseSize * 0.06, limbWidth: baseSize * 0.17, footLen: baseSize * 0.24, footWidth: baseSize * 0.14
         }, 1, false, anim);
 
         // --- HEAD --- shifted forward (+X) and down (less negative Y) from a
@@ -230,61 +225,63 @@ export class WalkingFrogEnemy extends BaseEnemy {
         // over the front legs rather than held bolt upright - the "bent over" cue,
         // applied only to the head/face so eyes and mouth stay level and legible
         // (an earlier attempt rotated the whole figure including the face, which
-        // read as a crooked/dizzy head instead of a hunched posture).
+        // read as a crooked/dizzy head instead of a hunched posture). Also sized
+        // down slightly and pulled closer to the body (was floating well above a
+        // tall torso; now the torso is compact so a same-size head read oversized).
         ctx.save();
-        ctx.translate(baseSize * 0.14, baseSize * 0.16);
+        ctx.translate(baseSize * 0.14, baseSize * 0.02);
 
         ctx.fillStyle = this.skinColor;
         ctx.beginPath();
-        ctx.ellipse(0, -baseSize * 0.42, baseSize * 0.5, baseSize * 0.42, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, -baseSize * 0.32, baseSize * 0.42, baseSize * 0.34, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = this.cachedDarken2Color;
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.ellipse(0, -baseSize * 0.42, baseSize * 0.5, baseSize * 0.42, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, -baseSize * 0.32, baseSize * 0.42, baseSize * 0.34, 0, 0, Math.PI * 2);
         ctx.stroke();
 
         // Head shading
         ctx.fillStyle = 'rgba(0, 0, 0, 0.13)';
         ctx.beginPath();
-        ctx.ellipse(0, -baseSize * 0.58, baseSize * 0.4, baseSize * 0.24, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, -baseSize * 0.45, baseSize * 0.34, baseSize * 0.19, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
         ctx.beginPath();
-        ctx.ellipse(baseSize * 0.06, -baseSize * 0.42, baseSize * 0.26, baseSize * 0.18, -0.2, 0, Math.PI * 2);
+        ctx.ellipse(baseSize * 0.05, -baseSize * 0.32, baseSize * 0.22, baseSize * 0.15, -0.2, 0, Math.PI * 2);
         ctx.fill();
 
         // --- EYES (bulging, alert - no blink: this is Mode A/baked, see class doc) ---
-        this.drawEye(ctx, -baseSize * 0.22, -baseSize * 0.58, baseSize);
-        this.drawEye(ctx, baseSize * 0.22, -baseSize * 0.58, baseSize);
+        this.drawEye(ctx, -baseSize * 0.19, -baseSize * 0.47, baseSize);
+        this.drawEye(ctx, baseSize * 0.19, -baseSize * 0.47, baseSize);
 
         // --- THROAT PULSE (tied to anim.t, so it bakes/loops correctly) ---
         const throatPulse = 0.6 + 0.4 * Math.sin(anim.t * 3);
         ctx.fillStyle = WalkingFrogEnemy._colors.get(this.skinColor, 'lighten_body');
         ctx.beginPath();
-        ctx.ellipse(0, -baseSize * 0.12, baseSize * 0.13, baseSize * 0.1 * throatPulse, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, -baseSize * 0.1, baseSize * 0.13, baseSize * 0.1 * throatPulse, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // --- MOUTH ---
         ctx.strokeStyle = WalkingFrogEnemy._colors.get(this.skinColor, 'darken_mouth');
         ctx.lineWidth = 1.2;
         ctx.beginPath();
-        ctx.arc(0, -baseSize * 0.25, baseSize * 0.22, 0, Math.PI);
+        ctx.arc(0, -baseSize * 0.2, baseSize * 0.18, 0, Math.PI);
         ctx.stroke();
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
         ctx.lineWidth = 0.8;
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.2, -baseSize * 0.25);
-        ctx.lineTo(baseSize * 0.2, -baseSize * 0.25);
+        ctx.moveTo(-baseSize * 0.16, -baseSize * 0.2);
+        ctx.lineTo(baseSize * 0.16, -baseSize * 0.2);
         ctx.stroke();
 
         // Nostrils
         ctx.fillStyle = WalkingFrogEnemy._colors.get(this.skinColor, 'darken_detail');
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.1, -baseSize * 0.48, baseSize * 0.05, 0, Math.PI * 2);
+        ctx.arc(-baseSize * 0.09, -baseSize * 0.39, baseSize * 0.045, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(baseSize * 0.1, -baseSize * 0.48, baseSize * 0.05, 0, Math.PI * 2);
+        ctx.arc(baseSize * 0.09, -baseSize * 0.39, baseSize * 0.045, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore(); // closes the head-offset save() above
@@ -326,7 +323,7 @@ export class WalkingFrogEnemy extends BaseEnemy {
      * in exactly one place instead of four near-identical copies.
      *
      * @param {number} hipX/hipY  attachment point
-     * @param {object} dims  { legUpper, legLower, strideX, liftY, limbWidth, footLen, footWidth }
+     * @param {object} dims  { legUpper, legLower, strideX, splay, reachRatio, liftY, limbWidth, footLen, footWidth }
      * @param {number} swingSign  +1 or -1: which direction this leg's foot moves
      *   for a positive anim.legSwing - use +1/-1 on opposite corners to pair legs
      *   into a diagonal gait (e.g. back-left and front-right both +1).
@@ -339,10 +336,28 @@ export class WalkingFrogEnemy extends BaseEnemy {
         const footColor = WalkingFrogEnemy._colors.get(this.skinColor, 'lighten_foot');
         const footDetail = WalkingFrogEnemy._colors.get(this.skinColor, 'darken_detail');
 
-        const groundY = hipY + (dims.legUpper + dims.legLower) * 0.92;
-        const footX = hipX + swingSign * anim.legSwing * dims.strideX;
+        // `side` mirrors which half of the body this hip is on, used for the IK
+        // knee-bend direction. solveLegIK's kneeSign bends the knee toward -x for
+        // +1 and toward +x for -1 (an ABSOLUTE screen direction, not "away from
+        // center") - passing a hardcoded sign here previously bent one side's knee
+        // inward, across the body, instead of outward.
+        //
+        // The outward knee BOW comes entirely from `reachRatio` < 1 (the hip-to-
+        // foot distance is deliberately short of the leg's full reach, so the IK
+        // solver has slack to bend the knee sideways) rather than from moving the
+        // foot itself far out to the side. An earlier version added a large
+        // constant lateral `splay` to the foot target on top of that slack - which
+        // pushed the hip-to-foot distance close to (or past, post-clamp) the leg's
+        // full length, forcing the IK to straighten the leg out nearly dead-straight
+        // to reach it. That read as long stiff sticks flung outward instead of
+        // bent, planted legs - exactly backwards from the intent. `splay` is now
+        // just a small stance-width nudge on top of an already-short reach, so it
+        // can't erase the bend.
+        const side = hipX < 0 ? -1 : 1;
+        const groundY = hipY + (dims.legUpper + dims.legLower) * dims.reachRatio;
+        const footX = hipX + side * dims.splay + swingSign * anim.legSwing * dims.strideX;
         const footY = groundY - kneeFlex(anim, kneePhaseIsRight) * dims.liftY;
-        const angles = solveLegIK(hipX, hipY, footX, footY, dims.legUpper, dims.legLower, -1);
+        const angles = solveLegIK(hipX, hipY, footX, footY, dims.legUpper, dims.legLower, -side);
         const leg = drawTwoSegmentLimb(
             ctx, hipX, hipY,
             angles.upperAngle, dims.legUpper, angles.lowerAngle, dims.legLower,
@@ -353,15 +368,18 @@ export class WalkingFrogEnemy extends BaseEnemy {
     }
 
     /** Translucent egg sac slung on her back - the visual "tell" that killing her
-     *  releases a brood (spawnOnDeath). Centered well outside the body ellipse's
-     *  left edge (body spans roughly x=[-0.5, 0.5]*baseSize) so it reads as a
-     *  distinct bulge rather than being fully painted over by the body fill that's
-     *  drawn right after this. Jiggle is tied to `t` (integer multiple) so it stays
-     *  a pure function of the walk phase and bakes/loops cleanly. */
+     *  releases a brood (spawnOnDeath). Centered above and behind the body ellipse's
+     *  rear-left edge (body spans roughly x=[-0.6, 0.6]*baseSize) so it reads as a
+     *  distinct bulge riding on her back rather than being fully painted over by
+     *  the body fill that's drawn right after this - and, now that the body is a
+     *  low wide oval, high enough (negative cy) to clear the back-left leg's hip
+     *  entirely instead of sitting right on top of it. Jiggle is tied to `t`
+     *  (integer multiple) so it stays a pure function of the walk phase and
+     *  bakes/loops cleanly. */
     drawEggSac(ctx, baseSize, t) {
         const jiggle = 1 + Math.sin(t * 2) * 0.03;
-        const cx = -baseSize * 0.68, cy = -baseSize * 0.02;
-        const rx = baseSize * 0.44 * jiggle, ry = baseSize * 0.52 * jiggle;
+        const cx = -baseSize * 0.62, cy = -baseSize * 0.28;
+        const rx = baseSize * 0.4 * jiggle, ry = baseSize * 0.42 * jiggle;
 
         // Membrane sac
         if (!this._sacGrad || this._sacGradBaseSize !== baseSize || this._sacGradCtx !== ctx) {
