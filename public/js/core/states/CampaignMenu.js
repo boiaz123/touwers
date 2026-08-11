@@ -8,6 +8,16 @@ const CAMPAIGN_BIOME = {
     'campaign-4': { from: '#1c1810', to: '#130f09', accent: '#8840c0' },  // Frog King violet accent
 };
 
+// Emblem art — drop a same-named file in public/assets/campaigns/ to replace any of these.
+// Missing/unloaded files fall back to the campaign's vector drawIcon() automatically.
+const CAMPAIGN_EMBLEM_IMAGE = {
+    'campaign-1': 'assets/campaigns/campaign-1.jpg',
+    'campaign-2': 'assets/campaigns/campaign-2.jpg',
+    'campaign-3': 'assets/campaigns/campaign-3.jpg',
+    'campaign-4': 'assets/campaigns/campaign-4.jpg',
+    'campaign-5': 'assets/campaigns/campaign-5.jpg',
+};
+
 export class CampaignMenu {
     constructor(stateManager) {
         this.stateManager = stateManager;
@@ -28,8 +38,21 @@ export class CampaignMenu {
             detailRightPad: 40,
             titleY: 56,
         };
+
+        this.emblemImageCache = {};
+        this._loadEmblemImages();
     }
-    
+
+    /** Preloads campaign emblem art; missing files silently fall back to drawIcon(). */
+    _loadEmblemImages() {
+        for (const [id, path] of Object.entries(CAMPAIGN_EMBLEM_IMAGE)) {
+            const img = new Image();
+            img.onload = () => { this.emblemImageCache[id] = img; };
+            img.onerror = () => { this.emblemImageCache[id] = null; };
+            img.src = path;
+        }
+    }
+
     enter() {
         const statsBar = document.getElementById('stats-bar');
         const sidebar = document.getElementById('tower-sidebar');
@@ -431,7 +454,7 @@ export class CampaignMenu {
         const oc = isSelected ? '#d4af37' : biome.accent + 'aa';
         this._drawCornerOrnament(ctx, b.x + 2, b.y + Math.floor((b.height - stripH) / 2), 4, oc);
 
-        this._renderUnlockedCard(ctx, campaign, b, isSelected, biome);
+        this._renderUnlockedCard(ctx, campaign, b, isSelected, biome, isHovered);
     }
 
     _renderLockedCard(ctx, campaign, b) {
@@ -450,23 +473,143 @@ export class CampaignMenu {
         ctx.fill();
     }
 
-    _renderUnlockedCard(ctx, campaign, b, isSelected, biome) {
-        biome = biome || CAMPAIGN_BIOME[campaign.id] || CAMPAIGN_BIOME['campaign-5'];
-        const iconX = b.x + 56;
-        const iconY = b.y + Math.floor((b.height - 22) / 2);
+    /**
+     * Draws `img` into the dest rect with "cover" fit (like CSS background-size:cover) —
+     * scales to fill completely and crops the overflow, centered, so no edges show through.
+     */
+    _drawCoverImage(ctx, img, dx, dy, dw, dh) {
+        const iw = img.naturalWidth || img.width;
+        const ih = img.naturalHeight || img.height;
+        if (!iw || !ih) return;
+        const scale = Math.max(dw / iw, dh / ih);
+        const sw = dw / scale;
+        const sh = dh / scale;
+        const sx = (iw - sw) / 2;
+        const sy = (ih - sh) / 2;
+        ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+    }
 
-        // Large campaign icon
-        if (campaign.drawIcon) {
-            campaign.drawIcon(ctx, iconX, iconY, 52);
+    /**
+     * Draws a campaign's scene art as a framed medallion emblem — a bevelled
+     * metal ring around a circular "photo" crop, zoomed in on the campaign's
+     * icon artwork so it reads as a scenic portrait rather than a flat glyph.
+     */
+    _drawEmblem(ctx, campaign, x, y, radius, biome, isSelected, isHovered) {
+        ctx.save();
+
+        // Drop shadow beneath the medallion
+        ctx.beginPath();
+        ctx.arc(x + 3, y + 5, radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fill();
+
+        const ringW = Math.max(5, radius * 0.115);
+        const ringInner = radius - ringW;
+
+        // Outer bevelled metal ring — gold when selected, warm pewter otherwise
+        const ringGrad = ctx.createLinearGradient(x, y - radius, x, y + radius);
+        if (isSelected) {
+            ringGrad.addColorStop(0, '#f6e29a');
+            ringGrad.addColorStop(0.5, '#d4af37');
+            ringGrad.addColorStop(1, '#8a651c');
+        } else if (isHovered) {
+            ringGrad.addColorStop(0, '#c8b488');
+            ringGrad.addColorStop(0.5, '#8f7748');
+            ringGrad.addColorStop(1, '#4a3c22');
         } else {
-            ctx.font = '52px serif';
+            ringGrad.addColorStop(0, '#8c7a5c');
+            ringGrad.addColorStop(0.5, '#5c4c32');
+            ringGrad.addColorStop(1, '#332a1a');
+        }
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = ringGrad;
+        ctx.fill();
+
+        // Inner bevel groove separating ring from picture
+        ctx.beginPath();
+        ctx.arc(x, y, ringInner + 1.5, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Clip to the inner circle and paint the zoomed-in scene crop
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, ringInner, 0, Math.PI * 2);
+        ctx.clip();
+
+        // Fallback backdrop in case the scene art has transparent gaps
+        ctx.fillStyle = biome.to || '#141414';
+        ctx.fillRect(x - ringInner, y - ringInner, ringInner * 2, ringInner * 2);
+
+        const emblemImg = this.emblemImageCache[campaign.id];
+        if (emblemImg) {
+            // Real picture — cover-fit crop so it fills the circle edge-to-edge with no gaps
+            this._drawCoverImage(ctx, emblemImg, x - ringInner, y - ringInner, ringInner * 2, ringInner * 2);
+        } else if (campaign.drawIcon) {
+            // Image not loaded/available yet — fall back to the vector scene art, zoomed to fill the frame
+            campaign.drawIcon(ctx, x, y, ringInner * 1.9);
+        } else {
+            ctx.font = `${Math.round(ringInner * 1.3)}px serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(campaign.icon, iconX, iconY);
+            ctx.fillText(campaign.icon, x, y);
         }
 
+        // Soft inner vignette so the crop's edges melt into the frame
+        const vig = ctx.createRadialGradient(x, y, ringInner * 0.6, x, y, ringInner);
+        vig.addColorStop(0, 'rgba(0,0,0,0)');
+        vig.addColorStop(1, 'rgba(0,0,0,0.30)');
+        ctx.fillStyle = vig;
+        ctx.beginPath();
+        ctx.arc(x, y, ringInner, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+
+        // Glass-like highlight catching light on the upper-left rim
+        ctx.beginPath();
+        ctx.arc(x, y, ringInner + 1, -Math.PI * 0.85, -Math.PI * 0.15);
+        ctx.strokeStyle = 'rgba(255,255,255,0.32)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // Crisp outer rim edge
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Small jewel stud at the base of the ring — biome-accented
+        const studY = y + radius - ringW * 0.5;
+        ctx.beginPath();
+        ctx.arc(x, studY, ringW * 0.42, 0, Math.PI * 2);
+        const studGrad = ctx.createRadialGradient(x - ringW * 0.15, studY - ringW * 0.15, 0, x, studY, ringW * 0.42);
+        studGrad.addColorStop(0, '#ffffff');
+        studGrad.addColorStop(0.35, biome.accent || '#a08040');
+        studGrad.addColorStop(1, '#1a1408');
+        ctx.fillStyle = studGrad;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    _renderUnlockedCard(ctx, campaign, b, isSelected, biome, isHovered) {
+        biome = biome || CAMPAIGN_BIOME[campaign.id] || CAMPAIGN_BIOME['campaign-5'];
+        const iconR = 54;
+        const iconX = b.x + 16 + iconR;
+        const iconY = b.y + Math.floor((b.height - 22) / 2);
+
+        // Large campaign emblem — framed, zoomed-in crop of the campaign's scene art
+        this._drawEmblem(ctx, campaign, iconX, iconY, iconR, biome, isSelected, isHovered);
+
         // Campaign name
-        const textX = b.x + 110;
+        const textX = b.x + 16 + iconR * 2 + 20;
         const nameY = b.y + 32;
         ctx.font = `bold 22px serif`;
         ctx.textAlign = 'left';
@@ -568,24 +711,20 @@ export class CampaignMenu {
         let cy = panel.y + pad;
         const biome = CAMPAIGN_BIOME[campaign.id] || { from: '#1c1810', to: '#130f09', accent: '#7a6a5a' };
 
+        // Icon + Name header
+        const headerR = 28;
+        this._drawEmblem(ctx, campaign, cx + headerR, cy + headerR, headerR, biome, true, false);
+
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-
-        // Icon + Name header
-        if (campaign.drawIcon) {
-            campaign.drawIcon(ctx, cx + 18, cy + 18, 36);
-        } else {
-            ctx.font = '36px serif';
-            ctx.fillText(campaign.icon, cx, cy);
-        }
-
+        const headerTextX = cx + headerR * 2 + 14;
         ctx.font = 'bold 21px serif';
         ctx.fillStyle = '#ffd700';
-        ctx.fillText(campaign.name, cx + 48, cy + 3);
+        ctx.fillText(campaign.name, headerTextX, cy + 3);
 
         ctx.font = '12px serif';
         ctx.fillStyle = this._difficultyColor(campaign.difficulty);
-        ctx.fillText(`\u2694 ${campaign.difficulty}`, cx + 48, cy + 30);
+        ctx.fillText(`\u2694 ${campaign.difficulty}`, headerTextX, cy + 30);
         cy += 56;
 
         // Divider

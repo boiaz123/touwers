@@ -38,6 +38,13 @@ export class CampaignRegistry {
                 icon: '▲',                levelCount: 12,
                 drawIcon(ctx, x, y, size) {
                     const s = size * 0.45;
+                    // Twilight forest sky backdrop
+                    const skyG1 = ctx.createLinearGradient(x, y - s, x, y + s);
+                    skyG1.addColorStop(0, '#0d2818');
+                    skyG1.addColorStop(0.6, '#163a20');
+                    skyG1.addColorStop(1, '#1f4a28');
+                    ctx.fillStyle = skyG1;
+                    ctx.fillRect(x - s, y - s, s*2, s*2);
                     // Background pine silhouettes for depth
                     [x - s*0.72, x + s*0.64].forEach((tx, i) => {
                         ctx.fillStyle = i === 0 ? '#14301a' : '#0f2814';
@@ -130,7 +137,7 @@ export class CampaignRegistry {
                     ctx.closePath(); ctx.fill();
                     // Left main peak
                     const lpG = ctx.createLinearGradient(x - s*0.55, y - s*0.88, x - s*0.55, y + s*0.68);
-                    lpG.addColorStop(0, '#DDE6EF'); lpG.addColorStop(0.24, '#8a9fb0'); lpG.addColorStop(1, '#445460');
+                    lpG.addColorStop(0, '#DDE6EF'); lpG.addColorStop(0.24, '#96abbc'); lpG.addColorStop(1, '#5a7080');
                     ctx.fillStyle = lpG;
                     ctx.beginPath();
                     ctx.moveTo(x - s*0.96, y + s*0.68); ctx.lineTo(x - s*0.18, y + s*0.68);
@@ -144,7 +151,7 @@ export class CampaignRegistry {
                     ctx.closePath(); ctx.fill();
                     // Right main peak
                     const rpG = ctx.createLinearGradient(x + s*0.48, y - s*0.72, x + s*0.48, y + s*0.68);
-                    rpG.addColorStop(0, '#C8D8E8'); rpG.addColorStop(0.26, '#6e8ea8'); rpG.addColorStop(1, '#384858');
+                    rpG.addColorStop(0, '#C8D8E8'); rpG.addColorStop(0.26, '#82a0b8'); rpG.addColorStop(1, '#4c6474');
                     ctx.fillStyle = rpG;
                     ctx.beginPath();
                     ctx.moveTo(x - s*0.06, y + s*0.68); ctx.lineTo(x + s*0.96, y + s*0.68);
