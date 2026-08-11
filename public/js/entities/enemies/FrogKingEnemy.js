@@ -1092,15 +1092,27 @@ export class FrogKingEnemy extends BaseEnemy {
         if (jumpPhase < 0.5) extension = jumpPhase * 2;
         else extension = Math.max(0, (1 - jumpPhase) * 2);
 
-        const thighLength = baseSize * 0.3;
-        const calfLength = baseSize * 0.28;
+        // Shorter than a stretched-out limb reads: a real crouched frog leg is
+        // compact, with most of its visible length coming from the knee bend rather
+        // than segment length.
+        const thighLength = baseSize * 0.21;
+        const calfLength = baseSize * 0.22;
 
-        const baseThighAngle = side > 0 ? Math.PI / 3.2 : Math.PI - Math.PI / 3.2;
-        const thighAngle = baseThighAngle - side * extension * 0.2;
+        // Thigh close to horizontal at rest (a real femur sits almost flat against
+        // the body), so the knee bend below reads as a tight corner rather than a
+        // shallow kink.
+        const baseThighAngle = side > 0 ? Math.PI / 6 : Math.PI - Math.PI / 6;
+        const thighAngle = baseThighAngle - side * extension * 0.15;
         const kneeX = hipX + Math.cos(thighAngle) * thighLength;
         const kneeY = hipY + Math.sin(thighAngle) * thighLength;
 
-        const calfAngle = thighAngle + side * 1.05 * (1 - extension * 0.7);
+        // Calf folds back sharply at rest - a tight ~75 degree corner at the knee,
+        // matching a real frog's crouched silhouette - and straightens toward a
+        // nearly-inline leg as it extends into the leap. Still shallow enough that
+        // the shin doesn't swing past vertical and cross under the body toward the
+        // other leg (matches the same tuning applied to the elemental frogs' shared
+        // leg code - see ElementalFrogEnemy.drawBattleLeg).
+        const calfAngle = thighAngle + side * 1.3 * (1 - extension * 0.85);
         const footX = kneeX + Math.cos(calfAngle) * calfLength;
         const footY = kneeY + Math.sin(calfAngle) * calfLength;
 
@@ -1113,18 +1125,18 @@ export class FrogKingEnemy extends BaseEnemy {
         drawTaperedPath(
             ctx,
             [{ x: hipX, y: hipY }, { x: kneeX, y: kneeY }, { x: footX, y: footY }],
-            [baseSize * 0.3, baseSize * 0.22, baseSize * 0.16],
+            [baseSize * 0.22, baseSize * 0.17, baseSize * 0.12],
             this.skinColor,
             darkenColor(this.skinColor, 0.3),
             1
         );
 
-        // Flipper - an actual paddle/fin outline (narrow ankle, wide belly, rounded
-        // tip), not a slightly-elongated ellipse - shared with the elemental frogs'
-        // identical fix, see FrogFlipperRenderer.js.
+        // Toe-pad foot - a palm with distinct thin-necked, round-padded toes fanning
+        // out, not a webbed paddle - shared with the elemental frogs' identical fix,
+        // see FrogFlipperRenderer.js.
         drawFlipperFoot(
             ctx, footX, footY, calfAngle,
-            baseSize * 0.56, baseSize * 0.28,
+            baseSize * 0.42, baseSize * 0.24,
             this.skinColor,
             darkenColor(this.skinColor, 0.4)
         );

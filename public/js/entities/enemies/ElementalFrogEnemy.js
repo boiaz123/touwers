@@ -1,6 +1,7 @@
 import { BaseEnemy } from './BaseEnemy.js';
 import { EnemyColorCache, FROG_COLOR_VARIANTS } from '../../utils/EnemyColorCache.js';
 import { drawFlipperFoot } from './FrogFlipperRenderer.js';
+import { drawTaperedPath } from './TaperedShapeRenderer.js';
 
 /**
  * Shared base for the four elemental "battle-mage" frogs (Fire/Water/Earth/Air).
@@ -540,76 +541,59 @@ export class ElementalFrogEnemy extends BaseEnemy {
         if (jumpPhase < 0.5) extension = jumpPhase * 2;
         else extension = Math.max(0, (1 - jumpPhase) * 2);
 
-        // Back legs - shared across all four elements (EarthFrogEnemy used to have its
-        // own much shorter 0.09/0.11 lengths here, a copy-paste typo making its back
-        // legs look stubby compared to its siblings; unifying this method fixes that).
-        const thighLength = baseSize * 0.27;
-        const calfLength = baseSize * 0.3;
+        // Back legs - shorter than a stretched-out limb reads: a real crouched frog
+        // leg is compact, not long, with most of its visible length coming from the
+        // bend rather than segment length.
+        const thighLength = baseSize * 0.19;
+        const calfLength = baseSize * 0.2;
 
-        // Thigh splayed out to the side and down - a real frog's hip juts outward,
-        // not straight down - so the silhouette reads as a folded leg, not a shaft.
-        const baseThighAngle = side > 0 ? Math.PI / 3.3 : Math.PI - Math.PI / 3.3;
-        const thighAngle = baseThighAngle - side * extension * 0.22;
+        // Thigh splayed out to the side, close to horizontal - a real frog's femur
+        // at rest sits almost flat against the body, not angled halfway to vertical -
+        // so the knee bend below reads as a proper corner instead of a shallow kink.
+        const baseThighAngle = side > 0 ? Math.PI / 6 : Math.PI - Math.PI / 6;
+        const thighAngle = baseThighAngle - side * extension * 0.15;
 
         const kneeX = hipX + Math.cos(thighAngle) * thighLength;
         const kneeY = hipY + Math.sin(thighAngle) * thighLength;
 
-        // Calf folds back sharply at rest (crouched knee bend); straightens out as
-        // the leg extends during the leap.
-        const restCalfBend = side * 1.15;
-        const calfAngle = thighAngle + restCalfBend * (1 - extension * 0.75);
+        // Calf folds back sharply at rest - a tight ~75-80 degree corner at the knee,
+        // matching a real frog's crouched silhouette (near-horizontal thigh, near-
+        // vertical shin) - and straightens toward a nearly-inline leg as it extends
+        // into the leap. Still shallow enough that the shin doesn't swing past
+        // vertical and cross under the body toward the other leg.
+        const restCalfBend = side * 1.35;
+        const calfAngle = thighAngle + restCalfBend * (1 - extension * 0.85);
 
         const footX = kneeX + Math.cos(calfAngle) * calfLength;
         const footY = kneeY + Math.sin(calfAngle) * calfLength;
 
-        // Shadow (offset, drawn as two tapered segments matching the real strokes below)
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = baseSize * 0.19;
-        ctx.beginPath();
-        ctx.moveTo(hipX + 1, hipY + 1);
-        ctx.lineTo(kneeX + 1, kneeY + 1);
-        ctx.stroke();
-        ctx.lineWidth = baseSize * 0.1;
-        ctx.beginPath();
-        ctx.moveTo(kneeX + 1, kneeY + 1);
-        ctx.lineTo(footX + 1, footY + 1);
-        ctx.stroke();
+        // Leg (hip -> knee -> ankle) as ONE continuous tapered shape instead of
+        // separate stroked segments plus a knee-joint circle - stacking independent
+        // round shapes at the joint is what read as a chain of blobs rather than a
+        // single natural limb. Matches the same fix already applied to FrogKingEnemy's
+        // legs (see TaperedShapeRenderer.js) so both read consistently.
+        const legWidths = [baseSize * 0.15, baseSize * 0.12, baseSize * 0.09];
+        drawTaperedPath(
+            ctx,
+            [{ x: hipX + 1, y: hipY + 1 }, { x: kneeX + 1, y: kneeY + 1 }, { x: footX + 1, y: footY + 1 }],
+            legWidths,
+            'rgba(0, 0, 0, 0.12)', null
+        );
 
-        // Thigh - thick, muscular segment
-        const thighColor = ElementalFrogEnemy._colors.get(this.skinColor, 'darken_leg');
-        ctx.strokeStyle = thighColor;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.lineWidth = baseSize * 0.19;
-        ctx.beginPath();
-        ctx.moveTo(hipX, hipY);
-        ctx.lineTo(kneeX, kneeY);
-        ctx.stroke();
+        drawTaperedPath(
+            ctx,
+            [{ x: hipX, y: hipY }, { x: kneeX, y: kneeY }, { x: footX, y: footY }],
+            legWidths,
+            ElementalFrogEnemy._colors.get(this.skinColor, 'darken_leg'),
+            ElementalFrogEnemy._colors.get(this.skinColor, 'darken_detail'),
+            1
+        );
 
-        // Calf - visibly narrower than the thigh, so the leg tapers instead of
-        // reading as one uniform-width tube.
-        ctx.strokeStyle = ElementalFrogEnemy._colors.get(this.skinColor, 'darken_detail');
-        ctx.lineWidth = baseSize * 0.1;
-        ctx.beginPath();
-        ctx.moveTo(kneeX, kneeY);
-        ctx.lineTo(footX, footY);
-        ctx.stroke();
-
-        // Knee joint - a small bump so the taper reads as a joint, not a seam
-        ctx.fillStyle = thighColor;
-        ctx.beginPath();
-        ctx.arc(kneeX, kneeY, baseSize * 0.095, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Flipper - an actual paddle/fin outline (narrow ankle, wide belly, rounded
-        // tip), not a slightly-elongated ellipse - at this render scale a plain
-        // ellipse reads as "a circle" regardless of aspect ratio; the shape needs a
-        // real outline cue to parse as a flipper. See FrogFlipperRenderer.js.
+        // Toe-pad foot - a palm with distinct thin-necked, round-padded toes fanning
+        // out, not a webbed paddle. See FrogFlipperRenderer.js.
         drawFlipperFoot(
             ctx, footX, footY, calfAngle,
-            baseSize * 0.5, baseSize * 0.26,
+            baseSize * 0.27, baseSize * 0.15,
             ElementalFrogEnemy._colors.get(this.skinColor, 'lighten_foot'),
             ElementalFrogEnemy._colors.get(this.skinColor, 'darken_detail')
         );
@@ -686,7 +670,7 @@ export class ElementalFrogEnemy extends BaseEnemy {
         // from the forearm.
         drawFlipperFoot(
             ctx, handX, handY, lowerAngle,
-            baseSize * 0.28, baseSize * 0.15,
+            baseSize * 0.2, baseSize * 0.11,
             ElementalFrogEnemy._colors.get(this.skinColor, 'lighten_foot'),
             ElementalFrogEnemy._colors.get(this.skinColor, 'darken_detail')
         );
