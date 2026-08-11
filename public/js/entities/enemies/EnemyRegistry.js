@@ -11,6 +11,8 @@ import { WaterFrogEnemy } from './WaterFrogEnemy.js';
 import { FireFrogEnemy } from './FireFrogEnemy.js';
 import { AirFrogEnemy } from './AirFrogEnemy.js';
 import { FrogKingEnemy } from './FrogKingEnemy.js';
+import { RamCartEnemy } from './RamCartEnemy.js';
+import { WalkingFrogEnemy } from './WalkingFrogEnemy.js';
 
 /**
  * EnemyRegistry - Centralized registry for all enemy types
@@ -67,9 +69,17 @@ export class EnemyRegistry {
             class: AirFrogEnemy, 
             ...AirFrogEnemy.BASE_STATS
         },
-        'frogking': { 
-            class: FrogKingEnemy, 
+        'frogking': {
+            class: FrogKingEnemy,
             ...FrogKingEnemy.BASE_STATS
+        },
+        'ramcart': {
+            class: RamCartEnemy,
+            ...RamCartEnemy.BASE_STATS
+        },
+        'walkingfrog': {
+            class: WalkingFrogEnemy,
+            ...WalkingFrogEnemy.BASE_STATS
         }
     };
 

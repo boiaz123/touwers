@@ -124,26 +124,7 @@ export class EnemyManager {
                 );
                 
                 if (enemy) {
-                    // Assign audio manager to enemy for sound effects (e.g. spell casts)
-                    if (this.audioManager) {
-                        enemy.audioManager = this.audioManager;
-                    }
-
-                    // Apply campaign-specific base loot rates (set by GameplayState based on current campaign)
-                    if (this.campaignLootConfig) {
-                        enemy.lootDropChance = this.campaignLootConfig.normalChance;
-                        enemy.rareLootDropChance = this.campaignLootConfig.rareChance;
-                        if (this.campaignLootConfig.realmShardChance !== undefined) {
-                            enemy.realmShardDropChance = this.campaignLootConfig.realmShardChance;
-                        }
-                    }
-
-                    // Apply Rabbit's Foot modifier if active in marketplace
-                    if (this.marketplaceSystem && this.marketplaceSystem.rabbitFootActive) {
-                        if (enemy.lootDropChance !== undefined) {
-                            enemy.lootDropChance *= 2; // Double the base loot chance
-                        }
-                    }
+                    this._applyEnemyDefaults(enemy);
                     this.enemies.push(enemy);
                     this.spawnTimer = 0;
                 }
@@ -189,6 +170,68 @@ export class EnemyManager {
         this.orphanedSplatters.length = writeIdx;
     }
     
+    /**
+     * Shared enemy-configuration step (audio manager, campaign loot rates, Rabbit's
+     * Foot modifier) applied to both freshly spawned wave enemies and enemies spawned
+     * by another enemy's spawnOnDeath (see _spawnDeathChildren) so the two paths can't
+     * drift out of sync.
+     */
+    _applyEnemyDefaults(enemy) {
+        // Assign audio manager to enemy for sound effects (e.g. spell casts)
+        if (this.audioManager) {
+            enemy.audioManager = this.audioManager;
+        }
+
+        // Apply campaign-specific base loot rates (set by GameplayState based on current campaign)
+        if (this.campaignLootConfig) {
+            enemy.lootDropChance = this.campaignLootConfig.normalChance;
+            enemy.rareLootDropChance = this.campaignLootConfig.rareChance;
+            if (this.campaignLootConfig.realmShardChance !== undefined) {
+                enemy.realmShardDropChance = this.campaignLootConfig.realmShardChance;
+            }
+        }
+
+        // Apply Rabbit's Foot modifier if active in marketplace
+        if (this.marketplaceSystem && this.marketplaceSystem.rabbitFootActive) {
+            if (enemy.lootDropChance !== undefined) {
+                enemy.lootDropChance *= 2; // Double the base loot chance
+            }
+        }
+    }
+
+    /**
+     * Spawns a dying enemy's spawnOnDeath entries (e.g. RamCartEnemy's raiding party,
+     * WalkingFrogEnemy's brood) into `outBuffer` rather than directly into this.enemies,
+     * since the caller (removeDeadEnemies) is mid-iteration over that array.
+     * Children appear scattered around the parent's death position and pick up its
+     * path progress, so they continue toward the castle instead of restarting at the
+     * path's beginning.
+     */
+    _spawnDeathChildren(parent, outBuffer) {
+        const spawns = parent.spawnOnDeath;
+        for (let s = 0; s < spawns.length; s++) {
+            const { type, count, healthMultiplier = 1 } = spawns[s];
+            const baseSpeed = EnemyRegistry.getDefaultSpeed(type) || 50;
+
+            for (let i = 0; i < count; i++) {
+                const child = EnemyRegistry.createEnemy(type, this.path, healthMultiplier, baseSpeed);
+                if (!child) continue;
+
+                const scatterAngle = Math.random() * Math.PI * 2;
+                const scatterDist = Math.random() * 24;
+                child.x = parent.x + Math.cos(scatterAngle) * scatterDist;
+                child.y = parent.y + Math.sin(scatterAngle) * scatterDist;
+                child.currentPathIndex = Math.min(parent.currentPathIndex, child.path.length - 1);
+                child.reachedEnd = parent.reachedEnd;
+                child.isAttackingCastle = parent.isAttackingCastle;
+                child.facingLeft = parent.facingLeft;
+
+                this._applyEnemyDefaults(child);
+                outBuffer.push(child);
+            }
+        }
+    }
+
     checkReachedEnd() {
         let reachedCount = 0;
         let writeIdx = 0;
@@ -210,13 +253,21 @@ export class EnemyManager {
         const lootDrops = this._lootDropBuffer;
         lootDrops.length = 0;
 
+        if (!this._spawnedChildBuffer) this._spawnedChildBuffer = [];
+        const spawnedChildren = this._spawnedChildBuffer;
+        spawnedChildren.length = 0;
+
         const startCount = this.enemies.length;
         let writeIdx = 0;
         for (let i = 0; i < this.enemies.length; i++) {
             const enemy = this.enemies[i];
             if (enemy.isDead()) {
                 totalGold += enemy.goldReward || 0;
-                
+
+                if (enemy.spawnOnDeath) {
+                    this._spawnDeathChildren(enemy, spawnedChildren);
+                }
+
                 // Check for realm shard drop (independent of regular loot)
                 if (enemy.shouldDropRealmShard && enemy.shouldDropRealmShard()) {
                     const shardId = enemy.getDroppedRealmShard ? enemy.getDroppedRealmShard() : 'realm-shard-bottom';
@@ -262,6 +313,12 @@ export class EnemyManager {
             }
         }
         this.enemies.length = writeIdx;
+
+        if (spawnedChildren.length > 0) {
+            for (let i = 0; i < spawnedChildren.length; i++) {
+                this.enemies.push(spawnedChildren[i]);
+            }
+        }
 
         return { totalGold, lootDrops, killed: startCount - writeIdx };
     }

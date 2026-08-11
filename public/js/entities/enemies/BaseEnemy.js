@@ -14,6 +14,12 @@ export class BaseEnemy {
         this.lootDropChance = 0.01; // 1/100 base chance to drop normal loot on death (0-1)
         this.rareLootDropChance = 0.001; // 1/1000 base chance to drop rare loot on death (0-1)
         this.realmShardDropChance = 0; // Chance to drop a Frog King's Realm Shard
+
+        // Optional death-triggered spawn: array of { type, count, healthMultiplier? }
+        // entries. When this enemy dies, EnemyManager.removeDeadEnemies() spawns these
+        // additional enemies at its death position/path progress instead of the path's
+        // start (see RamCartEnemy, WalkingFrogEnemy). Null means no spawn-on-death.
+        this.spawnOnDeath = null;
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;
         this.y = path && path.length > 0 ? path[0].y : 0;
