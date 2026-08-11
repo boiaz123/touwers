@@ -17,8 +17,6 @@ export class AirFrogEnemy extends ElementalFrogEnemy {
         robeColor: '#C9D6FF',
         robeColorDark: '#8C9EE8',
         glowColor: '#4DE8FF',
-        hatColors: ['#D8E4FF', '#B8CCFF', '#96AEE0'],
-        hatShowStar: true,
         particleColorBases: ['rgba(120, 200, 255, ', 'rgba(180, 160, 255, ', 'rgba(224, 246, 255, '],
     };
 

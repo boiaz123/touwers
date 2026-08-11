@@ -17,8 +17,6 @@ export class EarthFrogEnemy extends ElementalFrogEnemy {
         robeColor: '#3D2E12',
         robeColorDark: '#241A08',
         glowColor: '#8BC34A',
-        hatColors: ['#9C6B2E', '#6B4A18', '#3D2A10'],
-        hatShowStar: false,
         particleColorBases: ['rgba(156, 107, 46, ', 'rgba(139, 195, 74, ', 'rgba(217, 165, 33, '],
     };
 

@@ -17,8 +17,6 @@ export class FireFrogEnemy extends ElementalFrogEnemy {
         robeColor: '#5A1414',
         robeColorDark: '#2E0808',
         glowColor: '#FF8800',
-        hatColors: ['#FF8800', '#E64500', '#8a2800'],
-        hatShowStar: true,
         particleColorBases: ['rgba(255, 90, 40, ', 'rgba(255, 160, 0, ', 'rgba(255, 224, 120, '],
     };
 

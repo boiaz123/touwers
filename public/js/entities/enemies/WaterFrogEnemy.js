@@ -17,8 +17,6 @@ export class WaterFrogEnemy extends ElementalFrogEnemy {
         robeColor: '#0D3B66',
         robeColorDark: '#082238',
         glowColor: '#18E5FF',
-        hatColors: ['#0090E0', '#0060A8', '#003060'],
-        hatShowStar: true,
         particleColorBases: ['rgba(0, 168, 232, ', 'rgba(90, 200, 255, ', 'rgba(190, 240, 255, '],
     };
 

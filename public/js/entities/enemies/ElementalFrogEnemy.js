@@ -29,6 +29,17 @@ export class ElementalFrogEnemy extends BaseEnemy {
     // glow-tinted highlights.
     static _auraColorTables = new Map();
 
+    // Fixed, non-elemental hat palette shared by every battle-mage frog - the
+    // hat is a piece of common "mage order" gear, not colored per element, so
+    // all four frogs wear an identical charcoal-and-leather hat regardless of
+    // their skin/robe/glow colors.
+    static HAT_COLORS = ['#5C5468', '#3B3548', '#201C2B'];
+    static HAT_TRIM_COLOR = '#100D18';
+    static HAT_BAND_COLOR = '#2A1D14';
+    static HAT_RIVET_COLOR = '#B08D57';
+    static HAT_GEM_COLOR = '#E8B84B';
+    static HAT_GEM_TRIM_COLOR = '#5C4415';
+
     constructor(path, health_multiplier, speed, armour, magicResistance, baseStats, visual) {
         const actualSpeed = speed !== null ? speed : baseStats.speed;
         const actualArmour = armour !== null ? armour : baseStats.armour;
@@ -44,8 +55,6 @@ export class ElementalFrogEnemy extends BaseEnemy {
         this.robeColor = visual.robeColor;
         this.robeColorDark = visual.robeColorDark;
         this.glowColor = visual.glowColor;
-        this.hatColors = visual.hatColors; // [top, mid, bottom]
-        this.hatShowStar = visual.hatShowStar !== false;
         this._particleColorBases = visual.particleColorBases;
         this.sizeMultiplier = 3.2;
 
@@ -411,6 +420,33 @@ export class ElementalFrogEnemy extends BaseEnemy {
         ctx.ellipse(0, -baseSize * 0.45, baseSize * 0.48, baseSize * 0.45, 0, 0, Math.PI * 2);
         ctx.stroke();
 
+        // Crown-of-skull shading, same technique as FrogKingEnemy's head - reads as a
+        // heavier, more brooding brow instead of a flat, evenly-lit ball.
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
+        ctx.beginPath();
+        ctx.ellipse(0, -baseSize * 0.63, baseSize * 0.36, baseSize * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // --- SNOUT + NOSTRILS (was entirely missing - a flat head with no protruding
+        // snout is what read as a generic "ball head" instead of a frog) ---
+        ctx.fillStyle = this.cachedLightenColor;
+        ctx.beginPath();
+        ctx.ellipse(0, -baseSize * 0.24, baseSize * 0.23, baseSize * 0.15, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = this.cachedDarken2Color;
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.ellipse(0, -baseSize * 0.24, baseSize * 0.23, baseSize * 0.15, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = this.cachedDarken2Color;
+        ctx.beginPath();
+        ctx.ellipse(-baseSize * 0.08, -baseSize * 0.17, baseSize * 0.03, baseSize * 0.018, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(baseSize * 0.08, -baseSize * 0.17, baseSize * 0.03, baseSize * 0.018, 0, 0, Math.PI * 2);
+        ctx.fill();
+
         // --- PAROTOID GLAND BUMPS (classic frog/toad anatomy - raised glands angled
         // back/outward from the eyes, not flat forehead spots) ---
         for (const side of [-1, 1]) {
@@ -425,59 +461,38 @@ export class ElementalFrogEnemy extends BaseEnemy {
             ctx.fill();
         }
 
-        // --- EYES ---
+        // --- MENACING EYES: narrow, hooded, glowing vertical-slit pupils with a
+        // furrowed brow, replacing the previous round "googly" cartoon eyes ---
+        this._drawMageEye(ctx, -baseSize * 0.2, -baseSize * 0.6, -1, baseSize);
+        this._drawMageEye(ctx, baseSize * 0.2, -baseSize * 0.6, 1, baseSize);
+
+        // --- MOUTH (wide toothy snarl instead of a thin smiling line) ---
         ctx.fillStyle = this.cachedDarken2Color;
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.2, -baseSize * 0.6, baseSize * 0.17, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#FFFACD';
-        ctx.beginPath();
-        ctx.arc(-baseSize * 0.2, -baseSize * 0.6, baseSize * 0.12, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = this.glowColor;
-        ctx.beginPath();
-        ctx.arc(-baseSize * 0.2, -baseSize * 0.58, baseSize * 0.08, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.arc(-baseSize * 0.16, -baseSize * 0.61, baseSize * 0.05, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.beginPath();
-        ctx.arc(-baseSize * 0.14, -baseSize * 0.64, baseSize * 0.03, 0, Math.PI * 2);
+        ctx.moveTo(-baseSize * 0.22, -baseSize * 0.17);
+        ctx.quadraticCurveTo(0, -baseSize * 0.09, baseSize * 0.22, -baseSize * 0.17);
+        ctx.quadraticCurveTo(0, baseSize * 0.02, -baseSize * 0.22, -baseSize * 0.17);
+        ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = this.cachedDarken2Color;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.beginPath();
-        ctx.arc(baseSize * 0.2, -baseSize * 0.6, baseSize * 0.17, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#FFFACD';
-        ctx.beginPath();
-        ctx.arc(baseSize * 0.2, -baseSize * 0.6, baseSize * 0.12, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = this.glowColor;
-        ctx.beginPath();
-        ctx.arc(baseSize * 0.2, -baseSize * 0.58, baseSize * 0.08, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.arc(baseSize * 0.16, -baseSize * 0.61, baseSize * 0.05, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.beginPath();
-        ctx.arc(baseSize * 0.14, -baseSize * 0.64, baseSize * 0.03, 0, Math.PI * 2);
+        ctx.moveTo(-baseSize * 0.19, -baseSize * 0.16);
+        ctx.quadraticCurveTo(0, -baseSize * 0.02, baseSize * 0.19, -baseSize * 0.16);
+        ctx.quadraticCurveTo(0, -baseSize * 0.005, -baseSize * 0.19, -baseSize * 0.16);
+        ctx.closePath();
         ctx.fill();
 
-        // --- MOUTH ---
-        ctx.strokeStyle = this.cachedDarken2Color;
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        ctx.arc(0, -baseSize * 0.28, baseSize * 0.2, 0, Math.PI);
-        ctx.stroke();
-        ctx.fillStyle = 'rgba(255, 100, 100, 0.25)';
-        ctx.beginPath();
-        ctx.arc(0, -baseSize * 0.28, baseSize * 0.2, 0, Math.PI);
-        ctx.fill();
+        ctx.fillStyle = '#F5F5F0';
+        for (const side of [-1, 1]) {
+            const fx = side * baseSize * 0.17;
+            ctx.beginPath();
+            ctx.moveTo(fx, -baseSize * 0.16);
+            ctx.lineTo(fx - side * baseSize * 0.05, -baseSize * 0.16);
+            ctx.lineTo(fx - side * baseSize * 0.02, -baseSize * 0.08);
+            ctx.closePath();
+            ctx.fill();
+        }
 
         // --- THROAT POUCH (subtle breathing detail below the mouth, matching the
         // technique base FrogEnemy uses) ---
@@ -749,71 +764,172 @@ export class ElementalFrogEnemy extends BaseEnemy {
         );
     }
 
+    /** Narrow, hooded, glowing-slit eye with a furrowed brow - replaces the previous
+     *  round "googly" cartoon eye construction (dark circle + white circle + colored
+     *  circle + offset black pupil), which is what read as a cute plush toy rather
+     *  than a menacing battle-mage. Built entirely from unrotated ellipses/arcs and
+     *  literal angled line segments - never ctx.ellipse's rotation param, which
+     *  CanvasGraphicsShim silently drops (see FrogKingEnemy's similarly-intended but
+     *  never-actually-tilted eyes) - so the brow's inward "angry" slant actually
+     *  renders in-game. */
+    _drawMageEye(ctx, x, y, side, baseSize) {
+        // Furrowed brow - a thick dark ridge slanting down toward the snout
+        ctx.strokeStyle = this.cachedDarken2Color;
+        ctx.lineWidth = baseSize * 0.05;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x + side * baseSize * 0.16, y - baseSize * 0.14);
+        ctx.lineTo(x - side * baseSize * 0.13, y - baseSize * 0.02);
+        ctx.stroke();
+
+        // Hooded socket - narrower than a full circle so the eye reads as a
+        // squinting slit rather than a wide-open cartoon circle
+        ctx.fillStyle = this.cachedDarken2Color;
+        ctx.beginPath();
+        ctx.ellipse(x, y, baseSize * 0.15, baseSize * 0.12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#FFFACD';
+        ctx.beginPath();
+        ctx.ellipse(x, y + baseSize * 0.01, baseSize * 0.11, baseSize * 0.08, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Glowing elemental iris with a vertical slit pupil, shifted toward the
+        // snout so the frog reads as glaring forward instead of cross-eyed outward
+        const irisX = x - side * baseSize * 0.02;
+        ctx.fillStyle = this.glowColor;
+        ctx.beginPath();
+        ctx.arc(irisX, y, baseSize * 0.065, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(irisX, y, baseSize * 0.02, baseSize * 0.06, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.beginPath();
+        ctx.arc(irisX - side * baseSize * 0.025, y - baseSize * 0.035, baseSize * 0.02, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     drawBattleMageHat(ctx, baseSize) {
+        // Fixed, compact silhouette shared by all four elements (see HAT_COLORS
+        // etc. below) - smaller than the earlier oversized pass, and with the
+        // separate brim ellipse removed entirely (it read as an odd floating
+        // disc under the cone). The wrapped strap band near the base is now the
+        // hat's only anchor to the head. Still leans/flops to one side rather
+        // than a stiff straight cone, just at reduced scale.
+        const baseL = { x: -baseSize * 0.28, y: -baseSize * 0.74 };
+        const baseR = { x: baseSize * 0.28, y: -baseSize * 0.74 };
+        const peak = { x: baseSize * 0.2, y: -baseSize * 1.32 };
+        const tip = { x: baseSize * 0.37, y: -baseSize * 1.06 };
+        const spineCtrl = { x: -baseSize * 0.06, y: -baseSize * 1.06 };
+        const crownCtrl = { x: baseSize * 0.44, y: -baseSize * 1.25 };
+        const drapeCtrl = { x: baseSize * 0.47, y: -baseSize * 0.88 };
+
+        const [top, mid, bottom] = ElementalFrogEnemy.HAT_COLORS;
         if (!this._hatGrad || this._hatGradBaseSize !== baseSize || this._hatGradCtx !== ctx) {
             this._hatGradCtx = ctx;
             this._hatGradBaseSize = baseSize;
-            this._hatGrad = ctx.createLinearGradient(-baseSize * 0.35, -baseSize * 0.8, baseSize * 0.35, -baseSize * 1.6);
-            this._hatGrad.addColorStop(0, this.hatColors[0]);
-            this._hatGrad.addColorStop(0.5, this.hatColors[1]);
-            this._hatGrad.addColorStop(1, this.hatColors[2]);
-            this._tipGlow = ctx.createRadialGradient(baseSize * 0.1, -baseSize * 1.58, 0, baseSize * 0.1, -baseSize * 1.58, baseSize * 0.25);
-            this._tipGlow.addColorStop(0, this.glowColor);
+            this._hatGrad = ctx.createLinearGradient(baseL.x, baseL.y, tip.x, peak.y);
+            this._hatGrad.addColorStop(0, top);
+            this._hatGrad.addColorStop(0.55, mid);
+            this._hatGrad.addColorStop(1, bottom);
+            this._tipGlow = ctx.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, baseSize * 0.16);
+            this._tipGlow.addColorStop(0, ElementalFrogEnemy.HAT_GEM_COLOR);
             this._tipGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
         }
 
         ctx.fillStyle = this._hatGrad;
         ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.33, -baseSize * 0.75);
-        ctx.lineTo(baseSize * 0.33, -baseSize * 0.75);
-        ctx.lineTo(baseSize * 0.1, -baseSize * 1.6);
+        ctx.moveTo(baseL.x, baseL.y);
+        ctx.quadraticCurveTo(spineCtrl.x, spineCtrl.y, peak.x, peak.y);
+        ctx.quadraticCurveTo(crownCtrl.x, crownCtrl.y, tip.x, tip.y);
+        ctx.quadraticCurveTo(drapeCtrl.x, drapeCtrl.y, baseR.x, baseR.y);
         ctx.closePath();
         ctx.fill();
 
-        ctx.strokeStyle = this.hatColors[2];
-        ctx.lineWidth = 1.8;
-        ctx.beginPath();
-        ctx.moveTo(-baseSize * 0.33, -baseSize * 0.75);
-        ctx.lineTo(baseSize * 0.1, -baseSize * 1.6);
-        ctx.lineTo(baseSize * 0.33, -baseSize * 0.75);
-        ctx.stroke();
-
-        // Hat brim
-        ctx.fillStyle = this.robeColor;
-        ctx.beginPath();
-        ctx.ellipse(0, -baseSize * 0.78, baseSize * 0.4, baseSize * 0.12, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = this.robeColorDark;
+        ctx.strokeStyle = ElementalFrogEnemy.HAT_TRIM_COLOR;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.ellipse(0, -baseSize * 0.78, baseSize * 0.4, baseSize * 0.12, 0, 0, Math.PI * 2);
+        ctx.moveTo(baseL.x, baseL.y);
+        ctx.quadraticCurveTo(spineCtrl.x, spineCtrl.y, peak.x, peak.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(peak.x, peak.y);
+        ctx.quadraticCurveTo(crownCtrl.x, crownCtrl.y, tip.x, tip.y);
+        ctx.quadraticCurveTo(drapeCtrl.x, drapeCtrl.y, baseR.x, baseR.y);
         ctx.stroke();
 
-        // Magic symbols on hat (earth's hat traditionally omitted this, per its stonework theme)
-        if (this.hatShowStar) {
-            ctx.fillStyle = this.glowColor;
-            const starSize = baseSize * 0.12;
-            for (let i = 0; i < 3; i++) {
-                const angle = (i * Math.PI * 2 / 3) - Math.PI / 2;
-                const x = Math.cos(angle) * baseSize * 0.18;
-                const y = -baseSize * 0.5 + Math.sin(angle) * baseSize * 0.1;
-                ctx.font = `bold ${starSize}px serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText('✦', x, y);
-            }
-        }
-
-        // Glowing tip
-        ctx.fillStyle = this._tipGlow;
+        // Fabric fold (spine-side crease) and a sheen highlight along the outer
+        // drape - detail that reads as soft draped cloth instead of a flat
+        // painted triangle
+        ctx.strokeStyle = ElementalFrogEnemy.HAT_TRIM_COLOR;
+        ctx.lineWidth = 0.9;
         ctx.beginPath();
-        ctx.arc(baseSize * 0.1, -baseSize * 1.58, baseSize * 0.25, 0, Math.PI * 2);
+        ctx.moveTo(baseL.x + baseSize * 0.1, baseL.y - baseSize * 0.02);
+        ctx.quadraticCurveTo(spineCtrl.x + baseSize * 0.1, spineCtrl.y, peak.x - baseSize * 0.04, peak.y + baseSize * 0.11);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(peak.x + baseSize * 0.08, peak.y + baseSize * 0.08);
+        ctx.quadraticCurveTo(crownCtrl.x - baseSize * 0.06, crownCtrl.y, tip.x - baseSize * 0.05, tip.y - baseSize * 0.05);
+        ctx.stroke();
+
+        // Wrapped strap band with rivets and a single gem clasp - the hat's only
+        // anchor to the head now that the brim ellipse is gone
+        ctx.fillStyle = ElementalFrogEnemy.HAT_BAND_COLOR;
+        ctx.beginPath();
+        ctx.moveTo(-baseSize * 0.25, -baseSize * 0.72);
+        ctx.quadraticCurveTo(0, -baseSize * 0.66, baseSize * 0.23, -baseSize * 0.73);
+        ctx.lineTo(baseSize * 0.2, -baseSize * 0.62);
+        ctx.quadraticCurveTo(0, -baseSize * 0.56, -baseSize * 0.22, -baseSize * 0.61);
+        ctx.closePath();
         ctx.fill();
 
-        // Tip spark
-        ctx.fillStyle = this.glowColor;
+        ctx.fillStyle = ElementalFrogEnemy.HAT_RIVET_COLOR;
+        for (const rx of [-0.15, -0.05, 0.07, 0.16]) {
+            ctx.beginPath();
+            ctx.arc(rx * baseSize, -baseSize * 0.675, baseSize * 0.012, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        const gemY = -baseSize * 0.675;
+        ctx.fillStyle = ElementalFrogEnemy.HAT_GEM_COLOR;
         ctx.beginPath();
-        ctx.arc(baseSize * 0.1, -baseSize * 1.6, baseSize * 0.05, 0, Math.PI * 2);
+        ctx.moveTo(baseSize * 0.01, gemY - baseSize * 0.065);
+        ctx.lineTo(baseSize * 0.055, gemY);
+        ctx.lineTo(baseSize * 0.01, gemY + baseSize * 0.065);
+        ctx.lineTo(-baseSize * 0.03, gemY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = ElementalFrogEnemy.HAT_GEM_TRIM_COLOR;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(baseSize * 0.01, gemY - baseSize * 0.05);
+        ctx.lineTo(baseSize * 0.01, gemY + baseSize * 0.05);
+        ctx.stroke();
+
+        // Small glowing tip ornament - fixed neutral gold, matching the rest of
+        // the now-static hat palette rather than the frog's elemental glow color
+        ctx.fillStyle = this._tipGlow;
+        ctx.beginPath();
+        ctx.arc(tip.x, tip.y, baseSize * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = ElementalFrogEnemy.HAT_GEM_COLOR;
+        ctx.beginPath();
+        ctx.moveTo(tip.x, tip.y - baseSize * 0.09);
+        ctx.lineTo(tip.x + baseSize * 0.04, tip.y);
+        ctx.lineTo(tip.x, tip.y + baseSize * 0.065);
+        ctx.lineTo(tip.x - baseSize * 0.04, tip.y);
+        ctx.closePath();
         ctx.fill();
     }
 }

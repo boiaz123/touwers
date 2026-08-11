@@ -705,66 +705,9 @@ export class FrogKingEnemy extends BaseEnemy {
         }
 
         // --- MENACING EYES (narrower, angry) ---
-        // Left eye - narrowed, angled up
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.ellipse(-baseSize * 0.22, -baseSize * 0.64, baseSize * 0.16, baseSize * 0.17, -0.3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // White of eye with menacing glint
-        ctx.fillStyle = '#FFF8DC';
-        ctx.beginPath();
-        ctx.ellipse(-baseSize * 0.22, -baseSize * 0.63, baseSize * 0.11, baseSize * 0.12, -0.3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Iris with vertical pupil (menacing)
-        ctx.fillStyle = '#FFD700';
-        ctx.beginPath();
-        ctx.ellipse(-baseSize * 0.22, -baseSize * 0.62, baseSize * 0.08, baseSize * 0.09, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Vertical pupil (cat-like/menacing)
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.ellipse(-baseSize * 0.22, -baseSize * 0.62, baseSize * 0.04, baseSize * 0.08, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Angry eye shine - small and menacing
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.beginPath();
-        ctx.arc(-baseSize * 0.2, -baseSize * 0.66, baseSize * 0.025, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Right eye - narrowed, angled up
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.ellipse(baseSize * 0.22, -baseSize * 0.64, baseSize * 0.16, baseSize * 0.17, 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // White of eye
-        ctx.fillStyle = '#FFF8DC';
-        ctx.beginPath();
-        ctx.ellipse(baseSize * 0.22, -baseSize * 0.63, baseSize * 0.11, baseSize * 0.12, 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Iris
-        ctx.fillStyle = '#FFD700';
-        ctx.beginPath();
-        ctx.ellipse(baseSize * 0.22, -baseSize * 0.62, baseSize * 0.08, baseSize * 0.09, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Vertical pupil
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.ellipse(baseSize * 0.22, -baseSize * 0.62, baseSize * 0.04, baseSize * 0.08, 0, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Angry eye shine
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.beginPath();
-        ctx.arc(baseSize * 0.2, -baseSize * 0.66, baseSize * 0.025, 0, Math.PI * 2);
-        ctx.fill();
-        
+        this.drawKingEye(ctx, -baseSize * 0.22, -baseSize * 0.63, -1, baseSize);
+        this.drawKingEye(ctx, baseSize * 0.22, -baseSize * 0.63, 1, baseSize);
+
         // Eyebrow ridges (menacing)
         ctx.strokeStyle = darkenColor(this.skinColor, 0.5);
         ctx.lineWidth = 1.5;
@@ -930,10 +873,51 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.stroke();
     }
 
+    /** Hooded, angled eye - replaces the old paired-ellipse construction (a black
+     *  ellipse behind a slightly smaller white one, both passed a `rotation` angle).
+     *  CanvasGraphicsShim silently drops ctx.ellipse's rotation/start/end params (see
+     *  ElementalFrogEnemy._drawMageEye's doc), so in-game those ellipses always render
+     *  unrotated and concentric - the black "socket" shows as a uniform ring all the
+     *  way around the white, reading as a thick cartoon goggle rather than a menacing
+     *  hooded glare. Building the socket/sclera as actual angled polygons instead
+     *  fixes that without touching the already-good yellow iris/vertical-pupil look. */
+    drawKingEye(ctx, x, y, side, baseSize) {
+        ctx.fillStyle = darkenColor(this.skinColor, 0.55);
+        ctx.beginPath();
+        ctx.ellipse(x, y, baseSize * 0.155, baseSize * 0.14, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Hooded sclera - narrower and angled via explicit curve control points
+        // rather than an ellipse rotation, so the upward "glare" actually renders
+        ctx.fillStyle = '#FFF8DC';
+        ctx.beginPath();
+        ctx.moveTo(x - baseSize * 0.1, y + baseSize * 0.02);
+        ctx.quadraticCurveTo(x - side * baseSize * 0.01, y - baseSize * 0.11, x + baseSize * 0.11, y - baseSize * 0.03);
+        ctx.quadraticCurveTo(x + baseSize * 0.01, y + baseSize * 0.09, x - baseSize * 0.1, y + baseSize * 0.02);
+        ctx.closePath();
+        ctx.fill();
+
+        // Iris with vertical pupil (menacing) - unchanged from before, just re-centered
+        ctx.fillStyle = '#FFD700';
+        ctx.beginPath();
+        ctx.ellipse(x, y - baseSize * 0.01, baseSize * 0.08, baseSize * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(x, y - baseSize * 0.01, baseSize * 0.032, baseSize * 0.08, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.beginPath();
+        ctx.arc(x + side * baseSize * 0.02, y - baseSize * 0.05, baseSize * 0.025, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     drawRoyalCrown(ctx, baseSize) {
         const crownY = -baseSize * 0.95;
-        const crownWidth = baseSize * 0.65;
-        const peakHeight = baseSize * 0.35;
+        const crownWidth = baseSize * 0.74;
+        const peakHeight = baseSize * 0.42;
 
         // Charge-up "tell": glow builds through the final 1.2s before the vulnerability
         // rotates, then the transition burst/flash (see setVulnerability) takes over for
@@ -956,61 +940,130 @@ export class FrogKingEnemy extends BaseEnemy {
         if (glowIntensity > 0.02) {
             ctx.fillStyle = `rgba(255, 255, 255, ${glowIntensity * 0.5})`;
             ctx.beginPath();
-            ctx.arc(0, -peakHeight * 0.6, baseSize * (0.55 + glowIntensity * 0.35), 0, Math.PI * 2);
+            ctx.arc(0, -peakHeight * 0.6, baseSize * (0.6 + glowIntensity * 0.35), 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // Crown base band
-        ctx.fillStyle = '#FFD700';
+        // Shadow beneath the band for depth, so the crown reads as a solid worn
+        // object resting on the head rather than a flat decal floating on top
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.beginPath();
+        ctx.ellipse(0, baseSize * 0.03, crownWidth * 0.52, baseSize * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Crown base band - lit metal gradient instead of a flat gold fill
+        if (!this._crownBandGrad || this._crownBandBaseSize !== baseSize || this._crownBandCtx !== ctx) {
+            this._crownBandCtx = ctx;
+            this._crownBandBaseSize = baseSize;
+            this._crownBandGrad = ctx.createLinearGradient(0, -baseSize * 0.1, 0, baseSize * 0.1);
+            this._crownBandGrad.addColorStop(0, '#FFEA8A');
+            this._crownBandGrad.addColorStop(0.5, '#FFD700');
+            this._crownBandGrad.addColorStop(1, '#B8860B');
+        }
+        ctx.fillStyle = this._crownBandGrad;
         ctx.beginPath();
         ctx.ellipse(0, 0, crownWidth * 0.5, baseSize * 0.1, 0, 0, Math.PI * 2);
         ctx.fill();
-        
-        ctx.strokeStyle = '#DAA520';
+
+        ctx.strokeStyle = '#5C4400';
         ctx.lineWidth = 1.5;
         ctx.stroke();
-        
-        // Crown peaks
-        const peakPositions = [-crownWidth * 0.35, -crownWidth * 0.1, crownWidth * 0.1, crownWidth * 0.35];
-        for (let i = 0; i < peakPositions.length; i++) {
-            const x = peakPositions[i];
-            
-            // Peak point
+
+        // Inset band gems flanking the central spike - a jeweled ring reads as
+        // richer regalia than a plain gold hoop
+        for (const side of [-1, 1]) {
             ctx.fillStyle = this.crownColor;
             ctx.beginPath();
-            ctx.moveTo(x - baseSize * 0.08, 0);
-            ctx.lineTo(x, -peakHeight);
-            ctx.lineTo(x + baseSize * 0.08, 0);
+            ctx.arc(side * crownWidth * 0.22, baseSize * 0.005, baseSize * 0.045, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#5C4400';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+
+        // Five jagged spikes, tallest at the center and stepping down toward the
+        // sides - a gothic crown skyline instead of four identical, evenly spaced
+        // triangles (the old "picket fence" look). Each spike carries a beveled
+        // highlight edge and a glowing ball finial at its tip.
+        const peakOffsets = [-0.4, -0.2, 0, 0.2, 0.4];
+        const peakScales = [0.55, 0.8, 1.0, 0.8, 0.55];
+        for (let i = 0; i < peakOffsets.length; i++) {
+            const x = peakOffsets[i] * crownWidth;
+            const h = peakHeight * peakScales[i];
+            const w = baseSize * 0.075;
+
+            ctx.fillStyle = this.crownColor;
+            ctx.beginPath();
+            ctx.moveTo(x - w, 0);
+            ctx.lineTo(x - w * 0.3, -h * 0.7);
+            ctx.lineTo(x, -h);
+            ctx.lineTo(x + w * 0.3, -h * 0.7);
+            ctx.lineTo(x + w, 0);
             ctx.closePath();
             ctx.fill();
-            
-            ctx.strokeStyle = '#8B7500';
+
+            ctx.strokeStyle = '#5C4400';
             ctx.lineWidth = 1.2;
             ctx.stroke();
-            
-            // Peak shine
-            ctx.fillStyle = 'rgba(255, 255, 200, 0.5)';
+
+            ctx.strokeStyle = 'rgba(255, 255, 220, 0.55)';
+            ctx.lineWidth = 0.8;
             ctx.beginPath();
-            ctx.arc(x, -peakHeight * 0.5, baseSize * 0.05, 0, Math.PI * 2);
+            ctx.moveTo(x - w * 0.85, -baseSize * 0.01);
+            ctx.lineTo(x, -h * 0.96);
+            ctx.stroke();
+
+            ctx.fillStyle = this.glowColor;
+            ctx.beginPath();
+            ctx.arc(x, -h, baseSize * (i === 2 ? 0.06 : 0.04), 0, Math.PI * 2);
             ctx.fill();
+            ctx.strokeStyle = '#5C4400';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
         }
-        
-        // Center jewel
-        ctx.fillStyle = this.crownColor;
+
+        // Large faceted center jewel, floating above the tallest spike
+        const jewelY = -peakHeight * 1.32;
+        const jewelR = baseSize * 0.15;
+
+        if (!this._jewelGrad || this._jewelGradBaseSize !== baseSize || this._jewelGradCtx !== ctx) {
+            this._jewelGradCtx = ctx;
+            this._jewelGradBaseSize = baseSize;
+            this._jewelGrad = ctx.createRadialGradient(-jewelR * 0.35, jewelY - jewelR * 0.35, jewelR * 0.05, 0, jewelY, jewelR);
+            this._jewelGrad.addColorStop(0, 'rgba(255, 255, 255, 0.85)');
+            this._jewelGrad.addColorStop(0.4, this.crownColor);
+            this._jewelGrad.addColorStop(1, '#5C4400');
+        }
+
+        ctx.fillStyle = this._jewelGrad;
         ctx.beginPath();
-        ctx.arc(0, -peakHeight * 1.4, baseSize * 0.12, 0, Math.PI * 2);
+        for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2 - Math.PI / 8;
+            const px = Math.cos(a) * jewelR, py = jewelY + Math.sin(a) * jewelR;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
         ctx.fill();
-        
-        ctx.strokeStyle = '#8B7500';
+        ctx.strokeStyle = '#5C4400';
         ctx.lineWidth = 1.5;
         ctx.stroke();
-        
-        // Jewel shine
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+
+        // Facet lines across the jewel, so it reads as cut gemstone rather than a flat disc
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 0.7;
+        for (let i = 0; i < 4; i++) {
+            const a = (i / 4) * Math.PI;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a) * jewelR * 0.85, jewelY + Math.sin(a) * jewelR * 0.85);
+            ctx.lineTo(Math.cos(a + Math.PI) * jewelR * 0.85, jewelY + Math.sin(a + Math.PI) * jewelR * 0.85);
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.beginPath();
-        ctx.arc(-baseSize * 0.04, -peakHeight * 1.5, baseSize * 0.05, 0, Math.PI * 2);
+        ctx.arc(-jewelR * 0.35, jewelY - jewelR * 0.35, jewelR * 0.3, 0, Math.PI * 2);
         ctx.fill();
-        
+
         ctx.restore();
     }
 
