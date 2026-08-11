@@ -697,7 +697,11 @@ export class GameplayState {
         
         // Transition from level music to settlement music - playDifferentSettlementTheme()
         // crossfades smoothly into the new track instead of hard-cutting.
+        // Also stop any victory/defeat sting still playing - it lives on the SFX pool,
+        // not the music element, so leaving via a route other than the results-screen
+        // buttons (e.g. the pause menu's "quit to menu") would otherwise let it play on.
         if (this.stateManager.audioManager) {
+            this.stateManager.audioManager.stopSFXTune();
             this.stateManager.audioManager.playDifferentSettlementTheme();
         }
         

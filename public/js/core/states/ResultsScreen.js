@@ -168,11 +168,7 @@ export class ResultsScreen {
         
         // Stop music
         if (this.stateManager.audioManager) {
-            if (this.stateManager.audioManager.currentSFXTune) {
-                this.stateManager.audioManager.currentSFXTune.pause();
-                this.stateManager.audioManager.currentSFXTune.currentTime = 0;
-                this.stateManager.audioManager.currentSFXTune = null;
-            }
+            this.stateManager.audioManager.stopSFXTune();
             this.stateManager.audioManager.stopMusic();
         }
         

@@ -388,6 +388,17 @@ export class AudioManager {
     }
 
     /**
+     * Stop the currently playing victory/defeat SFX tune, if any.
+     */
+    stopSFXTune() {
+        if (this.currentSFXTune) {
+            this.currentSFXTune.pause();
+            this.currentSFXTune.currentTime = 0;
+            this.currentSFXTune = null;
+        }
+    }
+
+    /**
      * Pause current music
      */
     pauseMusic() {
