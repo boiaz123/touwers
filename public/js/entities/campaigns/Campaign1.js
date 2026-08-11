@@ -27,7 +27,8 @@ export class Campaign1 extends CampaignBase {
         super(stateManager);
         
         this.campaignId = 'campaign-1';
-        this.campaignName = 'The Forest Campaign';
+        this.campaignName = 'The Verdant Woodlands';
+        this.titleAccent = '#4e8c42';
 
         // Castle instances for each level slot (for exact rendering consistency)
         this.castleInstances = {};
@@ -1605,13 +1606,6 @@ export class Campaign1 extends CampaignBase {
         ctx.fillRect(-2, 3, 4, 5);
         
         ctx.restore();
-    }
-    
-    renderTitle(ctx, canvas) {
-        ctx.font = 'bold 36px serif';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#1a0f05';
-        ctx.fillText(this.campaignName.toUpperCase(), canvas.width / 2, 50);
     }
     
     update(deltaTime) {

@@ -16,7 +16,7 @@ export class PerformanceMonitor {
         // Performance tracking
         this.frameTimings = [];
         this.targetFPS = 60;
-        this.enabled = true;
+        this.enabled = false;
 
         // Per-system timing slots, accumulated (+=) via beginSlot/endSlot so renderSync
         // can sum several per-entity _syncXPixi calls within one frame. towerUpdate,

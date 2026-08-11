@@ -25,7 +25,8 @@ export class Campaign3 extends CampaignBase {
         super(stateManager);
         
         this.campaignId = 'campaign-3';
-        this.campaignName = 'The Desert Campaign';
+        this.campaignName = 'The Scorching Sands';
+        this.titleAccent = '#c47c30';
         this.castleInstances = {};
 
         // Animation time for castle flags
@@ -136,7 +137,7 @@ export class Campaign3 extends CampaignBase {
             { x: width * 0.85, y: height * 0.78 },
             { x: width * 0.90, y: height * 0.78 },
             { x: width * 0.95, y: height * 0.78 },
-            { x: width + 200, y: height * 0.78 }
+            { x: width + 20, y: height * 0.78 }
         ];
         
         // Generate 10 level slots distributed evenly by path distance

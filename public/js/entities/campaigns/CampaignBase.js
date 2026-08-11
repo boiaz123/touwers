@@ -705,11 +705,69 @@ export class CampaignBase {
         }
     }
     
-    renderTitle(ctx, canvas) {
-        ctx.font = 'bold 36px serif';
+    // Ornate gold banner title shared by all campaign maps. Subclasses set
+    // this.campaignName (must match CampaignRegistry's name for that campaign
+    // id) and may set this.titleAccent to tint the flanking ornaments.
+    renderTitle(ctx, canvas = this.stateManager.canvas) {
+        const W = canvas.width;
+        const title = this.campaignName.toUpperCase();
+        const accent = this.titleAccent || '#d4af37';
+        const titleY = 54;
+        const titleSize = Math.max(32, Math.min(50, Math.round(W * 0.026)));
+
+        ctx.save();
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#3d2817';
-        ctx.fillText(this.campaignName.toUpperCase(), canvas.width / 2, 50);
+        ctx.textBaseline = 'middle';
+        ctx.font = `bold ${titleSize}px serif`;
+
+        // Drop shadow so the banner reads clearly over any terrain behind it
+        ctx.shadowColor = 'rgba(0,0,0,0.75)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 3;
+
+        // Dark outline for legibility
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.strokeText(title, W / 2, titleY);
+
+        // Gold gradient fill
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        const grad = ctx.createLinearGradient(0, titleY - titleSize / 2, 0, titleY + titleSize / 2);
+        grad.addColorStop(0, '#fbe9a0');
+        grad.addColorStop(0.5, '#d4af37');
+        grad.addColorStop(1, '#a9791e');
+        ctx.fillStyle = grad;
+        ctx.fillText(title, W / 2, titleY);
+
+        // Diamond ornaments flanking the title, joined by a fading hairline
+        const halfSpan = ctx.measureText(title).width / 2 + 26;
+        const ornX1 = W / 2 - halfSpan;
+        const ornX2 = W / 2 + halfSpan;
+        const r = 5;
+        [ornX1, ornX2].forEach(ox => {
+            ctx.fillStyle = accent;
+            ctx.beginPath();
+            ctx.moveTo(ox, titleY - r);
+            ctx.lineTo(ox + r, titleY);
+            ctx.lineTo(ox, titleY + r);
+            ctx.lineTo(ox - r, titleY);
+            ctx.closePath();
+            ctx.fill();
+        });
+
+        const lineLen = 48;
+        ctx.strokeStyle = accent;
+        ctx.globalAlpha = 0.7;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(ornX1 - r - 4, titleY);
+        ctx.lineTo(ornX1 - r - 4 - lineLen, titleY);
+        ctx.moveTo(ornX2 + r + 4, titleY);
+        ctx.lineTo(ornX2 + r + 4 + lineLen, titleY);
+        ctx.stroke();
+
+        ctx.restore();
     }
     
     renderNavButtons(ctx) {

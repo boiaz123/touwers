@@ -27,12 +27,14 @@ export class CampaignMenu {
         this.hoveredStartButton = false;
         this.hoveredExitButton = false;
 
-        // Layout — large full-width cards left, compact info panel right
+        // Layout — large full-width cards left, compact info panel right.
+        // bottomPadding is shared by the card column and the detail panel so
+        // both always end flush at the same Y, regardless of card count.
         this.layout = {
             leftPadding: 48,
             topPadding: 118,
+            bottomPadding: 50,
             cardWidth: 1050,
-            cardHeight: 165,
             cardGap: 12,
             detailX: 1150,
             detailRightPad: 40,
@@ -161,8 +163,20 @@ export class CampaignMenu {
 
     // â”€â”€ Hit testing helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+    // Card height is derived from however many campaigns are shown, so the
+    // full stack of cards always starts at topPadding and ends exactly at
+    // the same bottom edge as the detail panel — never taller or shorter.
+    getCardHeight() {
+        const canvas = this.stateManager.canvas;
+        const { topPadding, bottomPadding, cardGap } = this.layout;
+        const n = Math.max(1, this.campaigns.length);
+        const availableHeight = canvas.height - topPadding - bottomPadding;
+        return (availableHeight - (n - 1) * cardGap) / n;
+    }
+
     getCardBounds(index) {
-        const { leftPadding, topPadding, cardWidth, cardHeight, cardGap } = this.layout;
+        const { leftPadding, topPadding, cardWidth, cardGap } = this.layout;
+        const cardHeight = this.getCardHeight();
         return {
             x: leftPadding,
             y: topPadding + index * (cardHeight + cardGap),
@@ -173,8 +187,8 @@ export class CampaignMenu {
 
     getDetailPanelBounds() {
         const canvas = this.stateManager.canvas;
-        const { detailX, detailRightPad, topPadding } = this.layout;
-        const panelH = Math.min(520, canvas.height - topPadding - 50);
+        const { detailX, detailRightPad, topPadding, bottomPadding } = this.layout;
+        const panelH = canvas.height - topPadding - bottomPadding;
         return {
             x: detailX,
             y: topPadding,
@@ -185,11 +199,11 @@ export class CampaignMenu {
 
     getStartButtonBounds() {
         const panel = this.getDetailPanelBounds();
-        const bh = 52;
-        const bw = Math.min(panel.width - 40, 320);
+        const bh = 64;
+        const bw = Math.min(panel.width - 40, 380);
         return {
             x: panel.x + Math.floor((panel.width - bw) / 2),
-            y: panel.y + panel.height - bh - 20,
+            y: panel.y + panel.height - bh - 26,
             width: bw,
             height: bh,
         };
@@ -623,51 +637,56 @@ export class CampaignMenu {
         ctx.fillStyle = diffColor;
         ctx.fillText(`\u2694  ${campaign.difficulty}`, textX, nameY + 28);
 
-        // Level count (top right of card)
-        const totalLevels = campaign.levelCount || 5;
-        const levelsCompleted = Math.round((campaign.progress / 100) * totalLevels);
-        const lvlText = `${levelsCompleted} / ${totalLevels} Levels`;
-        ctx.font = 'bold 13px serif';
-        ctx.textAlign = 'right';
-        ctx.fillStyle = campaign.progress >= 100 ? '#7edd6e' : '#b09060';
-        ctx.fillText(lvlText, b.x + b.width - 18, nameY + 4);
+        // Level count, progress bar and "Levels Completed" — only meaningful
+        // for campaigns with a fixed level list; Commander's Workshop is a
+        // free-form sandbox with no levels to track completion of.
+        if (campaign.levelCount) {
+            // Level count (top right of card)
+            const totalLevels = campaign.levelCount;
+            const levelsCompleted = Math.round((campaign.progress / 100) * totalLevels);
+            const lvlText = `${levelsCompleted} / ${totalLevels} Levels`;
+            ctx.font = 'bold 13px serif';
+            ctx.textAlign = 'right';
+            ctx.fillStyle = campaign.progress >= 100 ? '#7edd6e' : '#b09060';
+            ctx.fillText(lvlText, b.x + b.width - 18, nameY + 4);
 
-        // Progress bar inside the bottom strip
-        const stripH = 22;
-        const stripY = b.y + b.height - stripH;
-        const barPad = 110;
-        const barX = b.x + barPad;
-        const barW = b.width - barPad - 18;
-        const barH = 8;
-        const barY = stripY + Math.floor((stripH - barH) / 2);
+            // Progress bar inside the bottom strip
+            const stripH = 22;
+            const stripY = b.y + b.height - stripH;
+            const barPad = 110;
+            const barX = b.x + barPad;
+            const barW = b.width - barPad - 18;
+            const barH = 8;
+            const barY = stripY + Math.floor((stripH - barH) / 2);
 
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(barX, barY, barW, barH);
-
-        if (campaign.progress > 0) {
-            const pg = ctx.createLinearGradient(barX, barY, barX + barW, barY);
-            pg.addColorStop(0, biome.accent);
-            pg.addColorStop(1, '#d4af37');
-            ctx.fillStyle = pg;
-            ctx.fillRect(barX, barY, barW * (campaign.progress / 100), barH);
-        }
-        ctx.strokeStyle = biome.accent + '88';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(barX, barY, barW, barH);
-
-        // "Progress" label on left of strip
-        ctx.font = '11px serif';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#806040';
-        ctx.fillText('Progress', b.x + 14, stripY + stripH / 2);
-
-        // Small completion badge if 100%
-        if (campaign.progress >= 100) {
+            // "Levels Completed: X / X" sits above the bar instead of overlaid on
+            // top of it, where it was unreadable against the fill colour.
             ctx.font = '11px serif';
             ctx.textAlign = 'right';
-            ctx.fillStyle = '#7edd6e';
-            ctx.fillText('\u2714 Complete', b.x + b.width - 18, stripY + stripH / 2);
+            ctx.textBaseline = 'bottom';
+            ctx.fillStyle = campaign.progress >= 100 ? '#7edd6e' : '#a08050';
+            ctx.fillText(`Levels Completed: ${levelsCompleted} / ${totalLevels}`, barX + barW, stripY - 6);
+
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(barX, barY, barW, barH);
+
+            if (campaign.progress > 0) {
+                const pg = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+                pg.addColorStop(0, biome.accent);
+                pg.addColorStop(1, '#d4af37');
+                ctx.fillStyle = pg;
+                ctx.fillRect(barX, barY, barW * (campaign.progress / 100), barH);
+            }
+            ctx.strokeStyle = biome.accent + '88';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(barX, barY, barW, barH);
+
+            // "Progress" label on left of strip
+            ctx.font = '11px serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#806040';
+            ctx.fillText('Progress', b.x + 14, stripY + stripH / 2);
         }
     }
 
@@ -693,7 +712,7 @@ export class CampaignMenu {
         ctx.strokeRect(panel.x + 3, panel.y + 3, panel.width - 6, panel.height - 6);
 
         if (!campaign) {
-            ctx.font = '15px serif';
+            ctx.font = '20px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = '#5a4a3a';
@@ -705,106 +724,110 @@ export class CampaignMenu {
     }
 
     _renderDetailContent(ctx, campaign, panel) {
-        const pad = 24;
+        const pad = 32;
         const cx = panel.x + pad;
         const cw = panel.width - pad * 2;
         let cy = panel.y + pad;
         const biome = CAMPAIGN_BIOME[campaign.id] || { from: '#1c1810', to: '#130f09', accent: '#7a6a5a' };
 
         // Icon + Name header
-        const headerR = 28;
+        const headerR = 38;
         this._drawEmblem(ctx, campaign, cx + headerR, cy + headerR, headerR, biome, true, false);
 
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-        const headerTextX = cx + headerR * 2 + 14;
-        ctx.font = 'bold 21px serif';
+        const headerTextX = cx + headerR * 2 + 18;
+        ctx.font = 'bold 29px serif';
         ctx.fillStyle = '#ffd700';
-        ctx.fillText(campaign.name, headerTextX, cy + 3);
+        ctx.fillText(campaign.name, headerTextX, cy + 6);
 
-        ctx.font = '12px serif';
+        ctx.font = '17px serif';
         ctx.fillStyle = this._difficultyColor(campaign.difficulty);
-        ctx.fillText(`\u2694 ${campaign.difficulty}`, headerTextX, cy + 30);
-        cy += 56;
+        ctx.fillText(`\u2694 ${campaign.difficulty}`, headerTextX, cy + 44);
+        cy += headerR * 2 + 14;
 
         // Divider
         this._drawDivider(ctx, cx, cy, cw, biome.accent);
-        cy += 12;
+        cy += 20;
 
-        // Progress indicator
-        const totalLevels = campaign.levelCount || 5;
-        const levelsCompleted = Math.round((campaign.progress / 100) * totalLevels);
-        ctx.font = '12px serif';
-        ctx.fillStyle = '#a08040';
-        ctx.fillText(`Progress: ${levelsCompleted} / ${totalLevels} levels`, cx, cy);
-        cy += 16;
+        // Progress indicator — only for campaigns with a fixed level list;
+        // Commander's Workshop is a free-form sandbox with no levels to
+        // track completion of.
+        if (campaign.levelCount) {
+            const totalLevels = campaign.levelCount;
+            const levelsCompleted = Math.round((campaign.progress / 100) * totalLevels);
+            ctx.font = '16px serif';
+            ctx.fillStyle = '#a08040';
+            ctx.fillText(`Progress: ${levelsCompleted} / ${totalLevels} levels`, cx, cy);
+            cy += 24;
 
-        const bh = 8;
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(cx, cy, cw, bh);
-        if (campaign.progress > 0) {
-            const pg = ctx.createLinearGradient(cx, cy, cx + cw, cy);
-            pg.addColorStop(0, biome.accent);
-            pg.addColorStop(1, '#d4af37');
-            ctx.fillStyle = pg;
-            ctx.fillRect(cx, cy, cw * (campaign.progress / 100), bh);
+            const bh = 13;
+            ctx.fillStyle = 'rgba(0,0,0,0.4)';
+            ctx.fillRect(cx, cy, cw, bh);
+            if (campaign.progress > 0) {
+                const pg = ctx.createLinearGradient(cx, cy, cx + cw, cy);
+                pg.addColorStop(0, biome.accent);
+                pg.addColorStop(1, '#d4af37');
+                ctx.fillStyle = pg;
+                ctx.fillRect(cx, cy, cw * (campaign.progress / 100), bh);
+            }
+            ctx.strokeStyle = '#4a3010';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(cx, cy, cw, bh);
+            cy += bh + 20;
+
+            // Divider
+            this._drawDivider(ctx, cx, cy, cw, biome.accent);
+            cy += 20;
         }
-        ctx.strokeStyle = '#4a3010';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(cx, cy, cw, bh);
-        cy += bh + 14;
 
-        // Divider
-        this._drawDivider(ctx, cx, cy, cw, biome.accent);
-        cy += 12;
-
-        // Story — capped at 4 lines to keep the panel compact
-        ctx.font = 'bold 12px serif';
+        // Story
+        ctx.font = 'bold 17px serif';
         ctx.fillStyle = biome.accent;
         ctx.fillText('\u2726  Story', cx, cy);
-        cy += 18;
+        cy += 28;
 
-        ctx.font = '12px serif';
+        ctx.font = '16px serif';
         ctx.fillStyle = '#c9a876';
         const storyText = campaign.story || 'A great adventure awaits...';
-        cy = this._wrapTextCapped(ctx, storyText, cx, cy, cw, 15, 4);
-        cy += 10;
+        cy = this._wrapTextCapped(ctx, storyText, cx, cy, cw, 23, 8);
+        cy += 16;
 
         // Completion section — shown only when campaign is fully cleared
         if (campaign.progress >= 100) {
             this._drawDivider(ctx, cx, cy, cw, biome.accent);
-            cy += 12;
+            cy += 20;
 
             // Completion badge
-            ctx.font = 'bold 13px serif';
+            ctx.font = 'bold 19px serif';
             ctx.fillStyle = '#7edd6e';
             ctx.fillText('\u2714  Campaign Completed', cx, cy);
-            cy += 20;
+            cy += 30;
 
             // Completion story if available
             if (campaign.completionStory) {
-                ctx.font = 'italic 11px serif';
+                ctx.font = 'italic 16px serif';
                 ctx.fillStyle = '#b8c8a8';
-                cy = this._wrapTextCapped(ctx, campaign.completionStory, cx, cy, cw, 14, 4);
-                cy += 8;
+                cy = this._wrapTextCapped(ctx, campaign.completionStory, cx, cy, cw, 22, 8);
+                cy += 14;
             }
 
             // Unlocks / rewards
             if (campaign.rewards) {
                 this._drawDivider(ctx, cx, cy, cw, biome.accent);
-                cy += 12;
-                ctx.font = 'bold 12px serif';
+                cy += 20;
+                ctx.font = 'bold 17px serif';
                 ctx.fillStyle = '#d4af37';
                 ctx.fillText('\u2726  Unlocks', cx, cy);
-                cy += 18;
+                cy += 28;
 
                 if (campaign.rewards.unlocks && campaign.rewards.unlocks.length > 0) {
-                    ctx.font = '11px serif';
+                    ctx.font = '16px serif';
                     ctx.fillStyle = '#c9a876';
                     for (const unlockName of campaign.rewards.unlocks) {
-                        if (cy > panel.y + panel.height - 90) break;
-                        ctx.fillText('\u25B6  ' + unlockName, cx + 8, cy);
-                        cy += 15;
+                        if (cy > panel.y + panel.height - 130) break;
+                        ctx.fillText('\u25B6  ' + unlockName, cx + 10, cy);
+                        cy += 22;
                     }
                 }
 
@@ -814,10 +837,10 @@ export class CampaignMenu {
                 if (unlockedCampaignId) {
                     const unlockedCamp = CampaignRegistry.getCampaign(unlockedCampaignId);
                     if (unlockedCamp) {
-                        cy += 4;
-                        ctx.font = 'bold 11px serif';
+                        cy += 6;
+                        ctx.font = 'bold 16px serif';
                         ctx.fillStyle = '#7edd6e';
-                        ctx.fillText('\u25B6  Unlocked: ' + unlockedCamp.name, cx + 8, cy);
+                        ctx.fillText('\u25B6  Unlocked: ' + unlockedCamp.name, cx + 10, cy);
                     }
                 }
             }
@@ -838,7 +861,7 @@ export class CampaignMenu {
             ctx.strokeStyle = '#3a3a3a';
             ctx.lineWidth = 1.5;
             ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
-            ctx.font = 'bold 15px serif';
+            ctx.font = 'bold 20px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = '#555';
@@ -866,7 +889,7 @@ export class CampaignMenu {
             ctx.lineWidth = isHovered ? 2.5 : 1.5;
             ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
 
-            ctx.font = 'bold 17px serif';
+            ctx.font = 'bold 22px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = 'rgba(0,0,0,0.55)';

@@ -25,7 +25,8 @@ export class Campaign2 extends CampaignBase {
         super(stateManager);
         
         this.campaignId = 'campaign-2';
-        this.campaignName = 'The Mountain Campaign';
+        this.campaignName = 'The Ironstone Mountains';
+        this.titleAccent = '#5c84b8';
         this.castleInstances = {};
         this.animationTime = 0;
         this.pathPoints = [];
@@ -568,7 +569,7 @@ export class Campaign2 extends CampaignBase {
         this.renderSnowflakes(ctx);
         // Level name banners on top of all terrain, trees and snow
         this.renderAllLevelLabels(ctx);
-        this.renderTitle(ctx);
+        this.renderTitle(ctx, canvas);
         this.renderNavButtons(ctx);
 
         // Achievement panel popup + unlock banner, always drawn on top
@@ -1443,15 +1444,4 @@ export class Campaign2 extends CampaignBase {
         ctx.restore();
     }
     
-    renderTitle(ctx) {
-        const canvas = this.stateManager.canvas;
-        ctx.fillStyle = '#654321';
-        ctx.font = 'bold 48px serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('THE MOUNTAIN CAMPAIGN', canvas.width / 2, 60);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText('THE MOUNTAIN CAMPAIGN', canvas.width / 2 - 2, 58);
-    }
-    
-
 }

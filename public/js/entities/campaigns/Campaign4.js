@@ -23,7 +23,8 @@ export class Campaign4 extends CampaignBase {
         super(stateManager);
         
         this.campaignId = 'campaign-4';
-        this.campaignName = 'The Frog King\'s Realm';
+        this.campaignName = 'The Frog King\'s Domain';
+        this.titleAccent = '#8840c0';
         this.castleInstances = {};
 
         // Animation time for castle flags
