@@ -9,17 +9,17 @@ export class AirFrogEnemy extends ElementalFrogEnemy {
     };
 
     static VISUAL = {
-        skinColor: '#e8e8f8',
+        skinColor: '#DCE4FF',
         elementalType: 'air',
         vulnerableTo: 'fire',
-        accentColor: '#f5f5ff',
-        accentColorDark: '#c0c0e0',
-        robeColor: '#d0d0e0',
-        robeColorDark: '#a0a0c0',
-        glowColor: '#00d4ff',
-        hatColors: ['#e0e0f8', '#d0d0f0', '#b0b0e0'],
+        accentColor: '#A8D8FF',
+        accentColorDark: '#7FA8FF',
+        robeColor: '#C9D6FF',
+        robeColorDark: '#8C9EE8',
+        glowColor: '#4DE8FF',
+        hatColors: ['#D8E4FF', '#B8CCFF', '#96AEE0'],
         hatShowStar: true,
-        particleColorBases: ['rgba(100, 200, 255, ', 'rgba(150, 220, 255, ', 'rgba(200, 240, 255, '],
+        particleColorBases: ['rgba(120, 200, 255, ', 'rgba(180, 160, 255, ', 'rgba(224, 246, 255, '],
     };
 
     constructor(path, health_multiplier = 1.0, speed = null, armour = null, magicResistance = null) {

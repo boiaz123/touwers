@@ -1,8 +1,9 @@
 import { BaseEnemy } from './BaseEnemy.js';
 import { EnemyColorCache, FROG_KING_COLOR_VARIANTS } from '../../utils/EnemyColorCache.js';
-import { darkenColor, lightenColor } from '../../utils/colorUtils.js';
+import { darkenColor, lightenColor, hexToRgbaTable } from '../../utils/colorUtils.js';
 import { drawFlipperFoot } from './FrogFlipperRenderer.js';
 import { drawTaperedPath } from './TaperedShapeRenderer.js';
+import { drawSkinAura } from './EnemyAuraRenderer.js';
 
 export class FrogKingEnemy extends BaseEnemy {
     // Shared cached color-variant lookup (skinColor -> lighten/darken variants).
@@ -15,33 +16,46 @@ export class FrogKingEnemy extends BaseEnemy {
         magicResistance: 1.0
     };
 
-    // Vulnerability types with their properties
+    // Vulnerability types with their properties. glowColor drives the close-to-skin
+    // magical aura and the crown/scepter charge-glow tint; particleColorBases gives
+    // each element 3 distinct particle hues (matches ElementalFrogEnemy's palette)
+    // instead of one flat tone.
     static VULNERABILITIES = {
         'fire': {
-            skinColor: '#E74C3C',
-            crownColor: '#FF6B6B',
+            skinColor: '#FF5230',
+            crownColor: '#FFB300',
+            glowColor: '#FF8800',
             damageType: 'water',
-            particleColor: 'rgba(230, 76, 60, '
+            particleColorBases: ['rgba(255, 82, 48, ', 'rgba(255, 160, 0, ', 'rgba(255, 224, 120, ']
         },
         'water': {
-            skinColor: '#3498DB',
-            crownColor: '#2980B9',
+            skinColor: '#1E88FF',
+            crownColor: '#00D4FF',
+            glowColor: '#18E5FF',
             damageType: 'earth',
-            particleColor: 'rgba(52, 152, 219, '
+            particleColorBases: ['rgba(30, 136, 255, ', 'rgba(0, 212, 255, ', 'rgba(180, 235, 255, ']
         },
         'air': {
-            skinColor: '#e8e8f8',
-            crownColor: '#c0c0ff',
+            skinColor: '#E4E8FF',
+            crownColor: '#B39DFF',
+            glowColor: '#7FE8FF',
             damageType: 'fire',
-            particleColor: 'rgba(232, 232, 248, '
+            particleColorBases: ['rgba(180, 160, 255, ', 'rgba(140, 220, 255, ', 'rgba(230, 240, 255, ']
         },
         'earth': {
-            skinColor: '#8B6F47',
-            crownColor: '#A0826D',
+            skinColor: '#9C6B2E',
+            crownColor: '#D9A521',
+            glowColor: '#8BC34A',
             damageType: 'air',
-            particleColor: 'rgba(139, 111, 71, '
+            particleColorBases: ['rgba(156, 107, 46, ', 'rgba(139, 195, 74, ', 'rgba(217, 165, 33, ']
         }
     };
+
+    // Per-vulnerability particle color tables (3 colors x 101 alpha levels) and skin
+    // aura tables (101 alpha levels), built once and shared across every FrogKing
+    // instance/rotation - mirrors ElementalFrogEnemy's _colorTables/_auraColorTables.
+    static _particleColorTables = new Map();
+    static _auraColorTables = new Map();
     
     constructor(path, health_multiplier = 1.0, speed = null, armour = null, magicResistance = null) {
         const baseStats = FrogKingEnemy.BASE_STATS;
@@ -131,17 +145,42 @@ export class FrogKingEnemy extends BaseEnemy {
         this.currentVulnerabilityType = vulnerabilityType;
         this.skinColor = vulnData.skinColor;
         this.crownColor = vulnData.crownColor;
+        this.glowColor = vulnData.glowColor;
         this.vulnerableTo = vulnData.damageType;
-        this.particleColor = vulnData.particleColor;
+        this._particleColorBases = vulnData.particleColorBases;
 
         // Clear color caches when vulnerability changes
         this.cachedLightenColor = null;
         this.cachedDarkenColor = null;
         this.cachedDarken2Color = null;
-        this._particleColorTable = null;
 
         this._transitionFlash = silent ? 0 : 1.0;
         if (!silent) this._spawnTransitionBurst();
+    }
+
+    /** 3-color particle table (matches ElementalFrogEnemy._getColorTable) - built once
+     *  per vulnerability type and shared across every FrogKing instance/rotation. */
+    _getColorTable() {
+        let table = FrogKingEnemy._particleColorTables.get(this.currentVulnerabilityType);
+        if (!table) {
+            table = this._particleColorBases.map(b =>
+                Array.from({ length: 101 }, (_, i) => b + (i / 100).toFixed(2) + ')')
+            );
+            FrogKingEnemy._particleColorTables.set(this.currentVulnerabilityType, table);
+        }
+        return table;
+    }
+
+    /** 101-entry alpha lookup table for this vulnerability's glowColor - used for the
+     *  skin aura (see EnemyAuraRenderer.js for why translucency must be baked into the
+     *  color rather than driven via ctx.globalAlpha). */
+    _getAuraTable() {
+        let table = FrogKingEnemy._auraColorTables.get(this.currentVulnerabilityType);
+        if (!table) {
+            table = hexToRgbaTable(this.glowColor);
+            FrogKingEnemy._auraColorTables.set(this.currentVulnerabilityType, table);
+        }
+        return table;
     }
 
     /** One-shot ring of particles in the new element's color, fired the instant the
@@ -160,7 +199,7 @@ export class FrogKingEnemy extends BaseEnemy {
                 life: 0.7,
                 maxLife: 0.7,
                 size: Math.random() * 2.5 + 2.5,
-                colorIndex: 0
+                colorIndex: Math.floor(Math.random() * 3)
             });
         }
     }
@@ -365,18 +404,44 @@ export class FrogKingEnemy extends BaseEnemy {
     spawnMagicParticle() {
         const angle = Math.random() * Math.PI * 2;
         const radius = Math.random() * 15 + 5;
-        
+
+        // Elemental flourish matching ElementalFrogEnemy.spawnMagicParticle: each
+        // vulnerability biases how its ambient particles move, reusing the same
+        // capped particle array/spawn cadence rather than adding a second effect system.
+        let vx = Math.cos(angle) * (Math.random() * 20 + 10);
+        let vy = Math.sin(angle) * (Math.random() * 20 + 10) - 15;
+        let spawnYOffset = 0;
+
+        switch (this.currentVulnerabilityType) {
+            case 'fire':
+                vx = (Math.random() - 0.5) * 30;
+                vy = -Math.random() * 55 - 20;
+                break;
+            case 'water':
+                vx = (Math.random() - 0.5) * 26;
+                vy = Math.random() * 25 + 5;
+                break;
+            case 'earth':
+                spawnYOffset = 10;
+                vx = (Math.random() - 0.5) * 40;
+                vy = -Math.random() * 16 - 4;
+                break;
+            case 'air':
+                vx = (Math.random() - 0.5) * 55;
+                vy = -Math.random() * 32 - 8;
+                break;
+        }
+
         const particle = {
             x: this.x + Math.cos(angle) * radius,
-            y: this.y + Math.sin(angle) * radius,
-            vx: Math.cos(angle) * (Math.random() * 20 + 10),
-            vy: Math.sin(angle) * (Math.random() * 20 + 10) - 15,
+            y: this.y + Math.sin(angle) * radius + spawnYOffset,
+            vx, vy,
             life: 0.6,
             maxLife: 0.6,
-            size: Math.random() * 2 + 1,
+            size: Math.random() * 2.5 + 1.5,
             colorIndex: Math.floor(Math.random() * 3)
         };
-        
+
         if (this.magicParticles.length < 30) {
             this.magicParticles.push(particle);
         }
@@ -438,6 +503,15 @@ export class FrogKingEnemy extends BaseEnemy {
             this.cachedDarken2Color = FrogKingEnemy._colors.get(this.skinColor, 'darken_body');
         }
         
+        // --- MAGICAL AURA (close-to-skin glow in the current elemental vulnerability's
+        // color, drawn behind everything including the cape so it only peeks out past
+        // the body/head silhouette) ---
+        const auraPulse = 0.5 + 0.5 * Math.sin(this.animationTime * 2.2 + this.animationPhaseOffset);
+        drawSkinAura(ctx, this._getAuraTable(), auraPulse, [
+            { x: 0, y: baseSize * 0.1, rx: baseSize * 0.52 * bodyScaleX, ry: baseSize * 0.48 * bodyScaleY },
+            { x: 0, y: -baseSize * 0.48, rx: baseSize * 0.5, ry: baseSize * 0.48 },
+        ]);
+
         // --- ROYAL CAPE (drawn first, behind everything - swaying, fixed royal color
         // independent of the rotating elemental skin tone, so the king reads as
         // consistently "royal" even as his vulnerability color shifts every 10s) ---
@@ -615,7 +689,21 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.beginPath();
         ctx.ellipse(baseSize * 0.06, -baseSize * 0.45, baseSize * 0.28, baseSize * 0.2, -0.2, 0, Math.PI * 2);
         ctx.fill();
-        
+
+        // --- PAROTOID GLAND BUMPS (classic frog/toad anatomy - raised glands set
+        // back/outward from the eyes, toward the sides of the skull) ---
+        for (const side of [-1, 1]) {
+            const gx = side * baseSize * 0.44, gy = -baseSize * 0.56;
+            ctx.fillStyle = this.cachedDarken2Color;
+            ctx.beginPath();
+            ctx.ellipse(gx, gy, baseSize * 0.11, baseSize * 0.07, side * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = this.cachedLightenColor;
+            ctx.beginPath();
+            ctx.ellipse(gx - side * baseSize * 0.02, gy - baseSize * 0.02, baseSize * 0.05, baseSize * 0.03, side * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         // --- MENACING EYES (narrower, angry) ---
         // Left eye - narrowed, angled up
         ctx.fillStyle = '#000';
@@ -721,20 +809,24 @@ export class FrogKingEnemy extends BaseEnemy {
         ctx.beginPath();
         ctx.ellipse(0, -baseSize * 0.02, baseSize * 0.12, baseSize * 0.08, 0, 0, Math.PI * 2);
         ctx.fill();
-        
+
+        // --- THROAT POUCH (breathing detail below the jaw, peeking just above the
+        // breastplate's narrow collar point) ---
+        const throatPulse = 0.6 + 0.4 * Math.sin(this.animationTime * 2.0 + this.animationPhaseOffset);
+        ctx.fillStyle = lightenColor(this.skinColor, 0.2);
+        ctx.beginPath();
+        ctx.ellipse(0, -baseSize * 0.17, baseSize * 0.13, baseSize * 0.09 * throatPulse, 0, 0, Math.PI * 2);
+        ctx.fill();
+
         // --- ROYAL CROWN ---
         this.drawRoyalCrown(ctx, baseSize);
         
         // --- RENDER MAGIC PARTICLES ---
-        if (!this._particleColorTable) {
-            const base = this.particleColor;
-            this._particleColorTable = Array.from({ length: 101 }, (_, i) => base + (i / 100).toFixed(2) + ')');
-        }
-        const colorTable = this._particleColorTable;
+        const colorTable = this._getColorTable();
 
         for (let i = 0; i < this.magicParticles.length; i++) {
             const particle = this.magicParticles[i];
-            ctx.fillStyle = colorTable[Math.round(particle.life / particle.maxLife * 100)];
+            ctx.fillStyle = colorTable[particle.colorIndex][Math.round(particle.life / particle.maxLife * 100)];
             ctx.beginPath();
             ctx.arc(particle.x - this.x, particle.y - this.y, particle.size, 0, Math.PI * 2);
             ctx.fill();

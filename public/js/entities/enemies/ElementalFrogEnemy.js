@@ -2,6 +2,8 @@ import { BaseEnemy } from './BaseEnemy.js';
 import { EnemyColorCache, FROG_COLOR_VARIANTS } from '../../utils/EnemyColorCache.js';
 import { drawFlipperFoot } from './FrogFlipperRenderer.js';
 import { drawTaperedPath } from './TaperedShapeRenderer.js';
+import { drawSkinAura } from './EnemyAuraRenderer.js';
+import { hexToRgbaTable } from '../../utils/colorUtils.js';
 
 /**
  * Shared base for the four elemental "battle-mage" frogs (Fire/Water/Earth/Air).
@@ -21,6 +23,11 @@ export class ElementalFrogEnemy extends BaseEnemy {
     // Per-elementalType particle color tables (3 colors x 101 alpha levels), built once
     // per element and shared across every instance of that element.
     static _colorTables = new Map();
+
+    // Per-glowColor aura/highlight tables (101 alpha levels), shared across every
+    // instance of an element - used for the skin aura and the elemental texture's
+    // glow-tinted highlights.
+    static _auraColorTables = new Map();
 
     constructor(path, health_multiplier, speed, armour, magicResistance, baseStats, visual) {
         const actualSpeed = speed !== null ? speed : baseStats.speed;
@@ -88,6 +95,20 @@ export class ElementalFrogEnemy extends BaseEnemy {
         return table;
     }
 
+    /** 101-entry alpha lookup table for this element's glowColor - shared by the skin
+     *  aura and the elemental texture's glow-tinted highlights (see drawElementalTexture),
+     *  so translucency is baked into the fill color instead of relying on ctx.globalAlpha
+     *  (which CanvasGraphicsShim applies once to the whole Graphics object at render time,
+     *  not per draw call - see EnemyAuraRenderer.js's file doc). */
+    _getAuraTable() {
+        let table = ElementalFrogEnemy._auraColorTables.get(this.glowColor);
+        if (!table) {
+            table = hexToRgbaTable(this.glowColor);
+            ElementalFrogEnemy._auraColorTables.set(this.glowColor, table);
+        }
+        return table;
+    }
+
     update(deltaTime) {
         // DO NOT call super.update() - we handle movement ourselves with jump mechanics
         this.animationTime += deltaTime;
@@ -97,7 +118,7 @@ export class ElementalFrogEnemy extends BaseEnemy {
 
         // Particle effects
         this.particleSpawnCounter += deltaTime;
-        if (this.particleSpawnCounter > 0.3) {
+        if (this.particleSpawnCounter > 0.22) {
             this.spawnMagicParticle();
             this.particleSpawnCounter = 0;
         }
@@ -190,7 +211,7 @@ export class ElementalFrogEnemy extends BaseEnemy {
     }
 
     spawnMagicParticle() {
-        if (this.magicParticles.length >= 8) return;
+        if (this.magicParticles.length >= 12) return;
 
         // Elemental flourish: each element biases how its ambient particles move,
         // reusing the same capped particle array/spawn cadence rather than adding a
@@ -231,7 +252,7 @@ export class ElementalFrogEnemy extends BaseEnemy {
             vx, vy,
             life: 1.2,
             maxLife: 1.2,
-            size: Math.random() * 2.5 + 1.5,
+            size: Math.random() * 3 + 1.8,
             colorIndex: Math.floor(Math.random() * 3)
         });
     }
@@ -296,6 +317,14 @@ export class ElementalFrogEnemy extends BaseEnemy {
             this.cachedDarkenColor = ElementalFrogEnemy._colors.get(this.skinColor, 'darken');
             this.cachedDarken2Color = ElementalFrogEnemy._colors.get(this.skinColor, 'darken_body');
         }
+
+        // --- MAGICAL AURA (close-to-skin elemental glow, drawn behind everything so
+        // it only peeks out past the body/head silhouette) ---
+        const auraPulse = 0.5 + 0.5 * Math.sin(this.animationTime * 2.2 + this.animationPhaseOffset);
+        drawSkinAura(ctx, this._getAuraTable(), auraPulse, [
+            { x: 0, y: baseSize * 0.05, rx: baseSize * 0.52 * bodyScaleX, ry: baseSize * 0.5 * bodyScaleY },
+            { x: 0, y: -baseSize * 0.45, rx: baseSize * 0.48, ry: baseSize * 0.45 },
+        ]);
 
         // --- BACK LEGS (DRAW FIRST) ---
         this.drawBattleLeg(ctx, -baseSize * 0.3, baseSize * 0.32, baseSize, false, true);
@@ -382,14 +411,19 @@ export class ElementalFrogEnemy extends BaseEnemy {
         ctx.ellipse(0, -baseSize * 0.45, baseSize * 0.48, baseSize * 0.45, 0, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Head markings/spots
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-        ctx.beginPath();
-        ctx.arc(-baseSize * 0.15, -baseSize * 0.65, baseSize * 0.12, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(baseSize * 0.15, -baseSize * 0.65, baseSize * 0.12, 0, Math.PI * 2);
-        ctx.fill();
+        // --- PAROTOID GLAND BUMPS (classic frog/toad anatomy - raised glands angled
+        // back/outward from the eyes, not flat forehead spots) ---
+        for (const side of [-1, 1]) {
+            const gx = side * baseSize * 0.34, gy = -baseSize * 0.72;
+            ctx.fillStyle = this.cachedDarken2Color;
+            ctx.beginPath();
+            ctx.ellipse(gx, gy, baseSize * 0.1, baseSize * 0.065, side * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = this.cachedLightenColor;
+            ctx.beginPath();
+            ctx.ellipse(gx - side * baseSize * 0.02, gy - baseSize * 0.02, baseSize * 0.045, baseSize * 0.028, side * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         // --- EYES ---
         ctx.fillStyle = this.cachedDarken2Color;
@@ -445,6 +479,14 @@ export class ElementalFrogEnemy extends BaseEnemy {
         ctx.arc(0, -baseSize * 0.28, baseSize * 0.2, 0, Math.PI);
         ctx.fill();
 
+        // --- THROAT POUCH (subtle breathing detail below the mouth, matching the
+        // technique base FrogEnemy uses) ---
+        const throatPulse = 0.6 + 0.4 * Math.sin(this.animationTime * 2.4 + this.animationPhaseOffset);
+        ctx.fillStyle = ElementalFrogEnemy._colors.get(this.skinColor, 'lighten_body');
+        ctx.beginPath();
+        ctx.ellipse(0, -baseSize * 0.08, baseSize * 0.14, baseSize * 0.1 * throatPulse, 0, 0, Math.PI * 2);
+        ctx.fill();
+
         // --- WIZARD HAT (ENHANCED) ---
         this.drawBattleMageHat(ctx, baseSize);
 
@@ -464,14 +506,20 @@ export class ElementalFrogEnemy extends BaseEnemy {
     }
 
     /** Element-specific skin marking, drawn over the chest/body so each element reads
-     *  as thematically distinct beyond just its base palette. */
+     *  as thematically distinct beyond just its base palette. Translucency here is
+     *  always baked directly into fillStyle/strokeStyle as an rgba() string (via
+     *  _getAuraTable() or a literal rgba literal) rather than ctx.globalAlpha - under
+     *  CanvasGraphicsShim, globalAlpha maps to Pixi Graphics.alpha, a single value
+     *  applied to the WHOLE Graphics object at render time, so a set-then-reset
+     *  globalAlpha pattern within one synchronous render call has no visible effect
+     *  (see EnemyAuraRenderer.js's file doc for the full explanation). */
     drawElementalTexture(ctx, baseSize, bodyScaleX, bodyScaleY) {
+        const auraTable = this._getAuraTable();
         switch (this.elementalType) {
             case 'fire': {
                 // Glowing ember cracks across the body, like heat-cracked skin/hide.
-                ctx.strokeStyle = this.glowColor;
+                ctx.strokeStyle = auraTable[70];
                 ctx.lineWidth = baseSize * 0.025;
-                ctx.globalAlpha = 0.65;
                 const cracks = [
                     [-0.18, -0.12, -0.06, 0.02], [-0.06, 0.02, 0.02, 0.16],
                     [0.08, -0.18, 0.2, -0.02], [0.2, -0.02, 0.14, 0.14],
@@ -482,11 +530,18 @@ export class ElementalFrogEnemy extends BaseEnemy {
                     ctx.lineTo(x2 * baseSize, y2 * baseSize);
                     ctx.stroke();
                 }
-                ctx.globalAlpha = 1;
+                // Tiny glowing ember specks at a couple of the crack tips.
+                ctx.fillStyle = auraTable[90];
+                for (const [ex, ey] of [[-0.06, 0.02], [0.2, -0.02]]) {
+                    ctx.beginPath();
+                    ctx.arc(ex * baseSize, ey * baseSize, baseSize * 0.035, 0, Math.PI * 2);
+                    ctx.fill();
+                }
                 break;
             }
             case 'water': {
-                // Translucent scale/ripple marks across the back.
+                // Translucent scale/ripple marks across the back, rimmed with the
+                // elemental glow so they read as magically lit, not just wet skin.
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
                 ctx.lineWidth = baseSize * 0.02;
                 const scales = [[-0.16, -0.1], [0.13, -0.16], [-0.04, 0.16], [0.18, 0.08]];
@@ -495,29 +550,47 @@ export class ElementalFrogEnemy extends BaseEnemy {
                     ctx.arc(x * baseSize, y * baseSize, baseSize * 0.06, Math.PI * 0.15, Math.PI * 0.85);
                     ctx.stroke();
                 }
+                ctx.strokeStyle = auraTable[45];
+                ctx.lineWidth = baseSize * 0.014;
+                for (const [x, y] of scales) {
+                    ctx.beginPath();
+                    ctx.arc(x * baseSize, y * baseSize, baseSize * 0.09, Math.PI * 0.2, Math.PI * 0.7);
+                    ctx.stroke();
+                }
                 break;
             }
             case 'earth': {
-                // Small moss/rock patches mottling the hide.
+                // Small moss/rock patches mottling the hide, plus a couple of vivid
+                // moss-green glints so the earth frog reads as more than solid brown.
                 const patches = [
-                    [-0.17, -0.1, '#5a6b3a'], [0.15, 0.04, '#6b5a3a'], [-0.05, 0.2, '#4a5a2a'],
+                    [-0.17, -0.1, 'rgba(90, 107, 58, 0.55)'], [0.15, 0.04, 'rgba(107, 90, 58, 0.55)'], [-0.05, 0.2, 'rgba(74, 90, 42, 0.55)'],
                 ];
-                ctx.globalAlpha = 0.5;
                 for (const [x, y, c] of patches) {
                     ctx.fillStyle = c;
                     ctx.beginPath();
                     ctx.ellipse(x * baseSize, y * baseSize, baseSize * 0.075, baseSize * 0.05, 0.3, 0, Math.PI * 2);
                     ctx.fill();
                 }
-                ctx.globalAlpha = 1;
+                ctx.fillStyle = auraTable[55];
+                for (const [x, y] of [[-0.17, -0.13], [0.15, 0.01]]) {
+                    ctx.beginPath();
+                    ctx.ellipse(x * baseSize, y * baseSize, baseSize * 0.03, baseSize * 0.02, 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
                 break;
             }
             case 'air': {
-                // Soft wispy translucent outer glow tracing the body silhouette.
+                // Soft wispy translucent outer glow tracing the body silhouette, tinted
+                // with the elemental color so air's identity reads beyond its pale base.
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
                 ctx.lineWidth = baseSize * 0.03;
                 ctx.beginPath();
                 ctx.ellipse(0, baseSize * 0.05, baseSize * 0.56 * bodyScaleX, baseSize * 0.54 * bodyScaleY, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.strokeStyle = auraTable[55];
+                ctx.lineWidth = baseSize * 0.02;
+                ctx.beginPath();
+                ctx.ellipse(0, baseSize * 0.05, baseSize * 0.61 * bodyScaleX, baseSize * 0.59 * bodyScaleY, 0, 0, Math.PI * 2);
                 ctx.stroke();
                 break;
             }

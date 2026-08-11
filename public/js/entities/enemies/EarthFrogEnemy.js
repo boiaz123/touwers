@@ -9,17 +9,17 @@ export class EarthFrogEnemy extends ElementalFrogEnemy {
     };
 
     static VISUAL = {
-        skinColor: '#8B6F47',
+        skinColor: '#9C6B2E',
         elementalType: 'earth',
         vulnerableTo: 'air',
-        accentColor: '#8a6a3a',
-        accentColorDark: '#5a4a2a',
-        robeColor: '#2a2010',
-        robeColorDark: '#1a1000',
-        glowColor: '#cc8800',
-        hatColors: ['#8a6a3a', '#6a4a2a', '#3a2a1a'],
+        accentColor: '#C9820A',
+        accentColorDark: '#7A4E00',
+        robeColor: '#3D2E12',
+        robeColorDark: '#241A08',
+        glowColor: '#8BC34A',
+        hatColors: ['#9C6B2E', '#6B4A18', '#3D2A10'],
         hatShowStar: false,
-        particleColorBases: ['rgba(139, 111, 71, ', 'rgba(184, 134, 11, ', 'rgba(160, 82, 45, '],
+        particleColorBases: ['rgba(156, 107, 46, ', 'rgba(139, 195, 74, ', 'rgba(217, 165, 33, '],
     };
 
     constructor(path, health_multiplier = 1.0, speed = null, armour = null, magicResistance = null) {
