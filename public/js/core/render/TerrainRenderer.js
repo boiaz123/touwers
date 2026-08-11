@@ -1273,19 +1273,22 @@ export function renderTreeType1(ctx, x, y, size) {
         ctx.lineTo(x - size * 0.3, y + size * 0.05);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#2E7D32';
+        ctx.fillStyle = '#3C9440';
         ctx.beginPath();
         ctx.moveTo(x, y - size * 0.15);
         ctx.lineTo(x + size * 0.25, y + size * 0.2);
         ctx.lineTo(x - size * 0.25, y + size * 0.2);
         ctx.closePath();
         ctx.fill();
-        // Right-side shadow for depth
+        // Right-side shadow for depth - starts partway down the right edge (not the tier's
+        // own apex) and stays flush against that edge down to the base, so it reads as rim
+        // shading hugging the tier's own silhouette instead of a separate wedge poking out
+        // near the tip.
         ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
         ctx.beginPath();
-        ctx.moveTo(x + size * 0.02, y - size * 0.15);
+        ctx.moveTo(x + size * 0.13, y - size * 0.02);
         ctx.lineTo(x + size * 0.25, y + size * 0.2);
-        ctx.lineTo(x + size * 0.02, y + size * 0.2);
+        ctx.lineTo(x + size * 0.08, y + size * 0.2);
         ctx.closePath();
         ctx.fill();
     }
@@ -1334,44 +1337,48 @@ export function renderTreeType3(ctx, x, y, size) {
     }
 
 export function renderTreeType4(ctx, x, y, size) {
-        // Pine/Spruce style with layered triangles
+        // Pine/Spruce style with layered triangles. Each tier's base sits below the
+        // previous tier's apex (not flush with it) so tiers overlap by a real margin
+        // instead of meeting at a single point - a flush join let the narrow tip of one
+        // triangle taper to near-zero width right where the next tier's full-width base
+        // began, reading as a disconnected cap floating above the rest of the tree.
         const trunkWidth = size * 0.18;
         ctx.fillStyle = '#8B4513';
         ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
         ctx.fillStyle = '#0D3817';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.05);
-        ctx.lineTo(x + size * 0.38, y + size * 0.15);
-        ctx.lineTo(x - size * 0.38, y + size * 0.15);
+        ctx.moveTo(x, y - size * 0.08);
+        ctx.lineTo(x + size * 0.40, y + size * 0.17);
+        ctx.lineTo(x - size * 0.40, y + size * 0.17);
         ctx.closePath();
         ctx.fill();
         ctx.fillStyle = '#1B5E20';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.25);
-        ctx.lineTo(x + size * 0.3, y);
-        ctx.lineTo(x - size * 0.3, y);
+        ctx.moveTo(x, y - size * 0.28);
+        ctx.lineTo(x + size * 0.32, y - size * 0.02);
+        ctx.lineTo(x - size * 0.32, y - size * 0.02);
         ctx.closePath();
         ctx.fill();
         ctx.fillStyle = '#2E7D32';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.45);
-        ctx.lineTo(x + size * 0.2, y - size * 0.15);
-        ctx.lineTo(x - size * 0.2, y - size * 0.15);
+        ctx.moveTo(x, y - size * 0.48);
+        ctx.lineTo(x + size * 0.22, y - size * 0.20);
+        ctx.lineTo(x - size * 0.22, y - size * 0.20);
         ctx.closePath();
         ctx.fill();
         ctx.fillStyle = '#43A047';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.6);
-        ctx.lineTo(x + size * 0.12, y - size * 0.45);
-        ctx.lineTo(x - size * 0.12, y - size * 0.45);
+        ctx.moveTo(x, y - size * 0.62);
+        ctx.lineTo(x + size * 0.13, y - size * 0.38);
+        ctx.lineTo(x - size * 0.13, y - size * 0.38);
         ctx.closePath();
         ctx.fill();
-        // Right-side shadow on lowest layer for depth
+        // Right-side shadow spanning all tiers for depth
         ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
         ctx.beginPath();
-        ctx.moveTo(x + size * 0.02, y - size * 0.05);
-        ctx.lineTo(x + size * 0.38, y + size * 0.15);
-        ctx.lineTo(x + size * 0.02, y + size * 0.15);
+        ctx.moveTo(x + size * 0.02, y - size * 0.08);
+        ctx.lineTo(x + size * 0.40, y + size * 0.17);
+        ctx.lineTo(x + size * 0.02, y + size * 0.17);
         ctx.closePath();
         ctx.fill();
     }

@@ -725,37 +725,45 @@ export class LevelBase {
 
     /**
      * The screen-space Y used to depth-sort a terrain element against towers/enemies/other
-     * terrain (Y-sort "ground contact point"). Must mirror the y-shift renderSingleTerrainElement
-     * applies before actually drawing each type, otherwise the sort key and the pixels it's
-     * supposed to describe disagree: 'tree' (and non-mountain 'vegetation') are drawn shifted
-     * up by size*0.45 so the canopy has room to grow from its trunk, while 'rock'/'cactus'/
-     * 'drybush'/mountain-vegetation are drawn anchored exactly at their grid row. Using the raw,
-     * unshifted gridY for every type (as this used to) makes a tree's sort key sit up to
-     * size*0.45px below its actual painted base - on mountain levels (sizeScale 1.5, the
-     * largest of any campaign) that's often more than a full grid row, letting a rock declared
-     * later in the level file win same-row zIndex ties and draw in front of a tree it should
-     * be behind.
+     * terrain (Y-sort "ground contact point") - must approximate where the element's trunk/
+     * base actually lands on screen, not just mirror the pre-draw anchor shift blindly:
+     *
+     * - 'tree' elements and forest 'vegetation' both render via TerrainRenderer.renderTree(),
+     *   which draws its trunk *downward* from the pre-shifted anchor (renderSingleTerrainElement
+     *   shifts the anchor up by size*0.45 for canopy headroom). Every tree type's trunk height
+     *   lands in the ~0.4-0.5*size range, which cancels that shift back out - the trunk's true
+     *   ground-contact point sits almost exactly at the raw, unshifted screenY regardless of
+     *   size. Using the shifted anchor itself as the sort key (as this used to) overstated how
+     *   far back a large tree sits by up to size*0.45px - often a full grid row or more - letting
+     *   a rock a row or two *below* a big tree (which should still be behind it) win the sort and
+     *   draw in front, i.e. hover on top of the tree's canopy.
+     * - mountain 'vegetation' (pine) draws anchored at screenY with no pre-shift, so its trunk
+     *   extends *below* screenY by ~0.43*size instead of canceling out (matches the ground-shadow
+     *   offset renderMountainVegetation itself uses) - the sort key needs the opposite correction.
+     * - desert/space 'vegetation' has no trunk to cancel the pre-shift, so its true ground contact
+     *   really does sit size*0.45 above screenY.
+     * - 'rock'/'cactus'/'drybush' render symmetrically around screenY (no net offset); a sub-pixel
+     *   nudge just makes them consistently lose same-row ties against foliage instead of relying
+     *   on level-file insertion order (rocks are typically declared after vegetation).
      */
     getTerrainElementDepthY(element) {
         const campaign = this.getCampaign();
         const screenY = element.gridY * this.cellSize;
         if (element.type === 'water') return screenY;
         const baseSize = element.size * this.cellSize;
-        const sizeScale = (campaign !== 'forest' && campaign !== 'desert') ? 1.5 : 0.75;
+        const sizeScale = campaign !== 'desert' ? 1.5 : 0.75;
         const size = baseSize * sizeScale;
 
-        if (element.type === 'tree' || (element.type === 'vegetation' && campaign !== 'mountain')) {
+        if (element.type === 'tree' || (element.type === 'vegetation' && campaign === 'forest')) {
+            return screenY;
+        }
+        if (element.type === 'vegetation' && campaign === 'mountain') {
+            return screenY + size * 0.43;
+        }
+        if (element.type === 'vegetation') {
             return screenY - size * 0.45;
         }
         if (element.type === 'rock' || element.type === 'cactus' || element.type === 'drybush') {
-            // Ground-hugging clutter that never gets the upward shift above (including mountain
-            // vegetation, whose canopy - unlike every other campaign's - anchors flush with its
-            // own gridY too, see the mountain branch above). A rock and a tree can therefore land
-            // on the *exact* same sort key despite one visually towering over the other; that tie
-            // used to resolve by array insertion order, so whichever was declared later in the
-            // level file always won - typically the rock, since level files list rocks after
-            // vegetation. A sub-pixel nudge makes rock/cactus/drybush always lose ties against
-            // foliage at the same row instead, without perturbing any real (non-tied) ordering.
             return screenY - 0.5;
         }
         return screenY;
@@ -781,7 +789,7 @@ export class LevelBase {
         const screenX = element.gridX * this.cellSize;
         const screenY = element.gridY * this.cellSize;
         const baseSize = element.size * this.cellSize;
-        const sizeScale = (element.type !== 'water' && campaign !== 'forest' && campaign !== 'desert') ? 1.5 : 0.75;
+        const sizeScale = (element.type !== 'water' && campaign !== 'desert') ? 1.5 : 0.75;
         const size = element.type === 'water' ? baseSize : baseSize * sizeScale;
 
         switch (element.type) {
@@ -1954,7 +1962,7 @@ export class LevelBase {
 
             const screenX = element.gridX * this.cellSize;
             const baseSize = element.size * this.cellSize;
-            const sizeScale = (element.type !== 'water' && campaign !== 'forest' && campaign !== 'desert') ? 1.5 : 0.75;
+            const sizeScale = (element.type !== 'water' && campaign !== 'desert') ? 1.5 : 0.75;
             const size = element.type === 'water' ? baseSize : baseSize * sizeScale;
 
             switch (element.type) {

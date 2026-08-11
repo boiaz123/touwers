@@ -1,9 +1,16 @@
 import { Sprite } from 'pixi.js';
 
 // Generous margin around an element's nominal size - shadows/canopy extend well beyond
-// the footprint implied by `element.size` alone (e.g. a tree's canopy reaches ~size*0.6
-// above its anchor point).
-const BAKE_CANVAS_SCALE = 3;
+// the footprint implied by `element.size` alone. Worst case is a non-mountain 'vegetation'
+// element (tree/cactus/etc.): renderSingleTerrainElement pre-shifts its anchor up by
+// size*0.45 for canopy headroom, and the tallest canopy on top of that (TreeType3's round
+// crown, apex 0.55 above anchor + 0.3 radius) reaches another size*0.85 - a combined
+// size*1.3 above the element's raw grid row. At sizeScale 1.5 (every campaign but desert,
+// see LevelBase.renderSingleTerrainElement) that's size*1.3 = baseSize*1.95, so the bake
+// canvas half-extent (BAKE_CANVAS_SCALE/2 * baseSize) must clear ~1.95 with room to spare -
+// a value of 3 (half-extent 1.5*baseSize) clips the canopy tip; 5 (half-extent 2.5*baseSize)
+// leaves a comfortable margin.
+const BAKE_CANVAS_SCALE = 5;
 
 /**
  * Terrain elements (trees/rocks/cacti/bushes/vegetation) are pure decoration: placed once

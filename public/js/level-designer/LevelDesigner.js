@@ -2323,15 +2323,21 @@ export class LevelDesigner {
     /**
      * Depth-sort key for a terrain element, mirrored from LevelBase.getTerrainElementDepthY()
      * so the designer's paint order matches gameplay's exactly (see that method's doc
-     * comment for why the raw, unshifted gridY used to be wrong here too).
+     * comment for the full reasoning behind each campaign's offset).
      */
     _terrainElementDepthY(element, cellWidthPixels, cellHeightPixels, campaign) {
         const screenY = element.gridY * cellHeightPixels;
         if (element.type === 'water') return screenY;
         const baseSize = element.size * Math.min(cellWidthPixels, cellHeightPixels);
-        const sizeScale = (campaign !== 'forest' && campaign !== 'desert') ? 1.5 : 0.75;
+        const sizeScale = campaign !== 'desert' ? 1.5 : 0.75;
         const size = baseSize * sizeScale;
-        if (element.type === 'vegetation' && campaign !== 'mountain') {
+        if (element.type === 'vegetation' && campaign === 'forest') {
+            return screenY;
+        }
+        if (element.type === 'vegetation' && campaign === 'mountain') {
+            return screenY + size * 0.43;
+        }
+        if (element.type === 'vegetation') {
             return screenY - size * 0.45;
         }
         if (element.type === 'rock') {
@@ -2354,9 +2360,9 @@ export class LevelDesigner {
             const y = element.gridY * cellHeightPixels;
             const baseSize = element.size * Math.min(cellWidthPixels, cellHeightPixels);
             // Mirrors LevelBase.renderSingleTerrainElement()'s sizeScale exactly, so
-            // mountain/space trees & rocks (which render 2x larger in-game than
-            // forest/desert ones) preview at the same size here instead of always 0.75x.
-            const sizeScale = (element.type !== 'water' && campaign !== 'forest' && campaign !== 'desert') ? 1.5 : 0.75;
+            // mountain/space/forest trees & rocks (which render 2x larger in-game than
+            // desert ones) preview at the same size here instead of always 0.75x.
+            const sizeScale = (element.type !== 'water' && campaign !== 'desert') ? 1.5 : 0.75;
             const size = element.type === 'water' ? baseSize : baseSize * sizeScale;
 
             // Delegates to TerrainRenderer so the preview here is drawn by the exact
