@@ -658,7 +658,7 @@ export class MarketplaceRegistry {
         },
         'intel-pack-2': {
             name: 'Spy Report II',
-            description: 'Through careful espionage, you gain knowledge of intermediate threats. Unlock information about Knight Enemies and Shield Knight Enemies. Fortify your defenses with understanding.',
+            description: 'Through careful espionage, you gain knowledge of intermediate threats. Unlock information about Knight Enemies, Shield Knight Enemies, and the Battering Ram. Fortify your defenses with understanding.',
             cost: 200,
             drawIcon: _drawClipboard,
             category: 'intel',
@@ -669,7 +669,7 @@ export class MarketplaceRegistry {
         },
         'intel-pack-3': {
             name: 'Spy Report III',
-            description: 'Arcane scholars decipher cryptic runes revealing secrets of magical foes. Unlock intel on Mage Enemies and Frog Enemies. Master the arcane, and you master the battlefield.',
+            description: 'Arcane scholars decipher cryptic runes revealing secrets of magical foes. Unlock intel on Mage Enemies, Frog Enemies, and the Goliath Frog. Master the arcane, and you master the battlefield.',
             cost: 300,
             drawIcon: _drawMagnifier,
             category: 'intel',

@@ -48,6 +48,13 @@ export class EnemyIntelRegistry {
             stats: { health: 180, speed: 35, armour: 50, magicResistance: -0.2, damage: 12 },
             abilities: ['Shield defense', 'Heavy armour', 'Magic weakness']
         },
+        'ramcart': {
+            name: 'Battering Ram',
+            description: 'A covered wagon smuggling a raiding party toward the castle. Its stout planks and iron-shod wheels shrug off punishment until the wagon is finally broken open, unleashing the soldiers within.',
+            image: 'assets/enemies/ramcart.png',
+            stats: { health: 1100, speed: 30, armour: 50, magicResistance: 0, damage: 22 },
+            abilities: ['Heavy armour', 'Bursts open on death', 'Releases a raiding party']
+        },
         // MAGICAL ENEMIES (Spy Report III)
         'mage': {
             name: 'Mage',
@@ -62,6 +69,13 @@ export class EnemyIntelRegistry {
             image: 'assets/enemies/frog_mage.png',
             stats: { health: 85, speed: 55, armour: 10, magicResistance: 0.5, damage: 6 },
             abilities: ['Jumping attack', 'Magic immune (50%)']
+        },
+        'walkingfrog': {
+            name: 'Goliath Frog',
+            description: 'A huge swamp-matriarch frog that lumbers along on all four legs, carrying an egg sac swollen with young. Killing her bursts the sac open, releasing her brood onto the battlefield.',
+            image: 'assets/enemies/walkingfrog.png',
+            stats: { health: 2000, speed: 30, armour: 12, magicResistance: 0.4, damage: 9 },
+            abilities: ['High HP', 'Magic resistant', 'Bursts open on death', 'Releases a brood of frogs']
         },
         // ELEMENTAL ENEMIES (Spy Report IV)
         'earthfrog': {
@@ -97,8 +111,8 @@ export class EnemyIntelRegistry {
     // Mapping of intel packs to the enemies they unlock
     static #intelMapping = {
         'intel-pack-1': ['basic', 'archer', 'beefyenemy', 'villager'],
-        'intel-pack-2': ['knight', 'shieldknight'],
-        'intel-pack-3': ['mage', 'frog'],
+        'intel-pack-2': ['knight', 'shieldknight', 'ramcart'],
+        'intel-pack-3': ['mage', 'frog', 'walkingfrog'],
         'intel-pack-4': ['earthfrog', 'waterfrog', 'firefrog', 'airfrog']
     };
 
