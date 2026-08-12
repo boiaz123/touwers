@@ -1252,88 +1252,189 @@ export function renderTree(ctx, x, y, size, gridX, gridY, variant) {
         }
     }
 
-export function renderTreeType1(ctx, x, y, size) {
-        const trunkWidth = size * 0.25;
-        const trunkHeight = size * 0.5;
-        ctx.fillStyle = '#5D4037';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        ctx.fillStyle = '#3E2723';
-        ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
-        ctx.fillStyle = '#0D3817';
+// Shared shading helpers for the forest tree types below. All of them bake once onto a
+// real offscreen Canvas2D context (see PixiTextureCache.bake) rather than the live Pixi
+// Graphics shim, so the extra paths/strokes here cost nothing at runtime. Deliberately
+// avoids gradients for foliage - a smooth radial/linear fade reads as a glossy, inflated
+// balloon rather than a mass of leaves, so shading here is built from flat, layered,
+// slightly irregular shapes instead (matte, not shiny).
+
+// A tapered trunk with a root flare at the base, a flat (non-gradient) lit-left half, bark
+// grain streaks, and two short branch stubs poking out sideways near the canopy line -
+// drawn *before* the canopy tiers so foliage naturally covers their base and only the
+// outer tips show, like a real conifer's lower branches peeking out from under the skirt.
+function _renderTrunk(ctx, x, y, width, height, lightColor, darkColor) {
+        const topW = width * 0.8;
+        const baseW = width * 1.3;
+        const flareH = height * 0.16;
+
+        ctx.strokeStyle = darkColor;
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.max(1.5, width * 0.22);
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.6);
-        ctx.lineTo(x + size * 0.35, y - size * 0.1);
-        ctx.lineTo(x - size * 0.35, y - size * 0.1);
+        ctx.moveTo(x - topW * 0.35, y + height * 0.14);
+        ctx.lineTo(x - width * 1.55, y + height * 0.04);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x + topW * 0.3, y + height * 0.32);
+        ctx.lineTo(x + width * 1.4, y + height * 0.44);
+        ctx.stroke();
+
+        const trunkPath = () => {
+            ctx.beginPath();
+            ctx.moveTo(x - topW * 0.5, y);
+            ctx.lineTo(x + topW * 0.5, y);
+            ctx.lineTo(x + width * 0.5, y + height - flareH);
+            ctx.lineTo(x + baseW * 0.5, y + height);
+            ctx.lineTo(x - baseW * 0.5, y + height);
+            ctx.lineTo(x - width * 0.5, y + height - flareH);
+            ctx.closePath();
+        };
+        ctx.fillStyle = darkColor;
+        trunkPath();
+        ctx.fill();
+
+        ctx.save();
+        trunkPath();
+        ctx.clip();
+        ctx.fillStyle = lightColor;
+        ctx.fillRect(x - baseW * 0.5, y, baseW * 0.5, height);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.lineWidth = Math.max(1, width * 0.045);
+        const streaks = [[-0.30, 0.10, -0.25, 0.55], [-0.04, 0.28, -0.08, 0.85], [0.18, 0.05, 0.22, 0.45], [0.32, 0.35, 0.29, 0.90]];
+        for (const [x1f, y1f, x2f, y2f] of streaks) {
+            ctx.beginPath();
+            ctx.moveTo(x + x1f * width, y + y1f * height);
+            ctx.lineTo(x + x2f * width, y + y2f * height);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+// Interior points of an edge from the apex to a base corner, nudged alternately out/in
+// (tapering to zero at both ends) so the edge reads as a ragged cluster of branch tips
+// instead of a single geometric straight line.
+function _jaggedEdgePoints(apexX, apexY, cornerX, cornerY, teeth) {
+        const pts = [];
+        const dir = cornerX >= apexX ? 1 : -1;
+        const span = Math.abs(cornerX - apexX) || Math.abs(cornerY - apexY);
+        for (let i = 1; i < teeth; i++) {
+            const t = i / teeth;
+            const px = apexX + (cornerX - apexX) * t;
+            const py = apexY + (cornerY - apexY) * t;
+            const taper = Math.sin(Math.PI * t);
+            const jag = (i % 2 === 0 ? 1 : -0.45) * taper * span * 0.13;
+            pts.push([px + dir * jag, py]);
+        }
+        return pts;
+    }
+
+// A conifer tier with ragged, branch-like edges (not straight lines) and a flat two-tone
+// split (light upper-left half / dark lower-right half, matching the mountain pines'
+// proven technique) instead of a gradient - keeps the matte, painted look.
+function _jaggedTriangle(ctx, apexX, apexY, rightX, rightY, leftX, leftY, darkColor, lightColor) {
+        const rightPts = _jaggedEdgePoints(apexX, apexY, rightX, rightY, 6);
+        const leftPts = _jaggedEdgePoints(apexX, apexY, leftX, leftY, 6);
+        const midX = (rightX + leftX) / 2, midY = (rightY + leftY) / 2;
+
+        ctx.fillStyle = darkColor;
+        ctx.beginPath();
+        ctx.moveTo(apexX, apexY);
+        for (const [px, py] of rightPts) ctx.lineTo(px, py);
+        ctx.lineTo(rightX, rightY);
+        ctx.lineTo(leftX, leftY);
+        for (let i = leftPts.length - 1; i >= 0; i--) ctx.lineTo(leftPts[i][0], leftPts[i][1]);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#1B5E20';
+
+        ctx.fillStyle = lightColor;
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.35);
-        ctx.lineTo(x + size * 0.3, y + size * 0.05);
-        ctx.lineTo(x - size * 0.3, y + size * 0.05);
+        ctx.moveTo(apexX, apexY);
+        ctx.lineTo(midX, midY);
+        ctx.lineTo(leftX, leftY);
+        for (let i = leftPts.length - 1; i >= 0; i--) ctx.lineTo(leftPts[i][0], leftPts[i][1]);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = '#3C9440';
+
+        // faint contact shadow where this tier meets the one below, for extra depth
+        ctx.fillStyle = 'rgba(0, 10, 0, 0.16)';
         ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.15);
-        ctx.lineTo(x + size * 0.25, y + size * 0.2);
-        ctx.lineTo(x - size * 0.25, y + size * 0.2);
-        ctx.closePath();
-        ctx.fill();
-        // Right-side shadow for depth - starts partway down the right edge (not the tier's
-        // own apex) and stays flush against that edge down to the base, so it reads as rim
-        // shading hugging the tier's own silhouette instead of a separate wedge poking out
-        // near the tip.
-        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.13, y - size * 0.02);
-        ctx.lineTo(x + size * 0.25, y + size * 0.2);
-        ctx.lineTo(x + size * 0.08, y + size * 0.2);
-        ctx.closePath();
+        ctx.ellipse(midX, midY, Math.abs(rightX - leftX) * 0.3, Math.abs(rightX - leftX) * 0.07, 0, 0, Math.PI * 2);
         ctx.fill();
     }
 
+// A round foliage clump built from several overlapping puffs instead of one big circle -
+// reads as a leafy mass rather than a single smooth sphere. Each puff is split light-left/
+// dark-right (the same frontal, side-lit convention the pine tiers use via _jaggedTriangle -
+// a small highlight blob centered inside a circle reads as a specular sphere seen from
+// above, which is what made these look top-down instead of frontal like the pines) and the
+// split's tilt angle varies per puff so the shading doesn't look like one stamped pattern
+// repeated at every position.
+function _leafClump(ctx, cx, cy, r, darkColor, lightColor) {
+        const puffs = [
+            [0, r * 0.02, 1.0, 0.06],
+            [-r * 0.5, r * 0.24, 0.64, -0.22],
+            [r * 0.46, r * 0.18, 0.56, 0.30],
+            [-r * 0.14, -r * 0.44, 0.5, -0.12],
+            [r * 0.26, -r * 0.36, 0.44, 0.20],
+        ];
+        for (let i = 0; i < puffs.length; i++) {
+            const [ox, oy, scale, tilt] = puffs[i];
+            const pr = r * scale;
+            const px = cx + ox, py = cy + oy;
+            ctx.fillStyle = darkColor;
+            ctx.beginPath();
+            ctx.arc(px, py, pr, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(px, py, pr, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.translate(px, py);
+            ctx.rotate(tilt);
+            ctx.fillStyle = lightColor;
+            ctx.beginPath();
+            ctx.moveTo(0, -pr * 1.2);
+            ctx.lineTo(-pr * 1.2, -pr * 1.2);
+            ctx.lineTo(-pr * 1.2, pr * 1.2);
+            ctx.lineTo(0, pr * 1.2);
+            ctx.closePath();
+            ctx.fill();
+            // small shadow gap on the dark side, offset/sized a bit differently per puff
+            ctx.fillStyle = 'rgba(0, 10, 0, 0.16)';
+            ctx.beginPath();
+            ctx.ellipse(pr * (0.55 + (i % 2) * 0.1), pr * 0.32, pr * (0.36 + (i % 3) * 0.04), pr * 0.22, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+export function renderTreeType1(ctx, x, y, size) {
+        _renderTrunk(ctx, x, y, size * 0.25, size * 0.5, '#6D4C41', '#3E2723');
+        _jaggedTriangle(ctx, x, y - size * 0.6, x + size * 0.35, y - size * 0.1, x - size * 0.35, y - size * 0.1, '#0D3817', '#173F1F');
+        _jaggedTriangle(ctx, x, y - size * 0.35, x + size * 0.3, y + size * 0.05, x - size * 0.3, y + size * 0.05, '#1B5E20', '#276B2C');
+        _jaggedTriangle(ctx, x, y - size * 0.15, x + size * 0.25, y + size * 0.2, x - size * 0.25, y + size * 0.2, '#2E7D32', '#3F8C43');
+    }
+
 export function renderTreeType2(ctx, x, y, size) {
-        const trunkWidth = size * 0.2;
-        const trunkHeight = size * 0.4;
-        ctx.fillStyle = '#6B4423';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        ctx.fillStyle = '#8B5A3C';
-        ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.35, size * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#43A047';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.55, size * 0.2, 0, Math.PI * 2);
-        ctx.fill();
+        _renderTrunk(ctx, x, y, size * 0.2, size * 0.4, '#8B5A3C', '#5C3A22');
+        _leafClump(ctx, x, y - size * 0.1, size * 0.4, '#123D18', '#1D4E24');
+        _leafClump(ctx, x, y - size * 0.35, size * 0.35, '#1B5E20', '#276B2C');
+        _leafClump(ctx, x, y - size * 0.55, size * 0.2, '#2E7D32', '#3B8A3F');
     }
 
 export function renderTreeType3(ctx, x, y, size) {
         // Sparse tree with distinct branches
         const trunkWidth = size * 0.22;
-        ctx.fillStyle = '#795548';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
+        _renderTrunk(ctx, x, y - size * 0.2, trunkWidth, size * 0.6, '#8D6E63', '#4E342E');
         ctx.fillStyle = '#4E342E';
         ctx.beginPath();
         ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x + size * 0.28, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
-        ctx.fill();
+        _leafClump(ctx, x - size * 0.28, y - size * 0.35, size * 0.25, '#123D18', '#1D4E24');
+        _leafClump(ctx, x + size * 0.28, y - size * 0.3, size * 0.25, '#123D18', '#1D4E24');
+        _leafClump(ctx, x, y - size * 0.55, size * 0.3, '#1B5E20', '#276B2C');
     }
 
 export function renderTreeType4(ctx, x, y, size) {
@@ -1342,122 +1443,28 @@ export function renderTreeType4(ctx, x, y, size) {
         // instead of meeting at a single point - a flush join let the narrow tip of one
         // triangle taper to near-zero width right where the next tier's full-width base
         // began, reading as a disconnected cap floating above the rest of the tree.
-        const trunkWidth = size * 0.18;
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
-        ctx.fillStyle = '#0D3817';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.08);
-        ctx.lineTo(x + size * 0.40, y + size * 0.17);
-        ctx.lineTo(x - size * 0.40, y + size * 0.17);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.28);
-        ctx.lineTo(x + size * 0.32, y - size * 0.02);
-        ctx.lineTo(x - size * 0.32, y - size * 0.02);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.48);
-        ctx.lineTo(x + size * 0.22, y - size * 0.20);
-        ctx.lineTo(x - size * 0.22, y - size * 0.20);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#43A047';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.62);
-        ctx.lineTo(x + size * 0.13, y - size * 0.38);
-        ctx.lineTo(x - size * 0.13, y - size * 0.38);
-        ctx.closePath();
-        ctx.fill();
-        // Right-side shadow spanning all tiers for depth
-        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.02, y - size * 0.08);
-        ctx.lineTo(x + size * 0.40, y + size * 0.17);
-        ctx.lineTo(x + size * 0.02, y + size * 0.17);
-        ctx.closePath();
-        ctx.fill();
+        _renderTrunk(ctx, x, y - size * 0.05, size * 0.18, size * 0.45, '#A9642A', '#6B3A12');
+        _jaggedTriangle(ctx, x, y - size * 0.08, x + size * 0.40, y + size * 0.17, x - size * 0.40, y + size * 0.17, '#0D3817', '#173F1F');
+        _jaggedTriangle(ctx, x, y - size * 0.28, x + size * 0.32, y - size * 0.02, x - size * 0.32, y - size * 0.02, '#1B5E20', '#276B2C');
+        _jaggedTriangle(ctx, x, y - size * 0.48, x + size * 0.22, y - size * 0.20, x - size * 0.22, y - size * 0.20, '#2E7D32', '#3F8C43');
+        _jaggedTriangle(ctx, x, y - size * 0.62, x + size * 0.13, y - size * 0.38, x - size * 0.13, y - size * 0.38, '#3C9440', '#4A9E4E');
     }
 
 export function renderTreeType5(ctx, x, y, size) {
         // Tall columnar tree with narrow form
-        const trunkWidth = size * 0.15;
-        ctx.fillStyle = '#704214';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.15, trunkWidth, size * 0.55);
-        
-        // Dark trunk shadow
-        ctx.fillStyle = '#4a2511';
-        ctx.fillRect(x + trunkWidth * 0.15, y - size * 0.15, trunkWidth * 0.35, size * 0.55);
-        
-        // Narrow triangular crown
-        ctx.fillStyle = '#0f3d1f';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.25);
-        ctx.lineTo(x + size * 0.28, y + size * 0.08);
-        ctx.lineTo(x - size * 0.28, y + size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-        
-        ctx.fillStyle = '#1a5a2a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.42);
-        ctx.lineTo(x + size * 0.22, y - size * 0.08);
-        ctx.lineTo(x - size * 0.22, y - size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-        
-        ctx.fillStyle = '#2d7a3d';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.55);
-        ctx.lineTo(x + size * 0.15, y - size * 0.28);
-        ctx.lineTo(x - size * 0.15, y - size * 0.28);
-        ctx.closePath();
-        ctx.fill();
-        // Right-side shadow on lowest layer
-        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.02, y - size * 0.25);
-        ctx.lineTo(x + size * 0.28, y + size * 0.08);
-        ctx.lineTo(x + size * 0.02, y + size * 0.08);
-        ctx.closePath();
-        ctx.fill();
+        _renderTrunk(ctx, x, y - size * 0.15, size * 0.15, size * 0.55, '#8B5A2B', '#4a2511');
+        _jaggedTriangle(ctx, x, y - size * 0.25, x + size * 0.28, y + size * 0.08, x - size * 0.28, y + size * 0.08, '#0f3d1f', '#184927');
+        _jaggedTriangle(ctx, x, y - size * 0.42, x + size * 0.22, y - size * 0.08, x - size * 0.22, y - size * 0.08, '#1a5a2a', '#256433');
+        _jaggedTriangle(ctx, x, y - size * 0.55, x + size * 0.15, y - size * 0.28, x - size * 0.15, y - size * 0.28, '#2d7a3d', '#398545');
     }
 
 export function renderTreeType6(ctx, x, y, size) {
         // Broad oak/maple style tree with wide crown
-        const trunkWidth = size * 0.22;
-        
-        // Trunk
-        ctx.fillStyle = '#6B4423';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.1, trunkWidth, size * 0.5);
-        
-        // Trunk highlight
-        ctx.fillStyle = '#8B6434';
-        ctx.fillRect(x - trunkWidth * 0.3, y - size * 0.1, trunkWidth * 0.35, size * 0.5);
-        
-        // Wide rounded crown - multiple overlapping circles
-        ctx.fillStyle = '#0d4a1a';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.25, size * 0.42, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.fillStyle = '#1b6b2f';
-        ctx.beginPath();
-        ctx.arc(x - size * 0.2, y - size * 0.15, size * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.beginPath();
-        ctx.arc(x + size * 0.2, y - size * 0.15, size * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.fillStyle = '#2d8b3f';
-        ctx.beginPath();
-        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
-        ctx.fill();
+        _renderTrunk(ctx, x, y - size * 0.1, size * 0.22, size * 0.5, '#8B6434', '#4a2f16');
+        _leafClump(ctx, x, y - size * 0.25, size * 0.42, '#0a3312', '#123E1A');
+        _leafClump(ctx, x - size * 0.2, y - size * 0.15, size * 0.35, '#12511f', '#1D5E28');
+        _leafClump(ctx, x + size * 0.2, y - size * 0.15, size * 0.35, '#12511f', '#1D5E28');
+        _leafClump(ctx, x, y, size * 0.3, '#1e6b2d', '#2A7A38');
     }
 
 export function renderRock(ctx, x, y, size, gridX, gridY, variant, campaign) {

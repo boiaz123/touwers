@@ -16,6 +16,7 @@ import { MarketplaceRegistry } from '../MarketplaceRegistry.js';
 import { EnemyIntelRegistry } from '../EnemyIntelRegistry.js';
 import { SirFrogerty } from '../../ui/SirFrogerty.js';
 import { CampaignRegistry } from '../../game/CampaignRegistry.js';
+import * as TerrainRenderer from '../render/TerrainRenderer.js';
 
 // Import Tauri invoke for app control
 let invoke = null;
@@ -4407,38 +4408,6 @@ export class SettlementHub {
         });
     }
 
-    renderSimpleTree(ctx, x, y, size, darkColor) {
-        // Simple tree rendering - trunk and foliage
-        const trunkWidth = size * 0.15;
-        const trunkHeight = size * 0.35;
-        
-        // Trunk
-        ctx.fillStyle = '#5D4037';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        
-        // Shadow on trunk
-        ctx.fillStyle = '#3E2723';
-        ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
-        
-        // Foliage - top layer
-        ctx.fillStyle = darkColor;
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.45);
-        ctx.lineTo(x + size * 0.3, y - size * 0.05);
-        ctx.lineTo(x - size * 0.3, y - size * 0.05);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Foliage - middle layer
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.25);
-        ctx.lineTo(x + size * 0.25, y + size * 0.1);
-        ctx.lineTo(x - size * 0.25, y + size * 0.1);
-        ctx.closePath();
-        ctx.fill();
-    }
-
     renderSimpleRock(ctx, x, y, size) {
         // Simple rock rendering
         ctx.fillStyle = '#6b6b6b';
@@ -4472,220 +4441,13 @@ export class SettlementHub {
         ctx.globalAlpha = 1;
     }
 
-    // Tree rendering methods (from LevelBase.js)
-    renderTreeType1(ctx, x, y, size) {
-        const trunkWidth = size * 0.25;
-        const trunkHeight = size * 0.5;
-        ctx.fillStyle = '#5D4037';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        ctx.fillStyle = '#3E2723';
-        ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
-        ctx.fillStyle = '#0D3817';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.6);
-        ctx.lineTo(x + size * 0.35, y - size * 0.1);
-        ctx.lineTo(x - size * 0.35, y - size * 0.1);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.35);
-        ctx.lineTo(x + size * 0.3, y + size * 0.05);
-        ctx.lineTo(x - size * 0.3, y + size * 0.05);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.15);
-        ctx.lineTo(x + size * 0.25, y + size * 0.2);
-        ctx.lineTo(x - size * 0.25, y + size * 0.2);
-        ctx.closePath();
-        ctx.fill();
-        // Right-side shadow for depth
-        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.02, y - size * 0.15);
-        ctx.lineTo(x + size * 0.25, y + size * 0.2);
-        ctx.lineTo(x + size * 0.02, y + size * 0.2);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    renderTreeType2(ctx, x, y, size) {
-        const trunkWidth = size * 0.2;
-        const trunkHeight = size * 0.4;
-        ctx.fillStyle = '#6B4423';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        ctx.fillStyle = '#8B5A3C';
-        ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.35, size * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#43A047';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.55, size * 0.2, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    renderTreeType3(ctx, x, y, size) {
-        const trunkWidth = size * 0.22;
-        ctx.fillStyle = '#795548';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
-        ctx.fillStyle = '#4E342E';
-        ctx.beginPath();
-        ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x + size * 0.28, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    renderTreeType4(ctx, x, y, size) {
-        const trunkWidth = size * 0.18;
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
-        ctx.fillStyle = '#0D3817';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.05);
-        ctx.lineTo(x + size * 0.38, y + size * 0.15);
-        ctx.lineTo(x - size * 0.38, y + size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.25);
-        ctx.lineTo(x + size * 0.3, y);
-        ctx.lineTo(x - size * 0.3, y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.45);
-        ctx.lineTo(x + size * 0.2, y - size * 0.15);
-        ctx.lineTo(x - size * 0.2, y - size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#43A047';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.6);
-        ctx.lineTo(x + size * 0.12, y - size * 0.45);
-        ctx.lineTo(x - size * 0.12, y - size * 0.45);
-        ctx.closePath();
-        ctx.fill();
-        // Right-side shadow on lowest layer for depth
-        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.02, y - size * 0.05);
-        ctx.lineTo(x + size * 0.38, y + size * 0.15);
-        ctx.lineTo(x + size * 0.02, y + size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    renderTreeType5(ctx, x, y, size) {
-        // Tall columnar tree with narrow form
-        const trunkWidth = size * 0.15;
-        ctx.fillStyle = '#704214';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.15, trunkWidth, size * 0.55);
-        ctx.fillStyle = '#4a2511';
-        ctx.fillRect(x + trunkWidth * 0.15, y - size * 0.15, trunkWidth * 0.35, size * 0.55);
-        ctx.fillStyle = '#0f3d1f';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.25);
-        ctx.lineTo(x + size * 0.28, y + size * 0.08);
-        ctx.lineTo(x - size * 0.28, y + size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1a5a2a';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.42);
-        ctx.lineTo(x + size * 0.22, y - size * 0.08);
-        ctx.lineTo(x - size * 0.22, y - size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#2d7a3d';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.55);
-        ctx.lineTo(x + size * 0.15, y - size * 0.28);
-        ctx.lineTo(x - size * 0.15, y - size * 0.28);
-        ctx.closePath();
-        ctx.fill();
-        // Right-side shadow on lowest layer
-        ctx.fillStyle = 'rgba(0, 18, 5, 0.32)';
-        ctx.beginPath();
-        ctx.moveTo(x + size * 0.02, y - size * 0.25);
-        ctx.lineTo(x + size * 0.28, y + size * 0.08);
-        ctx.lineTo(x + size * 0.02, y + size * 0.08);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    renderTreeType6(ctx, x, y, size) {
-        // Broad oak/maple style tree with wide crown
-        const trunkWidth = size * 0.22;
-        ctx.fillStyle = '#6B4423';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.1, trunkWidth, size * 0.5);
-        ctx.fillStyle = '#8B6434';
-        ctx.fillRect(x - trunkWidth * 0.3, y - size * 0.1, trunkWidth * 0.35, size * 0.5);
-        ctx.fillStyle = '#0d4a1a';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.25, size * 0.42, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#1b6b2f';
-        ctx.beginPath();
-        ctx.arc(x - size * 0.2, y - size * 0.15, size * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x + size * 0.2, y - size * 0.15, size * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#2d8b3f';
-        ctx.beginPath();
-        ctx.arc(x, y, size * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
+    // Delegates to the shared TerrainRenderer forest tree art (see LevelBase.renderTree)
+    // instead of the separate, now-removed local copy - keeps the settlement backdrop's
+    // trees in sync with actual in-level ones. gridX/gridY are passed through unchanged
+    // so TerrainRenderer's own Math.floor(gridX+gridY)%6 hashing picks the exact same
+    // tree type per position that the old local copy of that same formula used to.
     renderTree(ctx, x, y, size, gridX, gridY) {
-        const seed = Math.floor(gridX + gridY) % 6;
-        // Ground shadow
-        ctx.save();
-        ctx.globalAlpha = 0.52;
-        ctx.fillStyle = '#010a01';
-        ctx.beginPath();
-        ctx.ellipse(x + size * 0.06, y + size * 0.43, size * 0.38, size * 0.09, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        switch(seed) {
-            case 0:
-                this.renderTreeType1(ctx, x, y, size);
-                break;
-            case 1:
-                this.renderTreeType2(ctx, x, y, size);
-                break;
-            case 2:
-                this.renderTreeType3(ctx, x, y, size);
-                break;
-            case 3:
-                this.renderTreeType4(ctx, x, y, size);
-                break;
-            case 4:
-                this.renderTreeType5(ctx, x, y, size);
-                break;
-            default:
-                this.renderTreeType6(ctx, x, y, size);
-        }
+        TerrainRenderer.renderTree(ctx, x, y, size, gridX, gridY);
     }
 }
 
