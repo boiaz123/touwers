@@ -1,90 +1,59 @@
 import { drawSwordCursor } from './SwordRenderer.js';
 
-// Sprite size for the pre-rendered cursor (generous margin around the sword's
-// ~40px reach from its tip so rotation + shadowBlur never clip).
-const CURSOR_SPRITE_SIZE = 160;
+// Small offscreen canvas used only to rasterize the sword once into a data-URI
+// PNG for a native CSS cursor - the sword's ~40px reach from its tip fits this
+// with generous margin for rotation + shadowBlur.
+const CURSOR_SPRITE_SIZE = 100;
 const CURSOR_SPRITE_CENTER = CURSOR_SPRITE_SIZE / 2;
 
-// Renders the sword cursor over the ENTIRE page - not just the game canvas -
-// so it stays in use over HTML UI (sidebar buttons, stats bar, modals,
-// disabled/"not-allowed" buttons, etc.) instead of falling back to the native
-// system cursor. The native cursor is hidden everywhere via CSS (`cursor: none`
-// on `*` in style.css); this is what replaces it.
+// Shows the sword cursor over the ENTIRE page - not just the game canvas - so
+// it stays in use over HTML UI (sidebar buttons, stats bar, modals, disabled/
+// "not-allowed" buttons, etc.) instead of falling back to the native system
+// cursor. This used to be a full-page canvas redrawn from mousemove events
+// inside the game's render loop - but that ties the cursor's on-screen position
+// to the game loop's frame time, so a heavy simulation frame on a slower system
+// made the cursor visibly lag behind the real mouse. A native CSS `cursor: url()`
+// is positioned by the OS/browser compositor instead, completely independent of
+// page JS, so it can never lag regardless of game performance. style.css's base
+// `cursor: none` rule (see the comment there) stays as the pre-init/hidden-state
+// value; this class injects a higher-priority rule with the generated sword
+// image once ready, and the `.cursor-hidden` / `.gamepad-active` rules in
+// style.css win back over it (via selector specificity) when the cursor should
+// be suppressed.
 export class CursorOverlay {
     constructor(stateManager) {
         this.stateManager = stateManager;
-        this.mouseX = 0;
-        this.mouseY = 0;
-        this.hasMouse = false;
+        this._lastStateAllowsCursor = null;
 
-        this.canvas = document.createElement('canvas');
-        this.canvas.id = 'sword-cursor-overlay';
-        this.canvas.style.position = 'fixed';
-        this.canvas.style.top = '0';
-        this.canvas.style.left = '0';
-        this.canvas.style.pointerEvents = 'none';
-        this.canvas.style.zIndex = '999999';
-        document.body.appendChild(this.canvas);
-        this.ctx = this.canvas.getContext('2d');
-
-        // PRE-RENDER OPTIMIZATION: the cursor's shape, tilt and shadow are always
-        // identical - only its screen position changes - so rasterize the ~15
-        // shadowed vector draws once into a small sprite instead of redoing them
-        // (with a fresh shadowBlur pass on every shape) on every single frame,
-        // across every screen in the game, regardless of whether the mouse moved.
-        this._spriteCanvas = document.createElement('canvas');
-        this._spriteCanvas.width = CURSOR_SPRITE_SIZE;
-        this._spriteCanvas.height = CURSOR_SPRITE_SIZE;
-        drawSwordCursor(this._spriteCanvas.getContext('2d'), CURSOR_SPRITE_CENTER, CURSOR_SPRITE_CENTER);
-
-        // Bounding box of the region drawn last frame, so render() only needs to
-        // clear that (plus this frame's region) instead of the entire - potentially
-        // 4K+ - page canvas every frame.
-        this._lastDrawX = null;
-        this._lastDrawY = null;
-
-        this._resize();
-        window.addEventListener('resize', () => this._resize());
-
-        window.addEventListener('mousemove', (e) => {
-            this.mouseX = e.clientX;
-            this.mouseY = e.clientY;
-            this.hasMouse = true;
-        });
-        document.documentElement.addEventListener('mouseleave', () => {
-            this.hasMouse = false;
-        });
-        window.addEventListener('blur', () => {
-            this.hasMouse = false;
-        });
+        this._injectCursorStyle();
     }
 
-    _resize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        // Resizing the canvas implicitly clears it, so there's nothing left to erase.
-        this._lastDrawX = null;
-        this._lastDrawY = null;
+    _injectCursorStyle() {
+        const spriteCanvas = document.createElement('canvas');
+        spriteCanvas.width = CURSOR_SPRITE_SIZE;
+        spriteCanvas.height = CURSOR_SPRITE_SIZE;
+        drawSwordCursor(spriteCanvas.getContext('2d'), CURSOR_SPRITE_CENTER, CURSOR_SPRITE_CENTER);
+        const dataUrl = spriteCanvas.toDataURL('image/png');
+
+        // Appended after style.css's <link> in document order, so for the equally-
+        // specific `*, *::before, *::after` selector this rule wins (last one in
+        // source order wins when specificity and importance are tied).
+        const style = document.createElement('style');
+        style.id = 'sword-cursor-style';
+        style.textContent = `*, *::before, *::after { cursor: url("${dataUrl}") ${CURSOR_SPRITE_CENTER} ${CURSOR_SPRITE_CENTER}, auto !important; }`;
+        document.head.appendChild(style);
     }
 
+    /** Toggles the `cursor-hidden` class (see style.css) when the active state's
+     *  cursorVisible flag changes - cheap enough to call every frame, but only
+     *  actually touches the DOM on an edge, not continuously. */
     render() {
         const currentState = this.stateManager.currentState;
         const stateAllowsCursor = !currentState || currentState.cursorVisible !== false;
-        const inputManager = this.stateManager.inputManager;
-        const gamepadCursorActive = inputManager && inputManager.gamepadCursorVisible;
-        const shouldDraw = this.hasMouse && stateAllowsCursor && !gamepadCursorActive;
 
-        if (this._lastDrawX !== null) {
-            this.ctx.clearRect(this._lastDrawX, this._lastDrawY, CURSOR_SPRITE_SIZE, CURSOR_SPRITE_SIZE);
-            this._lastDrawX = null;
-        }
-
-        if (shouldDraw) {
-            const drawX = this.mouseX - CURSOR_SPRITE_CENTER;
-            const drawY = this.mouseY - CURSOR_SPRITE_CENTER;
-            this.ctx.drawImage(this._spriteCanvas, drawX, drawY);
-            this._lastDrawX = drawX;
-            this._lastDrawY = drawY;
+        if (stateAllowsCursor !== this._lastStateAllowsCursor) {
+            document.documentElement.classList.toggle('cursor-hidden', !stateAllowsCursor);
+            this._lastStateAllowsCursor = stateAllowsCursor;
         }
     }
 }

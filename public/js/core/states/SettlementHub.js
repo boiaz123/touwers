@@ -393,7 +393,7 @@ export class SettlementHub {
                 const scaleY = this.stateManager.canvas.height / rect.height;
                 const x = (e.clientX - rect.left) * scaleX;
                 const y = (e.clientY - rect.top) * scaleY;
-                this.upgradesPopup.handleWheel(x, y, e.deltaY);
+                this.upgradesPopup.handleWheel(x, y, e.deltaY, e.deltaMode);
             }
         };
         this.stateManager.canvas.addEventListener('wheel', this.wheelHandler, { passive: false });
@@ -4721,6 +4721,10 @@ export class SettlementHub {
  * Upgrades Menu Popup
  * Allows player to view and unlock tower/building upgrades
  */
+// Must match the `lineHeight` used when wrapping/rendering the description text
+// below - handleWheel() converts raw wheel pixels into this many px per line.
+const UPGRADE_DESC_LINE_HEIGHT = 14;
+
 class UpgradesMenu {
     constructor(stateManager, settlementHub) {
         this.stateManager = stateManager;
@@ -5897,7 +5901,7 @@ class UpgradesMenu {
         }
     }
 
-    handleWheel(x, y, deltaY) {
+    handleWheel(x, y, deltaY, deltaMode = 0) {
         // Handle scrolling on upgrade tiles
         const canvas = this.stateManager.canvas;
         const baseWidth = canvas.width - 80;
@@ -5939,11 +5943,25 @@ class UpgradesMenu {
                 if (this.scrollableTiles.has(item.id)) {
                     const scrollState = this.scrollableTiles.get(item.id);
                     if (scrollState.maxScroll > 0) {
-                        // Scroll up (negative deltaY) or down (positive deltaY)
-                        const scrollDirection = deltaY > 0 ? 1 : -1;
-                        scrollState.scrollOffset += scrollDirection;
+                        // Convert the wheel event to pixels, honoring deltaMode (browsers/
+                        // OSes disagree: pixel deltas by default, but line deltas e.g. on
+                        // Firefox, and the OS's configured wheel/trackpad speed changes the
+                        // magnitude either way) instead of always stepping exactly 1 line.
+                        // This used to be a fixed +/-1 regardless of deltaY, which felt
+                        // "slow" on any system configured for a faster wheel speed.
+                        const pixelDelta = deltaMode === 1 ? deltaY * UPGRADE_DESC_LINE_HEIGHT
+                            : deltaMode === 2 ? deltaY * (scrollState.maxScroll * UPGRADE_DESC_LINE_HEIGHT)
+                            : deltaY;
+                        scrollState.pixelAccum = (scrollState.pixelAccum || 0) + pixelDelta;
+                        const stepLines = Math.trunc(scrollState.pixelAccum / UPGRADE_DESC_LINE_HEIGHT);
+                        if (stepLines !== 0) {
+                            scrollState.scrollOffset += stepLines;
+                            scrollState.pixelAccum -= stepLines * UPGRADE_DESC_LINE_HEIGHT;
+                        }
                         // Clamp scroll offset
-                        scrollState.scrollOffset = Math.max(0, Math.min(scrollState.scrollOffset, scrollState.maxScroll));
+                        const clamped = Math.max(0, Math.min(scrollState.scrollOffset, scrollState.maxScroll));
+                        if (clamped !== scrollState.scrollOffset) scrollState.pixelAccum = 0;
+                        scrollState.scrollOffset = clamped;
                     }
                 }
                 break;
@@ -6677,7 +6695,7 @@ class UpgradesMenu {
         ctx.font = '11px Arial';
         const descAvailWidth = width - 19;
         const lines = this.wrapTextToWidth(ctx, item.description, descAvailWidth);
-        const lineHeight = 14;
+        const lineHeight = UPGRADE_DESC_LINE_HEIGHT;
 
         // Calculate max scroll
         const maxVisibleLines = Math.floor((descBoxHeight - (textPadding * 2)) / lineHeight) - 1;
@@ -6967,7 +6985,7 @@ class UpgradesMenu {
         ctx.font = '11px Arial';
         const descAvailWidth = width - 19;
         const lines = this.wrapTextToWidth(ctx, item.description, descAvailWidth);
-        const lineHeight = 14;
+        const lineHeight = UPGRADE_DESC_LINE_HEIGHT;
 
         // Calculate max scroll
         const maxVisibleLines = Math.floor((descBoxHeight - (textPadding * 2)) / lineHeight) - 1;
