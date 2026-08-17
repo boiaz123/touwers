@@ -1260,24 +1260,32 @@ export function renderTree(ctx, x, y, size, gridX, gridY, variant) {
 // slightly irregular shapes instead (matte, not shiny).
 
 // A tapered trunk with a root flare at the base, a flat (non-gradient) lit-left half, bark
-// grain streaks, and two short branch stubs poking out sideways near the canopy line -
-// drawn *before* the canopy tiers so foliage naturally covers their base and only the
-// outer tips show, like a real conifer's lower branches peeking out from under the skirt.
-function _renderTrunk(ctx, x, y, width, height, lightColor, darkColor) {
+// grain streaks, and two short branch stubs poking out sideways - rooted at `skirtY` (the
+// y of the calling tree type's own lowest canopy edge, passed in by each renderTreeTypeN
+// function) plus a small margin, so the stubs always start on bark that's actually visible
+// below the foliage instead of a fixed fraction of the trunk's own height. That fixed-
+// fraction approach didn't account for how far down each tree type's canopy skirt reaches,
+// so on some types (e.g. renderTreeType1) the stubs rooted well inside the foliage mass and
+// read as bursting out of the green rather than growing off the visible trunk beneath it.
+// Drawn *before* the canopy tiers, so wide/bushy canopy types still naturally hide them if
+// their skirt happens to reach past the stub, matching how a real tree's lower limbs are
+// only visible where the canopy above doesn't already cover that height.
+function _renderTrunk(ctx, x, y, width, height, lightColor, darkColor, skirtY) {
         const topW = width * 0.8;
         const baseW = width * 1.3;
         const flareH = height * 0.16;
 
+        const branchRootY = (skirtY !== undefined ? skirtY : y + height * 0.35) + height * 0.05;
         ctx.strokeStyle = darkColor;
         ctx.lineCap = 'round';
-        ctx.lineWidth = Math.max(1.5, width * 0.22);
+        ctx.lineWidth = Math.max(1.3, width * 0.18);
         ctx.beginPath();
-        ctx.moveTo(x - topW * 0.35, y + height * 0.14);
-        ctx.lineTo(x - width * 1.55, y + height * 0.04);
+        ctx.moveTo(x - topW * 0.4, branchRootY);
+        ctx.lineTo(x - width * 0.9, branchRootY + height * 0.06);
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(x + topW * 0.3, y + height * 0.32);
-        ctx.lineTo(x + width * 1.4, y + height * 0.44);
+        ctx.moveTo(x + topW * 0.35, branchRootY + height * 0.1);
+        ctx.lineTo(x + width * 0.8, branchRootY + height * 0.17);
         ctx.stroke();
 
         const trunkPath = () => {
@@ -1329,32 +1337,50 @@ function _jaggedEdgePoints(apexX, apexY, cornerX, cornerY, teeth) {
         return pts;
     }
 
-// A conifer tier with ragged, branch-like edges (not straight lines) and a flat two-tone
-// split (light upper-left half / dark lower-right half, matching the mountain pines'
-// proven technique) instead of a gradient - keeps the matte, painted look.
+// A conifer tier with ragged, branch-like edges (not straight lines) and flat (non-gradient,
+// matte) shading. Earlier version split the tier into one hard-edged diagonal half light/
+// half dark - clean and readable from a distance, but up close the single straight seam
+// reads as a cut facet (like folded paper) rather than a mass of needles. Replaced with
+// several small, irregular light dabs scattered across the lit (upper-left) side instead -
+// same lighting direction and matte flatness, but no single straight edge to read as
+// "geometric", closer to how sunlit needle clusters actually clump and overlap.
 function _jaggedTriangle(ctx, apexX, apexY, rightX, rightY, leftX, leftY, darkColor, lightColor) {
         const rightPts = _jaggedEdgePoints(apexX, apexY, rightX, rightY, 6);
         const leftPts = _jaggedEdgePoints(apexX, apexY, leftX, leftY, 6);
         const midX = (rightX + leftX) / 2, midY = (rightY + leftY) / 2;
 
+        const tierPath = () => {
+            ctx.beginPath();
+            ctx.moveTo(apexX, apexY);
+            for (const [px, py] of rightPts) ctx.lineTo(px, py);
+            ctx.lineTo(rightX, rightY);
+            ctx.lineTo(leftX, leftY);
+            for (let i = leftPts.length - 1; i >= 0; i--) ctx.lineTo(leftPts[i][0], leftPts[i][1]);
+            ctx.closePath();
+        };
+
         ctx.fillStyle = darkColor;
-        ctx.beginPath();
-        ctx.moveTo(apexX, apexY);
-        for (const [px, py] of rightPts) ctx.lineTo(px, py);
-        ctx.lineTo(rightX, rightY);
-        ctx.lineTo(leftX, leftY);
-        for (let i = leftPts.length - 1; i >= 0; i--) ctx.lineTo(leftPts[i][0], leftPts[i][1]);
-        ctx.closePath();
+        tierPath();
         ctx.fill();
 
+        ctx.save();
+        tierPath();
+        ctx.clip();
         ctx.fillStyle = lightColor;
-        ctx.beginPath();
-        ctx.moveTo(apexX, apexY);
-        ctx.lineTo(midX, midY);
-        ctx.lineTo(leftX, leftY);
-        for (let i = leftPts.length - 1; i >= 0; i--) ctx.lineTo(leftPts[i][0], leftPts[i][1]);
-        ctx.closePath();
-        ctx.fill();
+        const spanX = Math.abs(rightX - leftX);
+        const spanY = Math.abs(leftY - apexY) || spanX * 0.6;
+        const dabs = [
+            [apexX - spanX * 0.10, apexY + spanY * 0.38, spanX * 0.24, spanY * 0.30, -0.25],
+            [leftX + spanX * 0.32, leftY - spanY * 0.34, spanX * 0.20, spanY * 0.24, 0.15],
+            [apexX - spanX * 0.24, midY - spanY * 0.02, spanX * 0.16, spanY * 0.20, -0.4],
+            [leftX + spanX * 0.14, leftY - spanY * 0.60, spanX * 0.13, spanY * 0.16, 0.1],
+        ];
+        for (const [dx, dy, drx, dry, rot] of dabs) {
+            ctx.beginPath();
+            ctx.ellipse(dx, dy, drx, dry, rot, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
 
         // faint contact shadow where this tier meets the one below, for extra depth
         ctx.fillStyle = 'rgba(0, 10, 0, 0.16)';
@@ -1364,19 +1390,24 @@ function _jaggedTriangle(ctx, apexX, apexY, rightX, rightY, leftX, leftY, darkCo
     }
 
 // A round foliage clump built from several overlapping puffs instead of one big circle -
-// reads as a leafy mass rather than a single smooth sphere. Each puff is split light-left/
-// dark-right (the same frontal, side-lit convention the pine tiers use via _jaggedTriangle -
-// a small highlight blob centered inside a circle reads as a specular sphere seen from
-// above, which is what made these look top-down instead of frontal like the pines) and the
-// split's tilt angle varies per puff so the shading doesn't look like one stamped pattern
-// repeated at every position.
+// reads as a leafy mass rather than a single smooth sphere. Each puff used to carry a
+// hard-edged wedge highlight (a straight-sided clipped shape) - a small flat-sided wedge
+// inside a circle reads as a cut gem facet up close, which is what made these look
+// low-poly/crystalline instead of leafy. Replaced with a handful of small soft highlight
+// dabs (circles, not wedges) clustered toward the puff's lit corner - still flat/matte
+// (no gradients), but a rounded dab has no straight edge to read as a facet. The dab
+// cluster's rotation varies per puff so the shading doesn't look like one stamped pattern
+// repeated at every position, and puffs overlap generously so neighboring puffs blend into
+// one mass instead of reading as separate stuck-together balls.
 function _leafClump(ctx, cx, cy, r, darkColor, lightColor) {
         const puffs = [
             [0, r * 0.02, 1.0, 0.06],
-            [-r * 0.5, r * 0.24, 0.64, -0.22],
-            [r * 0.46, r * 0.18, 0.56, 0.30],
-            [-r * 0.14, -r * 0.44, 0.5, -0.12],
-            [r * 0.26, -r * 0.36, 0.44, 0.20],
+            [-r * 0.46, r * 0.22, 0.66, -0.22],
+            [r * 0.42, r * 0.16, 0.58, 0.30],
+            [-r * 0.12, -r * 0.42, 0.52, -0.12],
+            [r * 0.24, -r * 0.34, 0.46, 0.20],
+            [-r * 0.32, r * 0.48, 0.4, -0.3],
+            [r * 0.12, r * 0.44, 0.38, 0.15],
         ];
         for (let i = 0; i < puffs.length; i++) {
             const [ox, oy, scale, tilt] = puffs[i];
@@ -1394,13 +1425,16 @@ function _leafClump(ctx, cx, cy, r, darkColor, lightColor) {
             ctx.translate(px, py);
             ctx.rotate(tilt);
             ctx.fillStyle = lightColor;
-            ctx.beginPath();
-            ctx.moveTo(0, -pr * 1.2);
-            ctx.lineTo(-pr * 1.2, -pr * 1.2);
-            ctx.lineTo(-pr * 1.2, pr * 1.2);
-            ctx.lineTo(0, pr * 1.2);
-            ctx.closePath();
-            ctx.fill();
+            const dabs = [
+                [-pr * 0.32, -pr * 0.34, pr * 0.62],
+                [-pr * 0.05, -pr * 0.62, pr * 0.4],
+                [-pr * 0.58, pr * 0.02, pr * 0.4],
+            ];
+            for (const [dx, dy, dr] of dabs) {
+                ctx.beginPath();
+                ctx.arc(dx, dy, dr, 0, Math.PI * 2);
+                ctx.fill();
+            }
             // small shadow gap on the dark side, offset/sized a bit differently per puff
             ctx.fillStyle = 'rgba(0, 10, 0, 0.16)';
             ctx.beginPath();
@@ -1411,14 +1445,19 @@ function _leafClump(ctx, cx, cy, r, darkColor, lightColor) {
     }
 
 export function renderTreeType1(ctx, x, y, size) {
-        _renderTrunk(ctx, x, y, size * 0.25, size * 0.5, '#6D4C41', '#3E2723');
-        _jaggedTriangle(ctx, x, y - size * 0.6, x + size * 0.35, y - size * 0.1, x - size * 0.35, y - size * 0.1, '#0D3817', '#173F1F');
+        // Tier colors go dark (base, most shadowed by the canopy above it) to bright (tip,
+        // catching the most light) from bottom to top - matching every other conifer type
+        // below. This used to run the other way (brightest at the wide base, darkest at the
+        // tip), which broke that shared convention and made the stack read as a dark cap
+        // sitting on a separate light mass rather than one gradually-lit tree.
+        _renderTrunk(ctx, x, y, size * 0.25, size * 0.5, '#6D4C41', '#3E2723', y + size * 0.2);
+        _jaggedTriangle(ctx, x, y - size * 0.6, x + size * 0.35, y - size * 0.1, x - size * 0.35, y - size * 0.1, '#2E7D32', '#3F8C43');
         _jaggedTriangle(ctx, x, y - size * 0.35, x + size * 0.3, y + size * 0.05, x - size * 0.3, y + size * 0.05, '#1B5E20', '#276B2C');
-        _jaggedTriangle(ctx, x, y - size * 0.15, x + size * 0.25, y + size * 0.2, x - size * 0.25, y + size * 0.2, '#2E7D32', '#3F8C43');
+        _jaggedTriangle(ctx, x, y - size * 0.15, x + size * 0.25, y + size * 0.2, x - size * 0.25, y + size * 0.2, '#0D3817', '#173F1F');
     }
 
 export function renderTreeType2(ctx, x, y, size) {
-        _renderTrunk(ctx, x, y, size * 0.2, size * 0.4, '#8B5A3C', '#5C3A22');
+        _renderTrunk(ctx, x, y, size * 0.2, size * 0.4, '#8B5A3C', '#5C3A22', y + size * 0.23);
         _leafClump(ctx, x, y - size * 0.1, size * 0.4, '#123D18', '#1D4E24');
         _leafClump(ctx, x, y - size * 0.35, size * 0.35, '#1B5E20', '#276B2C');
         _leafClump(ctx, x, y - size * 0.55, size * 0.2, '#2E7D32', '#3B8A3F');
@@ -1427,7 +1466,7 @@ export function renderTreeType2(ctx, x, y, size) {
 export function renderTreeType3(ctx, x, y, size) {
         // Sparse tree with distinct branches
         const trunkWidth = size * 0.22;
-        _renderTrunk(ctx, x, y - size * 0.2, trunkWidth, size * 0.6, '#8D6E63', '#4E342E');
+        _renderTrunk(ctx, x, y - size * 0.2, trunkWidth, size * 0.6, '#8D6E63', '#4E342E', y - size * 0.05);
         ctx.fillStyle = '#4E342E';
         ctx.beginPath();
         ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
@@ -1443,7 +1482,7 @@ export function renderTreeType4(ctx, x, y, size) {
         // instead of meeting at a single point - a flush join let the narrow tip of one
         // triangle taper to near-zero width right where the next tier's full-width base
         // began, reading as a disconnected cap floating above the rest of the tree.
-        _renderTrunk(ctx, x, y - size * 0.05, size * 0.18, size * 0.45, '#A9642A', '#6B3A12');
+        _renderTrunk(ctx, x, y - size * 0.05, size * 0.18, size * 0.45, '#A9642A', '#6B3A12', y + size * 0.17);
         _jaggedTriangle(ctx, x, y - size * 0.08, x + size * 0.40, y + size * 0.17, x - size * 0.40, y + size * 0.17, '#0D3817', '#173F1F');
         _jaggedTriangle(ctx, x, y - size * 0.28, x + size * 0.32, y - size * 0.02, x - size * 0.32, y - size * 0.02, '#1B5E20', '#276B2C');
         _jaggedTriangle(ctx, x, y - size * 0.48, x + size * 0.22, y - size * 0.20, x - size * 0.22, y - size * 0.20, '#2E7D32', '#3F8C43');
@@ -1452,7 +1491,7 @@ export function renderTreeType4(ctx, x, y, size) {
 
 export function renderTreeType5(ctx, x, y, size) {
         // Tall columnar tree with narrow form
-        _renderTrunk(ctx, x, y - size * 0.15, size * 0.15, size * 0.55, '#8B5A2B', '#4a2511');
+        _renderTrunk(ctx, x, y - size * 0.15, size * 0.15, size * 0.55, '#8B5A2B', '#4a2511', y + size * 0.08);
         _jaggedTriangle(ctx, x, y - size * 0.25, x + size * 0.28, y + size * 0.08, x - size * 0.28, y + size * 0.08, '#0f3d1f', '#184927');
         _jaggedTriangle(ctx, x, y - size * 0.42, x + size * 0.22, y - size * 0.08, x - size * 0.22, y - size * 0.08, '#1a5a2a', '#256433');
         _jaggedTriangle(ctx, x, y - size * 0.55, x + size * 0.15, y - size * 0.28, x - size * 0.15, y - size * 0.28, '#2d7a3d', '#398545');
@@ -1460,7 +1499,7 @@ export function renderTreeType5(ctx, x, y, size) {
 
 export function renderTreeType6(ctx, x, y, size) {
         // Broad oak/maple style tree with wide crown
-        _renderTrunk(ctx, x, y - size * 0.1, size * 0.22, size * 0.5, '#8B6434', '#4a2f16');
+        _renderTrunk(ctx, x, y - size * 0.1, size * 0.22, size * 0.5, '#8B6434', '#4a2f16', y + size * 0.25);
         _leafClump(ctx, x, y - size * 0.25, size * 0.42, '#0a3312', '#123E1A');
         _leafClump(ctx, x - size * 0.2, y - size * 0.15, size * 0.35, '#12511f', '#1D5E28');
         _leafClump(ctx, x + size * 0.2, y - size * 0.15, size * 0.35, '#12511f', '#1D5E28');

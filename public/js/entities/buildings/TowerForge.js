@@ -550,21 +550,20 @@ export class TowerForge extends Building {
      *  TrainingGrounds' fenceDecorations and BasicTower's drawEnvironmentBack/Front corner
      *  trees are - proportionally large relative to the 4x4 grid cell (and the workers
      *  standing next to them), spread around the building rather than tucked behind it, so
-     *  the structure reads as standing in a clearing surrounded by trees. No bushes - the
-     *  fallback bush shape (a flat 3-circle green blob) never looked like real foliage, just
-     *  an odd smudge, so it's gone rather than reworked. Rendered at true scale (outside the
-     *  structure's own shrink transform - see the call sites in renderStaticBack). Split into
-     *  two passes by depth, painter's-algorithm style, rather than one "all vegetation" call:
-     *  the back accents (negative y) are drawn behind the wall/chimney so those opaque shapes
-     *  correctly occlude any overlapping canopy instead of the plant floating on top of them;
-     *  the front corner trees (positive y - further forward/closer to the viewer than
-     *  anything in the yard) are drawn LAST, after the log pile/grindstone/barrels/etc., so
-     *  those props don't incorrectly poke through the tree trunks in front of them. Uses the
-     *  level's own campaign-themed vegetation renderer when available (gameplay - forest/
-     *  desert/mountain/space, matching GoldMine/TrainingGrounds/MagicAcademy's convention);
-     *  ctx.level is never set for TowerForge in the Settlement Hub (see
-     *  SettlementBuildingVisuals), so the fallback naturally gives the Hub the same forest
-     *  look gameplay gets, instead of a cruder placeholder shape. */
+     *  the structure reads as standing in a clearing surrounded by trees. Rendered at true
+     *  scale (outside the structure's own shrink transform - see the call sites in
+     *  renderStaticBack). Split into two passes by depth, painter's-algorithm style, rather
+     *  than one "all vegetation" call: the back accents (negative y) are drawn behind the
+     *  wall/chimney so those opaque shapes correctly occlude any overlapping canopy instead
+     *  of the plant floating on top of them; the front corner trees (positive y - further
+     *  forward/closer to the viewer than anything in the yard) are drawn LAST, after the log
+     *  pile/grindstone/barrels/etc., so those props don't incorrectly poke through the tree
+     *  trunks in front of them. Only draws via the level's own campaign-themed vegetation
+     *  renderer (gameplay - forest/desert/mountain/space, matching GoldMine/TrainingGrounds/
+     *  MagicAcademy's convention); ctx.level is never set for TowerForge in the Settlement
+     *  Hub (see SettlementBuildingVisuals), so the Hub's forge yard simply has no trees -
+     *  they're unnecessary clutter there and were making every forge in the Hub read as a
+     *  forest scene regardless of the player's actual campaign. */
     renderBackVegetation(ctx, size) {
         this._renderVegetationPlants(ctx, [
             { x: -56, y: -16, scale: 46, variant: 0, kind: 'tree' },
@@ -580,150 +579,12 @@ export class TowerForge extends Building {
     }
 
     _renderVegetationPlants(ctx, plants) {
+        if (!ctx.level) return; // Settlement Hub - no trees around the forge, see doc comment above
         plants.forEach(p => {
             const px = this.x + p.x;
             const py = this.y + p.y;
-            if (ctx.level) {
-                ctx.level.renderVegetation(ctx, px, py, p.scale, 0, 0, p.variant);
-            } else {
-                this.renderFallbackForestTree(ctx, px, py, p.scale, p.variant);
-            }
+            ctx.level.renderVegetation(ctx, px, py, p.scale, 0, 0, p.variant);
         });
-    }
-
-    /** Forest tree used only when ctx.level isn't set (Settlement Hub). Four distinct
-     *  variants copied from TrainingGrounds'/LevelBase's own forest tree renderer (not the
-     *  old single round-blob shape) so the Hub's forge yard matches the same forest look
-     *  gameplay gets via ctx.level.renderVegetation, instead of reading as a different,
-     *  cruder style. */
-    renderFallbackForestTree(ctx, x, y, size, variant = 0) {
-        switch (((variant % 4) + 4) % 4) {
-            case 0: this.renderFallbackTreeType1(ctx, x, y, size); break;
-            case 1: this.renderFallbackTreeType2(ctx, x, y, size); break;
-            case 2: this.renderFallbackTreeType3(ctx, x, y, size); break;
-            default: this.renderFallbackTreeType4(ctx, x, y, size);
-        }
-    }
-
-    renderFallbackTreeType1(ctx, x, y, size) {
-        const trunkWidth = size * 0.25;
-        const trunkHeight = size * 0.5;
-        ctx.fillStyle = '#5D4037';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        ctx.fillStyle = '#3E2723';
-        ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
-        ctx.fillStyle = '#0D3817';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.6);
-        ctx.lineTo(x + size * 0.35, y - size * 0.1);
-        ctx.lineTo(x - size * 0.35, y - size * 0.1);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(6, 26, 10, 0.4)';
-        ctx.lineWidth = size * 0.02;
-        ctx.stroke();
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.35);
-        ctx.lineTo(x + size * 0.3, y + size * 0.05);
-        ctx.lineTo(x - size * 0.3, y + size * 0.05);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.15);
-        ctx.lineTo(x + size * 0.25, y + size * 0.2);
-        ctx.lineTo(x - size * 0.25, y + size * 0.2);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    renderFallbackTreeType2(ctx, x, y, size) {
-        const trunkWidth = size * 0.2;
-        const trunkHeight = size * 0.4;
-        ctx.fillStyle = '#6B4423';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        ctx.fillStyle = '#8B5A3C';
-        ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(6, 26, 10, 0.4)';
-        ctx.lineWidth = size * 0.02;
-        ctx.stroke();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.35, size * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#43A047';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.55, size * 0.2, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    renderFallbackTreeType3(ctx, x, y, size) {
-        // Sparse tree with distinct branches
-        const trunkWidth = size * 0.22;
-        ctx.fillStyle = '#795548';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
-        ctx.fillStyle = '#4E342E';
-        ctx.beginPath();
-        ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#1B5E20';
-        ctx.strokeStyle = 'rgba(6, 26, 10, 0.4)';
-        ctx.lineWidth = size * 0.02;
-        ctx.beginPath();
-        ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(x + size * 0.28, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    renderFallbackTreeType4(ctx, x, y, size) {
-        // Pine/Spruce style with layered triangles
-        const trunkWidth = size * 0.18;
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
-        ctx.fillStyle = '#0D3817';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.05);
-        ctx.lineTo(x + size * 0.38, y + size * 0.15);
-        ctx.lineTo(x - size * 0.38, y + size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(6, 26, 10, 0.4)';
-        ctx.lineWidth = size * 0.02;
-        ctx.stroke();
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.25);
-        ctx.lineTo(x + size * 0.3, y);
-        ctx.lineTo(x - size * 0.3, y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.45);
-        ctx.lineTo(x + size * 0.2, y - size * 0.15);
-        ctx.lineTo(x - size * 0.2, y - size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#43A047';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.65);
-        ctx.lineTo(x + size * 0.12, y - size * 0.35);
-        ctx.lineTo(x - size * 0.12, y - size * 0.35);
-        ctx.closePath();
-        ctx.fill();
     }
 
     /** Exterior blacksmith workstation - anvil the blacksmith worker actually strikes, a
