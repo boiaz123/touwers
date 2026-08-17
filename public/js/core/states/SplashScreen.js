@@ -1,12 +1,14 @@
 // Generic skippable brand/credit splash screen, shown before the main menu.
 // Any click, key press, or touch advances immediately; otherwise it advances
-// on its own after autoAdvanceSeconds.
+// on its own after autoAdvanceSeconds - or, if musicTrack is set, after that
+// track's own length so the screen stays up for exactly as long as it plays.
 export class SplashScreen {
-    constructor(stateManager, { lines, nextState, autoAdvanceSeconds = 3.5 }) {
+    constructor(stateManager, { lines, nextState, autoAdvanceSeconds = 3.5, musicTrack = null }) {
         this.stateManager = stateManager;
         this.lines = lines;
         this.nextState = nextState;
         this.autoAdvanceSeconds = autoAdvanceSeconds;
+        this.musicTrack = musicTrack;
         this.animationTime = 0;
         this.opacity = 0;
         this.advancing = false;
@@ -18,10 +20,40 @@ export class SplashScreen {
         this.opacity = 0;
         this.advancing = false;
         this.setupInputListeners();
+        this._playMusicTrack();
     }
 
     exit() {
         this.removeInputListeners();
+        if (this.musicTrack && this.stateManager.audioManager) {
+            this.stateManager.audioManager.stopMusic();
+        }
+    }
+
+    /**
+     * Play this screen's jingle (if any) and stretch autoAdvanceSeconds to match
+     * its real duration once the browser reports it, so a longer/shorter re-recorded
+     * file just works without touching autoAdvanceSeconds by hand.
+     */
+    _playMusicTrack() {
+        if (!this.musicTrack || !this.stateManager.audioManager) return;
+
+        this.stateManager.audioManager.playMusic(this.musicTrack);
+
+        const el = this.stateManager.audioManager.musicElement;
+        if (!el) return;
+
+        const applyDuration = () => {
+            if (el.duration && isFinite(el.duration)) {
+                this.autoAdvanceSeconds = el.duration;
+            }
+        };
+
+        if (el.readyState >= 1 && el.duration && isFinite(el.duration)) {
+            applyDuration();
+        } else {
+            el.addEventListener('loadedmetadata', applyDuration, { once: true });
+        }
     }
 
     setupInputListeners() {

@@ -59,6 +59,27 @@ export class MusicRegistry {
  * Add new music tracks here following this pattern
  */
 export function initializeMusicRegistry() {
+    // Intro jingles - play once each on the opening splash/credit screens
+    MusicRegistry.registerMusic(
+        'intro-jingle-lilys-adventures',
+        'assets/audio/music/IntroJingle/IntroJingle_LilysAdventures.mp3',
+        {
+            loop: false,
+            category: 'intro',
+            volume: 0.8
+        }
+    );
+
+    MusicRegistry.registerMusic(
+        'intro-jingle-paseyan',
+        'assets/audio/music/IntroJingle/IntroJingle_Paseyan.mp3',
+        {
+            loop: false,
+            category: 'intro',
+            volume: 0.8
+        }
+    );
+
     // Menu theme - plays in main menu, campaign menu (after campaign selected), level selection
     MusicRegistry.registerMusic(
         'menu-theme',
@@ -100,7 +121,17 @@ export function initializeMusicRegistry() {
             volume: 0.7
         }
     );
-    
+
+    MusicRegistry.registerMusic(
+        'settlement-theme-4',
+        'assets/audio/music/SettlementSongs/Settlement_Theme4.mp3',
+        {
+            loop: true,
+            category: 'settlement',
+            volume: 0.7
+        }
+    );
+
     // CAMPAIGN-SPECIFIC MUSIC TRACKS
     // Each campaign type has its own dedicated music folder and songs
     
@@ -138,6 +169,16 @@ export function initializeMusicRegistry() {
     MusicRegistry.registerMusic(
         'campaign-1-battle-4',
         'assets/audio/music/CampaignSongs/ForestSongs/Forest_Battle4.mp3',
+        {
+            loop: true,
+            category: 'campaign-1',
+            volume: 0.7
+        }
+    );
+
+    MusicRegistry.registerMusic(
+        'campaign-1-battle-5',
+        'assets/audio/music/CampaignSongs/ForestSongs/Forest_Battle5.mp3',
         {
             loop: true,
             category: 'campaign-1',

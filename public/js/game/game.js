@@ -182,13 +182,15 @@ export class Game {
 
             const splashLily = new SplashScreen(this.stateManager, {
                 lines: ["A Lily's Little Adventures Game"],
-                nextState: 'splashMusic'
+                nextState: 'splashMusic',
+                musicTrack: 'intro-jingle-lilys-adventures'
             });
             this.stateManager.addState('splashLily', splashLily);
 
             const splashMusic = new SplashScreen(this.stateManager, {
                 lines: ['Music and Sound by Joost'],
-                nextState: 'mainMenu'
+                nextState: 'mainMenu',
+                musicTrack: 'intro-jingle-paseyan'
             });
             this.stateManager.addState('splashMusic', splashMusic);
 
