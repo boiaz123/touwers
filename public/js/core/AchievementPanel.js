@@ -21,6 +21,8 @@
  *   this.achievementPanel.handleClick(x, y);          // on click
  */
 
+import { drawMedallion, drawCoverImage, drawChestIcon } from './EmblemRenderer.js';
+
 const CAT_COLORS = {
     combat:      '#8b1a1a',
     victory:     '#8b6914',
@@ -34,17 +36,80 @@ const CAT_COLORS = {
     playtime:    '#2a3a6b',
     superweapon: '#7a1a8b',
 };
-// Tier ladder — the badge ring/glow upgrades through these ranks as an achievement's
-// position within its category climbs, so e.g. "slay 100,000 enemies" reads as a
-// visibly grander emblem than "slay your first enemy" even though both share an icon.
-const TIER_STYLES = [
-    { ring: '#a9694a', glow: 'rgba(169, 105, 74, 0.55)',  inner: '#7a4a30' }, // Bronze
-    { ring: '#b9c0c6', glow: 'rgba(185, 192, 198, 0.55)', inner: '#7c8389' }, // Silver
-    { ring: '#d4af37', glow: 'rgba(212, 175, 55, 0.6)',   inner: '#6b4018' }, // Gold
-    { ring: '#7fd8c4', glow: 'rgba(127, 216, 196, 0.6)',  inner: '#1f5a4d' }, // Platinum
-    { ring: '#7fdfff', glow: 'rgba(127, 223, 255, 0.65)', inner: '#155a6b' }, // Diamond
-    { ring: '#c77dff', glow: 'rgba(199, 125, 255, 0.7)',  inner: '#4a1f6b' }  // Mythic
+
+// Medallion ring ladder — mirrors the campaign-select emblem's bevelled-metal ring,
+// re-themed as a Bronze → Silver → Gold → Diamond rank progression. An achievement's
+// position within its category ladder picks the rung (tier 4 and beyond all read as
+// Diamond, the ladder's max rank), so e.g. "slay 100,000 enemies" reads as a visibly
+// grander medallion than "slay your first enemy" even though both share a token.
+const TIER_RINGS = [
+    { top: '#dba372', mid: '#a9694a', bottom: '#5c3820' }, // Bronze — tier 1
+    { top: '#eef2f4', mid: '#b9c0c6', bottom: '#5c6368' }, // Silver — tier 2
+    { top: '#f6e29a', mid: '#d4af37', bottom: '#8a651c' }, // Gold — tier 3
+    { top: '#c8f4ff', mid: '#5fc6e8', bottom: '#1c5b74' }, // Diamond — tier 4+
 ];
+// One-off achievements with no tier ladder (the four campaign-completion medallions)
+// — a fixed gold-like rank befitting a whole-campaign clear rather than a graded climb.
+const NO_TIER_RING = { top: '#f6e29a', mid: '#d4af37', bottom: '#8a651c' };
+// Locked/unearned medallions — dull unlit pewter, same "default" tone the campaign
+// menu uses for an unselected campaign, regardless of what tier they'd unlock at.
+const LOCKED_RING = { top: '#8c7a5c', mid: '#5c4c32', bottom: '#332a1a' };
+
+function tierRingFor(achievement) {
+    if (!achievement.unlocked) return LOCKED_RING;
+    const tier = achievement.tier || 0;
+    if (tier <= 0) return NO_TIER_RING;
+    return TIER_RINGS[Math.min(tier, TIER_RINGS.length) - 1];
+}
+
+// Emblem art — drop a same-named file in public/assets/achievements/ to override any
+// entry here (checked first, same convention as CampaignMenu's CAMPAIGN_EMBLEM_IMAGE).
+// Categories/ids not listed here have no confident real-art match yet and fall back to
+// a hand-drawn vector token (economy chests) or, failing that, the achievement's glyph —
+// swap in a proper screenshot for those whenever one's ready.
+const ACHIEVEMENT_EMBLEM_IMAGE = {
+    // Combat — the horde you're cutting down
+    'getting-started':   'assets/enemies/knight.png',
+    'deadly-force':       'assets/enemies/knight.png',
+    'executioner':         'assets/enemies/knight.png',
+    'warlord':              'assets/enemies/knight.png',
+    'annihilator':           'assets/enemies/knight.png',
+    'extinction-event':       'assets/enemies/knight.png',
+    // Victory — the enemy commander you must break to win a battle
+    'first-victory':      'assets/enemies/enemy_captain.png',
+    'battle-hardened':     'assets/enemies/enemy_captain.png',
+    'seasoned-veteran':     'assets/enemies/enemy_captain.png',
+    'campaign-champion':     'assets/enemies/enemy_captain.png',
+    'legendary-commander':    'assets/enemies/enemy_captain.png',
+    'eternal-guardian':        'assets/enemies/enemy_captain.png',
+    // Resilience / defeats — you took a hit and kept your shield up
+    'fallen-warrior': 'assets/enemies/shieldknight.png',
+    'undaunted':       'assets/enemies/shieldknight.png',
+    'unbreakable':      'assets/enemies/shieldknight.png',
+    // Tower building
+    'apprentice-builder': 'assets/towers/basic.png',
+    'master-engineer':     'assets/towers/basic.png',
+    'tower-overlord':       'assets/towers/basic.png',
+    'grand-architect':       'assets/towers/basic.png',
+    'eternal-fortress':       'assets/towers/basic.png',
+    // Campaigns — reuse the exact campaign-select portrait art
+    'forest-conqueror':   'assets/campaigns/campaign-1.jpg',
+    'mountain-conqueror': 'assets/campaigns/campaign-2.jpg',
+    'desert-conqueror':   'assets/campaigns/campaign-3.jpg',
+    'frog-slayer':        'assets/campaigns/campaign-4.jpg',
+    // Super Weapon Lab
+    'arcane-spire':    'assets/buildings/superweapon.png',
+    'frost-shatter':    'assets/buildings/superweapon.png',
+    'arcane-arsenal':    'assets/buildings/superweapon.png',
+};
+
+// Categories with no photographed token yet, but a fitting hand-drawn vector stand-in —
+// reuses the marketplace's own chest icon art (see SettlementHub.js's Wooden/Golden/
+// Platinum Chest upgrades) since both ladders are about gold moving through the market.
+const ACHIEVEMENT_CHEST_VARIANT = {
+    spending: 'golden',
+    trading: 'platinum',
+};
 
 /**
  * The achievements grid/detail view itself — header stat bars, the paginated card
@@ -64,6 +129,42 @@ export class AchievementsContentView {
         this.rightArrowHovered  = false;
         this.backButtonHovered  = false;
         this.hoveredCardId      = null;
+
+        this.emblemImageCache = {};
+        this._loadEmblemImages();
+    }
+
+    /** Preloads achievement emblem art; missing/unlisted ids fall back to vector/glyph content. */
+    _loadEmblemImages() {
+        for (const [id, path] of Object.entries(ACHIEVEMENT_EMBLEM_IMAGE)) {
+            const img = new Image();
+            img.onload = () => { this.emblemImageCache[id] = img; };
+            img.onerror = () => { this.emblemImageCache[id] = null; };
+            img.src = path;
+        }
+    }
+
+    /**
+     * Resolves the medallion's picture content for one achievement — a real cropped
+     * photo when available, else a themed vector token, else the achievement's own
+     * glyph rendered large as a placeholder to be replaced later.
+     */
+    _emblemContentFor(achievement) {
+        const img = this.emblemImageCache[achievement.id];
+        if (img) {
+            return (ctx, cx, cy, r) => drawCoverImage(ctx, img, cx - r, cy - r, r * 2, r * 2);
+        }
+        const chestVariant = ACHIEVEMENT_CHEST_VARIANT[achievement.category];
+        if (chestVariant) {
+            return (ctx, cx, cy, r) => drawChestIcon(ctx, cx, cy, r * 1.9, chestVariant);
+        }
+        return (ctx, cx, cy, r) => {
+            ctx.font = `${Math.round(r * 1.1)}px Trebuchet MS, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(230, 200, 140, 0.9)';
+            ctx.fillText(achievement.icon || '●', cx, cy + r * 0.05);
+        };
     }
 
     /** @param {string} [focusAchievementId] - jump straight to this achievement's detail view */
@@ -437,7 +538,7 @@ export class AchievementsContentView {
         const ratio     = prog.max > 0 ? Math.min(prog.current / prog.max, 1) : 0;
         const tier      = achievement.tier || 0;
         const tierMax   = achievement.tierMax || 0;
-        const tierStyle = tier > 0 ? TIER_STYLES[Math.min(tier - 1, TIER_STYLES.length - 1)] : null;
+        const ringColors = tierRingFor(achievement);
 
         const stripe = 3 * uiSf;
         const pad    = 8 * uiSf;
@@ -497,41 +598,17 @@ export class AchievementsContentView {
         ctx.textBaseline = 'middle';
         ctx.fillText(ptsText, ptsX + ptsW / 2, ptsY + ptsH / 2);
 
-        // ── Icon badge ────────────────────────────────────────────────────────
+        // ── Icon medallion ────────────────────────────────────────────────────
         const iconCX = cx + stripe + pad + iconR;
         const iconCY = cy + ch / 2;
 
-        // Rank glow behind the badge — only for unlocked, tiered achievements, and
-        // grows brighter/thicker at higher tiers.
-        if (unlocked && tierStyle) {
-            ctx.beginPath();
-            ctx.arc(iconCX, iconCY, iconR + 3 * uiSf, 0, Math.PI * 2);
-            ctx.strokeStyle = tierStyle.glow;
-            ctx.lineWidth   = (1.5 + tier * 0.4) * uiSf;
-            ctx.stroke();
-        }
-
-        ctx.beginPath();
-        ctx.arc(iconCX, iconCY, iconR, 0, Math.PI * 2);
-        if (unlocked) {
-            const iconBg = ctx.createRadialGradient(iconCX - 5, iconCY - 5, 3, iconCX, iconCY, iconR);
-            iconBg.addColorStop(0, tierStyle ? tierStyle.inner : '#6b4018');
-            iconBg.addColorStop(1, '#2e1508');
-            ctx.fillStyle = iconBg;
-        } else {
-            ctx.fillStyle = '#150e06';
-        }
-        ctx.fill();
-
-        ctx.strokeStyle = unlocked ? (tierStyle ? tierStyle.ring : '#c9922a') : '#1e1408';
-        ctx.lineWidth   = unlocked ? 1.5 : 1;
-        ctx.stroke();
-
-        ctx.font         = `${unlocked ? 'bold ' : ''}${Math.round(20 * uiSf)}px Trebuchet MS, sans-serif`;
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle    = unlocked ? '#f5d070' : '#2e2018';
-        ctx.fillText(achievement.icon || '●', iconCX, iconCY + 1);
+        drawMedallion(ctx, {
+            x: iconCX, y: iconCY, radius: iconR,
+            ringColors,
+            backdrop: '#130f09',
+            dim: !unlocked,
+            drawContent: this._emblemContentFor(achievement)
+        });
 
         // Rank pips beneath the badge — filled count shows this achievement's tier
         // out of its category's ladder (e.g. ●●●○○○ = rank 3 of 6).
@@ -539,13 +616,13 @@ export class AchievementsContentView {
             const pipR   = 1.6 * uiSf;
             const pipGap = 5 * uiSf;
             const pipsW  = (tierMax - 1) * pipGap;
-            const pipY   = iconCY + iconR + 6 * uiSf;
+            const pipY   = iconCY + iconR + 8 * uiSf;
             let pipX0    = iconCX - pipsW / 2;
             for (let p = 0; p < tierMax; p++) {
                 ctx.beginPath();
                 ctx.arc(pipX0 + p * pipGap, pipY, pipR, 0, Math.PI * 2);
                 if (p < tier) {
-                    ctx.fillStyle = unlocked ? (tierStyle ? tierStyle.ring : catColor) : (catColor + '88');
+                    ctx.fillStyle = unlocked ? ringColors.mid : (catColor + '88');
                     ctx.fill();
                 } else {
                     ctx.strokeStyle = unlocked ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)';
@@ -618,7 +695,7 @@ export class AchievementsContentView {
         const catColor   = CAT_COLORS[achievement.category] || '#3a2a1a';
         const tier       = achievement.tier || 0;
         const tierMax    = achievement.tierMax || 0;
-        const tierStyle  = tier > 0 ? TIER_STYLES[Math.min(tier - 1, TIER_STYLES.length - 1)] : null;
+        const ringColors = tierRingFor(achievement);
         const prog       = achievement.progress || { current: 0, max: 1 };
         const ratio      = prog.max > 0 ? Math.min(prog.current / prog.max, 1) : 0;
 
@@ -653,50 +730,31 @@ export class AchievementsContentView {
         ctx.textBaseline = 'middle';
         ctx.fillText(statusText, statusX + statusW / 2, statusY + statusH / 2);
 
-        // ── Icon + name row ──────────────────────────────────────────────────────
+        // ── Icon medallion + name row ────────────────────────────────────────────
         const iconR  = Math.round(38 * uiSf);
         const iconCX = x + Math.round(16 * uiSf) + iconR;
         const iconCY = back.y + back.h + Math.round(26 * uiSf) + iconR;
 
-        if (unlocked && tierStyle) {
-            ctx.beginPath();
-            ctx.arc(iconCX, iconCY, iconR + 5 * uiSf, 0, Math.PI * 2);
-            ctx.strokeStyle = tierStyle.glow;
-            ctx.lineWidth   = (2 + tier * 0.6) * uiSf;
-            ctx.stroke();
-        }
-        ctx.beginPath();
-        ctx.arc(iconCX, iconCY, iconR, 0, Math.PI * 2);
-        if (unlocked) {
-            const iconBg = ctx.createRadialGradient(iconCX - 8, iconCY - 8, 4, iconCX, iconCY, iconR);
-            iconBg.addColorStop(0, tierStyle ? tierStyle.inner : '#6b4018');
-            iconBg.addColorStop(1, '#2e1508');
-            ctx.fillStyle = iconBg;
-        } else {
-            ctx.fillStyle = '#150e06';
-        }
-        ctx.fill();
-        ctx.strokeStyle = unlocked ? (tierStyle ? tierStyle.ring : '#c9922a') : '#1e1408';
-        ctx.lineWidth   = unlocked ? 2 : 1;
-        ctx.stroke();
-        ctx.font         = `${unlocked ? 'bold ' : ''}${Math.round(34 * uiSf)}px Trebuchet MS, sans-serif`;
-        ctx.textAlign    = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle    = unlocked ? '#f5d070' : '#2e2018';
-        ctx.fillText(achievement.icon || '●', iconCX, iconCY + 2 * uiSf);
+        drawMedallion(ctx, {
+            x: iconCX, y: iconCY, radius: iconR,
+            ringColors,
+            backdrop: '#130f09',
+            dim: !unlocked,
+            drawContent: this._emblemContentFor(achievement)
+        });
 
         // Tier pips beneath the icon
         if (tierMax > 0) {
             const pipR   = 2 * uiSf;
             const pipGap = 8 * uiSf;
             const pipsW  = (tierMax - 1) * pipGap;
-            const pipY   = iconCY + iconR + 12 * uiSf;
+            const pipY   = iconCY + iconR + 14 * uiSf;
             let pipX0    = iconCX - pipsW / 2;
             for (let p = 0; p < tierMax; p++) {
                 ctx.beginPath();
                 ctx.arc(pipX0 + p * pipGap, pipY, pipR, 0, Math.PI * 2);
                 if (p < tier) {
-                    ctx.fillStyle = unlocked ? (tierStyle ? tierStyle.ring : catColor) : (catColor + '88');
+                    ctx.fillStyle = unlocked ? ringColors.mid : (catColor + '88');
                     ctx.fill();
                 } else {
                     ctx.strokeStyle = 'rgba(255,255,255,0.25)';

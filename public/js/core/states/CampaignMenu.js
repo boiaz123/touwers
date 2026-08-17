@@ -1,4 +1,5 @@
 ﻿import { CampaignRegistry } from '../../game/CampaignRegistry.js';
+import { drawCoverImage, drawMedallion } from '../EmblemRenderer.js';
 
 // Unified stone base with campaign-specific accent colours
 const CAMPAIGN_BIOME = {
@@ -488,129 +489,44 @@ export class CampaignMenu {
     }
 
     /**
-     * Draws `img` into the dest rect with "cover" fit (like CSS background-size:cover) —
-     * scales to fill completely and crops the overflow, centered, so no edges show through.
-     */
-    _drawCoverImage(ctx, img, dx, dy, dw, dh) {
-        const iw = img.naturalWidth || img.width;
-        const ih = img.naturalHeight || img.height;
-        if (!iw || !ih) return;
-        const scale = Math.max(dw / iw, dh / ih);
-        const sw = dw / scale;
-        const sh = dh / scale;
-        const sx = (iw - sw) / 2;
-        const sy = (ih - sh) / 2;
-        ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
-    }
-
-    /**
      * Draws a campaign's scene art as a framed medallion emblem — a bevelled
      * metal ring around a circular "photo" crop, zoomed in on the campaign's
      * icon artwork so it reads as a scenic portrait rather than a flat glyph.
+     * Ring color is gold when selected, warm pewter otherwise. Delegates the
+     * actual ring/bevel/vignette chrome to the shared EmblemRenderer so this
+     * stays visually identical to the achievement panel's medallions.
      */
     _drawEmblem(ctx, campaign, x, y, radius, biome, isSelected, isHovered) {
-        ctx.save();
-
-        // Drop shadow beneath the medallion
-        ctx.beginPath();
-        ctx.arc(x + 3, y + 5, radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fill();
-
-        const ringW = Math.max(5, radius * 0.115);
-        const ringInner = radius - ringW;
-
-        // Outer bevelled metal ring — gold when selected, warm pewter otherwise
-        const ringGrad = ctx.createLinearGradient(x, y - radius, x, y + radius);
+        let ringColors;
         if (isSelected) {
-            ringGrad.addColorStop(0, '#f6e29a');
-            ringGrad.addColorStop(0.5, '#d4af37');
-            ringGrad.addColorStop(1, '#8a651c');
+            ringColors = { top: '#f6e29a', mid: '#d4af37', bottom: '#8a651c' };
         } else if (isHovered) {
-            ringGrad.addColorStop(0, '#c8b488');
-            ringGrad.addColorStop(0.5, '#8f7748');
-            ringGrad.addColorStop(1, '#4a3c22');
+            ringColors = { top: '#c8b488', mid: '#8f7748', bottom: '#4a3c22' };
         } else {
-            ringGrad.addColorStop(0, '#8c7a5c');
-            ringGrad.addColorStop(0.5, '#5c4c32');
-            ringGrad.addColorStop(1, '#332a1a');
+            ringColors = { top: '#8c7a5c', mid: '#5c4c32', bottom: '#332a1a' };
         }
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = ringGrad;
-        ctx.fill();
-
-        // Inner bevel groove separating ring from picture
-        ctx.beginPath();
-        ctx.arc(x, y, ringInner + 1.5, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Clip to the inner circle and paint the zoomed-in scene crop
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(x, y, ringInner, 0, Math.PI * 2);
-        ctx.clip();
-
-        // Fallback backdrop in case the scene art has transparent gaps
-        ctx.fillStyle = biome.to || '#141414';
-        ctx.fillRect(x - ringInner, y - ringInner, ringInner * 2, ringInner * 2);
 
         const emblemImg = this.emblemImageCache[campaign.id];
-        if (emblemImg) {
-            // Real picture — cover-fit crop so it fills the circle edge-to-edge with no gaps
-            this._drawCoverImage(ctx, emblemImg, x - ringInner, y - ringInner, ringInner * 2, ringInner * 2);
-        } else if (campaign.drawIcon) {
-            // Image not loaded/available yet — fall back to the vector scene art, zoomed to fill the frame
-            campaign.drawIcon(ctx, x, y, ringInner * 1.9);
-        } else {
-            ctx.font = `${Math.round(ringInner * 1.3)}px serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(campaign.icon, x, y);
-        }
-
-        // Soft inner vignette so the crop's edges melt into the frame
-        const vig = ctx.createRadialGradient(x, y, ringInner * 0.6, x, y, ringInner);
-        vig.addColorStop(0, 'rgba(0,0,0,0)');
-        vig.addColorStop(1, 'rgba(0,0,0,0.30)');
-        ctx.fillStyle = vig;
-        ctx.beginPath();
-        ctx.arc(x, y, ringInner, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.restore();
-
-        // Glass-like highlight catching light on the upper-left rim
-        ctx.beginPath();
-        ctx.arc(x, y, ringInner + 1, -Math.PI * 0.85, -Math.PI * 0.15);
-        ctx.strokeStyle = 'rgba(255,255,255,0.32)';
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-
-        // Crisp outer rim edge
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        // Small jewel stud at the base of the ring — biome-accented
-        const studY = y + radius - ringW * 0.5;
-        ctx.beginPath();
-        ctx.arc(x, studY, ringW * 0.42, 0, Math.PI * 2);
-        const studGrad = ctx.createRadialGradient(x - ringW * 0.15, studY - ringW * 0.15, 0, x, studY, ringW * 0.42);
-        studGrad.addColorStop(0, '#ffffff');
-        studGrad.addColorStop(0.35, biome.accent || '#a08040');
-        studGrad.addColorStop(1, '#1a1408');
-        ctx.fillStyle = studGrad;
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-        ctx.lineWidth = 0.7;
-        ctx.stroke();
-
-        ctx.restore();
+        drawMedallion(ctx, {
+            x, y, radius,
+            ringColors,
+            accent: biome.accent || '#a08040',
+            backdrop: biome.to || '#141414',
+            drawContent: (ctx, cx, cy, r) => {
+                if (emblemImg) {
+                    // Real picture — cover-fit crop so it fills the circle edge-to-edge with no gaps
+                    drawCoverImage(ctx, emblemImg, cx - r, cy - r, r * 2, r * 2);
+                } else if (campaign.drawIcon) {
+                    // Image not loaded/available yet — fall back to the vector scene art, zoomed to fill the frame
+                    campaign.drawIcon(ctx, cx, cy, r * 1.9);
+                } else {
+                    ctx.font = `${Math.round(r * 1.3)}px serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(campaign.icon, cx, cy);
+                }
+            }
+        });
     }
 
     _renderUnlockedCard(ctx, campaign, b, isSelected, biome, isHovered) {
