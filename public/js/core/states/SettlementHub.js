@@ -1844,6 +1844,10 @@ export class SettlementHub {
             // Exterior trees behind the wall — sorted by Y so distant ones draw first
             this.renderSettlementTerrain(ctx, canvas, centerX, centerY);
 
+            // Ground-contact shadow - part of the terrain, drawn before the wall/trees that
+            // stand on it (see renderSettlementGroundShadow's doc comment for why)
+            this.renderSettlementGroundShadow(ctx, centerX, centerY, sf);
+
             // Back-arc (upper/rear half) exterior wall decoration drawn BEFORE the wall
             // so it correctly appears behind the wall structure
             this.renderWallExteriorDecoration(ctx, centerX, centerY, false);
@@ -1895,11 +1899,30 @@ export class SettlementHub {
 
         // Render active boons
         this.renderActiveBoons(ctx, canvas);
+    }
 
-        // Ground shadow under settlement
+    /** Ground-contact shadow, grounding the settlement into the grass around it. Shifted down
+     * and shallower than the wall ellipse (radiusX=360*sf, see renderFrontWallOverlay) on
+     * purpose - it's a contact shadow, not a silhouette copy - but needs radiusX=410*sf (bigger
+     * than the wall's own 360*sf) to actually reach the wall's leftmost/rightmost points: pulled
+     * down by the +50*sf offset, a same-size ellipse is narrower than the wall at those points
+     * by basic ellipse math, which used to leave two visible gaps of bare, unshadowed ground
+     * right at the wall's east/west edges.
+     *
+     * Drawn here - as part of the ground, right after the background trees and before the wall/
+     * palisade/front-tree passes - rather than as a final overlay on top of literally everything:
+     * drawn last, its own shape (which reaches past the wall's front edge on purpose) also
+     * painted over part of the interior floor near the gate ("leaking" through the wall) and cut
+     * a hard edge straight across any tree standing in the ring between the wall and the
+     * shadow's own edge, including every tree this file otherwise takes care to draw in front of
+     * the wall/Castle. Ground shadows are logically part of the terrain a structure or tree
+     * stands on, not a decal painted over both afterward - putting it back in painter's-algorithm
+     * order like this means anything drawn after (the wall, front trees, buildings) naturally
+     * covers whatever part of it shouldn't show, with no clipping trick needed. */
+    renderSettlementGroundShadow(ctx, centerX, centerY, sf) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
         ctx.beginPath();
-        ctx.ellipse(centerX, centerY + 50 * sf, 340 * sf, 120 * sf, 0, 0, Math.PI * 2);
+        ctx.ellipse(centerX, centerY + 50 * sf, 410 * sf, 120 * sf, 0, 0, Math.PI * 2);
         ctx.fill();
     }
 
@@ -1922,6 +1945,7 @@ export class SettlementHub {
         this._sceneBehindCanvas.height = canvas.height;
         const bctx = this._sceneBehindCanvas.getContext('2d');
         this.renderSettlementTerrain(bctx, canvas, centerX, centerY);
+        this.renderSettlementGroundShadow(bctx, centerX, centerY, sf);
         this.renderWallExteriorDecoration(bctx, centerX, centerY, false);
         this.renderEllipticalPalisade(bctx, canvas, centerX, centerY);
         this.renderWallExteriorDecoration(bctx, centerX, centerY, true);
@@ -2028,10 +2052,14 @@ export class SettlementHub {
 
         // ── Worn dirt transition band — grounds the wall into the terrain
         // instead of grass butting straight up against the rampart edge ────────
+        // Each half is drawn slightly PAST the seam (into the other half's territory) rather
+        // than stopping just short of it - stopping short on both sides left two small gaps of
+        // bare grass right at the wall's exact left/right extremes, where the two halves met but
+        // didn't quite touch.
         const dirtRadX = rX + 40 * sf;
         const dirtRadY = rY + 40 * sf;
-        const startAngle = frontHalf ? 0.05 : Math.PI + 0.05;
-        const endAngle   = frontHalf ? Math.PI - 0.05 : Math.PI * 2 - 0.05;
+        const startAngle = frontHalf ? -0.05 : Math.PI - 0.05;
+        const endAngle   = frontHalf ? Math.PI + 0.05 : Math.PI * 2 + 0.05;
         ctx.lineCap = 'butt';
         ctx.strokeStyle = 'rgba(90, 74, 48, 0.28)';
         ctx.lineWidth = 16 * sf;
@@ -2416,6 +2444,27 @@ export class SettlementHub {
         this.renderIntegratedGate(ctx, centerX, centerY + radiusY - 5 * sf, sf);
         this.renderGuardTowerWithBase(ctx, centerX - 68 * sf, centerY + radiusY + 15 * sf, sf, -1);
         this.renderGuardTowerWithBase(ctx, centerX + 68 * sf, centerY + radiusY + 15 * sf, sf, 1);
+
+        // Foreground trees standing just outside the front wall, drawn last so their
+        // canopies overlap the palisade's upper rail. Without this, every exterior tree
+        // is drawn once, behind the entire settlement (see renderSettlementTerrain) - the
+        // settlement then always paints over all of them, so it reads as a flat disc
+        // pasted onto the forest rather than a settlement actually standing among the
+        // trees.
+        this.renderWallForegroundTrees(ctx);
+    }
+
+    /** See renderFrontWallOverlay's call site for why this exists. Draws _frontTreesWall - the
+     * real ambient forest trees renderSettlementTerrain classified as standing south of (closer
+     * to the viewer than) the wall's own elliptical curve at their particular x, not just a
+     * handful of fixed accent positions - any other nearby tree was still silently getting
+     * painted over by the wall/palisade, reading as the settlement standing on top of it. */
+    renderWallForegroundTrees(ctx) {
+        (this._frontTreesWall || []).forEach(t => {
+            const gridX = Math.floor(t.x / 50);
+            const gridY = Math.floor(t.y / 50);
+            this.renderTree(ctx, t.x, t.y, t.size, gridX, gridY);
+        });
     }
 
     renderIntegratedGate(ctx, x, y, sf = 1) {
@@ -3053,6 +3102,7 @@ export class SettlementHub {
         } else if (mode === 'exterior') {
             exterior.forEach(item => {
                 renderBody(item);
+                this.renderExteriorBuildingForegroundTrees(ctx, item.building);
                 if (item.clickable && item.action) this.renderBuildingHeader(ctx, item, headers);
             });
         } else if (mode === 'headers') {
@@ -3062,6 +3112,26 @@ export class SettlementHub {
                 ctx.globalAlpha = 1;
             });
         }
+    }
+
+    /** Same idea as renderWallForegroundTrees (see renderFrontWallOverlay's call site): the
+     * Castle otherwise always paints over every tree behind it (it's an exterior building,
+     * drawn after and on top of the whole terrain bake), so it would read as a cutout pasted
+     * onto the forest instead of standing within it. _frontTreesCastle is the real ambient
+     * forest trees that renderSettlementTerrain pulled out of that background bake for standing
+     * in front of the Castle's base (see its call site) - drawing them here, after the
+     * building's own body, puts them back on top. (TrainingGrounds has no front-tree list - its
+     * whole surrounding area is kept as a tree-free clearing instead, see renderSettlementTerrain.) */
+    renderExteriorBuildingForegroundTrees(ctx, building) {
+        if (!(building instanceof Castle)) return;
+        const list = this._frontTreesCastle;
+        if (!list) return;
+
+        list.forEach(t => {
+            const gridX = Math.floor(t.x / 50);
+            const gridY = Math.floor(t.y / 50);
+            this.renderTree(ctx, t.x, t.y, t.size, gridX, gridY);
+        });
     }
 
     renderBuildingHeader(ctx, item, headers) {
@@ -3104,7 +3174,6 @@ export class SettlementHub {
         const size = 0.7 * 2.2 * sf * 128; // matches the old duplicate's effective on-screen scale
 
         building._lastRenderSize = size; // read by update() to scale particle-spawn world positions
-        building.forceLocalVegetation = true; // always forest-style trees, never the last-played campaign's
 
         building.renderStaticBack(ctx, size);
         building.renderDynamicParts(ctx, size);
@@ -3386,10 +3455,207 @@ export class SettlementHub {
             { x: centerX + 1300, y: centerY + 115, size: 43 },
         ];
 
+        // Turn the flat, evenly-spaced skeleton above into an actual forest. Foreground trees
+        // here used to render at roughly 1/6 the settlement castle's height (size 18-46 next to
+        // buildings well over 200px tall), and every position sits on a suspiciously round grid
+        // (multiples of 50/100), which reads as a planted orchard rather than woodland. This
+        // pass scales trees up (nearer ones more, sharpening the depth cue) and jitters both
+        // position and size with a deterministic hash of each tree's index - not Math.random(),
+        // since this whole scene gets baked to an offscreen canvas once (see
+        // renderSettlementScene's _ensureSceneStaticLayers) and never redrawn from scratch, so
+        // the forest needs to look identical every time it's blitted. Companion trees fill the
+        // gaps the bigger scale would otherwise leave, offset only a short, capped distance from
+        // their anchor's hand-placed (and already collision-checked against the settlement wall/
+        // Campaign/Castle footprints) position so they can't drift into a building or the clearing.
+        const hash = (n) => {
+            const s = Math.sin(n * 12.9898) * 43758.5453;
+            return s - Math.floor(s);
+        };
+
+        const naturalTrees = [];
+        treePositions.forEach((t, i) => {
+            const depthT = (t.size - 18) / (46 - 18); // 0 = farthest background, 1 = nearest
+            const scaleMul = 1.55 + depthT * 0.85; // nearer trees grow more, sharpening the depth read
+            const baseSize = t.size * scaleMul;
+
+            const jx = (hash(i * 3.1 + 0.7) * 2 - 1) * 12;
+            const jy = (hash(i * 5.7 + 1.3) * 2 - 1) * 6;
+            const js = (hash(i * 7.9 + 2.1) * 2 - 1) * baseSize * 0.12;
+            naturalTrees.push({ x: t.x + jx, y: t.y + jy, size: baseSize + js });
+
+            // More candidates than the final forest needs - the spacing pass below thins
+            // whichever of these actually collide, so generating a denser pool up front (rather
+            // than tuning distance/probability to hit a final count directly) is what makes the
+            // result denser without loosening the spacing rule itself.
+            const companionRoll = hash(i * 2.3 + 4.4);
+            const companions = companionRoll < 0.30 ? 1 : (companionRoll < 0.62 ? 2 : (companionRoll < 0.88 ? 3 : 0));
+            for (let c = 0; c < companions; c++) {
+                const angle = hash(i * 13.7 + c * 6.6 + 6.6) * Math.PI * 2;
+                const dist = 16 + hash(i * 17.3 + c * 8.8 + 7.7) * 26;
+                const cx = t.x + Math.cos(angle) * dist;
+                const cy = t.y + Math.sin(angle) * dist * 0.45; // flatten to the ground plane
+                const cSize = baseSize * (0.5 + hash(i * 21.1 + c * 4.4 + 8.8) * 0.4);
+                naturalTrees.push({ x: cx, y: cy, size: cSize });
+            }
+        });
+
+        // Extra scattered candidates across the open field, on top of the hand-placed clusters
+        // above - those clusters were authored around specific landmarks (the wall, Campaign,
+        // Castle) and thin out noticeably in the plain grass gaps between them. Same idea as the
+        // companion trees above: generate more candidates than the scene needs and let the
+        // spacing pass below keep only the ones that don't collide, so this only fills genuinely
+        // open ground instead of doubling up density that's already there.
+        const fillLeft = centerX - 1450, fillRight = centerX + 1450;
+        const fillTop = canvas.height * 0.58, fillBottom = centerY + 230;
+        const fillCell = 65;
+        let fillSeed = 5000;
+        for (let fx = fillLeft; fx < fillRight; fx += fillCell) {
+            for (let fy = fillTop; fy < fillBottom; fy += fillCell) {
+                fillSeed++;
+                if (hash(fillSeed * 0.37) > 0.68) continue; // skip some cells so it isn't a perfect grid
+                const jx = (hash(fillSeed * 3.1) * 2 - 1) * fillCell * 0.55;
+                const jy = (hash(fillSeed * 5.3) * 2 - 1) * fillCell * 0.55;
+                const depthT = Math.max(0, Math.min(1, (fy - fillTop) / (fillBottom - fillTop)));
+                const size = (24 + depthT * 58) * (0.75 + hash(fillSeed * 9.7) * 0.5);
+                naturalTrees.push({ x: fx + jx, y: fy + jy, size });
+            }
+        }
+
+        // --- Spacing: no two trees may stand close enough for their canopies to effectively
+        // coincide ("a tree standing on top of another tree's base"). `canopyRadius` estimates
+        // how far a tree's canopy can reach from its trunk - the broadest shape in
+        // TerrainRenderer.js (renderTreeType6's off-center leaf clumps) can reach up to ~0.59x
+        // its `size`, so 0.62 keeps a small margin over every tree type rather than fitting the
+        // average case and clipping the wide ones. Spacing between any two trees is derived from
+        // BOTH their radii, not a flat fraction of one size, so a big tree always keeps its real
+        // clearance regardless of what its neighbor's size happens to be. `overlapFactor`
+        // controls how much of that combined radius neighbors are allowed to share: <1 forces a
+        // gap, close to 1 lets canopies just graze (used for the general backdrop, where a
+        // little overlap reads as a natural dense wood), and >1 would allow real overlap (never
+        // used here). The same estimate is reused below to decide which trees near the Campaign
+        // fence or Castle base are close enough to promote in front of the building - using the
+        // same slightly-generous radius there too means a tree is never left stranded half-
+        // rendered behind a structure its canopy visibly reaches.
+        const canopyRadius = (size) => size * 0.62;
+        const declutter = (trees, overlapFactor) => {
+            const kept = [];
+            [...trees].sort((a, b) => b.size - a.size).forEach(t => {
+                const collides = kept.some(k =>
+                    Math.hypot(t.x - k.x, t.y - k.y) < (canopyRadius(t.size) + canopyRadius(k.size)) * overlapFactor
+                );
+                if (!collides) kept.push(t);
+            });
+            return kept;
+        };
+        // Companion trees (generated above) cluster tightly around their anchor by design -
+        // good for backdrop density, but left unchecked plenty of them land close enough to
+        // stack on their own anchor. One global pass over the whole forest first, before
+        // anything building-specific happens, keeps every tree in the scene readable as its
+        // own tree.
+        const spacedTrees = declutter(naturalTrees, 0.62);
+
+        // --- The Campaign (TrainingGrounds) yard stays a clear, open patch: no ambient tree
+        // renders anywhere near it, front or back - repeatedly trying to have trees drape over
+        // or beside its fence kept producing edge-case artifacts (clipped canopies, bare
+        // trunks), so instead of resolving depth against it at all, this just carves out a
+        // clearing and leaves it standing in open ground, the way the Castle's own courtyard
+        // (paved, walled) already reads as separate from the forest.
+        //
+        // The Castle is a tall keep, so a tree actually in front of it (closer to the viewer)
+        // still needs to be pulled forward to draw over its base - this whole layer bakes once,
+        // entirely behind every exterior building (see renderSettlementScene), so without that
+        // split such a tree would always be painted over even though it's standing in front of
+        // the structure. renderExteriorBuildingForegroundTrees (called right after the Castle's
+        // own live render) draws _frontTreesCastle back in on top so it correctly stands in
+        // front - a tree genuinely standing behind the keep stays hidden behind it, the same as
+        // it would in front of a real building of that height. Reach scales with that tree's own
+        // canopyRadius rather than a fixed margin, so the catch region always matches how far
+        // that particular tree could actually visually extend.
+        const sf = canvas.width / 1920;
+        const tgBuilding = (this.settlementBuildings.find(item => item.building instanceof TrainingGrounds) || {}).building;
+        const castleBuilding = (this.settlementBuildings.find(item => item.building instanceof Castle) || {}).building;
+        // Fence is roughly 77x74 (see TG_FENCE_HALF_W/H history in earlier passes); the clearing
+        // extends well past that so the yard reads as an open spot, not just tree-free right up
+        // to the rail.
+        const TG_CLEARING_HALF_W = 140 * sf, TG_CLEARING_HALF_H = 135 * sf;
+        // Base platform spans y:[wallHeight/2, wallHeight/2+30] = [40,70] below the Castle's own
+        // anchor (see Castle.js's drawCastleBase) - 70 is genuinely where the structure ends.
+        const CASTLE_HALF_W = 110, CASTLE_FRONT_EDGE = 70;
+        // The elliptical palisade itself (see renderFrontWallOverlay) - any ambient tree whose
+        // ground position is south of the wall's own curve at that x is standing in front of it
+        // and needs the same front/back split, not just the four hand-placed accent trees this
+        // used to be limited to (see renderWallForegroundTrees's history) - anything else nearby
+        // still got silently painted over by the wall/palisade, which is what read as "the
+        // settlement standing on top of" those trees.
+        const WALL_RX = 360 * sf, WALL_RY = 140 * sf;
+
+        const backTrees = [];
+        const rawFrontCastle = [];
+        const rawFrontWall = [];
+        spacedTrees.forEach(t => {
+            if (tgBuilding) {
+                const dx = t.x - tgBuilding.x, dy = t.y - tgBuilding.y;
+                if (Math.abs(dx) < TG_CLEARING_HALF_W && Math.abs(dy) < TG_CLEARING_HALF_H) {
+                    return; // inside the Campaign clearing - no tree belongs here
+                }
+            }
+            // A tree anchored INSIDE the Castle's own footprint (not just near its edge) can't be
+            // fixed by clipping alone - for a tree anchored close enough that its trunk sits
+            // right on the boundary, that's most or all of the canopy, leaving a bare trunk
+            // poking out with no crown ("headless tree"). Requiring the anchor to be genuinely
+            // outside the real footprint before promoting it avoids that; `reach` only extends
+            // how far *outside* still counts as close enough to catch.
+            if (castleBuilding) {
+                const reach = canopyRadius(t.size);
+                const dx = t.x - castleBuilding.x, dy = t.y - castleBuilding.y;
+                if (dy > CASTLE_FRONT_EDGE && Math.abs(dx) < CASTLE_HALF_W + reach && dy < CASTLE_FRONT_EDGE + reach) {
+                    rawFrontCastle.push(t);
+                    return;
+                }
+            }
+            // Gate is centered at x=centerX (see renderIntegratedGate/renderGuardTowerWithBase
+            // in renderFrontWallOverlay) - dropped entirely rather than just left unpromoted:
+            // every tree draws its own ground-contact shadow well south of its trunk (see
+            // TerrainRenderer.renderTree), so a background tree anchored just behind the gate
+            // could still have that shadow poke out past the gate's own base into open ground,
+            // even though the tree itself stayed correctly hidden.
+            const wdxGate = t.x - centerX;
+            if (Math.abs(wdxGate) < 110 * sf && t.y > centerY + 20 * sf && t.y < centerY + WALL_RY + 100 * sf) {
+                return;
+            }
+            const wdx = t.x - centerX;
+            if (Math.abs(wdx) >= 95 * sf && Math.abs(wdx) < WALL_RX) {
+                const normX = wdx / WALL_RX;
+                const wallEdgeY = centerY + WALL_RY * Math.sqrt(Math.max(0, 1 - normX * normX));
+                const reach = canopyRadius(t.size);
+                if (t.y > wallEdgeY - reach * 0.25 && t.y < wallEdgeY + reach) {
+                    rawFrontWall.push(t);
+                    return;
+                }
+            }
+            backTrees.push(t);
+        });
+
+        // Re-declutter each front group on its own, with almost no allowed overlap (0.95, vs
+        // 0.62 for the general backdrop) - standing right in front of a structure is the most
+        // visually prominent spot in the whole forest, so it gets the strictest spacing.
+        this._frontTreesTG = []; // the Campaign clearing above already excludes every tree near it
+        this._frontTreesCastle = declutter(rawFrontCastle, 0.95).sort((a, b) => a.y - b.y);
+        this._frontTreesWall = declutter(rawFrontWall, 0.95).sort((a, b) => a.y - b.y);
+
+        // A background tree sitting right next to one that just got promoted to "front" reads
+        // as that same tree being simultaneously in front of AND behind the building - correct
+        // per-tree occlusion, confusing side by side. Drop any backTrees survivor within
+        // spacing range of a front tree so each ground spot has exactly one, unambiguous tree.
+        const allFront = [...this._frontTreesCastle, ...this._frontTreesWall];
+        const backTreesClean = backTrees.filter(b =>
+            !allFront.some(f => Math.hypot(b.x - f.x, b.y - f.y) < (canopyRadius(b.size) + canopyRadius(f.size)) * 0.95)
+        );
+
         // Render trees with proper z-ordering (by Y position)
         // Filter out trees above the green field boundary (horizon zone)
         const horizonY = canvas.height * 0.62;
-        const filteredTrees = treePositions.filter(t => t.y >= horizonY);
+        const filteredTrees = backTreesClean.filter(t => t.y >= horizonY);
         filteredTrees.sort((a, b) => a.y - b.y);
 
         filteredTrees.forEach((treePos) => {

@@ -1,4 +1,5 @@
 import { Building } from './Building.js';
+import * as TerrainRenderer from '../../core/render/TerrainRenderer.js';
 
 export class MagicAcademy extends Building {
     /**
@@ -199,14 +200,16 @@ export class MagicAcademy extends Building {
      * tower - everything except shimmer/ripples/pulsing crystals/orb glow (see
      * renderDynamicParts).
      *
-     * Originally renderGroundFootprint() only rendered when ctx.buildingManager was set
-     * (the original code's way of detecting "in-game" vs "settlement hub" rendering
-     * context) - simplified to unconditional here since baking only ever happens via the
-     * in-game Pixi adapter (GameplayState), so that distinction is moot for this path.
+     * renderGroundFootprint() only renders when ctx.level is set - it marks the
+     * building's claimed grid cells against the surrounding level terrain, which only
+     * means something during actual gameplay. This same renderStaticBack also runs
+     * directly (not via the in-game Pixi adapter) for the Settlement Hub's decorative
+     * preview instance, where ctx.level is always null - there it previously showed up
+     * as an unexplained dark soft-edged patch under the building with no grid to mark.
      */
     renderStaticBack(ctx, size) {
         size *= MagicAcademy.VISUAL_SCALE;
-        this.renderGroundFootprint(ctx, size);
+        if (ctx.level) this.renderGroundFootprint(ctx, size);
 
         // Back-row trees/bushes (see VEGETATION_BACK_Y) render before the moat, so its
         // bank and water can naturally overlap their base - grounding them behind the
@@ -660,136 +663,14 @@ export class MagicAcademy extends Building {
                 // Campaign-aware vegetation
                 ctx.level.renderVegetation(ctx, treeX, treeY, scale, 0, 0, index);
             } else {
-                // Fallback: forest trees - a warm earthy shadow instead of flat black so
-                // the tree blends into the dirt/grass beneath it rather than reading as
-                // a flat cutout pasted on top.
-                ctx.fillStyle = 'rgba(40, 28, 12, 0.3)';
-                ctx.save();
-                ctx.translate(treeX + 3, treeY + 4);
-                ctx.scale(1, 0.4);
-                ctx.beginPath();
-                ctx.arc(0, 0, scale * 0.35, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
-                const treeType = index % 4;
-                switch(treeType) {
-                    case 0: this.renderTreeType1(ctx, treeX, treeY, scale); break;
-                    case 1: this.renderTreeType2(ctx, treeX, treeY, scale); break;
-                    case 2: this.renderTreeType3(ctx, treeX, treeY, scale); break;
-                    default: this.renderTreeType4(ctx, treeX, treeY, scale);
-                }
+                // No ctx.level (e.g. settlement hub) - force the same forest-style trees
+                // via the shared TerrainRenderer instead of this building's own stale
+                // duplicate tree code.
+                TerrainRenderer.renderVegetation(ctx, treeX, treeY, scale, 0, 0, index, 'forest');
             }
         });
     }
-    
-    renderTreeType1(ctx, x, y, size) {
-        const trunkWidth = size * 0.25;
-        const trunkHeight = size * 0.5;
-        ctx.fillStyle = '#5D4037';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        ctx.fillStyle = '#3E2723';
-        ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
-        ctx.fillStyle = '#0D3817';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.6);
-        ctx.lineTo(x + size * 0.35, y - size * 0.1);
-        ctx.lineTo(x - size * 0.35, y - size * 0.1);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.35);
-        ctx.lineTo(x + size * 0.3, y + size * 0.05);
-        ctx.lineTo(x - size * 0.3, y + size * 0.05);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.15);
-        ctx.lineTo(x + size * 0.25, y + size * 0.2);
-        ctx.lineTo(x - size * 0.25, y + size * 0.2);
-        ctx.closePath();
-        ctx.fill();
-    }
 
-    renderTreeType2(ctx, x, y, size) {
-        const trunkWidth = size * 0.2;
-        const trunkHeight = size * 0.4;
-        ctx.fillStyle = '#6B4423';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        ctx.fillStyle = '#8B5A3C';
-        ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.35, size * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#43A047';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.55, size * 0.2, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    renderTreeType3(ctx, x, y, size) {
-        // Sparse tree with distinct branches
-        const trunkWidth = size * 0.22;
-        ctx.fillStyle = '#795548';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
-        ctx.fillStyle = '#4E342E';
-        ctx.beginPath();
-        ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(x + size * 0.28, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    renderTreeType4(ctx, x, y, size) {
-        // Pine/Spruce style with layered triangles
-        const trunkWidth = size * 0.18;
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
-        ctx.fillStyle = '#0D3817';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.05);
-        ctx.lineTo(x + size * 0.38, y + size * 0.15);
-        ctx.lineTo(x - size * 0.38, y + size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.25);
-        ctx.lineTo(x + size * 0.3, y);
-        ctx.lineTo(x - size * 0.3, y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.45);
-        ctx.lineTo(x + size * 0.2, y - size * 0.15);
-        ctx.lineTo(x - size * 0.2, y - size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#43A047';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.6);
-        ctx.lineTo(x + size * 0.12, y - size * 0.45);
-        ctx.lineTo(x - size * 0.12, y - size * 0.45);
-        ctx.closePath();
-        ctx.fill();
-    }
-    
     renderBushes(ctx, size, backLayer) {
         const sf = size / 128;
         this.bushes.forEach((bush, index) => {
@@ -802,29 +683,10 @@ export class MagicAcademy extends Building {
                 // Campaign-aware small vegetation
                 ctx.level.renderVegetation(ctx, bushX, bushY, bs * 3.5, 0, 0, index + 20);
             } else {
-                // Fallback: forest bushes - warm earthy shadow so it blends into the
-                // ground beneath it rather than reading as a flat cutout.
-                ctx.save();
-                ctx.translate(bushX, bushY);
-
-                ctx.fillStyle = 'rgba(40, 28, 12, 0.32)';
-                ctx.beginPath();
-                ctx.ellipse(2, 2, bs, bs * 0.3, 0, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.fillStyle = '#228B22';
-                ctx.beginPath();
-                ctx.arc(0, 0, bs, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.fillStyle = '#32CD32';
-                for (let i = 0; i < 3; i++) {
-                    const angle = (i / 3) * Math.PI * 2;
-                    ctx.beginPath();
-                    ctx.arc(Math.cos(angle) * bs * 0.4, Math.sin(angle) * bs * 0.4, bs * 0.3, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                ctx.restore();
+                // No ctx.level (e.g. settlement hub) - force the same forest-style bushes
+                // via the shared TerrainRenderer instead of this building's own stale
+                // duplicate bush code.
+                TerrainRenderer.renderVegetation(ctx, bushX, bushY, bs * 3.5, 0, 0, index + 20, 'forest');
             }
         });
     }

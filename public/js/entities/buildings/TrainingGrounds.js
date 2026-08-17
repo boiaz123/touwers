@@ -105,32 +105,6 @@ export class TrainingGrounds extends Building {
             height: 9
         };
 
-        // Environmental decorations around fence - LARGER and OUTSIDE (but within grid).
-        // The two corner trees nearest the hut (index 0/1) sit well above the fence line
-        // (y well past -60) so their canopies never visually cross over the hut roof.
-        this.fenceDecorations = {
-            trees: [
-                { x: -56, y: -60, size: 1.8, gridX: -1, gridY: -1 },
-                { x: -42, y: -64, size: 2.0, gridX: -1, gridY: -2 },
-                { x: 54, y: -52, size: 1.9, gridX: 1, gridY: -1 },
-                { x: 56, y: -48, size: 1.7, gridX: 2, gridY: -1 },
-                { x: -56, y: 52, size: 1.95, gridX: -2, gridY: 1 },
-                { x: 54, y: 54, size: 1.8, gridX: 1, gridY: 2 }
-            ],
-            rocks: [
-                { x: -60, y: -40, size: 1.75 },
-                { x: 60, y: -42, size: 2.0 },
-                { x: -60, y: 36, size: 1.9 },
-                { x: 60, y: 32, size: 1.6 }
-            ],
-            bushes: [
-                { x: -57, y: -32, size: 0.6 },
-                { x: 58, y: -36, size: 0.65 },
-                { x: -56, y: 48, size: 0.55 },
-                { x: 57, y: 52, size: 0.7 }
-            ]
-        };
-
         // Supply props INSIDE the fence (mirrors the hut corner with a barrel stack, and
         // tucks crates into the two open corners by the sword-fight area) - keeps them
         // visually tied to the yard instead of scattered loose in the field outside.
@@ -157,12 +131,6 @@ export class TrainingGrounds extends Building {
         // Set by BuildingRenderAdapter once it has baked/synced this building's static
         // grounds via Pixi (particles still draw here regardless - not yet migrated).
         this.skipCanvas2DBodyRender = false;
-
-        // When true, fence-decoration vegetation always uses the local generic tree/bush
-        // renderer instead of ctx.level.renderVegetation - set by SettlementHub on its campaign-
-        // select preview instance so it always shows forest-style trees regardless of whatever
-        // campaign ctx.level happens to reflect (e.g. the last level actually played).
-        this.forceLocalVegetation = false;
     }
 
     update(deltaTime) {
@@ -413,7 +381,6 @@ export class TrainingGrounds extends Building {
         this.renderDetailedGround(ctx, size);
         this.renderArcherLanePaths(ctx);
         this.renderFencePerimeter(ctx, size);
-        this.renderFenceDecorations(ctx, size);
         this.renderHut(ctx, size);
         this.renderYardProps(ctx);
         this.renderLaneMarkings(ctx, size);
@@ -709,223 +676,6 @@ export class TrainingGrounds extends Building {
                 });
             }
         });
-    }
-
-    renderFenceDecorations(ctx, size) {
-        // Render trees around fence
-        this.fenceDecorations.trees.forEach((tree) => {
-            const treeX = this.x + tree.x;
-            const treeY = this.y + tree.y;
-            const treeSize = tree.size * 15;
-
-            // Ground contact shadow ties the vegetation to the ground plane
-            ctx.fillStyle = 'rgba(20, 30, 10, 0.25)';
-            ctx.beginPath();
-            ctx.ellipse(treeX, treeY + treeSize * 0.05, treeSize * 0.32, treeSize * 0.09, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            if (ctx.level && !this.forceLocalVegetation) {
-                ctx.level.renderVegetation(ctx, treeX, treeY, treeSize, tree.gridX, tree.gridY, 0);
-            } else {
-                this.renderTree(ctx, treeX, treeY, treeSize, tree.gridX, tree.gridY);
-            }
-        });
-
-        // Render rocks around fence
-        this.fenceDecorations.rocks.forEach(rock => {
-            const rockX = this.x + rock.x;
-            const rockY = this.y + rock.y;
-
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.beginPath();
-            ctx.ellipse(rockX + 0.6, rockY + rock.size * 0.5, rock.size * 1.1, rock.size * 0.4, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            const rockGradient = ctx.createRadialGradient(
-                rockX - rock.size * 0.3, rockY - rock.size * 0.3, 0,
-                rockX, rockY, rock.size
-            );
-            rockGradient.addColorStop(0, '#8C8C88');
-            rockGradient.addColorStop(1, '#54544E');
-            ctx.fillStyle = rockGradient;
-            ctx.strokeStyle = '#2F2F2F';
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            ctx.arc(rockX, rockY, rock.size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-        });
-
-        // Render bushes around fence
-        this.fenceDecorations.bushes.forEach((bush, index) => {
-            const bushX = this.x + bush.x;
-            const bushY = this.y + bush.y;
-            const scale = bush.size;
-
-            ctx.fillStyle = 'rgba(20, 30, 10, 0.22)';
-            ctx.beginPath();
-            ctx.ellipse(bushX, bushY + 1.6 * scale, 2.6 * scale, 0.8 * scale, 0, 0, Math.PI * 2);
-            ctx.fill();
-
-            if (ctx.level && !this.forceLocalVegetation) {
-                ctx.level.renderVegetation(ctx, bushX, bushY, scale * 15, 0, 0, index + 10);
-            } else {
-                ctx.fillStyle = '#1f6f1f';
-                ctx.beginPath();
-                ctx.arc(bushX, bushY, 2.5 * scale, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = '#28a028';
-                ctx.beginPath();
-                ctx.arc(bushX - 1 * scale, bushY - 1 * scale, 1.75 * scale, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(bushX + 1 * scale, bushY - 1 * scale, 1.75 * scale, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        });
-    }
-
-    // Tree rendering methods from LevelBase (adapted for scaled usage)
-    renderTree(ctx, x, y, size, gridX, gridY) {
-        // Normalize to a non-negative remainder - gridX/gridY here are often negative (fence
-        // decorations sit at negative grid offsets), and JS's % keeps the sign of the dividend,
-        // so an unguarded `% 4` on a negative sum always misses case 0/1/2 and collapses every
-        // negative-offset tree onto the same default type instead of cycling through all four.
-        const seed = ((Math.floor(gridX + gridY) % 4) + 4) % 4;
-        switch(seed) {
-            case 0:
-                this.renderTreeType1(ctx, x, y, size);
-                break;
-            case 1:
-                this.renderTreeType2(ctx, x, y, size);
-                break;
-            case 2:
-                this.renderTreeType3(ctx, x, y, size);
-                break;
-            default:
-                this.renderTreeType4(ctx, x, y, size);
-        }
-    }
-
-    renderTreeType1(ctx, x, y, size) {
-        const trunkWidth = size * 0.25;
-        const trunkHeight = size * 0.5;
-        ctx.fillStyle = '#5D4037';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        ctx.fillStyle = '#3E2723';
-        ctx.fillRect(x, y, trunkWidth * 0.5, trunkHeight);
-        ctx.fillStyle = '#0D3817';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.6);
-        ctx.lineTo(x + size * 0.35, y - size * 0.1);
-        ctx.lineTo(x - size * 0.35, y - size * 0.1);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(6, 26, 10, 0.4)';
-        ctx.lineWidth = size * 0.02;
-        ctx.stroke();
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.35);
-        ctx.lineTo(x + size * 0.3, y + size * 0.05);
-        ctx.lineTo(x - size * 0.3, y + size * 0.05);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.15);
-        ctx.lineTo(x + size * 0.25, y + size * 0.2);
-        ctx.lineTo(x - size * 0.25, y + size * 0.2);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-    renderTreeType2(ctx, x, y, size) {
-        const trunkWidth = size * 0.2;
-        const trunkHeight = size * 0.4;
-        ctx.fillStyle = '#6B4423';
-        ctx.fillRect(x - trunkWidth * 0.5, y, trunkWidth, trunkHeight);
-        ctx.fillStyle = '#8B5A3C';
-        ctx.fillRect(x - trunkWidth * 0.5 + trunkWidth * 0.6, y, trunkWidth * 0.4, trunkHeight);
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.1, size * 0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(6, 26, 10, 0.4)';
-        ctx.lineWidth = size * 0.02;
-        ctx.stroke();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.35, size * 0.35, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#43A047';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.55, size * 0.2, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    renderTreeType3(ctx, x, y, size) {
-        // Sparse tree with distinct branches
-        const trunkWidth = size * 0.22;
-        ctx.fillStyle = '#795548';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.2, trunkWidth, size * 0.6);
-        ctx.fillStyle = '#4E342E';
-        ctx.beginPath();
-        ctx.arc(x + trunkWidth * 0.25, y, trunkWidth * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#1B5E20';
-        ctx.strokeStyle = 'rgba(6, 26, 10, 0.4)';
-        ctx.lineWidth = size * 0.02;
-        ctx.beginPath();
-        ctx.arc(x - size * 0.28, y - size * 0.35, size * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(x + size * 0.28, y - size * 0.3, size * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.arc(x, y - size * 0.55, size * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    renderTreeType4(ctx, x, y, size) {
-        // Pine/Spruce style with layered triangles
-        const trunkWidth = size * 0.18;
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(x - trunkWidth * 0.5, y - size * 0.05, trunkWidth, size * 0.45);
-        ctx.fillStyle = '#0D3817';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.05);
-        ctx.lineTo(x + size * 0.38, y + size * 0.15);
-        ctx.lineTo(x - size * 0.38, y + size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(6, 26, 10, 0.4)';
-        ctx.lineWidth = size * 0.02;
-        ctx.stroke();
-        ctx.fillStyle = '#1B5E20';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.25);
-        ctx.lineTo(x + size * 0.3, y);
-        ctx.lineTo(x - size * 0.3, y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#2E7D32';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.45);
-        ctx.lineTo(x + size * 0.2, y - size * 0.15);
-        ctx.lineTo(x - size * 0.2, y - size * 0.15);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#43A047';
-        ctx.beginPath();
-        ctx.moveTo(x, y - size * 0.65);
-        ctx.lineTo(x + size * 0.12, y - size * 0.35);
-        ctx.lineTo(x - size * 0.12, y - size * 0.35);
-        ctx.closePath();
-        ctx.fill();
     }
 
     renderHut(ctx, size) {
