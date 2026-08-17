@@ -164,13 +164,17 @@ export class CampaignMenu {
 
     // â”€â”€ Hit testing helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-    // Card height is derived from however many campaigns are shown, so the
-    // full stack of cards always starts at topPadding and ends exactly at
-    // the same bottom edge as the detail panel — never taller or shorter.
+    // Card height is derived from the total number of campaigns that exist
+    // (locked or not), not just the ones currently unlocked. This keeps each
+    // card's size and slot position fixed as the player progresses — newly
+    // unlocked campaigns simply fill the next empty slot rather than causing
+    // every card to resize and reflow. The full stack still starts at
+    // topPadding and, once all campaigns are unlocked, ends exactly at the
+    // same bottom edge as the detail panel.
     getCardHeight() {
         const canvas = this.stateManager.canvas;
         const { topPadding, bottomPadding, cardGap } = this.layout;
-        const n = Math.max(1, this.campaigns.length);
+        const n = Math.max(1, CampaignRegistry.getAllCampaigns().length);
         const availableHeight = canvas.height - topPadding - bottomPadding;
         return (availableHeight - (n - 1) * cardGap) / n;
     }
