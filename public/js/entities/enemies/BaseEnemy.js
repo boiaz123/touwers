@@ -14,6 +14,7 @@ export class BaseEnemy {
         this.lootDropChance = 0.01; // 1/100 base chance to drop normal loot on death (0-1)
         this.rareLootDropChance = 0.001; // 1/1000 base chance to drop rare loot on death (0-1)
         this.realmShardDropChance = 0; // Chance to drop a Frog King's Realm Shard
+        this.workshopTokenChance = 0; // Chance to drop this enemy's own Workshop token (0 until the Commander's Workshop is purchased - see EnemyManager._applyEnemyDefaults)
 
         // Optional death-triggered spawn: array of { type, count, healthMultiplier? }
         // entries. When this enemy dies, EnemyManager.removeDeadEnemies() spawns these
@@ -443,6 +444,13 @@ export class BaseEnemy {
      */
     shouldDropRealmShard() {
         return this.realmShardDropChance > 0 && Math.random() < this.realmShardDropChance;
+    }
+
+    /**
+     * Check if this enemy should drop a Workshop token for its own type
+     */
+    shouldDropWorkshopToken() {
+        return this.workshopTokenChance > 0 && Math.random() < this.workshopTokenChance;
     }
 
     /**

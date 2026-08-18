@@ -5,6 +5,7 @@
 import { CampaignThemeConfig } from '../core/CampaignThemeConfig.js';
 import { DesignerRenderAdapter } from '../core/render/adapters/DesignerRenderAdapter.js';
 import * as TerrainRenderer from '../core/render/TerrainRenderer.js';
+import { WorkshopRegistry } from '../core/WorkshopRegistry.js';
 
 // Vite glob patterns must be literal strings (no variables), hence one call per
 // campaign folder. This replaces a hardcoded per-campaign level count that would
@@ -92,9 +93,12 @@ export class LevelDesigner {
         // Confirmation system
         this.confirmationCallback = null;
         
-        // Enemies and towers for form
-        this.enemies = ['basic', 'villager', 'archer', 'beefyenemy', 'knight', 'shieldknight', 'mage', 'frog', 'earthfrog', 'waterfrog', 'firefrog', 'airfrog', 'frogking'];
-        
+        // Enemies and towers for form - filtered to what the player has purchased in the
+        // Workshop shop when running as the in-game designer (see _computeAvailableEnemies).
+        // The standalone dev tool (designerMode 'dev') always sees the full roster.
+        this.enemies = [];
+        this._computeAvailableEnemies();
+
         // Wire the single-select "Type" picker (used for single tree placement and rocks).
         // Brush mode has its own separate multi-select swatches inside the brush panel
         // (wired below) instead of overloading these same buttons with a second meaning.
@@ -2931,6 +2935,55 @@ ${pathCode}
     /** Called by LevelDesignerState after instantiation to wire save-slot support. */
     setStateManager(sm) {
         this._stateManager = sm;
+        // Re-derive the unlocked enemy/theme lists every time the designer is (re-)entered,
+        // so purchases made in the Workshop shop since the last visit show up.
+        this._computeAvailableEnemies();
+        this._applyThemeLocks();
+    }
+
+    /**
+     * Recomputes this.enemies from WorkshopRegistry, filtered by what's been purchased in
+     * the Workshop shop. The standalone dev tool (designerMode 'dev', no stateManager) stays
+     * unrestricted - it's a developer convenience, not subject to the in-game economy.
+     */
+    _computeAvailableEnemies() {
+        const allIds = WorkshopRegistry.getAllEnemyIds();
+        const workshopSystem = this._stateManager && this._stateManager.workshopSystem;
+        if (this.designerMode === 'dev' || !workshopSystem) {
+            this.enemies = allIds;
+            return;
+        }
+        this.enemies = allIds.filter(id => workshopSystem.hasEnemyType(id));
+    }
+
+    /**
+     * Disables <option> elements in the Campaign Theme select for themes not yet purchased
+     * in the Workshop shop, and moves the current selection off a locked theme if needed.
+     * Same dev-mode bypass as _computeAvailableEnemies.
+     */
+    _applyThemeLocks() {
+        const select = document.getElementById('campaignTheme');
+        if (!select) return;
+
+        const workshopSystem = this._stateManager && this._stateManager.workshopSystem;
+        const unrestricted = this.designerMode === 'dev' || !workshopSystem;
+
+        let firstUnlocked = null;
+        Array.from(select.options).forEach(option => {
+            const themeId = option.value;
+            const unlocked = unrestricted || workshopSystem.hasCampaignTheme(themeId);
+            option.disabled = !unlocked;
+            const baseLabel = option.textContent.replace(/ \(Locked\)$/, '');
+            option.textContent = unlocked ? baseLabel : `${baseLabel} (Locked)`;
+            if (unlocked && firstUnlocked === null) firstUnlocked = themeId;
+        });
+
+        if (!unrestricted && select.options[select.selectedIndex] && select.options[select.selectedIndex].disabled) {
+            if (firstUnlocked) {
+                select.value = firstUnlocked;
+                this.currentCampaign = firstUnlocked;
+            }
+        }
     }
 
     openSaveModal() {

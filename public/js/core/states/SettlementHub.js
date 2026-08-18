@@ -16,6 +16,9 @@ import { MarketplaceRegistry } from '../MarketplaceRegistry.js';
 import { EnemyIntelRegistry } from '../EnemyIntelRegistry.js';
 import { SirFrogerty } from '../../ui/SirFrogerty.js';
 import { CampaignRegistry } from '../../game/CampaignRegistry.js';
+import { WorkshopSystem } from '../WorkshopSystem.js';
+import { WorkshopMenu } from '../WorkshopMenu.js';
+import { WorkshopHall } from '../../entities/buildings/WorkshopHall.js';
 import * as TerrainRenderer from '../render/TerrainRenderer.js';
 
 // Import Tauri invoke for app control
@@ -59,6 +62,7 @@ export class SettlementHub {
         this.arcaneLibraryPopup = null;
         this.musicalScoresPopup = null;
         this.achievementPanelPopup = null;
+        this.workshopPopup = null;
         this.buildingPositions = {};
         
         // Animation state
@@ -150,7 +154,15 @@ export class SettlementHub {
                     this.stateManager.marketplaceSystem.restoreFromSave(currentSaveData.marketplace);
                 }
             }
-            
+
+            // Initialize Workshop system (unlocked enemy types/campaign themes + tokens)
+            if (saveSlotChanged || !this.stateManager.workshopSystem || comingFromLoad) {
+                this.stateManager.workshopSystem = new WorkshopSystem();
+                if (currentSaveData.workshop) {
+                    this.stateManager.workshopSystem.restoreFromSave(currentSaveData.workshop);
+                }
+            }
+
             // Initialize game statistics
             // ALWAYS reinitialize if save slot changed, or if not already done, or if returning from level
             if (saveSlotChanged || !this.stateManager.gameStatistics || returningFromLevel) {
@@ -182,6 +194,8 @@ export class SettlementHub {
             }
             // Always create new marketplace system for empty slot
             this.stateManager.marketplaceSystem = new MarketplaceSystem();
+            // Always create new Workshop system for empty slot
+            this.stateManager.workshopSystem = new WorkshopSystem();
             // Always create new statistics for empty slot
             this.stateManager.gameStatistics = new GameStatistics();
             // Always create new achievement system for empty slot
@@ -233,6 +247,10 @@ export class SettlementHub {
             this.arcaneLibraryPopup.tabs = this.arcaneLibraryPopup.tabs.map(b => ({ ...b, hovered: false }));
             this.arcaneLibraryPopup.closeButtonHovered = false;
         }
+        if (this.workshopPopup && this.workshopPopup.tabs) {
+            this.workshopPopup.tabs = this.workshopPopup.tabs.map(b => ({ ...b, hovered: false }));
+            this.workshopPopup.closeButtonHovered = false;
+        }
         if (this.achievementPanelPopup) {
             this.achievementPanelPopup.closeButtonHovered = false;
         }
@@ -269,6 +287,8 @@ export class SettlementHub {
         // Main buildings positioned strategically
         // Training Grounds OUTSIDE the settlement to the left (as per user request)
         // Other buildings spread naturally INSIDE the boundary
+        const workshopUnlocked = !!(this.stateManager.upgradeSystem &&
+            this.stateManager.upgradeSystem.hasUpgrade('commanders-workshop'));
         this.settlementBuildings = [
             // === MAIN INTERACTIVE BUILDINGS ===
             // Training Grounds - EXTERIOR: outside the wall to the left
@@ -303,6 +323,17 @@ export class SettlementHub {
                 action: 'options',
                 exterior: true
             },
+
+            // Workshop - EXTERIOR: only appears once the Commander's Workshop upgrade is
+            // purchased (see UpgradesMenu.handleItemAction's 'commanders-workshop' branch,
+            // which calls _addWorkshopBuilding() to insert this without a full re-enter()).
+            ...(workshopUnlocked ? [{
+                building: new WorkshopHall(centerX + 440 * sf, centerY + 185 * sf, 0, 0),
+                scale: 24 * sf,
+                clickable: true,
+                action: 'workshop',
+                exterior: true
+            }] : []),
 
             // === GUARD POST QUARTERS (BARRACKS) ===
             // Left cluster — a couple of these are town houses instead (see
@@ -356,6 +387,30 @@ export class SettlementHub {
         ];
         
         this.setupMouseListeners();
+    }
+
+    /**
+     * Inserts the Workshop building into the already-built settlementBuildings array
+     * immediately after the Commander's Workshop upgrade is purchased, so the player
+     * doesn't have to leave and re-enter the Settlement Hub to see it appear.
+     * (enter() already inserts it up front on future visits via the workshopUnlocked check.)
+     */
+    _addWorkshopBuilding() {
+        if (this.settlementBuildings.some(item => item.action === 'workshop')) return;
+        const canvas = this.stateManager.canvas;
+        const sf = this._sf || (canvas.width / 1920);
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height * 0.76;
+        this.settlementBuildings.push({
+            building: new WorkshopHall(centerX + 440 * sf, centerY + 185 * sf, 0, 0),
+            scale: 24 * sf,
+            clickable: true,
+            action: 'workshop',
+            exterior: true
+        });
+        // Invalidate the cached filtered/sorted subsets renderSettlementBuildings() builds once
+        // and reuses (see its own comment: "buildings never move or change identity at runtime").
+        this._sbCache = null;
     }
 
     exit() {
@@ -434,6 +489,8 @@ export class SettlementHub {
             this.musicalScoresPopup.updateHoverState(x, y);
         } else if (this.activePopup === 'achievementPanel' && this.achievementPanelPopup) {
             this.achievementPanelPopup.updateHoverState(x, y);
+        } else if (this.activePopup === 'workshop' && this.workshopPopup) {
+            this.workshopPopup.updateHoverState(x, y);
         } else {
             // Check settlement building hover states
             const sf = this._sf || 1;
@@ -525,6 +582,9 @@ export class SettlementHub {
         } else if (this.activePopup === 'achievementPanel' && this.achievementPanelPopup) {
             this.achievementPanelPopup.handleClick(x, y);
             return;
+        } else if (this.activePopup === 'workshop' && this.workshopPopup) {
+            this.workshopPopup.handleClick(x, y);
+            return;
         }
 
         // Check bard click (only if musical-equipment upgrade purchased)
@@ -592,6 +652,12 @@ export class SettlementHub {
                 this.arcaneLibraryPopup = new ArcaneLibraryMenu(this.stateManager, this);
             }
             this.arcaneLibraryPopup.open();
+        } else if (buildingItem.action === 'workshop') {
+            this.activePopup = 'workshop';
+            if (!this.workshopPopup) {
+                this.workshopPopup = new WorkshopMenu(this.stateManager, this);
+            }
+            this.workshopPopup.open();
         }
     }
 
@@ -1070,6 +1136,8 @@ export class SettlementHub {
             this.musicalScoresPopup.update(deltaTime);
         } else if (this.activePopup === 'achievementPanel' && this.achievementPanelPopup) {
             this.achievementPanelPopup.update(deltaTime);
+        } else if (this.activePopup === 'workshop' && this.workshopPopup) {
+            this.workshopPopup.update(deltaTime);
         }
 
         // Update Sir Frogerty adviser
@@ -1142,6 +1210,8 @@ export class SettlementHub {
                 this.musicalScoresPopup.render(ctx);
             } else if (this.activePopup === 'achievementPanel' && this.achievementPanelPopup) {
                 this.achievementPanelPopup.render(ctx);
+            } else if (this.activePopup === 'workshop' && this.workshopPopup) {
+                this.workshopPopup.render(ctx);
             }
 
             // Professional fade-in overlay effect (soft, from dark to transparent)
@@ -3070,7 +3140,8 @@ export class SettlementHub {
                     'TrainingGrounds': 'Campaign',
                     'MagicAcademy': 'Arcane Library',
                     'TowerForge': 'Buy & Sell',
-                    'Castle': 'Manage Settlement'
+                    'Castle': 'Manage Settlement',
+                    'WorkshopHall': 'Workshop'
                 },
                 interior: this.settlementBuildings
                     .filter(item => !item.exterior && item.building)
@@ -3141,7 +3212,10 @@ export class SettlementHub {
 
         const sf = this._sf || 1;
         const headerX = item.building.x;
-        const headerY = item.building.y - 120 * sf;
+        // WorkshopHall is shorter than the other headered buildings, so its default header
+        // offset leaves an oversized gap above the building - sits a little lower than the rest.
+        const headerOffset = buildingType === 'WorkshopHall' ? 100 : 120;
+        const headerY = item.building.y - headerOffset * sf;
         const fontSize = Math.round(22 * sf);
 
         if (buildingType === 'TowerForge') {
@@ -3574,10 +3648,18 @@ export class SettlementHub {
         const sf = canvas.width / 1920;
         const tgBuilding = (this.settlementBuildings.find(item => item.building instanceof TrainingGrounds) || {}).building;
         const castleBuilding = (this.settlementBuildings.find(item => item.building instanceof Castle) || {}).building;
+        const workshopBuilding = (this.settlementBuildings.find(item => item.building instanceof WorkshopHall) || {}).building;
         // Fence is roughly 77x74 (see TG_FENCE_HALF_W/H history in earlier passes); the clearing
         // extends well past that so the yard reads as an open spot, not just tree-free right up
         // to the rail.
         const TG_CLEARING_HALF_W = 140 * sf, TG_CLEARING_HALF_H = 135 * sf;
+        // WorkshopHall's own footprint (roof peak + banner pole reach roughly 55px above its
+        // anchor, spears/pole reach roughly 35px to either side, at STRUCTURE_SCALE=0.8 - see
+        // WorkshopHall.js) - this whole forest layer bakes once, entirely behind every exterior
+        // building, so a tree anchored here would otherwise render partly hidden behind the
+        // building instead of standing cleanly beside it. Asymmetric like the building itself:
+        // mostly tree-free above/beside the anchor, barely anything carved out below it.
+        const WORKSHOP_CLEARING_HALF_W = 55 * sf, WORKSHOP_CLEARING_TOP = 85 * sf, WORKSHOP_CLEARING_BOTTOM = 20 * sf;
         // Base platform spans y:[wallHeight/2, wallHeight/2+30] = [40,70] below the Castle's own
         // anchor (see Castle.js's drawCastleBase) - 70 is genuinely where the structure ends.
         const CASTLE_HALF_W = 110, CASTLE_FRONT_EDGE = 70;
@@ -3597,6 +3679,12 @@ export class SettlementHub {
                 const dx = t.x - tgBuilding.x, dy = t.y - tgBuilding.y;
                 if (Math.abs(dx) < TG_CLEARING_HALF_W && Math.abs(dy) < TG_CLEARING_HALF_H) {
                     return; // inside the Campaign clearing - no tree belongs here
+                }
+            }
+            if (workshopBuilding) {
+                const dx = t.x - workshopBuilding.x, dy = t.y - workshopBuilding.y;
+                if (Math.abs(dx) < WORKSHOP_CLEARING_HALF_W && dy > -WORKSHOP_CLEARING_TOP && dy < WORKSHOP_CLEARING_BOTTOM) {
+                    return; // inside the Workshop's own footprint - no tree belongs here
                 }
             }
             // A tree anchored INSIDE the Castle's own footprint (not just near its edge) can't be
@@ -4788,7 +4876,8 @@ class UpgradesMenu {
         const upgradeSystem = this.stateManager.upgradeSystem || { hasUpgrade: () => false };
         const marketplaceSystem = this.stateManager.marketplaceSystem || { hasUsedConsumable: () => false, isBoonActive: () => false, getConsumableCount: () => 0 };
         const unlockedCampaigns = this.stateManager.currentSaveData?.unlockedCampaigns || ['campaign-1'];
-        
+        const completedCampaigns = this.stateManager.currentSaveData?.completedCampaigns || [];
+
         const items = [];
         
         // Helper: get the name of the campaign that must be completed to unlock a required campaign id
@@ -5167,24 +5256,48 @@ class UpgradesMenu {
                 },
                 category: 'building',
                 campaignRequirement: 'campaign-3'
+            },
+            {
+                id: 'commanders-workshop',
+                name: "Commander's Workshop",
+                description: 'Blueprints for a private workshop where you can design and test your own battle maps.',
+                effect: 'Unlocks the Commander\'s Workshop level designer\nAdds the Workshop building to your settlement',
+                cost: 2000,
+                drawIcon(ctx, cx, cy, size) {
+                    const camp5 = CampaignRegistry.getCampaign('campaign-5');
+                    if (camp5 && camp5.drawIcon) {
+                        camp5.drawIcon(ctx, cx, cy, size);
+                    }
+                },
+                category: 'building',
+                // Distinct from campaignRequirement (checked against unlockedCampaigns, which
+                // includes campaign-1 from the very start): this upgrade should only appear once
+                // campaign-1 has actually been beaten, so it's gated on completedCampaigns instead.
+                completedCampaignRequirement: 'campaign-1'
             }
         ];
-        
+
         for (const upgrade of upgradeData) {
             const isPurchased = upgradeSystem.hasUpgrade(upgrade.id);
             let canPurchase = !isPurchased;
             let requirementMsg = null;
-            
+
             // Check prerequisites — hide upgrade entirely if prerequisite not yet met
             if (!isPurchased && upgrade.prerequisite && !upgradeSystem.hasUpgrade(upgrade.prerequisite)) {
                 continue;
             }
-            
+
             // Check campaign requirement — hide the upgrade entirely if not yet unlocked
             if (!isPurchased && upgrade.campaignRequirement && !unlockedCampaigns.includes(upgrade.campaignRequirement)) {
                 continue;
             }
-            
+
+            // Check completed-campaign requirement — hide the upgrade entirely until that
+            // campaign has actually been beaten (not just unlocked)
+            if (!isPurchased && upgrade.completedCampaignRequirement && !completedCampaigns.includes(upgrade.completedCampaignRequirement)) {
+                continue;
+            }
+
             // If already purchased, set requirement message to "Purchased"
             if (isPurchased) {
                 requirementMsg = 'Purchased';
@@ -5809,7 +5922,27 @@ class UpgradesMenu {
             if (item.type === 'upgrade') {
                 // Purchase upgrade to upgrade system
                 this.stateManager.upgradeSystem.purchaseUpgrade(item.id);
-                
+
+                // Commander's Workshop unlocks the campaign-5 screen (same mechanism the old
+                // Frog-King-completion path used to set) and spawns the Workshop building on
+                // the settlement map immediately, without needing to leave and re-enter.
+                if (item.id === 'commanders-workshop') {
+                    const saveData = this.stateManager.currentSaveData;
+                    if (saveData) {
+                        if (!saveData.unlockedCampaigns) saveData.unlockedCampaigns = ['campaign-1'];
+                        if (!saveData.unlockedCampaigns.includes('campaign-5')) {
+                            saveData.unlockedCampaigns.push('campaign-5');
+                        }
+                        CampaignRegistry.loadFromSaveData(saveData);
+                    }
+                    if (!this.stateManager.workshopSystem) {
+                        this.stateManager.workshopSystem = new WorkshopSystem();
+                    }
+                    if (this.settlementHub) {
+                        this.settlementHub._addWorkshopBuilding();
+                    }
+                }
+
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('upgrade');
                 }
@@ -7265,6 +7398,7 @@ class SettlementOptionsMenu {
                     playerInventory: this.stateManager.playerInventory || [],
                     upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
                     marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
+                    workshop: this.stateManager.workshopSystem ? this.stateManager.workshopSystem.serialize() : { unlockedEnemyTypes: [], unlockedCampaignThemes: [], tokens: {} },
                     statistics: this.stateManager.gameStatistics ? this.stateManager.gameStatistics.serialize() : {},
                     achievements: this.stateManager.achievementSystem ? this.stateManager.achievementSystem.serialize() : { unlockedIds: [] },
                     lastPlayedLevel: this.stateManager.currentSaveData.lastPlayedLevel,
@@ -7850,6 +7984,7 @@ class ManageSettlementMenu {
                 playerInventory: this.stateManager.playerInventory || [],
                 upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
                 marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
+                    workshop: this.stateManager.workshopSystem ? this.stateManager.workshopSystem.serialize() : { unlockedEnemyTypes: [], unlockedCampaignThemes: [], tokens: {} },
                 statistics: this.stateManager.gameStatistics ? this.stateManager.gameStatistics.serialize() : {},
                 achievements: this.stateManager.achievementSystem ? this.stateManager.achievementSystem.serialize() : { unlockedIds: [] },
                 lastPlayedLevel: this.stateManager.currentSaveData.lastPlayedLevel,
@@ -7903,6 +8038,7 @@ class ManageSettlementMenu {
                         playerInventory: this.stateManager.playerInventory || [],
                         upgrades: this.stateManager.upgradeSystem ? this.stateManager.upgradeSystem.serialize() : { purchasedUpgrades: [] },
                         marketplace: this.stateManager.marketplaceSystem ? this.stateManager.marketplaceSystem.serialize() : { consumables: {} },
+                    workshop: this.stateManager.workshopSystem ? this.stateManager.workshopSystem.serialize() : { unlockedEnemyTypes: [], unlockedCampaignThemes: [], tokens: {} },
                         statistics: this.stateManager.gameStatistics ? this.stateManager.gameStatistics.serialize() : {},
                         achievements: this.stateManager.achievementSystem ? this.stateManager.achievementSystem.serialize() : { unlockedIds: [] },
                         lastPlayedLevel: this.stateManager.currentSaveData.lastPlayedLevel,

@@ -1,5 +1,6 @@
 import { EnemyRegistry } from './EnemyRegistry.js';
 import { HitSplatter } from '../effects/HitSplatter.js';
+import { TOKEN_DROP_CHANCE } from '../../core/WorkshopRegistry.js';
 
 export class EnemyManager {
     constructor(path) {
@@ -197,6 +198,10 @@ export class EnemyManager {
                 enemy.lootDropChance *= 2; // Double the base loot chance
             }
         }
+
+        // Workshop tokens only start dropping once the Commander's Workshop has been
+        // purchased (see GameplayState, which sets this.workshopUnlocked on this manager).
+        enemy.workshopTokenChance = this.workshopUnlocked ? TOKEN_DROP_CHANCE : 0;
     }
 
     /**
@@ -257,6 +262,10 @@ export class EnemyManager {
         const spawnedChildren = this._spawnedChildBuffer;
         spawnedChildren.length = 0;
 
+        if (!this._tokenDropBuffer) this._tokenDropBuffer = [];
+        const tokenDrops = this._tokenDropBuffer;
+        tokenDrops.length = 0;
+
         const startCount = this.enemies.length;
         let writeIdx = 0;
         for (let i = 0; i < this.enemies.length; i++) {
@@ -301,6 +310,11 @@ export class EnemyManager {
                     });
                 }
                 
+                // Check for Workshop token drop (independent of loot rolls, specific to this enemy's own type)
+                if (enemy.shouldDropWorkshopToken && enemy.shouldDropWorkshopToken()) {
+                    tokenDrops.push({ enemyType: enemy.type });
+                }
+
                 // Preserve splatters from dead enemies so they continue to animate and fade
                 if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
                     for (let j = 0; j < enemy.hitSplatters.length; j++) {
@@ -320,7 +334,7 @@ export class EnemyManager {
             }
         }
 
-        return { totalGold, lootDrops, killed: startCount - writeIdx };
+        return { totalGold, lootDrops, tokenDrops, killed: startCount - writeIdx };
     }
     
 }

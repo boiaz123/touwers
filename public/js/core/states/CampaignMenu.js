@@ -7,7 +7,60 @@ const CAMPAIGN_BIOME = {
     'campaign-2': { from: '#1c1810', to: '#130f09', accent: '#5c84b8' },  // Mountain slate accent
     'campaign-3': { from: '#1c1810', to: '#130f09', accent: '#c47c30' },  // Desert amber accent
     'campaign-4': { from: '#1c1810', to: '#130f09', accent: '#8840c0' },  // Frog King violet accent
+    'sandbox': { from: '#1c1810', to: '#130f09', accent: '#d4af37' },     // Freeplay gold accent
 };
+
+/** Draws an overflowing treasure chest - Sandbox mode's "unlimited gold" icon. */
+function _drawSandboxIcon(ctx, cx, cy, size) {
+    const w = size * 0.62, h = size * 0.46;
+    const bx = cx - w / 2, by = cy - h * 0.28;
+
+    // Glow behind the pile, hinting at "unlimited"
+    const glow = ctx.createRadialGradient(cx, by - h * 0.1, 0, cx, by - h * 0.1, size * 0.55);
+    glow.addColorStop(0, 'rgba(255, 215, 100, 0.35)');
+    glow.addColorStop(1, 'rgba(255, 215, 100, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(cx, by - h * 0.1, size * 0.55, 0, Math.PI * 2); ctx.fill();
+
+    // Body
+    const bodyGrad = ctx.createLinearGradient(cx, by + h * 0.3, cx, by + h);
+    bodyGrad.addColorStop(0, '#9a6a30'); bodyGrad.addColorStop(1, '#5c3a18');
+    ctx.fillStyle = bodyGrad;
+    ctx.fillRect(bx, by + h * 0.3, w, h * 0.7);
+    ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(bx, by + h * 0.3, w, h * 0.7);
+
+    // Open lid (angled back)
+    ctx.save();
+    ctx.translate(bx, by + h * 0.3);
+    ctx.rotate(-0.55);
+    const lidGrad = ctx.createLinearGradient(0, -h * 0.5, 0, 0);
+    lidGrad.addColorStop(0, '#c89850'); lidGrad.addColorStop(1, '#8a5a28');
+    ctx.fillStyle = lidGrad;
+    ctx.fillRect(0, -h * 0.42, w, h * 0.42);
+    ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 1.2;
+    ctx.strokeRect(0, -h * 0.42, w, h * 0.42);
+    ctx.restore();
+
+    // Metal bands
+    ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(bx + w * 0.25, by + h * 0.3); ctx.lineTo(bx + w * 0.25, by + h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx + w * 0.75, by + h * 0.3); ctx.lineTo(bx + w * 0.75, by + h); ctx.stroke();
+
+    // Overflowing gold coins
+    ctx.fillStyle = '#ffd700';
+    const coins = [
+        [-0.28, -0.12, 0.11], [-0.08, -0.22, 0.1], [0.14, -0.14, 0.12],
+        [0.30, -0.04, 0.09], [0.0, -0.30, 0.08], [-0.20, -0.02, 0.09]
+    ];
+    coins.forEach(([dx, dy, r]) => {
+        ctx.beginPath();
+        ctx.ellipse(cx + dx * w, by + h * 0.3 + dy * h, r * w, r * w * 0.65, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#a87c1a'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.fillStyle = '#ffd700';
+    });
+}
 
 // Emblem art — drop a same-named file in public/assets/campaigns/ to replace any of these.
 // Missing/unloaded files fall back to the campaign's vector drawIcon() automatically.
@@ -66,8 +119,16 @@ export class CampaignMenu {
         const saveData = this.stateManager.currentSaveData;
         if (saveData) CampaignRegistry.loadFromSaveData(saveData);
 
-        // Only show campaigns the player has unlocked (filter out locked ones)
-        this.campaigns = CampaignRegistry.getCampaignsOrdered().filter(c => !c.locked);
+        // Only show campaigns the player has unlocked (filter out locked ones).
+        // Commander's Workshop (campaign-5) is no longer selectable from here - it's reached
+        // via the Workshop building's "Strategy Table" button in the Settlement Hub instead
+        // (see WorkshopMenu.js). Its old slot in this list is now Sandbox Mode, which moved
+        // here from inside the Workshop and unlocks on defeating the Frog King (campaign-4).
+        this.campaigns = CampaignRegistry.getCampaignsOrdered().filter(c => !c.locked && c.id !== 'campaign-5');
+        const completedCampaigns = saveData?.completedCampaigns || [];
+        if (completedCampaigns.includes('campaign-4')) {
+            this.campaigns.push(this._buildSandboxEntry());
+        }
         this.hoveredCampaignId = null;
         this.hoveredExitButton = false;
         this.hoveredStartButton = false;
@@ -91,6 +152,47 @@ export class CampaignMenu {
 
     exit() {
         this.removeMouseListeners();
+    }
+
+    /** Synthetic campaign-shaped entry for Sandbox Mode - not a real CampaignRegistry
+     *  campaign (no levels, no class to instantiate), so START CAMPAIGN is special-cased
+     *  for it in handleClick()/activateFocusedButton() to launch the sandbox level directly
+     *  instead of instantiating campaign.class. */
+    _buildSandboxEntry() {
+        return {
+            id: 'sandbox',
+            name: 'Sandbox Mode',
+            description: 'Build freely with unlimited gold and no waves.',
+            icon: '∞',
+            drawIcon: _drawSandboxIcon,
+            difficulty: 'Freeplay',
+            class: null,
+            rewards: null,
+            story: 'No waves, no pressure - just you, unlimited gold, and a blank battlefield. Perfect for testing tower placements and combinations without consequence.',
+            completionStory: '',
+            progress: 0,
+            levelCount: null,
+            locked: false
+        };
+    }
+
+    /** Looks up the selected entry from this.campaigns (real campaigns + the synthetic
+     *  Sandbox entry) rather than CampaignRegistry, which has no 'sandbox' id. */
+    _getSelectedEntry() {
+        return this.campaigns.find(c => c.id === this.selectedCampaignId) || null;
+    }
+
+    /** Launches Sandbox Mode directly, mirroring the launch code that used to live in
+     *  PlayerWorkshop's Sandbox Mode button (now removed - see PlayerWorkshop.js). */
+    _launchSandbox() {
+        if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('open-campaign');
+        this.stateManager.selectedLevelInfo = {
+            id: 'sandbox-workshop',
+            name: 'Sandbox Mode',
+            type: 'sandbox',
+            campaignId: 'campaign-5'
+        };
+        this.stateManager.changeState('game');
     }
 
     // ============ GAMEPAD BUTTON NAVIGATION ============
@@ -135,12 +237,16 @@ export class CampaignMenu {
             this.selectedCampaignId = this.campaigns[idx].id;
         } else if (idx === this.campaigns.length) {
             // Start button
-            const sel = this.selectedCampaignId ? CampaignRegistry.getCampaign(this.selectedCampaignId) : null;
+            const sel = this.selectedCampaignId ? this._getSelectedEntry() : null;
             if (sel && !sel.locked) {
-                if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('open-campaign');
-                const campaignState = new sel.class(this.stateManager);
-                this.stateManager.addState('levelSelect', campaignState);
-                this.stateManager.changeState('levelSelect');
+                if (sel.id === 'sandbox') {
+                    this._launchSandbox();
+                } else {
+                    if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('open-campaign');
+                    const campaignState = new sel.class(this.stateManager);
+                    this.stateManager.addState('levelSelect', campaignState);
+                    this.stateManager.changeState('levelSelect');
+                }
             }
         } else if (idx === this.campaigns.length + 1) {
             // Exit
@@ -255,7 +361,7 @@ export class CampaignMenu {
 
         // Start button
         const startBtn = this.getStartButtonBounds();
-        const sel = this.selectedCampaignId ? CampaignRegistry.getCampaign(this.selectedCampaignId) : null;
+        const sel = this.selectedCampaignId ? this._getSelectedEntry() : null;
         if (sel && !sel.locked && this._inBounds(x, y, startBtn)) {
             this.hoveredStartButton = true;
             pointerCursor = true;
@@ -274,13 +380,17 @@ export class CampaignMenu {
         }
 
         // Start button
-        const sel = this.selectedCampaignId ? CampaignRegistry.getCampaign(this.selectedCampaignId) : null;
+        const sel = this.selectedCampaignId ? this._getSelectedEntry() : null;
         const startBtn = this.getStartButtonBounds();
         if (sel && !sel.locked && this._inBounds(x, y, startBtn)) {
-            if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('open-campaign');
-            const campaignState = new sel.class(this.stateManager);
-            this.stateManager.addState('levelSelect', campaignState);
-            this.stateManager.changeState('levelSelect');
+            if (sel.id === 'sandbox') {
+                this._launchSandbox();
+            } else {
+                if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('open-campaign');
+                const campaignState = new sel.class(this.stateManager);
+                this.stateManager.addState('levelSelect', campaignState);
+                this.stateManager.changeState('levelSelect');
+            }
             return;
         }
 
@@ -612,7 +722,7 @@ export class CampaignMenu {
 
     _renderDetailPanel(ctx) {
         const panel = this.getDetailPanelBounds();
-        const campaign = this.selectedCampaignId ? CampaignRegistry.getCampaign(this.selectedCampaignId) : null;
+        const campaign = this.selectedCampaignId ? this._getSelectedEntry() : null;
 
         // Panel background
         const bg = ctx.createLinearGradient(panel.x, panel.y, panel.x, panel.y + panel.height);
@@ -809,13 +919,14 @@ export class CampaignMenu {
             ctx.lineWidth = isHovered ? 2.5 : 1.5;
             ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
 
+            const label = campaign.id === 'sandbox' ? 'ENTER SANDBOX  \u25B6' : 'START CAMPAIGN  \u25B6';
             ctx.font = 'bold 22px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = 'rgba(0,0,0,0.55)';
-            ctx.fillText('START CAMPAIGN  \u25B6', btn.x + btn.width / 2 + 1, btn.y + btn.height / 2 + 1);
+            ctx.fillText(label, btn.x + btn.width / 2 + 1, btn.y + btn.height / 2 + 1);
             ctx.fillStyle = isHovered ? '#000' : '#1a0f04';
-            ctx.fillText('START CAMPAIGN  \u25B6', btn.x + btn.width / 2, btn.y + btn.height / 2);
+            ctx.fillText(label, btn.x + btn.width / 2, btn.y + btn.height / 2);
         }
     }
 

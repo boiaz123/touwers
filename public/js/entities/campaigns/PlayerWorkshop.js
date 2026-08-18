@@ -10,7 +10,9 @@ const SLOT_COUNT = 6;
 /**
  * Commander's Workshop (campaign-5 state)
  * A panel-based UI for playing player-created levels and sandbox mode.
- * Unlocked after defeating the Frog King (final boss of campaign-4).
+ * Unlocked by purchasing the "Commander's Workshop" upgrade in the Upgrades
+ * tab (available once campaign-1 has been completed) - see
+ * SettlementHub.js's UpgradesMenu.handleItemAction 'commanders-workshop' branch.
  */
 export class PlayerWorkshop extends CampaignBase {
     constructor(stateManager) {
@@ -62,20 +64,6 @@ export class PlayerWorkshop extends CampaignBase {
             y: row1Y + row * (cardH + gapY),
             w: cardW,
             h: cardH
-        };
-    }
-
-    _getSandboxBounds() {
-        const canvas = this.stateManager.canvas;
-        const W = canvas.width;
-        const H = canvas.height;
-        const w = Math.round(W * 0.22);
-        const h = Math.round(H * 0.09);
-        return {
-            x: Math.round((W - w) / 2),
-            y: Math.round(H * 0.775),
-            w,
-            h
         };
     }
 
@@ -226,13 +214,6 @@ export class PlayerWorkshop extends CampaignBase {
             }
         }
 
-        const sb = this._getSandboxBounds();
-        if (x >= sb.x && x <= sb.x + sb.w && y >= sb.y && y <= sb.y + sb.h) {
-            this.hoveredCard = SLOT_COUNT;
-            canvas.style.cursor = 'pointer';
-            return;
-        }
-
         canvas.style.cursor = 'default';
     }
 
@@ -293,19 +274,6 @@ export class PlayerWorkshop extends CampaignBase {
                 return;
             }
         }
-
-        const sb = this._getSandboxBounds();
-        if (x >= sb.x && x <= sb.x + sb.w && y >= sb.y && y <= sb.y + sb.h) {
-            if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
-            this.stateManager.selectedLevelInfo = {
-                id: 'sandbox-workshop',
-                name: 'Sandbox Mode',
-                type: 'sandbox',
-                campaignId: 'campaign-5'
-            };
-            this.stateManager.changeState('game');
-            return;
-        }
     }
 
     // ---- Rendering ----
@@ -318,7 +286,6 @@ export class PlayerWorkshop extends CampaignBase {
         this._drawBackground(ctx, W, H);
         this._drawTitle(ctx, W, H);
         this._drawPlayerLevelCards(ctx, W, H);
-        this._drawSandboxButton(ctx);
         this._drawDesignerButton(ctx);
         this.renderNavButtons(ctx);
 
@@ -538,64 +505,6 @@ export class PlayerWorkshop extends CampaignBase {
                 }
             }
         }
-    }
-
-    _drawSandboxButton(ctx) {
-        const sb = this._getSandboxBounds();
-        const isHovered = this.hoveredCard === SLOT_COUNT;
-
-        // Drop shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.fillRect(sb.x + 4, sb.y + 4, sb.w, sb.h);
-
-        // Background gradient — standard wood button
-        if (isHovered) {
-            const bg = ctx.createLinearGradient(0, sb.y, 0, sb.y + sb.h);
-            bg.addColorStop(0, 'rgba(90,74,63,0.98)');
-            bg.addColorStop(0.5, 'rgba(74,58,47,0.98)');
-            bg.addColorStop(1, 'rgba(64,48,37,0.98)');
-            ctx.fillStyle = bg;
-        } else {
-            const bg = ctx.createLinearGradient(0, sb.y, 0, sb.y + sb.h);
-            bg.addColorStop(0, 'rgba(68,48,28,0.9)');
-            bg.addColorStop(0.5, 'rgba(48,28,8,0.9)');
-            bg.addColorStop(1, 'rgba(38,18,0,0.9)');
-            ctx.fillStyle = bg;
-        }
-        ctx.fillRect(sb.x, sb.y, sb.w, sb.h);
-
-        // Border with optional glow
-        if (isHovered) {
-            ctx.shadowColor = 'rgba(212,175,55,0.5)';
-            ctx.shadowBlur = 18;
-        }
-        ctx.strokeStyle = isHovered ? '#ffe700' : '#8a6028';
-        ctx.lineWidth = isHovered ? 3 : 2;
-        ctx.strokeRect(sb.x, sb.y, sb.w, sb.h);
-        ctx.shadowColor = 'rgba(0,0,0,0)';
-        ctx.shadowBlur = 0;
-
-        // Top highlight
-        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(sb.x + 1, sb.y + 1);
-        ctx.lineTo(sb.x + sb.w - 1, sb.y + 1);
-        ctx.stroke();
-
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Label shadow + text
-        ctx.font = `bold ${Math.round(sb.h * 0.33)}px serif`;
-        ctx.fillStyle = 'rgba(0,0,0,0.8)';
-        ctx.fillText('SANDBOX MODE', sb.x + sb.w / 2 + 1, sb.y + sb.h * 0.43 + 1);
-        ctx.fillStyle = isHovered ? '#ffe700' : '#d4af37';
-        ctx.fillText('SANDBOX MODE', sb.x + sb.w / 2, sb.y + sb.h * 0.43);
-
-        ctx.font = `${Math.round(sb.h * 0.22)}px serif`;
-        ctx.fillStyle = isHovered ? '#b09060' : '#7a6040';
-        ctx.fillText('Unlimited gold - no waves', sb.x + sb.w / 2, sb.y + sb.h * 0.73);
     }
 
     _drawDesignerButton(ctx) {

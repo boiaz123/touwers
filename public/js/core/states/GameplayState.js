@@ -331,6 +331,9 @@ export class GameplayState {
         this.enemyManager.audioManager = this.stateManager.audioManager;
         // Set marketplace system reference for consumable checks on enemy spawn
         this.enemyManager.marketplaceSystem = this.stateManager.marketplaceSystem;
+        // Workshop tokens only drop once the Commander's Workshop upgrade has been purchased
+        this.enemyManager.workshopUnlocked = !!(this.stateManager.upgradeSystem &&
+            this.stateManager.upgradeSystem.hasUpgrade('commanders-workshop'));
         this.towerManager.audioManager = this.stateManager.audioManager;
         this.lootManager.audioManager = this.stateManager.audioManager;
         // Ensure all existing towers have audio manager (for loaded games)
@@ -1834,7 +1837,10 @@ export class GameplayState {
             if (this.stateManager.marketplaceSystem) {
                 saveData.marketplace = this.stateManager.marketplaceSystem.serialize();
             }
-            
+            if (this.stateManager.workshopSystem) {
+                saveData.workshop = this.stateManager.workshopSystem.serialize();
+            }
+
             // Save game statistics
             if (this.stateManager.gameStatistics) {
                 saveData.statistics = this.stateManager.gameStatistics.serialize();
@@ -2002,6 +2008,14 @@ export class GameplayState {
         const deathResult = this.enemyManager.removeDeadEnemies();
         const goldFromEnemies = deathResult.totalGold;
         const lootDrops = deathResult.lootDrops || [];
+        const tokenDrops = deathResult.tokenDrops || [];
+
+        // Workshop tokens are granted instantly (no world pickup), same as gold-per-kill
+        if (tokenDrops.length > 0 && this.stateManager.workshopSystem) {
+            for (const drop of tokenDrops) {
+                this.stateManager.workshopSystem.addToken(drop.enemyType, 1);
+            }
+        }
 
         if (deathResult.killed > 0) {
             this.enemiesDefeated += deathResult.killed;

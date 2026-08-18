@@ -8,19 +8,22 @@
  *   campaign-1 (Verdant Woodlands)  → campaign-2 (Ironstone Mountains)
  *   campaign-2                      → campaign-3 (Scorching Sands)
  *   campaign-3                      → campaign-4 (Frog King's Domain)
- *   campaign-4 (Frog King's Domain)   → campaign-5 (Commander's Workshop)
- *   campaign-5                         — unlocked by completing campaign-4
+ *   campaign-5 (Commander's Workshop) is NOT part of this completion chain -
+ *   it's unlocked by purchasing the "Commander's Workshop" upgrade in the
+ *   Upgrades tab (available once campaign-1 is completed). See
+ *   SettlementHub.js's UpgradesMenu.handleItemAction 'commanders-workshop'
+ *   branch, which pushes 'campaign-5' into unlockedCampaigns directly.
  */
 export class CampaignRegistry {
     static campaigns = {};
     static campaignClasses = {};
 
-    /** Maps each campaign to the one it unlocks on completion */
+    /** Maps each campaign to the one it unlocks on completion. campaign-5 is deliberately
+     *  absent - see the class doc comment above for how it actually unlocks. */
     static UNLOCK_CHAIN = {
         'campaign-1': 'campaign-2',
         'campaign-2': 'campaign-3',
-        'campaign-3': 'campaign-4',
-        'campaign-4': 'campaign-5'
+        'campaign-3': 'campaign-4'
     };
 
     /**
@@ -361,7 +364,7 @@ export class CampaignRegistry {
             'campaign-5': {
                 id: 'campaign-5',
                 name: 'Commander\'s Workshop',
-                description: 'Design your own levels and test them in battle. Unlocked by defeating the Frog King.',
+                description: 'Design your own levels and test them in battle. Purchased in the Upgrades tab after completing The Verdant Woodlands.',
                 icon: '◈',
                 drawIcon(ctx, x, y, size) {
                     const s = size * 0.44;
@@ -402,8 +405,8 @@ export class CampaignRegistry {
                     gold: 0,
                     unlocks: []
                 },
-                unlockText: 'Defeat the Frog King to unlock this!',
-                story: 'You have proven yourself a master commander. The Frog King has fallen and the realm is at peace — but the forge of strategy never cools. Here, you can design your own battlegrounds and test your tactical mettle against waves of your own creation.',
+                unlockText: "Purchase the Commander's Workshop upgrade in the Upgrades tab to unlock this!",
+                story: "You have proven yourself a capable commander, and word of your workshop has spread. Here, you can design your own battlegrounds and test your tactical mettle against waves of your own creation - stocked with whatever enemy types and terrain themes you've earned the right to wield.",
                 completionStory: '',
                 lootStyle: { normalChance: 0.10, rareChance: 0.02 },
                 progress: 0,

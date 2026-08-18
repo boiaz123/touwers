@@ -121,6 +121,7 @@ export class SaveSystem {
             playerInventory: settlementData.playerInventory || [],
             upgrades: settlementData.upgrades || { purchasedUpgrades: [] },
             marketplace: settlementData.marketplace || { consumables: {} },
+            workshop: settlementData.workshop || { unlockedEnemyTypes: [], unlockedCampaignThemes: [], tokens: {} },
             statistics: settlementData.statistics || SaveSystem.DEFAULT_STATISTICS,
             achievements: settlementData.achievements || { unlockedIds: [] },
             // Campaign progression
@@ -199,6 +200,7 @@ export class SaveSystem {
             playerInventory: updateData.playerInventory !== undefined ? updateData.playerInventory : (existingSave?.playerInventory || []),
             upgrades: updateData.upgrades || existingSave?.upgrades || { purchasedUpgrades: [] },
             marketplace: updateData.marketplace || existingSave?.marketplace || { consumables: {} },
+            workshop: updateData.workshop || existingSave?.workshop || { unlockedEnemyTypes: [], unlockedCampaignThemes: [], tokens: {} },
             statistics: updateData.statistics || existingSave?.statistics || SaveSystem.DEFAULT_STATISTICS,
             achievements: updateData.achievements || existingSave?.achievements || { unlockedIds: [] },
             // Campaign progression - always preserve
@@ -312,6 +314,7 @@ export class SaveSystem {
             playerInventory: [],
             upgrades: { purchasedUpgrades: [] },
             marketplace: { consumables: {} },
+            workshop: { unlockedEnemyTypes: [], unlockedCampaignThemes: [], tokens: {} },
             statistics: SaveSystem.DEFAULT_STATISTICS,
             lastPlayedLevel: 'level1',
             unlockedLevels: ['level1'],
