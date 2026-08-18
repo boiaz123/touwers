@@ -32,16 +32,23 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
-    target: 'es2020',
-    // Gameplay code identifies building/tower/enemy subclasses at runtime via
-    // `instance.constructor.name === 'GoldMine'` (etc.) in ~30 places across
-    // the codebase. esbuild's default minifier renames class declarations,
-    // silently breaking every one of those string comparisons (they always
-    // evaluate to false) while dev mode - unminified, native ESM - works
-    // fine. esbuild's `keepNames` transform option isn't honored by Vite's
-    // build-time minify step, so we use terser instead, which supports
-    // keep_classnames/keep_fnames directly and keeps `.constructor.name`
-    // truthful in the built app.
+    // Must support native class fields (ES2022). Below that, esbuild's syntax-lowering
+    // rewrites `class Foo { static bar = 1 }` into a class *expression* plus a separate
+    // `__publicField(Foo, "bar", 1)` statement, and Rollup then has to give that expression
+    // its own internal name distinct from the outer binding - which it does by prefixing it
+    // with "_" (`class _Foo`). That silently renames `.constructor.name` for every class with
+    // a static/private field (MagicAcademy, TowerForge, WorkshopHall, CannonTower, most enemy
+    // classes, ...), which gameplay code identifies at runtime via
+    // `instance.constructor.name === 'GoldMine'` (etc.) in ~30 places across the codebase.
+    // Dev mode serves native, unbundled, un-lowered ESM straight to the WebView, so this only
+    // ever showed up in the built app: e.g. SettlementHub's header-label lookup keys off
+    // 'MagicAcademy'/'TowerForge' and silently drew nothing, and TowerManager's
+    // `find(b => b.constructor.name === 'TowerForge')` returned undefined so the Tower Forge
+    // hotkey no-opped. Confirmed by building with `--minify false`: the renaming survives with
+    // minification off, so it's esbuild's target-driven lowering, not terser's mangler -
+    // keep_classnames below doesn't reach this at all. Tauri's WebView2/WKWebView both support
+    // ES2022 natively, so target: 'es2022' avoids the lowering entirely instead of fighting it.
+    target: 'es2022',
     minify: 'terser',
     terserOptions: {
       keep_classnames: true,
