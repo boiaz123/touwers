@@ -1679,7 +1679,17 @@ export class UIManager {
         
         // Build upgraded HTML with professional header + upgrades layout
         let contentHTML = '';
-        
+
+        // Base tower stats these Forge upgrades grow, shared by the header effects badges
+        // below and the per-upgrade section further down.
+        const baseTowerStats = {
+            'basic': { damage: 20 },
+            'archer': { damage: 35 },
+            'barricade_radius': { radius: 20 },
+            'poison': { damage: 13 },
+            'cannon': { damage: 100, radius: 50 }
+        };
+
         // BUILD HEADER SECTION - Professional top panel with forge stats
         if (forgeData.forgeUpgrade || forgeData.forge) {
             const forgeUpgrade = forgeData.forgeUpgrade;
@@ -1699,8 +1709,8 @@ export class UIManager {
             }
             
             if (forge.upgrades.barricade_radius.level > 0) {
-                const radiusBonus = forge.upgrades.barricade_radius.level * forge.upgrades.barricade_radius.effect;
-                effectsList.push(`Barricade: +${radiusBonus}px`);
+                const radiusPercent = Math.round((forge.upgrades.barricade_radius.level * forge.upgrades.barricade_radius.effect / baseTowerStats.barricade_radius.radius) * 100);
+                effectsList.push(`Barricade: +${radiusPercent}%`);
             }
             
             if (forge.forgeLevel >= 2 && forge.upgrades.poison.level > 0) {
@@ -1775,17 +1785,7 @@ export class UIManager {
         if (forgeData.upgrades && forgeData.upgrades.length > 0) {
             contentHTML += `<div class="upgrade-category compact-upgrades">
                 <div class="upgrade-category-header">TOWER ENHANCEMENTS</div>`;
-            
-            // Define base tower stats
-            const baseTowerStats = {
-                'basic': { damage: 20 },
-                'archer': { damage: 35 },
-                'barricade_radius': { radius: 20 },
-                'poison': { damage: 13 },
-                'cannon': { damage: 100, radius: 50 },
 
-            };
-            
             forgeData.upgrades.forEach(upgrade => {
                 const isMaxed = upgrade.level >= upgrade.maxLevel;
                 // calculateUpgradeCost() returns null once this tower's own upgrade level
@@ -1816,10 +1816,10 @@ export class UIManager {
                 } else if (upgrade.id === 'barricade_radius') {
                     const baseRadius = baseTowerStats.barricade_radius.radius;
                     const radiusEffect = forge.upgrades.barricade_radius.effect;
-                    const currentRadius = baseRadius + (forge.upgrades.barricade_radius.level * radiusEffect);
-                    const nextRadius = baseRadius + ((forge.upgrades.barricade_radius.level + 1) * radiusEffect);
-                    currentValue = `${currentRadius}px`;
-                    nextValue = `${nextRadius}px`;
+                    const currentPercent = Math.round((forge.upgrades.barricade_radius.level * radiusEffect / baseRadius) * 100);
+                    const nextPercent = Math.round(((forge.upgrades.barricade_radius.level + 1) * radiusEffect / baseRadius) * 100);
+                    currentValue = `+${currentPercent}%`;
+                    nextValue = `+${nextPercent}%`;
                 } else if (upgrade.id === 'poison') {
                     const baseDmg = baseTowerStats.poison.damage;
                     const currentBonus = this.calculatePoisonBonus(forge.upgrades.poison.level);
@@ -1831,10 +1831,10 @@ export class UIManager {
                     const baseRadius = baseTowerStats.cannon.radius;
                     const currentDmgBonus = forge.upgrades.cannon.level * 25;
                     const nextDmgBonus = (forge.upgrades.cannon.level + 1) * 25;
-                    const currentRadius = baseRadius + (forge.upgrades.cannon.level * 5);
-                    const nextRadius = baseRadius + ((forge.upgrades.cannon.level + 1) * 5);
-                    currentValue = `${baseDmg + currentDmgBonus} (R${currentRadius})`;
-                    nextValue = `${baseDmg + nextDmgBonus} (R${nextRadius})`;
+                    const currentRadiusPercent = Math.round((forge.upgrades.cannon.level * forge.upgrades.cannon.radiusEffect / baseRadius) * 100);
+                    const nextRadiusPercent = Math.round(((forge.upgrades.cannon.level + 1) * forge.upgrades.cannon.radiusEffect / baseRadius) * 100);
+                    currentValue = `${baseDmg + currentDmgBonus} (+${currentRadiusPercent}% radius)`;
+                    nextValue = `${baseDmg + nextDmgBonus} (+${nextRadiusPercent}% radius)`;
                     upgrade.name = 'Trebuchet Tower Upgrade';
                 }
                 
@@ -1855,19 +1855,18 @@ export class UIManager {
                     tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${baseDmg + curDmg}</span></div>`;
                     tooltipText += `<div>Armor Pierce: <span style="color: #FFD700;">${curPierce}%</span></div>`;
                 } else if (upgrade.id === 'barricade_radius') {
-                    const curRadius = baseTowerStats.barricade_radius.radius + (forge.upgrades.barricade_radius.level * forge.upgrades.barricade_radius.effect);
-                    tooltipText += `<div>◯ Slow Radius: <span style="color: #FFD700;">${curRadius}px</span></div>`;
+                    const curRadiusPercent = Math.round((forge.upgrades.barricade_radius.level * forge.upgrades.barricade_radius.effect / baseTowerStats.barricade_radius.radius) * 100);
+                    tooltipText += `<div>◯ Slow Radius Bonus: <span style="color: #FFD700;">+${curRadiusPercent}%</span></div>`;
                 } else if (upgrade.id === 'poison') {
                     const baseDmg = baseTowerStats.poison.damage;
                     const curBonus = this.calculatePoisonBonus(forge.upgrades.poison.level);
                     tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${baseDmg + curBonus}</span></div>`;
                 } else if (upgrade.id === 'cannon') {
                     const baseDmg = baseTowerStats.cannon.damage;
-                    const baseRad = baseTowerStats.cannon.radius;
                     const curDmg = forge.upgrades.cannon.level * 25;
-                    const curRad = forge.upgrades.cannon.level * 5;
+                    const curRadiusPercent = Math.round((forge.upgrades.cannon.level * forge.upgrades.cannon.radiusEffect / baseTowerStats.cannon.radius) * 100);
                     tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${baseDmg + curDmg}</span></div>`;
-                    tooltipText += `<div>◯ Blast Radius: <span style="color: #FFD700;">${baseRad + curRad}px</span></div>`;
+                    tooltipText += `<div>◯ Blast Radius Bonus: <span style="color: #FFD700;">+${curRadiusPercent}%</span></div>`;
                 }
                 
                 if (!isMaxed && !isLocked) {
@@ -3447,22 +3446,32 @@ export class UIManager {
                     tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
                     tooltipText += `<div style="font-weight: bold;">Per Upgrade Level (+1 ◆):</div>`;
                     if (spell.id === 'arcaneBlast') {
+                        // Base blast radius is 120px (see SuperWeaponLab spell definitions).
+                        const radiusPercent = Math.round(2 / 120 * 100);
                         tooltipText += `<div>Magic Damage: +5</div>`;
-                        tooltipText += `<div>Radius: +2px</div>`;
+                        tooltipText += `<div>Radius: +${radiusPercent}%</div>`;
                         tooltipText += `<div style="color: #bb88ff;">Classless — damages all enemies</div>`;
                     } else if (spell.id === 'frostNova') {
+                        // Base freeze radius is 150px (see SuperWeaponLab spell definitions).
+                        const radiusPercent = Math.round(2 / 150 * 100);
                         tooltipText += `<div>Ice Damage: +2</div>`;
                         tooltipText += `<div>Freeze Duration: +0.1s</div>`;
-                        tooltipText += `<div>Radius: +2px</div>`;
+                        tooltipText += `<div>Radius: +${radiusPercent}%</div>`;
                         tooltipText += `<div style="color: #88ddff;">Freeze always applies (ignores immunity)</div>`;
                     } else if (spell.id === 'meteorStrike') {
+                        // No Radius line: Meteor Strike's impact radius is a hardcoded 80px
+                        // in GameplayState (both damage check and visual impact ring) and
+                        // never actually reads spell.radius, so upgrading it doesn't widen
+                        // the impact - showing a Radius bonus here would be misleading.
                         tooltipText += `<div>Fire Damage: +7</div>`;
                         tooltipText += `<div>Burn (per tick): +0.5/s</div>`;
-                        tooltipText += `<div>Radius: +2px</div>`;
                         tooltipText += `<div style="color: #ff8844;">Effective vs Air Frogs</div>`;
                     } else if (spell.id === 'chainLightning') {
+                        // No Radius line: Chain Lightning has no radius/AoE at all - it jumps
+                        // between the chainCount nearest enemies map-wide (see
+                        // GameplayState's 'chainLightning' cast handler), so spell.radius is
+                        // never read for it either.
                         tooltipText += `<div>Electricity Damage: +3</div>`;
-                        tooltipText += `<div>Radius: +2px</div>`;
                         tooltipText += `<div>Chain Targets: +1 every 5 levels</div>`;
                         tooltipText += `<div style="color: #ffff88;">Bypasses frogs (use vs normal enemies)</div>`;
                     }

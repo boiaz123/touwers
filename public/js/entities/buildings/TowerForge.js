@@ -1733,14 +1733,11 @@ export class TowerForge extends Building {
         // Barricade Tower - available from forge level 1
         // Barricade Radius - grows the rubble zone's slow radius
         {
-            const baseRadius = TowerForge.BARRICADE_BASE_RADIUS;
-            const effect = this.upgrades.barricade_radius.effect;
-            const percentPerLevel = Math.round((effect / baseRadius) * 100);
-            const maxRadius = baseRadius + effect * this.maxForgeLevel;
+            const percentPerLevel = Math.round((this.upgrades.barricade_radius.effect / TowerForge.BARRICADE_BASE_RADIUS) * 100);
             options.push({
                 id: 'barricade_radius',
                 name: 'Barricade Tower Upgrade',
-                description: `Increases the rubble patch's slow radius by ${percentPerLevel}% per level (${baseRadius} → ${maxRadius}px at max level)`,
+                description: `Increases the rubble patch's slow radius by ${percentPerLevel}% per level`,
                 level: this.upgrades.barricade_radius.level,
                 maxLevel: this.maxForgeLevel,
                 baseCost: this.upgrades.barricade_radius.baseCost,
@@ -1777,12 +1774,11 @@ export class TowerForge extends Building {
         
         // Trebuchet Tower - available from forge level 3+
         if (this.forgeLevel >= 3) {
-            const cannonBaseRadius = TowerForge.CANNON_BASE_SPLASH_RADIUS;
-            const cannonRadiusPercent = Math.round((this.upgrades.cannon.radiusEffect / cannonBaseRadius) * 100);
+            const cannonRadiusPercent = Math.round((this.upgrades.cannon.radiusEffect / TowerForge.CANNON_BASE_SPLASH_RADIUS) * 100);
             options.push({
                 id: 'cannon',
                 name: 'Trebuchet Tower Upgrade',
-                description: `+${this.upgrades.cannon.damageEffect} damage & +${cannonRadiusPercent}% blast radius per level (${cannonBaseRadius} → ${cannonBaseRadius + this.upgrades.cannon.radiusEffect * this.maxForgeLevel}px at max level)`,
+                description: `+${this.upgrades.cannon.damageEffect} damage & +${cannonRadiusPercent}% blast radius per level`,
                 level: this.upgrades.cannon.level,
                 maxLevel: this.maxForgeLevel,
                 baseCost: this.upgrades.cannon.baseCost,
