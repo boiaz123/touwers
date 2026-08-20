@@ -31,20 +31,24 @@ tackle first.
 
 ## Track B — Achievements / trophies
 
-1. Download the Steamworks SDK from your Steamworks Partner account (needs
-   step 0) — it's not distributable via npm/crates.io, so I can't fetch it
-   for you.
-2. Create a `steam_appid.txt` (just your App ID, one line) next to the dev
-   binary, for testing without launching through the Steam client.
-3. In Steamworks Partner → App Admin → Stats & Achievements, create all 47
+**Done, as of App ID `5132600` + the SDK zip you provided.** The
+`steamworks-rs` wiring is live in `apps/desktop/src-tauri/src/lib.rs` (see
+`STEAM_ACHIEVEMENTS.md` for the full detail) — it initializes
+`steamworks::Client::init_app(5132600)` at startup, falls back to a silent
+local-only no-op if Steam isn't available, and `steam_unlock_achievement`
+really calls `achievement().set()` + `store_stats()` now. Verified it builds
+and runs cleanly (including the no-Steam-client fallback path).
+
+What's left is Steamworks-dashboard-only, not code:
+
+1. In Steamworks Partner → App Admin → Stats & Achievements, create all 47
    achievements using the exact **API Name** values from the mapping table
    in `STEAM_ACHIEVEMENTS.md` (case-sensitive, immutable once players unlock
-   them).
-4. **Tell me once the SDK + App ID exist** — the remaining work
-   (`steamworks-rs` dependency, initializing `steamworks::Client`, replacing
-   the stub in `apps/desktop/src-tauri/src/lib.rs` with the real
-   `client.user_stats()` calls) is a short follow-up I'll do, not something
-   you need to hand-write.
+   them). Until this is done, unlocks will fail silently (logged, not
+   fatal) since Steam won't recognize the API names yet.
+2. Playtest through Steam (launch via the Steam client, or with the App ID
+   owned by your Steamworks Partner account) to confirm real unlocks land
+   on your Steam profile.
 
 ## Track C — Known publisher / code signing
 
@@ -71,5 +75,5 @@ Independent of Tracks A and B — no Steamworks account needed for this one.
 | | Done | On you |
 |---|---|---|
 | Store page copy/asset spec | ✅ drafted (`STEAM_PAGE.md`) | Screenshots, capsule art, Steamworks account, age rating |
-| Achievement integration point | ✅ stubbed in code | Steamworks account, SDK download, achievement config, ping me to finish wiring |
+| Achievements | ✅ fully wired (`steamworks-rs`, App ID `5132600`) | Create the 47 achievements in Steamworks App Admin, playtest through Steam |
 | Code signing | ✅ options documented (`CODE_SIGNING.md`) | Pick + buy/register, identity verification, ping me to wire config |

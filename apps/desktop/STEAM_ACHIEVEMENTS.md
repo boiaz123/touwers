@@ -4,60 +4,56 @@
 
 Touwers has a fully working in-game achievement system
 (`public/js/core/AchievementSystem.js`) with 47 achievements, its own
-unlock banner UI, and save persistence. **No Steamworks integration exists
-yet.** Real Steam achievement unlocks require:
-
-1. A Steamworks Partner account + registered App ID (one-time $100 Steam
-   Direct fee) — **not set up yet**.
-2. The Steamworks SDK (`steam_api64.dll` + headers), downloaded from your
-   Steamworks Partner account — it's not distributable via npm/crates.io, so
-   I can't fetch it for you. Comes as a zip under
-   `sdk/redistributable_bin/` and `sdk/public/steam/`.
-3. Achievement API names configured 1:1 in Steamworks (App Admin →
-   Stats & Achievements) matching the IDs below.
-4. A `steam_appid.txt` file (containing just your App ID) next to the dev
-   binary for local testing without launching through the Steam client.
-
-Until those exist, this integration only goes as far as a **stubbed
-platform-notification seam** — see "What's wired up now" below. It's safe,
-compiles, and does nothing external yet.
+unlock banner UI, and save persistence. **The Steamworks integration is
+wired up and live** for App ID `5132600`, using the `steamworks` crate
+(steamworks-rs) 0.13.
 
 ## What's wired up now
 
 - `AchievementSystem.checkAchievements()` (`public/js/core/AchievementSystem.js`)
-  now calls `notifyPlatformUnlock(def)` for every newly-unlocked achievement,
+  calls `notifyPlatformUnlock(def)` for every newly-unlocked achievement,
   which — when running under Tauri — invokes the `steam_unlock_achievement`
   Tauri command with the achievement's `id`. Outside Tauri (browser dev mode)
   it's a no-op.
-- `apps/desktop/src-tauri/src/lib.rs` has a `steam_unlock_achievement(id: String)`
-  command registered in the Tauri invoke handler. Right now it just logs the
-  id — it's the exact spot to swap in a real `steamworks-rs` call later.
+- `apps/desktop/src-tauri/src/lib.rs`:
+  - `init_steam()` calls `steamworks::Client::init_app(5132600)` once at
+    startup (in `.setup()`), and spawns a background thread that calls
+    `client.run_callbacks()` every 100ms (Valve's API needs its callbacks
+    pumped periodically; this app has no render loop to hook that into).
+  - Init failure (Steam client not running, no license, missing
+    `steam_api64.dll`, etc.) is **not fatal** — it's logged and the app
+    continues with `SteamState(None)` managed as Tauri state, so every
+    Steam-touching command becomes a silent no-op. This is what makes dev
+    builds and non-Steam distribution work identically to the Steam build.
+  - `steam_unlock_achievement(id)` calls
+    `client.user_stats().achievement(&id).set()` then `.store_stats()`,
+    logging (not erroring) on failure — an unrecognized `id` shouldn't ever
+    happen since it's driven by `ACHIEVEMENT_DEFS`, but Steam being
+    unreachable mid-session is a real, harmless case.
+- `apps/desktop/src-tauri/steam_api64.dll` — the Steamworks redistributable
+  runtime, extracted from the SDK zip and **committed to the repo**. Valve's
+  SDK license explicitly permits redistributing this specific file with your
+  game (that's what `redistributable_bin/` is for — unlike the full SDK
+  zip's headers/libs, which stay out of the repo). It's staged next to the
+  built exe two ways:
+  - `apps/desktop/src-tauri/build.rs` copies it into `target/<profile>/`
+    after every `cargo build` / `cargo tauri dev`, so local runs work without
+    a manual step.
+  - `tauri.conf.json`'s `bundle.resources` copies it next to the installed
+    exe for the NSIS installer build.
+- No `STEAM_SDK_LOCATION` env var, no vendored SDK headers, and no
+  `steam_appid.txt` are needed: `steamworks-sys` (the crate's FFI layer)
+  already vendors its own copy of the redistributable binaries and headers,
+  and this app always calls `init_app(5132600)` with the real App ID
+  explicitly, so there's nothing for a `steam_appid.txt` fallback to do.
 
-## Finishing the wiring once you have an App ID + SDK
+## What's still on you
 
-1. Add to `apps/desktop/src-tauri/Cargo.toml`:
-   ```toml
-   steamworks = "0.11"
-   ```
-   (crate wraps the SDK; you still need the raw SDK binaries — see step 2.)
-2. Drop `steam_api64.dll` (and `steam_api.dll` for 32-bit if needed) next to
-   the built exe, per `steamworks-rs`' README — it doesn't vendor the actual
-   Valve binary.
-3. In `lib.rs`, initialize the client once at startup:
-   ```rust
-   let (client, single) = steamworks::Client::init_app(YOUR_APP_ID)?;
-   ```
-   guarded so a missing `steam_api64.dll`/`steam_appid.txt` doesn't crash a
-   non-Steam build — wrap in `Option<Client>` and no-op the command if `None`.
-4. Replace the stub body of `steam_unlock_achievement` with:
-   ```rust
-   client.user_stats().achievement(&id).set()?;
-   client.user_stats().store_stats()?;
-   ```
-5. In Steamworks Partner → App Admin → Stats & Achievements, create one
-   achievement per row below with the **API Name** column value exactly
-   matching (Steam achievement API names are case-sensitive and immutable
-   once players have unlocked them).
+In Steamworks Partner → App Admin → Stats & Achievements, create one
+achievement per row below with the **API Name** column value exactly
+matching (Steam achievement API names are case-sensitive and immutable once
+players have unlocked them). Until that's done, `achievement(&id).set()`
+will fail per-id (logged, non-fatal) since Steam won't recognize the name.
 
 ## Achievement ID mapping table
 

@@ -2,8 +2,18 @@
 
 use std::fs;
 use std::path::PathBuf;
+use std::time::Duration;
 use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
+
+// Steamworks App Admin -> this app's App ID.
+const STEAM_APP_ID: u32 = 5132600;
+
+// Holds the initialized Steam client, if Steam was available at startup. `None`
+// on a non-Steam build/machine (missing steam_api64.dll, Steam client not
+// running, no license, etc.) - every command below treats that as a silent
+// no-op rather than an error, since achievements still work locally either way.
+struct SteamState(Option<steamworks::Client>);
 
 fn get_saves_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let app_data = app.path().app_data_dir()
@@ -77,19 +87,65 @@ fn open_external_url(app: tauri::AppHandle, url: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to open URL: {}", e))
 }
 
-// Placeholder for Steamworks achievement unlocks — see apps/desktop/STEAM_ACHIEVEMENTS.md.
-// Currently just logs; swap in a real `steamworks::Client` call once an App ID
-// and the Steamworks SDK are available.
+// Unlocks a Steam achievement by its API Name — see apps/desktop/STEAM_ACHIEVEMENTS.md
+// for the full id -> API Name mapping. `id` must match an achievement configured
+// in Steamworks App Admin exactly (case-sensitive); an unrecognized id, or Steam
+// being unavailable, is logged and swallowed rather than surfaced as an error,
+// since the in-game achievement system already tracks unlocks locally regardless.
 #[tauri::command]
-fn steam_unlock_achievement(id: String) -> Result<(), String> {
-    println!("[steam] would unlock achievement: {}", id);
+fn steam_unlock_achievement(state: tauri::State<SteamState>, id: String) -> Result<(), String> {
+    let Some(client) = state.0.as_ref() else {
+        println!("[steam] Steam unavailable, skipping achievement unlock: {}", id);
+        return Ok(());
+    };
+
+    let user_stats = client.user_stats();
+    if user_stats.achievement(&id).set().is_err() {
+        println!("[steam] failed to set achievement (unrecognized API Name?): {}", id);
+        return Ok(());
+    }
+    if user_stats.store_stats().is_err() {
+        println!("[steam] failed to store stats after unlocking: {}", id);
+        return Ok(());
+    }
+    println!("[steam] unlocked achievement: {}", id);
     Ok(())
+}
+
+// Tries to bring up the Steamworks API for STEAM_APP_ID. Returns `None` (instead
+// of erroring the whole app) when Steam isn't available - e.g. running outside
+// the Steam client during development, or a non-Steam build missing steam_api64.dll -
+// so the rest of the app works identically either way.
+fn init_steam() -> Option<steamworks::Client> {
+    match steamworks::Client::init_app(STEAM_APP_ID) {
+        Ok(client) => {
+            // The Steamworks API needs its callbacks pumped periodically to process
+            // async results (stat/achievement stores, etc.); once per frame is
+            // Valve's guidance for games, but this app has no render loop to hook
+            // into, so a lightweight background thread stands in for one.
+            let callback_client = client.clone();
+            std::thread::spawn(move || loop {
+                callback_client.run_callbacks();
+                std::thread::sleep(Duration::from_millis(100));
+            });
+            println!("[steam] initialized for app {}", STEAM_APP_ID);
+            Some(client)
+        }
+        Err(e) => {
+            println!("[steam] unavailable, achievements will be local-only: {}", e);
+            None
+        }
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .setup(|app| {
+            app.manage(SteamState(init_steam()));
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             close_app,
             write_save_file,

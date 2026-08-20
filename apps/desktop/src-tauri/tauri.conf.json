@@ -28,6 +28,9 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "resources": {
+      "steam_api64.dll": "steam_api64.dll"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
