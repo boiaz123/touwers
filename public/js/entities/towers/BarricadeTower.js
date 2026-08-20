@@ -1,14 +1,20 @@
 import { Tower } from './Tower.js';
 import { ObjectPool } from '../../core/ObjectPool.js';
 
+// A throw is a deliberate grab -> aim -> throw -> recover sequence (see
+// _updateDefenderAnimation()) rather than one instant swing, so it reads as a natural
+// motion instead of a snap. "throw" (the actual forward release) is intentionally the
+// shortest phase - the wind-up either side of it is what sells the weight of the barrel.
+const THROW_PHASE_DURATIONS = { grab: 0.5, aim: 0.45, throw: 0.18, recover: 0.4 };
+
 export class BarricadeTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
         this.range = 120; // Max distance from the tower to its fixed rubble-landing spot
 
         this.defenders = [
-            { pushAnimation: 0, hasBarrel: true, barrelReloadTimer: 0 },
-            { pushAnimation: 0, hasBarrel: true, barrelReloadTimer: 0 }
+            { animPhase: 'idle', animTimer: 0, hasBarrel: true, barrelReloadTimer: 0 },
+            { animPhase: 'idle', animTimer: 0, hasBarrel: true, barrelReloadTimer: 0 }
         ];
         this.rollingBarrels = [];
         // Phase 5: reuse barrel objects across throws instead of allocating a fresh literal
@@ -442,7 +448,7 @@ export class BarricadeTower extends Tower {
 
         for (let d = 0; d < this.defenders.length; d++) {
             const defender = this.defenders[d];
-            defender.pushAnimation = Math.max(0, defender.pushAnimation - deltaTime * 2);
+            this._updateDefenderAnimation(defender, deltaTime);
 
             if (!defender.hasBarrel && defender.barrelReloadTimer > 0) {
                 defender.barrelReloadTimer -= deltaTime;
@@ -563,15 +569,59 @@ export class BarricadeTower extends Tower {
         this._slowedSet.add(enemy);
     }
 
+    /** Kicks off one defender's grab -> aim -> throw -> recover sequence (see
+     *  _updateDefenderAnimation()) - the physical barrel itself is only spawned once that
+     *  sequence reaches the throw phase (see _releaseBarrel()), not here. */
     throwRubble() {
-        const availableDefenders = this.defenders.filter(d => d.hasBarrel);
-        const pool = availableDefenders.length > 0 ? availableDefenders : this.defenders;
+        const idleDefenders = this.defenders.filter(d => d.animPhase === 'idle');
+        if (idleDefenders.length === 0) return; // both mid-throw - next timer tick will retry
+
+        const availableDefenders = idleDefenders.filter(d => d.hasBarrel);
+        const pool = availableDefenders.length > 0 ? availableDefenders : idleDefenders;
         const defender = pool[Math.floor(Math.random() * pool.length)];
 
-        defender.pushAnimation = 1;
+        defender.animPhase = 'grab';
+        defender.animTimer = 0;
         defender.hasBarrel = false;
         defender.barrelReloadTimer = 1.5 + Math.random();
+    }
 
+    /** Advances one defender through the grab/aim/throw/recover sequence started by
+     *  throwRubble(), carrying leftover time into the next phase so the pacing stays exact
+     *  even at low frame rates. */
+    _updateDefenderAnimation(defender, deltaTime) {
+        if (defender.animPhase === 'idle') return;
+
+        defender.animTimer += deltaTime;
+        const duration = THROW_PHASE_DURATIONS[defender.animPhase];
+        if (defender.animTimer < duration) return;
+
+        const overflow = defender.animTimer - duration;
+        switch (defender.animPhase) {
+            case 'grab':
+                defender.animPhase = 'aim';
+                defender.animTimer = overflow;
+                break;
+            case 'aim':
+                defender.animPhase = 'throw';
+                defender.animTimer = overflow;
+                this._releaseBarrel();
+                break;
+            case 'throw':
+                defender.animPhase = 'recover';
+                defender.animTimer = overflow;
+                break;
+            case 'recover':
+                defender.animPhase = 'idle';
+                defender.animTimer = 0;
+                break;
+        }
+    }
+
+    /** Spawns the physical rolling barrel - called right as a defender's throw phase
+     *  begins (the moment the arm snaps forward), not when the sequence was first
+     *  triggered, so the projectile actually leaves the hand at the visual release point. */
+    _releaseBarrel() {
         const rollSpeed = 200;
         const dx = this.rubbleX - this.x;
         const dy = this.rubbleY - this.y;
@@ -964,6 +1014,10 @@ export class BarricadeTower extends Tower {
             const defenderY = platformY - 5;
 
             ctx.translate(defenderX, defenderY);
+            // A slight dip while bending down to grab the barrel (see
+            // _defenderBodyOffset()) - 0 for every other phase, so it doesn't affect the
+            // resting pose or the aim/throw/recover phases at all.
+            ctx.translate(0, this._defenderBodyOffset(defender));
 
             // Defender body - blue tunic
             ctx.fillStyle = '#4169E1';
@@ -984,49 +1038,109 @@ export class BarricadeTower extends Tower {
             ctx.strokeStyle = '#DDBEA9';
             ctx.lineWidth = 3;
 
-            // isThrowing is only true for the brief (~0.5s) follow-through right after a
-            // throw, once every 6-9s - pointing that arm toward this tower's throwAngle is
-            // correct there (it's literally where the barrel just went). The much more
-            // common resting pose below is deliberately fixed instead, so defenders never
-            // look like they're reaching up or down at odd angles just because of which
-            // way this particular tower's road happens to run.
-            const isThrowing = defender.pushAnimation > 0.05;
-            if (isThrowing) {
-                const pushOffset = defender.pushAnimation * 5;
-                ctx.beginPath();
-                ctx.moveTo(0, -5);
-                ctx.lineTo(Math.cos(this.throwAngle) * (8 + pushOffset), -5 + Math.sin(this.throwAngle) * (8 + pushOffset));
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.moveTo(0, -5);
-                ctx.lineTo(-4, -1);
-                ctx.stroke();
-
-                // Only actually gripping a barrel for the instant of the throw itself (the
-                // peak of the swing), not the whole follow-through - grabbed from the
-                // platform's storage rack right as it's thrown, not carried beforehand.
-                if (defender.pushAnimation > 0.7) {
-                    const barrelX = Math.cos(this.throwAngle) * (8 + pushOffset);
-                    const barrelY = -5 + Math.sin(this.throwAngle) * (8 + pushOffset);
-                    this._renderCarriedBarrel(ctx, barrelX, barrelY);
-                }
-            } else {
-                // Resting pose - empty-handed. Defenders only grab a barrel at the moment
-                // they throw (see isThrowing above), not held the whole time in between.
-                ctx.beginPath();
-                ctx.moveTo(0, -5);
-                ctx.lineTo(-3, -1);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(0, -5);
-                ctx.lineTo(3, -1);
-                ctx.stroke();
-            }
+            this._renderDefenderArms(ctx, defender);
 
             ctx.restore();
         }
     }
+
+    /** A small down-then-up dip (like bending at the knees) while a defender reaches for a
+     *  barrel - only during the grab phase, 0 the rest of the sequence including idle. */
+    _defenderBodyOffset(defender) {
+        if (defender.animPhase !== 'grab') return 0;
+        const t = this._easeInOut(this._phaseProgress(defender));
+        return Math.sin(t * Math.PI) * 2.5;
+    }
+
+    /** Draws both arms for one defender. The idle (non-throwing) arm stays in its relaxed
+     *  resting position for the whole sequence - only the active arm moves, driven by
+     *  _defenderArmPose(). Pointing it toward this tower's throwAngle only happens during
+     *  aim/throw, when it's literally reaching toward where the barrel is about to go -
+     *  the plain idle pose is deliberately fixed instead, so defenders never look like
+     *  they're reaching at odd angles just because of which way this tower's road runs. */
+    _renderDefenderArms(ctx, defender) {
+        if (defender.animPhase === 'idle') {
+            ctx.beginPath();
+            ctx.moveTo(0, -5);
+            ctx.lineTo(-3, -1);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(0, -5);
+            ctx.lineTo(3, -1);
+            ctx.stroke();
+            return;
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(0, -5);
+        ctx.lineTo(-4, -1);
+        ctx.stroke();
+
+        const pose = this._defenderArmPose(defender);
+        ctx.beginPath();
+        ctx.moveTo(0, -5);
+        ctx.lineTo(pose.x, pose.y);
+        ctx.stroke();
+
+        if (pose.showBarrel) {
+            this._renderCarriedBarrel(ctx, pose.x, pose.y);
+        }
+    }
+
+    /** Hand position (in the defender's local space, from the shoulder at (0,-5)) and
+     *  whether a barrel is currently gripped, keyframed per animation phase so each phase
+     *  starts exactly where the previous one ended: rest -> grab (reach down to the
+     *  platform's barrel rack) -> aim (lift the barrel and draw it back opposite the throw
+     *  direction) -> throw (snap forward along throwAngle - the barrel itself is released
+     *  at the start of this phase, see _releaseBarrel()) -> recover (ease the empty arm
+     *  back to rest). */
+    _defenderArmPose(defender) {
+        const rest = { x: 3, y: -1 };
+        const grabbed = { x: 2, y: 4 };
+        const drawnBack = {
+            x: Math.cos(this.throwAngle + Math.PI) * 5,
+            y: -7 + Math.sin(this.throwAngle + Math.PI) * 3
+        };
+        const extended = {
+            x: Math.cos(this.throwAngle) * 13,
+            y: -5 + Math.sin(this.throwAngle) * 13
+        };
+        const t = this._phaseProgress(defender);
+
+        switch (defender.animPhase) {
+            case 'grab': {
+                const e = this._easeInOut(t);
+                // Only actually gripping the barrel once the reach is mostly complete, not
+                // from the very start of the bend.
+                return { x: this._lerp(rest.x, grabbed.x, e), y: this._lerp(rest.y, grabbed.y, e), showBarrel: e > 0.55 };
+            }
+            case 'aim': {
+                const e = this._easeInOut(t);
+                return { x: this._lerp(grabbed.x, drawnBack.x, e), y: this._lerp(grabbed.y, drawnBack.y, e), showBarrel: true };
+            }
+            case 'throw': {
+                const e = this._easeOut(t);
+                return { x: this._lerp(drawnBack.x, extended.x, e), y: this._lerp(drawnBack.y, extended.y, e), showBarrel: false };
+            }
+            case 'recover': {
+                const e = this._easeInOut(t);
+                return { x: this._lerp(extended.x, rest.x, e), y: this._lerp(extended.y, rest.y, e), showBarrel: false };
+            }
+            default:
+                return { x: rest.x, y: rest.y, showBarrel: false };
+        }
+    }
+
+    _phaseProgress(defender) {
+        const duration = THROW_PHASE_DURATIONS[defender.animPhase];
+        return duration ? Math.min(1, defender.animTimer / duration) : 1;
+    }
+
+    _lerp(a, b, t) { return a + (b - a) * t; }
+
+    _easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
+
+    _easeOut(t) { return 1 - Math.pow(1 - t, 3); }
 
     /** The barrel a defender is currently holding, at a fixed spot relative to their own
      *  local (translated) origin - see the resting-pose note in renderDefenders(). */
