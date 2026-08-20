@@ -2120,28 +2120,6 @@ export class SettlementHub {
         const rX = 360 * sf;
         const rY = 140 * sf;
 
-        // ── Worn dirt transition band — grounds the wall into the terrain
-        // instead of grass butting straight up against the rampart edge ────────
-        // Each half is drawn slightly PAST the seam (into the other half's territory) rather
-        // than stopping just short of it - stopping short on both sides left two small gaps of
-        // bare grass right at the wall's exact left/right extremes, where the two halves met but
-        // didn't quite touch.
-        const dirtRadX = rX + 40 * sf;
-        const dirtRadY = rY + 40 * sf;
-        const startAngle = frontHalf ? -0.05 : Math.PI - 0.05;
-        const endAngle   = frontHalf ? Math.PI + 0.05 : Math.PI * 2 + 0.05;
-        ctx.lineCap = 'butt';
-        ctx.strokeStyle = 'rgba(90, 74, 48, 0.28)';
-        ctx.lineWidth = 16 * sf;
-        ctx.beginPath();
-        ctx.ellipse(centerX, centerY, dirtRadX, dirtRadY, 0, startAngle, endAngle);
-        ctx.stroke();
-        ctx.strokeStyle = 'rgba(112, 96, 62, 0.16)';
-        ctx.lineWidth = 7 * sf;
-        ctx.beginPath();
-        ctx.ellipse(centerX, centerY, dirtRadX - 3 * sf, dirtRadY - 3 * sf, 0, startAngle, endAngle);
-        ctx.stroke();
-
         // ── Natural clumps of rocks/shrubs/grass tufts, grouped into loose
         // clusters (rather than one item spaced evenly per slot) so the border
         // reads as scattered undergrowth instead of a dotted ring ──────────────
@@ -2163,6 +2141,13 @@ export class SettlementHub {
 
             // Skip guard-tower flanking zones (centerX ± ~120 px at the very bottom)
             if (sinA > 0.88 && Math.abs(cosA * rX) < 150) continue;
+
+            // Clusters 7, 8 and 9 cover the whole front-left arc between the guard-tower
+            // flanking zone and the west point, near the Arcane Library. The wall's rendered
+            // band is visually thinner there than the ellipse math assumes, so shrubs from any
+            // of these clusters end up partially covered, leaving a stray sliver poking out
+            // from underneath the wall.
+            if (i === 7 || i === 8 || i === 9) continue;
 
             // Deterministic LCG seeded from cluster index — stable across frames
             let s = (i * 1664525 + 1013904223) >>> 0;
@@ -3390,7 +3375,7 @@ export class SettlementHub {
             // Middle-lower left
             { x: centerX - 600, y: centerY + 50, size: 38 },
             { x: centerX - 850, y: centerY + 55, size: 40 },
-            { x: centerX - 350, y: centerY + 45, size: 35 },
+            { x: centerX - 350, y: centerY + 45, size: 35, hidden: true }, // stranded right at the wall's west tip, reads as randomly planted against the palisade
             { x: centerX - 500, y: centerY + 60, size: 36 },
             { x: centerX - 850, y: centerY + 52, size: 41 },
             
@@ -3416,7 +3401,7 @@ export class SettlementHub {
             // Bottom left corner
             { x: centerX - 600, y: centerY + 85, size: 38 },
             { x: centerX - 950, y: centerY + 80, size: 41 },
-            { x: centerX - 400, y: centerY + 88, size: 36 },
+            { x: centerX - 400, y: centerY + 88, size: 36, hidden: true }, // its one surviving companion sprite lands behind the wall with just a stump poking out beneath it
             
             // Bottom right corner
             { x: centerX + 600, y: centerY + 85, size: 38 },
@@ -3548,6 +3533,7 @@ export class SettlementHub {
 
         const naturalTrees = [];
         treePositions.forEach((t, i) => {
+            if (t.hidden) return; // manually excluded - see the tree's own entry above for why
             const depthT = (t.size - 18) / (46 - 18); // 0 = farthest background, 1 = nearest
             const scaleMul = 1.55 + depthT * 0.85; // nearer trees grow more, sharpening the depth read
             const baseSize = t.size * scaleMul;

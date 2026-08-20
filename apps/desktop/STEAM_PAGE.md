@@ -16,9 +16,10 @@ just prepares everything you'd type or upload once you're there.
 
 ## Short description (~300 chars, shown in search results/wishlist)
 
-> Touwers is a fantasy tower defense strategy game. Place towers on a grid,
-> hold the line through escalating enemy waves, build up your economy, and
-> conquer four campaigns — from the Forest to a frog-infested alien realm.
+> Touwers is a fantasy tower defense strategy game where you place towers on
+> a grid, hold the line through escalating enemy waves, and grow your
+> economy into a fortress strong enough to conquer four very different
+> campaigns.
 
 ## Long description (About This Game)
 
