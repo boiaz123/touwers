@@ -230,6 +230,130 @@ export class Tower {
         }
     }
     
+    /**
+     * Shared "this tower has been transformed" visual - a pulsing glow ring at the base
+     * plus a small floating emblem, layered on top of the (otherwise unmodified) inherited
+     * body art. Must be called from renderDynamicParts, not the baked static layers, since
+     * it animates off this.animationTime and would otherwise freeze at bake time.
+     */
+    renderTransformBadge(ctx, gridSize, { color, symbol }) {
+        const size = gridSize || this.getTowerSize(ctx);
+        const half = size / 2;
+        const t = this.animationTime;
+        const pulse = 0.5 + 0.5 * Math.sin(t * 2.4);
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // Pulsing glow ring at the tower's base
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5 + pulse * 1.5;
+        ctx.globalAlpha = 0.35 + pulse * 0.3;
+        ctx.beginPath();
+        ctx.ellipse(0, half * 0.82, half * 0.92, half * 0.26, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+
+        // Floating emblem above the tower, gently bobbing
+        const bob = Math.sin(t * 1.6) * half * 0.06;
+        const badgeY = -half * 1.55 + bob;
+        const badgeR = half * 0.22;
+
+        ctx.save();
+        ctx.translate(0, badgeY);
+
+        ctx.globalCompositeOperation = 'lighter';
+        const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, badgeR * 2.2);
+        glow.addColorStop(0, color);
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.globalAlpha = 0.4 + pulse * 0.25;
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, badgeR * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+
+        const discGradient = ctx.createRadialGradient(-badgeR * 0.3, -badgeR * 0.3, badgeR * 0.1, 0, 0, badgeR);
+        discGradient.addColorStop(0, '#fff');
+        discGradient.addColorStop(0.35, color);
+        discGradient.addColorStop(1, 'rgba(20,10,10,0.9)');
+        ctx.fillStyle = discGradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, badgeR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        this._renderTransformSymbol(ctx, symbol, badgeR, color);
+
+        ctx.restore();
+        ctx.restore();
+    }
+
+    _renderTransformSymbol(ctx, symbol, r, color) {
+        ctx.strokeStyle = '#fff';
+        ctx.fillStyle = '#fff';
+        ctx.lineWidth = Math.max(1, r * 0.16);
+        ctx.lineCap = 'round';
+        switch (symbol) {
+            case 'burst': {
+                for (let i = 0; i < 3; i++) {
+                    const a = -Math.PI / 2 + (i - 1) * 0.55;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(Math.cos(a) * r * 0.75, Math.sin(a) * r * 0.75);
+                    ctx.stroke();
+                }
+                break;
+            }
+            case 'crosshair': {
+                ctx.beginPath();
+                ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2);
+                ctx.stroke();
+                [[-r * 0.85, 0, -r * 0.55, 0], [r * 0.55, 0, r * 0.85, 0], [0, -r * 0.85, 0, -r * 0.55], [0, r * 0.55, 0, r * 0.85]].forEach(([x1, y1, x2, y2]) => {
+                    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+                });
+                break;
+            }
+            case 'spike': {
+                for (let i = 0; i < 3; i++) {
+                    const a = -Math.PI / 2 + (i - 1) * 0.8;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(a) * r * 0.2, Math.sin(a) * r * 0.2);
+                    ctx.lineTo(Math.cos(a) * r * 0.85, Math.sin(a) * r * 0.85);
+                    ctx.stroke();
+                }
+                break;
+            }
+            case 'triorb': {
+                [[-0.55, 0.35], [0.55, 0.35], [0, -0.5]].forEach(([dx, dy]) => {
+                    ctx.beginPath();
+                    ctx.arc(dx * r, dy * r, r * 0.22, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                break;
+            }
+            case 'skull': {
+                ctx.beginPath();
+                ctx.arc(0, -r * 0.05, r * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillRect(-r * 0.32, r * 0.1, r * 0.64, r * 0.3);
+                ctx.fillStyle = color;
+                ctx.beginPath(); ctx.arc(-r * 0.2, -r * 0.05, r * 0.12, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(r * 0.2, -r * 0.05, r * 0.12, 0, Math.PI * 2); ctx.fill();
+                break;
+            }
+            default:
+                ctx.beginPath();
+                ctx.arc(0, 0, r * 0.35, 0, Math.PI * 2);
+                ctx.fill();
+        }
+    }
+
     renderDisabledOverlay(ctx) {
         const towerSize = this.getTowerSize(ctx);
         const half = towerSize / 2;

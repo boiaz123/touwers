@@ -5260,6 +5260,132 @@ class UpgradesMenu {
                 // includes campaign-1 from the very start): this upgrade should only appear once
                 // campaign-1 has actually been beaten, so it's gated on completedCampaigns instead.
                 completedCampaignRequirement: 'campaign-1'
+            },
+            {
+                id: 'slinger-tower-unlock',
+                name: 'Slinger Tower Plans',
+                description: "Forge-tempered slings recovered from a travelling tinker's cart. Fit to a Watch Tower's defenders, they let each throw three times as fast.",
+                effect: 'Unlocks the Slinger Tower transform\nRequires Forge & Training Grounds Lv5',
+                cost: 400,
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    const r = size * 0.34;
+                    const bg = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+                    bg.addColorStop(0, '#fff'); bg.addColorStop(0.35, '#FFD700'); bg.addColorStop(1, '#8B6914');
+                    ctx.fillStyle = bg;
+                    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 1.2; ctx.stroke();
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, r * 0.16); ctx.lineCap = 'round';
+                    for (let i = 0; i < 3; i++) {
+                        const a = -Math.PI / 2 + (i - 1) * 0.55;
+                        ctx.beginPath();
+                        ctx.moveTo(cx, cy);
+                        ctx.lineTo(cx + Math.cos(a) * r * 0.75, cy + Math.sin(a) * r * 0.75);
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                },
+                category: 'upgrade'
+            },
+            {
+                id: 'sharpshooter-tower-unlock',
+                name: 'Sharpshooter Plans',
+                description: "A marksman's doctrine, hand-annotated in the margins: patience over volume. Unlimited range, one devastating shot at a time.",
+                effect: 'Unlocks the Sharpshooter transform\nRequires Forge & Training Grounds Lv5',
+                cost: 650,
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    const r = size * 0.34;
+                    const bg = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+                    bg.addColorStop(0, '#fff'); bg.addColorStop(0.35, '#B22222'); bg.addColorStop(1, '#3A0A0A');
+                    ctx.fillStyle = bg;
+                    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#3A0A0A'; ctx.lineWidth = 1.2; ctx.stroke();
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, r * 0.14);
+                    ctx.beginPath(); ctx.arc(cx, cy, r * 0.55, 0, Math.PI * 2); ctx.stroke();
+                    [[-0.85, 0, -0.55, 0], [0.55, 0, 0.85, 0], [0, -0.85, 0, -0.55], [0, 0.55, 0, 0.85]].forEach(([x1, y1, x2, y2]) => {
+                        ctx.beginPath();
+                        ctx.moveTo(cx + x1 * r, cy + y1 * r);
+                        ctx.lineTo(cx + x2 * r, cy + y2 * r);
+                        ctx.stroke();
+                    });
+                    ctx.restore();
+                },
+                category: 'upgrade'
+            },
+            {
+                id: 'spike-thrower-tower-unlock',
+                name: 'Spike Thrower Plans',
+                description: "A crate of hardened iron spikes, the kind meant to be buried point-up in soft ground. Perfect for a rubble pile that's already slowing enemies down.",
+                effect: 'Unlocks the Spike Thrower transform\nRequires Forge & Training Grounds Lv5',
+                cost: 500,
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    const r = size * 0.34;
+                    const bg = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+                    bg.addColorStop(0, '#fff'); bg.addColorStop(0.35, '#CC5500'); bg.addColorStop(1, '#4A1E00');
+                    ctx.fillStyle = bg;
+                    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#4A1E00'; ctx.lineWidth = 1.2; ctx.stroke();
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, r * 0.16); ctx.lineCap = 'round';
+                    for (let i = 0; i < 3; i++) {
+                        const a = -Math.PI / 2 + (i - 1) * 0.8;
+                        ctx.beginPath();
+                        ctx.moveTo(cx + Math.cos(a) * r * 0.2, cy + Math.sin(a) * r * 0.2);
+                        ctx.lineTo(cx + Math.cos(a) * r * 0.85, cy + Math.sin(a) * r * 0.85);
+                        ctx.stroke();
+                    }
+                    ctx.restore();
+                },
+                category: 'upgrade'
+            },
+            {
+                id: 'triple-trebuchet-unlock',
+                name: 'Triple Trebuchet Plans',
+                description: 'Engineering sketches for a reinforced throwing arm, strong enough to launch three fireballs in a single throw instead of one.',
+                effect: 'Unlocks the Triple Trebuchet transform\nRequires Forge & Training Grounds Lv5',
+                cost: 900,
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    const r = size * 0.34;
+                    const bg = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+                    bg.addColorStop(0, '#fff'); bg.addColorStop(0.35, '#7B2FBE'); bg.addColorStop(1, '#2E0F49');
+                    ctx.fillStyle = bg;
+                    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#2E0F49'; ctx.lineWidth = 1.2; ctx.stroke();
+                    ctx.fillStyle = '#fff';
+                    [[-0.55, 0.35], [0.55, 0.35], [0, -0.5]].forEach(([dx, dy]) => {
+                        ctx.beginPath();
+                        ctx.arc(cx + dx * r, cy + dy * r, r * 0.22, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                    ctx.restore();
+                },
+                category: 'upgrade'
+            },
+            {
+                id: 'super-poison-tower-unlock',
+                name: 'Super Poison Plans',
+                description: "An alchemist's refined recipe, scrawled on oilcloth: the toxin now eats into an enemy's legs as surely as it eats into their health.",
+                effect: 'Unlocks the Super Poison transform\nRequires Forge & Training Grounds Lv5',
+                cost: 700,
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    const r = size * 0.34;
+                    const bg = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+                    bg.addColorStop(0, '#fff'); bg.addColorStop(0.35, '#9B30FF'); bg.addColorStop(1, '#2E0A49');
+                    ctx.fillStyle = bg;
+                    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#2E0A49'; ctx.lineWidth = 1.2; ctx.stroke();
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath(); ctx.arc(cx, cy - r * 0.05, r * 0.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillRect(cx - r * 0.32, cy + r * 0.1, r * 0.64, r * 0.3);
+                    ctx.fillStyle = '#9B30FF';
+                    ctx.beginPath(); ctx.arc(cx - r * 0.2, cy - r * 0.05, r * 0.12, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + r * 0.2, cy - r * 0.05, r * 0.12, 0, Math.PI * 2); ctx.fill();
+                    ctx.restore();
+                },
+                category: 'upgrade'
             }
         ];
 

@@ -1,4 +1,5 @@
 import { TowerRegistry } from './TowerRegistry.js';
+import { TowerTransformRegistry } from './TowerTransformRegistry.js';
 import { BuildingManager } from '../buildings/BuildingManager.js';
 import { UnlockSystem } from '../../core/UnlockSystem.js';
 import { SpatialGrid } from '../../core/SpatialGrid.js';
@@ -1128,6 +1129,74 @@ export class TowerManager {
         }
     }
     
+    /**
+     * True once this level's Tower Forge AND Training Grounds are both fully upgraded
+     * (level 5/5) - the in-level gate for the tower transform feature. Both buildings are
+     * capped at 1 per level (see UnlockSystem.canBuildBuilding), so cachedForges[0]/
+     * cachedTrainingGrounds[0] is always the relevant instance when present.
+     */
+    canTransformTowers() {
+        const forge = this.cachedForges && this.cachedForges[0];
+        const training = this.cachedTrainingGrounds && this.cachedTrainingGrounds[0];
+        if (!forge || !training) return false;
+        return forge.forgeLevel >= forge.maxForgeLevel && training.trainingLevel >= training.maxTrainingLevel;
+    }
+
+    /**
+     * Look up the transform definition available for a given placed tower, or null if
+     * this tower type has no transform or the tower has already been transformed.
+     */
+    getTowerTransform(tower) {
+        if (!tower || tower.transformedType) return null;
+        return TowerTransformRegistry.getTransform(tower.type);
+    }
+
+    /**
+     * Transform a placed tower into its advanced variant in place (same tile). Requires
+     * the settlement unlock for this transform to have been purchased, the Tower Forge
+     * and Training Grounds both at level 5 this level, and enough in-level gold.
+     * @returns {Object|false} - the new tower instance on success, false otherwise
+     */
+    transformTower(tower) {
+        const transform = this.getTowerTransform(tower);
+        if (!transform) return false;
+
+        const upgradeSystem = this.stateManager && this.stateManager.upgradeSystem;
+        if (!upgradeSystem || !upgradeSystem.hasUpgrade(transform.unlockId)) return false;
+        if (!this.canTransformTowers()) return false;
+        if (this.gameState.gold < transform.transformCost) return false;
+
+        this.gameState.gold -= transform.transformCost;
+
+        const NewClass = transform.class;
+        const newTower = new NewClass(tower.x, tower.y, tower.gridX, tower.gridY);
+        newTower.type = tower.type; // keep the base type so Forge/Training Grounds bonuses keep applying
+        newTower.transformedType = transform.key;
+        if (this.audioManager) {
+            newTower.audioManager = this.audioManager;
+        }
+
+        // Mirrors placeTower()'s barricade special-case: the fixed rubble-landing spot
+        // needs to be resolved onto the level's road, exactly like a freshly-placed
+        // BarricadeTower does.
+        if (tower.type === 'barricade' && this.level && this.level.path) {
+            newTower.setPath(this.level.path, this.level.cellSize);
+        }
+
+        const idx = this.towers.indexOf(tower);
+        if (idx !== -1) {
+            this.towers[idx] = newTower;
+        } else {
+            this.towers.push(newTower);
+        }
+
+        // Force the per-frame stat-refresh block to recompute originalDamage/Range/
+        // FireRate and reapply Forge/Training Grounds bonuses for the new instance.
+        this._towerStatsNeedUpdate = true;
+
+        return newTower;
+    }
+
     sellTower(tower) {
         const refund = Math.floor(tower.constructor.getInfo().cost * 0.7);
         this.gameState.gold += refund;

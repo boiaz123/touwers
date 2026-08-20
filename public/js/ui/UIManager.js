@@ -4,6 +4,7 @@ import { InputManager } from '../core/InputManager.js';
 import { ControlsScreen } from './ControlsScreen.js';
 import { ResolutionSelector } from './ResolutionSelector.js';
 import { ResolutionSettings } from '../core/ResolutionSettings.js';
+import { TowerTransformRegistry } from '../entities/towers/TowerTransformRegistry.js';
 
 export class UIManager {
     constructor(gameplayState) {
@@ -3264,6 +3265,61 @@ export class UIManager {
                 `;
                 break;
             }
+            case 'SlingerTower': {
+                statBadgesHTML = `
+                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 20)}</span>
+                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 120)}</span>
+                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 3.0, '/s')}</span>
+                `;
+                break;
+            }
+            case 'SharpshooterTower': {
+                const rangeDisplay = (tower.range === Infinity) ? '∞' : Math.round(tower.range);
+                statBadgesHTML = `
+                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 150)}</span>
+                    <span class="effect-badge" style="color: #FFD700; font-weight: bold;">${rangeDisplay}</span>
+                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.3, '/s')}</span>
+                `;
+                break;
+            }
+            case 'SpikeThrowerTower': {
+                const radius = tower.effectRadius || 40;
+                const baseRadius = tower.originalEffectRadius || 40;
+                const slowPercent = Math.round((tower.slowPercent || 0.65) * 100);
+                const baseSlowPercent = Math.round((tower.originalSlowPercent || 0.65) * 100);
+                statBadgesHTML = `
+                    <span class="effect-badge">${sv(radius, baseRadius, 'px')}</span>
+                    <span class="effect-badge">${sv(slowPercent, baseSlowPercent, '%')}</span>
+                    <span class="effect-badge">${tower.zoneDamage || 8}/${(tower.zoneTickInterval || 1.5).toFixed(1)}s</span>
+                `;
+                break;
+            }
+            case 'TripleTrebuchetTower': {
+                const radius = tower.splashRadius || 50;
+                const baseRadius = tower.originalSplashRadius || 50;
+                statBadgesHTML = `
+                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 100)}</span>
+                    <span class="effect-badge">${sv(radius, baseRadius, 'px')}</span>
+                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 120)}</span>
+                    <span class="effect-badge" style="color: #FFD700; font-weight: bold;">×3 shots</span>
+                `;
+                break;
+            }
+            case 'SuperPoisonTower': {
+                let superPoisonForgeBonus = 0;
+                if (this.towerManager.cachedForges && this.towerManager.cachedForges.length > 0) {
+                    const fm = this.towerManager.cachedForges[0].getUpgradeMultipliers();
+                    superPoisonForgeBonus = fm.poisonDamageBonus || 0;
+                }
+                const superPoisonTickDmg = 13 + superPoisonForgeBonus;
+                const superBasePoisonTickDmg = 13;
+                statBadgesHTML = `
+                    <span class="effect-badge">${sv(superPoisonTickDmg, superBasePoisonTickDmg, '/2s')}</span>
+                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 130)}</span>
+                    <span class="effect-badge" style="color: #FFD700; font-weight: bold;">-20% speed</span>
+                `;
+                break;
+            }
             default: {
                 statBadgesHTML = `
                     <span class="effect-badge">${typeof tower.damage === 'number' ? Math.round(tower.damage) : tower.damage}</span>
@@ -3280,8 +3336,34 @@ export class UIManager {
             upgradeNote = '<div style="font-size: 0.65rem; color: #aaffaa; margin-top: 0.2rem;">✦ Includes upgrade bonuses</div>';
         }
         
-        const towerImageMap = { 'BasicTower': 'basic', 'ArcherTower': 'archer', 'CannonTower': 'cannon', 'BarricadeTower': 'barricade', 'PoisonArcherTower': 'poison' };
+        const towerImageMap = {
+            'BasicTower': 'basic', 'ArcherTower': 'archer', 'CannonTower': 'cannon', 'BarricadeTower': 'barricade', 'PoisonArcherTower': 'poison',
+            'SlingerTower': 'basic', 'SharpshooterTower': 'archer', 'SpikeThrowerTower': 'barricade', 'TripleTrebuchetTower': 'cannon', 'SuperPoisonTower': 'poison'
+        };
         const towerImg = towerImageMap[towerType] || 'basic';
+
+        // Transform button - only offered once the settlement unlock for this tower's
+        // transform has been purchased; shown disabled (with a reason) until the Tower
+        // Forge and Training Grounds are both level 5 this level, or gold is short.
+        let transformButtonHTML = '';
+        const transformDef = TowerTransformRegistry.getTransform(tower.type);
+        if (transformDef && !tower.transformedType) {
+            const upgradeSystem = this.stateManager.upgradeSystem;
+            const transformUnlocked = upgradeSystem && upgradeSystem.hasUpgrade(transformDef.unlockId);
+            if (transformUnlocked) {
+                const buildingsReady = this.towerManager.canTransformTowers();
+                const canAfford = this.gameState.gold >= transformDef.transformCost;
+                const disabled = !buildingsReady || !canAfford;
+                const reason = !buildingsReady
+                    ? 'Requires Tower Forge & Training Grounds at Level 5'
+                    : (!canAfford ? 'Not enough gold' : '');
+                transformButtonHTML = `
+                    <button id="transform-tower-btn-${tower.gridX}-${tower.gridY}" class="upgrade-button transform-tower-btn" ${disabled ? 'disabled' : ''} title="${reason}" style="background: ${disabled ? '#555' : '#9B30FF'}; padding: 0.2rem 0.5rem; margin: 0.25rem 0 0 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(155, 48, 255, 0.5); width: 100%; max-width: 80px; opacity: ${disabled ? '0.6' : '1'}; cursor: ${disabled ? 'not-allowed' : 'pointer'};">
+                        Transform (${transformDef.transformCost}g)
+                    </button>
+                `;
+            }
+        }
 
         let contentHTML = `
             <div class="forge-panel-header">
@@ -3291,6 +3373,7 @@ export class UIManager {
                         <button id="sell-tower-btn-${tower.gridX}-${tower.gridY}" class="upgrade-button sell-tower-btn" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
                             Sell
                         </button>
+                        ${transformButtonHTML}
                     </div>
                     <div class="forge-info-wrapper">
                         <div class="forge-title-row">
@@ -3304,10 +3387,10 @@ export class UIManager {
                 </div>
             </div>
         `;
-        
+
         // Display in panel using the non-closing method so menu stays open when clicking towers
         this.showPanelWithoutClosing('basic-tower-panel', `${icon} ${name}`, contentHTML);
-        
+
         // Add sell button handler
         const sellBtn = document.getElementById(`sell-tower-btn-${tower.gridX}-${tower.gridY}`);
         if (sellBtn) {
@@ -3317,6 +3400,21 @@ export class UIManager {
                 this.updateButtonStates();
                 this.level.setPlacementPreview(0, 0, false);
                 this.closePanelWithAnimation('basic-tower-panel');
+            });
+        }
+
+        // Add transform button handler
+        const transformBtn = document.getElementById(`transform-tower-btn-${tower.gridX}-${tower.gridY}`);
+        if (transformBtn && !transformBtn.disabled) {
+            transformBtn.addEventListener('click', () => {
+                const newTower = this.towerManager.transformTower(tower);
+                if (!newTower) return;
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('upgrade');
+                }
+                this.updateUI();
+                this.updateButtonStates();
+                this.showTowerStatsMenu({ tower: newTower, position: towerData.position });
             });
         }
     }

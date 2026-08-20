@@ -83,6 +83,46 @@ export class UpgradeRegistry {
             category: 'building',
             effect: 'Permanently unlocks the Super Weapon Lab building',
             campaignRequirement: 'campaign-3'
+        },
+        'slinger-tower-unlock': {
+            name: 'Slinger Tower Plans',
+            description: 'Forge-tempered slings that let a Watch Tower\'s defenders throw three times as fast. Requires Tower Forge and Training Grounds at level 5 to use.',
+            cost: 400,
+            icon: '◇',
+            category: 'building',
+            effect: 'Unlocks the Watch Tower → Slinger Tower transform'
+        },
+        'sharpshooter-tower-unlock': {
+            name: 'Sharpshooter Plans',
+            description: 'A patient marksman\'s doctrine: unlimited range and devastating damage, at the cost of a long reload. Requires Tower Forge and Training Grounds at level 5 to use.',
+            cost: 650,
+            icon: '◇',
+            category: 'building',
+            effect: 'Unlocks the Archer Tower → Sharpshooter transform'
+        },
+        'spike-thrower-tower-unlock': {
+            name: 'Spike Thrower Plans',
+            description: 'Iron spikes hidden in the rubble that bite anything lingering in the slow zone. Requires Tower Forge and Training Grounds at level 5 to use.',
+            cost: 500,
+            icon: '◇',
+            category: 'building',
+            effect: 'Unlocks the Barricade Tower → Spike Thrower transform'
+        },
+        'triple-trebuchet-unlock': {
+            name: 'Triple Trebuchet Plans',
+            description: 'A reinforced throwing arm that hurls three fireballs per shot instead of one. Requires Tower Forge and Training Grounds at level 5 to use.',
+            cost: 900,
+            icon: '◇',
+            category: 'building',
+            effect: 'Unlocks the Trebuchet Tower → Triple Trebuchet transform'
+        },
+        'super-poison-tower-unlock': {
+            name: 'Super Poison Plans',
+            description: 'A refined toxin that permanently saps 20% of a poisoned enemy\'s speed. Requires Tower Forge and Training Grounds at level 5 to use.',
+            cost: 700,
+            icon: '◇',
+            category: 'building',
+            effect: 'Unlocks the Poison Archer → Super Poison Tower transform'
         }
     };
 
