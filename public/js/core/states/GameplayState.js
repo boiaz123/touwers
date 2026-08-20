@@ -1937,7 +1937,10 @@ export class GameplayState {
             this.resultsScreen.update(this.getRealDeltaTime(deltaTime));
         }
 
-        const adjustedDeltaTime = this.getAdjustedDeltaTime(deltaTime);
+        // deltaTime here is already speed-scaled by game.js's gameLoop (which calls
+        // getAdjustedDeltaTime before invoking stateManager.update). Do not scale again -
+        // doing so previously squared the multiplier (x3 simulated as x9).
+        const adjustedDeltaTime = deltaTime;
 
         this._updateWaveCooldown(adjustedDeltaTime);
         this._updatePendingDamage(adjustedDeltaTime);
