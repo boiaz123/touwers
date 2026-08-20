@@ -10,6 +10,7 @@ import { CannonTower } from './CannonTower.js';
 export class TripleTrebuchetTower extends CannonTower {
     // Radians each side shot is rotated away from the center shot's aim point.
     static SPREAD_ANGLES = [-0.22, 0, 0.22];
+    static TRANSFORM_COLOR = '#7B2FBE';
 
     shoot() {
         if (!this.target) return;
@@ -59,7 +60,10 @@ export class TripleTrebuchetTower extends CannonTower {
 
     renderDynamicParts(ctx, gridSize) {
         super.renderDynamicParts(ctx, gridSize);
-        this.renderTransformBadge(ctx, gridSize, { color: '#7B2FBE', symbol: 'triorb' });
+        // CannonTower's stone body (see its renderStaticBack) bottoms out exactly at
+        // this.y - tuned here to match, instead of the old generic offset that placed
+        // the ring well below the tower's actual base.
+        this.renderTransformBadge(ctx, gridSize, { color: TripleTrebuchetTower.TRANSFORM_COLOR, symbol: 'triorb', groundYFactor: 0.15, badgeYFactor: -0.15 });
     }
 
     static getInfo() {

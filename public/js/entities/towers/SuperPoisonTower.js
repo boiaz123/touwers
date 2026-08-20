@@ -5,6 +5,8 @@ import { PoisonArcherTower } from './PoisonArcherTower.js';
  * in addition to the usual damage-over-time.
  */
 export class SuperPoisonTower extends PoisonArcherTower {
+    static TRANSFORM_COLOR = '#9B30FF';
+
     applyPoisonToEnemy(enemy, towerForgeBonus = 0) {
         super.applyPoisonToEnemy(enemy, towerForgeBonus);
 
@@ -28,7 +30,12 @@ export class SuperPoisonTower extends PoisonArcherTower {
 
     renderDynamicParts(ctx, gridSize) {
         super.renderDynamicParts(ctx, gridSize);
-        this.renderTransformBadge(ctx, gridSize, { color: '#9B30FF', symbol: 'skull' });
+        // PoisonArcherTower has no static structure - its 4 camouflage bushes sit
+        // symmetrically around this.y (see generateCoverElements), so this.y is closer to
+        // the footprint's center than its bottom edge; a smaller offset than the other
+        // (foundation-based) towers keeps the ring under the bush cluster instead of well
+        // past it.
+        this.renderTransformBadge(ctx, gridSize, { color: SuperPoisonTower.TRANSFORM_COLOR, symbol: 'skull', groundYFactor: 0.5, badgeYFactor: 0.25 });
     }
 
     static getInfo() {

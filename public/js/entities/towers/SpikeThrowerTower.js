@@ -9,6 +9,8 @@ import { BarricadeTower } from './BarricadeTower.js';
  * the zone this frame" without re-doing the zone-shape math in _isInZone().
  */
 export class SpikeThrowerTower extends BarricadeTower {
+    static TRANSFORM_COLOR = '#CC5500';
+
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
         this.zoneDamage = 8;
@@ -44,7 +46,9 @@ export class SpikeThrowerTower extends BarricadeTower {
 
     renderDynamicParts(ctx, gridSize) {
         super.renderDynamicParts(ctx, gridSize);
-        this.renderTransformBadge(ctx, gridSize, { color: '#CC5500', symbol: 'spike' });
+        // BarricadeTower's foundation (see its renderStaticBack) bottoms out exactly at
+        // this.y - tuned here to match.
+        this.renderTransformBadge(ctx, gridSize, { color: SpikeThrowerTower.TRANSFORM_COLOR, symbol: 'spike', groundYFactor: 0.15, badgeYFactor: -0.15 });
     }
 
     static getInfo() {

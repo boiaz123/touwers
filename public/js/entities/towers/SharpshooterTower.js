@@ -12,6 +12,8 @@ const VISUAL_RANGE_CAP = 3000;
  * every living enemy directly instead.
  */
 export class SharpshooterTower extends ArcherTower {
+    static TRANSFORM_COLOR = '#B22222';
+
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
         this.damage = 150;
@@ -65,7 +67,10 @@ export class SharpshooterTower extends ArcherTower {
 
     renderDynamicParts(ctx, gridSize) {
         super.renderDynamicParts(ctx, gridSize);
-        this.renderTransformBadge(ctx, gridSize, { color: '#B22222', symbol: 'crosshair' });
+        // ArcherTower's stone foundation (see its renderStaticBack) bottoms out at
+        // this.y + towerSize*0.15 - tuned here to match, instead of the old generic
+        // offset that put the ring well below the tower's actual visible base.
+        this.renderTransformBadge(ctx, gridSize, { color: SharpshooterTower.TRANSFORM_COLOR, symbol: 'crosshair', groundYFactor: 0.3, badgeYFactor: 0.02 });
     }
 
     static getInfo() {

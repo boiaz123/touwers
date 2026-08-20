@@ -3345,6 +3345,10 @@ export class UIManager {
         // Transform button - only offered once the settlement unlock for this tower's
         // transform has been purchased; shown disabled (with a reason) until the Tower
         // Forge and Training Grounds are both level 5 this level, or gold is short.
+        // Full-width, reuses the same forge-upgrade-btn/btn-label/btn-cost convention as
+        // the Tower Forge level-up button so the (variable-length) "Transform -> X" label
+        // and cost always have room to lay out cleanly instead of being squeezed into the
+        // narrow icon column alongside Sell.
         let transformButtonHTML = '';
         const transformDef = TowerTransformRegistry.getTransform(tower.type);
         if (transformDef && !tower.transformedType) {
@@ -3356,10 +3360,14 @@ export class UIManager {
                 const disabled = !buildingsReady || !canAfford;
                 const reason = !buildingsReady
                     ? 'Requires Tower Forge & Training Grounds at Level 5'
-                    : (!canAfford ? 'Not enough gold' : '');
+                    : (!canAfford ? 'Not enough gold' : `Transform into ${transformDef.class.getInfo().name}`);
+                const targetName = transformDef.class.getInfo().name;
                 transformButtonHTML = `
-                    <button id="transform-tower-btn-${tower.gridX}-${tower.gridY}" class="upgrade-button transform-tower-btn" ${disabled ? 'disabled' : ''} title="${reason}" style="background: ${disabled ? '#555' : '#9B30FF'}; padding: 0.2rem 0.5rem; margin: 0.25rem 0 0 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(155, 48, 255, 0.5); width: 100%; max-width: 80px; opacity: ${disabled ? '0.6' : '1'}; cursor: ${disabled ? 'not-allowed' : 'pointer'};">
-                        Transform (${transformDef.transformCost}g)
+                    <button id="transform-tower-btn-${tower.gridX}-${tower.gridY}" class="forge-upgrade-btn forge-level-upgrade-btn transform-upgrade-btn" ${disabled ? 'disabled' : ''} title="${reason}">
+                        <div class="forge-upgrade-btn-content">
+                            <span class="btn-label">⚡ Transform &rarr; ${targetName}</span>
+                            <span class="btn-cost"><span class="coin-xs"></span> ${transformDef.transformCost}</span>
+                        </div>
                     </button>
                 `;
             }
@@ -3373,7 +3381,6 @@ export class UIManager {
                         <button id="sell-tower-btn-${tower.gridX}-${tower.gridY}" class="upgrade-button sell-tower-btn" style="background: #ff4444; padding: 0.2rem 0.5rem; margin: 0; font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(255, 68, 68, 0.4); width: 100%; max-width: 80px;">
                             Sell
                         </button>
-                        ${transformButtonHTML}
                     </div>
                     <div class="forge-info-wrapper">
                         <div class="forge-title-row">
@@ -3385,6 +3392,7 @@ export class UIManager {
                         ${hasUpgrades ? upgradeNote : ''}
                     </div>
                 </div>
+                ${transformButtonHTML}
             </div>
         `;
 

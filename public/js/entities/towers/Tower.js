@@ -231,12 +231,34 @@ export class Tower {
     }
     
     /**
-     * Shared "this tower has been transformed" visual - a pulsing glow ring at the base
-     * plus a small floating emblem, layered on top of the (otherwise unmodified) inherited
-     * body art. Must be called from renderDynamicParts, not the baked static layers, since
-     * it animates off this.animationTime and would otherwise freeze at bake time.
+     * Shared "this tower has been transformed" visual: a pulsing glow ring at the base
+     * plus a small rune plate mounted low on the tower's front face, layered on top of
+     * the (otherwise unmodified) inherited body art - the body art itself is also
+     * recolored via a sprite tint applied once at registration (see
+     * TowerRenderAdapter.register's transformTint). Must be called from
+     * renderDynamicParts, not the baked static layers, since it animates off
+     * this.animationTime and would otherwise freeze at bake time.
+     *
+     * Deliberately flat-shaded (solid fills/strokes only, no gradients): an earlier
+     * version used two ctx.createRadialGradient() calls for a floating glow badge, each
+     * of which backs a real GPU texture once handed to Pixi (see
+     * CanvasGraphicsShim.createRadialGradient's doc) - recreating those from scratch
+     * every call allocated/destroyed 2 GPU textures per transformed tower on every
+     * ~30fps dynamic-layer redraw (TowerRenderAdapter.sync), which was the actual source
+     * of the frame-rate hit from placing several transformed towers. A grounded, flat
+     * badge reads better as "part of the tower" anyway, rather than an icon floating
+     * above it.
+     *
+     * groundYFactor/badgeYFactor (both x half, i.e. "fraction of the tower's half-size
+     * below this.y"): each base tower class draws its own foundation with a different
+     * relationship to this.y (some extend the foundation below it, some stop exactly at
+     * it - see each subclass's renderTransformBadge call for the value measured against
+     * its actual renderStaticBack art), so a single hardcoded offset here previously put
+     * the ring at the right height for some towers and floating well below the visible
+     * structure for others. Defaults match the original generic look for any future
+     * transform that doesn't tune these.
      */
-    renderTransformBadge(ctx, gridSize, { color, symbol }) {
+    renderTransformBadge(ctx, gridSize, { color, symbol, groundYFactor = 0.82, badgeYFactor = 0.5 }) {
         const size = gridSize || this.getTowerSize(ctx);
         const half = size / 2;
         const t = this.animationTime;
@@ -251,42 +273,37 @@ export class Tower {
         ctx.lineWidth = 1.5 + pulse * 1.5;
         ctx.globalAlpha = 0.35 + pulse * 0.3;
         ctx.beginPath();
-        ctx.ellipse(0, half * 0.82, half * 0.92, half * 0.26, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, half * groundYFactor, half * 0.92, half * 0.26, 0, 0, Math.PI * 2);
         ctx.stroke();
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = 'source-over';
 
-        // Floating emblem above the tower, gently bobbing
-        const bob = Math.sin(t * 1.6) * half * 0.06;
-        const badgeY = -half * 1.55 + bob;
-        const badgeR = half * 0.22;
+        // Rune plate mounted low on the tower's front face - grounded rather than
+        // floating, and gently breathing (subtle scale pulse) instead of bobbing since
+        // it's now anchored to the structure rather than hovering independently of it.
+        const badgeR = half * 0.2 * (0.94 + pulse * 0.06);
+        const badgeY = half * badgeYFactor;
 
         ctx.save();
         ctx.translate(0, badgeY);
 
-        ctx.globalCompositeOperation = 'lighter';
-        const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, badgeR * 2.2);
-        glow.addColorStop(0, color);
-        glow.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.globalAlpha = 0.4 + pulse * 0.25;
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(0, 0, badgeR * 2.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.globalCompositeOperation = 'source-over';
-
-        const discGradient = ctx.createRadialGradient(-badgeR * 0.3, -badgeR * 0.3, badgeR * 0.1, 0, 0, badgeR);
-        discGradient.addColorStop(0, '#fff');
-        discGradient.addColorStop(0.35, color);
-        discGradient.addColorStop(1, 'rgba(20,10,10,0.9)');
-        ctx.fillStyle = discGradient;
+        ctx.fillStyle = 'rgba(18, 12, 8, 0.9)';
         ctx.beginPath();
         ctx.arc(0, 0, badgeR, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = color;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1.5;
         ctx.stroke();
+
+        // Flat highlight arc standing in for a sheen (a real gradient here would cost
+        // another GPU texture for a purely cosmetic touch)
+        ctx.globalAlpha = 0.45;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(-badgeR * 0.25, -badgeR * 0.3, badgeR * 0.55, Math.PI * 1.1, Math.PI * 1.8);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
 
         this._renderTransformSymbol(ctx, symbol, badgeR, color);
 

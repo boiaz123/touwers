@@ -2302,6 +2302,27 @@ body.orientation-portrait .side-panel {
     flex-shrink: 1;
 }
 
+/* Transform button - arcane purple variant of the forge-upgrade-btn used for the
+   Tower Forge level-up button, so the transform action reads as its own special
+   category of upgrade rather than a mundane stat increase. */
+.transform-upgrade-btn {
+    background: linear-gradient(135deg, rgba(130, 55, 200, 0.95) 0%, rgba(80, 25, 140, 0.95) 100%);
+    border-color: #b370ff;
+    color: #f0dcff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 14px rgba(155, 48, 255, 0.3);
+}
+
+.transform-upgrade-btn .btn-label {
+    text-shadow: 0 0 8px rgba(200, 130, 255, 0.7), 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.transform-upgrade-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(160, 80, 230, 0.98) 0%, rgba(104, 35, 175, 0.98) 100%);
+    border-color: #e0bbff;
+    color: #ffffff;
+    box-shadow: 0 6px 14px rgba(155, 48, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
 .forge-upgrade-btn-content {
     display: flex;
     flex-direction: column;

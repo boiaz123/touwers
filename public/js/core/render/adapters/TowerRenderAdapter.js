@@ -5,6 +5,20 @@ import { CanvasGraphicsShim } from '../CanvasGraphicsShim.js';
 // decorations (trees, bushes, rocks) extend well beyond the tower's own footprint.
 const BAKE_CANVAS_SCALE = 4;
 
+// Blends a '#RRGGBB' hex color toward white by `amount` (0-1) and returns a Pixi tint
+// number. Used to recolor a transformed tower's baked back/front sprites in place -
+// Sprite.tint is a per-pixel multiply against the (shared, cached) baked texture, so
+// applying a raw saturated color straight would crush shadow detail toward black;
+// blending toward white first keeps the tower's structure/shading readable while still
+// clearly recoloring it. Applied once per Sprite at registration (towers never move or
+// get re-registered after placement), so this costs nothing on a per-frame basis.
+function transformTint(hexColor, amount = 0.45) {
+    const n = parseInt(hexColor.slice(1), 16);
+    const r = (n >> 16) & 0xff, g = (n >> 8) & 0xff, b = n & 0xff;
+    const mix = (c) => Math.round(c + (255 - c) * amount);
+    return (mix(r) << 16) | (mix(g) << 8) | mix(b);
+}
+
 /**
  * Phase 3 of the Canvas2D -> Pixi migration: tower rendering.
  *
@@ -48,7 +62,19 @@ export class TowerRenderAdapter {
      * @param {number} gridSize - this tower's current cell-size-derived footprint
      */
     register(tower, campaign, level, gridSize) {
-        const typeKey = tower.constructor.name + ':' + campaign;
+        // Transform subclasses (SlingerTower, SharpshooterTower, ...) never override
+        // renderStaticBack/Front - they inherit their base class's (BasicTower,
+        // ArcherTower, ...) unmodified, per each subclass's own doc comment. Baking under
+        // tower.constructor.name would treat every transform type as a brand-new visual
+        // variant needing its own full bake pass + permanently-cached texture, even
+        // though the pixels are byte-identical to what's already cached under the base
+        // type - wasted bake time (a real stutter) the first time each transform type
+        // appears, plus 2 extra full-resolution GPU textures held for the rest of the
+        // process lifetime (PixiTextureCache never evicts). Baking under the base
+        // class's name instead lets a transform reuse whatever's already baked for that
+        // tower type, exactly like an upgraded instance of the same base type would.
+        const bakeClassName = tower.transformedType ? Object.getPrototypeOf(tower.constructor).name : tower.constructor.name;
+        const typeKey = bakeClassName + ':' + campaign;
 
         const backTexture = this._getOrBakeLayer(typeKey + ':back', tower, level, gridSize, 'renderStaticBack');
         const frontTexture = this._getOrBakeLayer(typeKey + ':front', tower, level, gridSize, 'renderStaticFront');
@@ -81,6 +107,16 @@ export class TowerRenderAdapter {
         const front = new Sprite(frontTexture);
         front.anchor.set(0.5, 0.5);
         front.zIndex = 2;
+
+        // Transformed towers get their whole body recolored via sprite tint (see
+        // transformTint's doc above) instead of just the small badge drawn into
+        // `dynamic` - the shared baked texture itself is untouched, so this only affects
+        // this tower's own back/front Sprite instances.
+        if (tower.transformedType && tower.constructor.TRANSFORM_COLOR) {
+            const tint = transformTint(tower.constructor.TRANSFORM_COLOR);
+            back.tint = tint;
+            front.tint = tint;
+        }
 
         entryContainer.addChild(ground, back, dynamic, front);
         this.container.addChild(entryContainer);
