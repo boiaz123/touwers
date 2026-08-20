@@ -1,76 +1,39 @@
 import { ArcherTower } from './ArcherTower.js';
 
-// Range circles are drawn with ctx.arc(..., range, ...) - an actually-Infinity radius
-// would hang/crash the canvas draw call, so range indicators are capped to this visual
-// radius instead. Large enough to read as "covers the whole map" at any resolution.
-const VISUAL_RANGE_CAP = 3000;
-
 /**
- * Transformed Archer Tower - trades fire rate for a devastating, unlimited-range shot.
- * Infinite range means the shared spatial-grid targeting in Tower.findTarget() (which
- * queries a bounded radius) can't be reused, so findTarget() is overridden to linear-scan
- * every living enemy directly instead.
+ * Transformed Archer Tower - trades fire rate for a devastating, effectively-unlimited-
+ * range shot.
+ *
+ * Range used to be set to actual Infinity, which caused two real problems: (1) the shared
+ * spatial-grid targeting in Tower.findTarget() queries a bounded radius around the tower,
+ * which is meaningless for an infinite radius, so findTarget() had to be overridden to
+ * linear-scan every living enemy on every re-target instead; and (2) ctx.arc(..., range, ...)
+ * with an Infinite radius would hang/crash the canvas draw call, so the range-circle
+ * rendering needed a separate hardcoded cap just to stay drawable.
+ *
+ * MASSIVE_RANGE replaces Infinity with a large-but-finite radius instead: it comfortably
+ * exceeds the base-resolution map diagonal (1920x1080, ~2202px) at every supported
+ * resolution scale, so it still reads as "covers the whole map" in play, while being a real
+ * number the shared spatial-grid targeting and the base Tower's range-circle rendering
+ * (Tower.renderAttackRadiusCircle) can use completely unmodified - no override needed for
+ * either.
  */
 export class SharpshooterTower extends ArcherTower {
     static TRANSFORM_COLOR = '#B22222';
+    static MASSIVE_RANGE = 3000;
 
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
         this.damage = 150;
         this.fireRate = 0.3;
-        this.range = Infinity;
-    }
-
-    findTarget(enemies) {
-        let closest = null;
-        let closestDistSq = Infinity;
-        for (let i = 0; i < enemies.length; i++) {
-            const enemy = enemies[i];
-            const dx = enemy.x - this.x;
-            const dy = enemy.y - this.y;
-            const distSq = dx * dx + dy * dy;
-            if (distSq < closestDistSq) {
-                closest = enemy;
-                closestDistSq = distSq;
-            }
-        }
-        return closest;
-    }
-
-    renderRangeIndicator(ctx, color = 'rgba(139, 69, 19, 0.2)') {
-        if (!this.target) return;
-        const range = Math.min(this.effectiveRange ?? this.range, VISUAL_RANGE_CAP);
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, range, 0, Math.PI * 2);
-        ctx.stroke();
-    }
-
-    renderAttackRadiusCircle(ctx, color = 'rgba(100, 200, 100, 0.3)') {
-        if (!this.isSelected) return;
-        const range = Math.min(this.effectiveRange ?? this.range, VISUAL_RANGE_CAP);
-        ctx.strokeStyle = 'rgba(100, 200, 100, 0.6)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, range, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.strokeStyle = 'rgba(100, 200, 100, 0.4)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([5, 5]);
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, range, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
+        this.range = SharpshooterTower.MASSIVE_RANGE;
     }
 
     renderDynamicParts(ctx, gridSize) {
         super.renderDynamicParts(ctx, gridSize);
         // ArcherTower's stone foundation (see its renderStaticBack) bottoms out at
-        // this.y + towerSize*0.15 - tuned here to match, instead of the old generic
-        // offset that put the ring well below the tower's actual visible base.
-        this.renderTransformBadge(ctx, gridSize, { color: SharpshooterTower.TRANSFORM_COLOR, symbol: 'crosshair', groundYFactor: 0.3, badgeYFactor: 0.02 });
+        // this.y + towerSize*0.15 - tuned here to match.
+        this.renderTransformBadge(ctx, gridSize, { color: SharpshooterTower.TRANSFORM_COLOR, symbol: 'crosshair', groundYFactor: 0.3 });
     }
 
     static getInfo() {

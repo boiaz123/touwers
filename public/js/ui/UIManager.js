@@ -5,6 +5,7 @@ import { ControlsScreen } from './ControlsScreen.js';
 import { ResolutionSelector } from './ResolutionSelector.js';
 import { ResolutionSettings } from '../core/ResolutionSettings.js';
 import { TowerTransformRegistry } from '../entities/towers/TowerTransformRegistry.js';
+import { SharpshooterTower } from '../entities/towers/SharpshooterTower.js';
 
 export class UIManager {
     constructor(gameplayState) {
@@ -3252,7 +3253,7 @@ export class UIManager {
                 break;
             }
             case 'SharpshooterTower': {
-                const rangeDisplay = (tower.range === Infinity) ? '∞' : Math.round(tower.range);
+                const rangeDisplay = (tower.range >= SharpshooterTower.MASSIVE_RANGE) ? '∞' : Math.round(tower.range);
                 statBadgesHTML = `
                     ${badge('DMG', Math.round(tower.damage))}
                     ${badge('RANGE', rangeDisplay)}

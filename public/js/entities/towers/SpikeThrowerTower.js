@@ -48,7 +48,7 @@ export class SpikeThrowerTower extends BarricadeTower {
         super.renderDynamicParts(ctx, gridSize);
         // BarricadeTower's foundation (see its renderStaticBack) bottoms out exactly at
         // this.y - tuned here to match.
-        this.renderTransformBadge(ctx, gridSize, { color: SpikeThrowerTower.TRANSFORM_COLOR, symbol: 'spike', groundYFactor: 0.15, badgeYFactor: -0.15 });
+        this.renderTransformBadge(ctx, gridSize, { color: SpikeThrowerTower.TRANSFORM_COLOR, symbol: 'spike', groundYFactor: 0.15 });
     }
 
     static getInfo() {

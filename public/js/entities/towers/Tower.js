@@ -231,89 +231,116 @@ export class Tower {
     }
     
     /**
-     * Shared "this tower has been transformed" visual: a pulsing glow ring at the base
-     * plus a small rune plate mounted low on the tower's front face, layered on top of
-     * the (otherwise unmodified) inherited body art - the body art itself is also
+     * Shared "this tower has been transformed" visual: a rune stone planted at the
+     * tower's base, carved with a symbol indicating the transform's function, layered on
+     * top of the (otherwise unmodified) inherited body art - the body art itself is also
      * recolored via a sprite tint applied once at registration (see
      * TowerRenderAdapter.register's transformTint). Must be called from
-     * renderDynamicParts, not the baked static layers, since it animates off
-     * this.animationTime and would otherwise freeze at bake time.
+     * renderDynamicParts, not the baked static layers, since its rune inscription pulses
+     * off this.animationTime and would otherwise freeze at bake time.
      *
      * Deliberately flat-shaded (solid fills/strokes only, no gradients): an earlier
-     * version used two ctx.createRadialGradient() calls for a floating glow badge, each
-     * of which backs a real GPU texture once handed to Pixi (see
+     * version used ctx.createRadialGradient() calls for a floating glow badge, each of
+     * which backs a real GPU texture once handed to Pixi (see
      * CanvasGraphicsShim.createRadialGradient's doc) - recreating those from scratch
-     * every call allocated/destroyed 2 GPU textures per transformed tower on every
-     * ~30fps dynamic-layer redraw (TowerRenderAdapter.sync), which was the actual source
-     * of the frame-rate hit from placing several transformed towers. A grounded, flat
-     * badge reads better as "part of the tower" anyway, rather than an icon floating
-     * above it.
+     * every call allocated/destroyed GPU textures per transformed tower on every ~30fps
+     * dynamic-layer redraw (TowerRenderAdapter.sync), which was the actual source of the
+     * frame-rate hit from placing several transformed towers on screen. The stone below
+     * is built entirely from flat polygon/arc fills and strokes for the same reason.
      *
-     * groundYFactor/badgeYFactor (both x half, i.e. "fraction of the tower's half-size
-     * below this.y"): each base tower class draws its own foundation with a different
-     * relationship to this.y (some extend the foundation below it, some stop exactly at
-     * it - see each subclass's renderTransformBadge call for the value measured against
-     * its actual renderStaticBack art), so a single hardcoded offset here previously put
-     * the ring at the right height for some towers and floating well below the visible
-     * structure for others. Defaults match the original generic look for any future
-     * transform that doesn't tune these.
+     * groundYFactor (x half, i.e. "fraction of the tower's half-size below this.y")
+     * plants the stone at each base tower's actual foundation level: each base tower
+     * class draws its own foundation with a different relationship to this.y (some
+     * extend the foundation below it, some stop exactly at it - see each subclass's
+     * renderTransformBadge call for the value measured against its actual
+     * renderStaticBack art), so a single hardcoded offset here previously put the old
+     * ring at the right height for some towers and floating well below the visible
+     * structure for others. Default matches the original generic look for any future
+     * transform that doesn't tune it.
      */
-    renderTransformBadge(ctx, gridSize, { color, symbol, groundYFactor = 0.82, badgeYFactor = 0.5 }) {
+    renderTransformBadge(ctx, gridSize, { color, symbol, groundYFactor = 0.82 }) {
         const size = gridSize || this.getTowerSize(ctx);
         const half = size / 2;
         const t = this.animationTime;
         const pulse = 0.5 + 0.5 * Math.sin(t * 2.4);
 
+        const stoneY = half * groundYFactor;
+        const stoneW = half * 0.6;
+        const stoneH = half * 0.56;
+
         ctx.save();
         ctx.translate(this.x, this.y);
 
-        // Pulsing glow ring at the tower's base
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 1.5 + pulse * 1.5;
-        ctx.globalAlpha = 0.35 + pulse * 0.3;
+        // Ground shadow, anchoring the stone against the tower's foundation
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.beginPath();
-        ctx.ellipse(0, half * groundYFactor, half * 0.92, half * 0.26, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-        ctx.globalCompositeOperation = 'source-over';
-
-        // Rune plate mounted low on the tower's front face - grounded rather than
-        // floating, and gently breathing (subtle scale pulse) instead of bobbing since
-        // it's now anchored to the structure rather than hovering independently of it.
-        const badgeR = half * 0.2 * (0.94 + pulse * 0.06);
-        const badgeY = half * badgeYFactor;
+        ctx.ellipse(stoneW * 0.1, stoneY + stoneH * 0.42, stoneW * 0.62, stoneH * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
 
         ctx.save();
-        ctx.translate(0, badgeY);
+        ctx.translate(0, stoneY);
 
-        ctx.fillStyle = 'rgba(18, 12, 8, 0.9)';
+        // Weathered standing-stone silhouette (an irregular hexagon rather than a
+        // perfect shape, to read as rough-hewn rock): wider base, tapered rounded top.
         ctx.beginPath();
-        ctx.arc(0, 0, badgeR, 0, Math.PI * 2);
+        ctx.moveTo(-stoneW * 0.32, -stoneH);
+        ctx.lineTo(stoneW * 0.4, -stoneH * 0.86);
+        ctx.lineTo(stoneW * 0.58, -stoneH * 0.1);
+        ctx.lineTo(stoneW * 0.46, stoneH * 0.5);
+        ctx.lineTo(-stoneW * 0.5, stoneH * 0.46);
+        ctx.lineTo(-stoneW * 0.6, -stoneH * 0.2);
+        ctx.closePath();
+        ctx.fillStyle = '#4a453f';
         ctx.fill();
-        ctx.strokeStyle = color;
+        ctx.strokeStyle = '#242119';
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        // Flat highlight arc standing in for a sheen (a real gradient here would cost
-        // another GPU texture for a purely cosmetic touch)
-        ctx.globalAlpha = 0.45;
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1;
+        // Flat side-shading panel standing in for depth (a real gradient here would
+        // cost another GPU texture for a purely cosmetic touch)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
         ctx.beginPath();
-        ctx.arc(-badgeR * 0.25, -badgeR * 0.3, badgeR * 0.55, Math.PI * 1.1, Math.PI * 1.8);
+        ctx.moveTo(stoneW * 0.1, -stoneH * 0.9);
+        ctx.lineTo(stoneW * 0.58, -stoneH * 0.1);
+        ctx.lineTo(stoneW * 0.46, stoneH * 0.5);
+        ctx.lineTo(stoneW * 0.05, stoneH * 0.4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Carved rune panel: a recessed dark plate on the stone's face, breathing gently
+        const panelR = Math.min(stoneW, stoneH) * 0.42 * (0.96 + pulse * 0.05);
+        const panelY = -stoneH * 0.16;
+        ctx.fillStyle = 'rgba(10, 8, 6, 0.8)';
+        ctx.beginPath();
+        ctx.arc(0, panelY, panelR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Glowing rune inscription, pulsing with the transform's theme color
+        ctx.save();
+        ctx.translate(0, panelY);
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.55 + pulse * 0.35;
+        this._renderTransformSymbol(ctx, symbol, panelR, color);
+        ctx.restore();
+
+        // Thin glowing ring tracing the rune panel's edge
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5 + pulse;
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        ctx.arc(0, panelY, panelR, 0, Math.PI * 2);
         ctx.stroke();
         ctx.globalAlpha = 1;
-
-        this._renderTransformSymbol(ctx, symbol, badgeR, color);
+        ctx.globalCompositeOperation = 'source-over';
 
         ctx.restore();
         ctx.restore();
     }
 
     _renderTransformSymbol(ctx, symbol, r, color) {
-        ctx.strokeStyle = '#fff';
-        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
         ctx.lineWidth = Math.max(1, r * 0.16);
         ctx.lineCap = 'round';
         switch (symbol) {
@@ -359,7 +386,9 @@ export class Tower {
                 ctx.arc(0, -r * 0.05, r * 0.5, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.fillRect(-r * 0.32, r * 0.1, r * 0.64, r * 0.3);
-                ctx.fillStyle = color;
+                // Eye sockets punched through to the dark panel behind, so they read as
+                // holes in the glowing skull rather than a second glowing color.
+                ctx.fillStyle = 'rgba(10, 8, 6, 0.9)';
                 ctx.beginPath(); ctx.arc(-r * 0.2, -r * 0.05, r * 0.12, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.arc(r * 0.2, -r * 0.05, r * 0.12, 0, Math.PI * 2); ctx.fill();
                 break;

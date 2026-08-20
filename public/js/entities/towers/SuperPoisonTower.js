@@ -32,10 +32,9 @@ export class SuperPoisonTower extends PoisonArcherTower {
         super.renderDynamicParts(ctx, gridSize);
         // PoisonArcherTower has no static structure - its 4 camouflage bushes sit
         // symmetrically around this.y (see generateCoverElements), so this.y is closer to
-        // the footprint's center than its bottom edge; a smaller offset than the other
-        // (foundation-based) towers keeps the ring under the bush cluster instead of well
-        // past it.
-        this.renderTransformBadge(ctx, gridSize, { color: SuperPoisonTower.TRANSFORM_COLOR, symbol: 'skull', groundYFactor: 0.5, badgeYFactor: 0.25 });
+        // the footprint's center than its bottom edge; tuned here to plant the stone
+        // under the bush cluster instead of well past it.
+        this.renderTransformBadge(ctx, gridSize, { color: SuperPoisonTower.TRANSFORM_COLOR, symbol: 'skull', groundYFactor: 0.5 });
     }
 
     static getInfo() {
