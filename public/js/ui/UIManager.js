@@ -3183,70 +3183,49 @@ export class UIManager {
         const icon = towerInfo.icon || '';
         const name = towerInfo.name;
         
-        // Check for upgrade indicators (compare live vs base)
-        const hasUpgrades = tower.originalDamage && (tower.damage !== tower.originalDamage || tower.range !== tower.originalRange || tower.fireRate !== tower.originalFireRate);
-        
-        // Helper: show stat with base value if upgraded
-        const sv = (current, base, suffix = '') => {
-            const cur = Math.round(current);
-            const bas = Math.round(base);
-            if (cur !== bas && bas > 0) {
-                return `<span style="color: #FFD700; font-weight: bold;">${cur}${suffix}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${bas}${suffix})</span>`;
-            }
-            return `<span style="color: #FFD700; font-weight: bold;">${cur}${suffix}</span>`;
-        };
-        const svDec = (current, base, suffix = '') => {
-            const cur = current.toFixed(1);
-            const bas = base.toFixed(1);
-            if (cur !== bas && parseFloat(bas) > 0) {
-                return `<span style="color: #FFD700; font-weight: bold;">${cur}${suffix}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${bas}${suffix})</span>`;
-            }
-            return `<span style="color: #FFD700; font-weight: bold;">${cur}${suffix}</span>`;
-        };
-        
+        // Helper: a single labeled stat badge showing only the tower's current value
+        const badge = (label, value) => `<span class="effect-badge"><span class="forge-benefit-label">${label}</span> <span class="forge-benefit-value">${value}</span></span>`;
+
         // Build stat badges for display
         let statBadgesHTML = '';
         const towerType = tower.constructor.name;
-        
+
         switch (towerType) {
             case 'BasicTower': {
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 20)}</span>
-                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 120)}</span>
-                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 1.0, '/s')}</span>
+                    ${badge('DMG', Math.round(tower.damage))}
+                    ${badge('RANGE', Math.round(tower.range))}
+                    ${badge('RATE', tower.fireRate.toFixed(1) + '/s')}
                 `;
                 break;
             }
             case 'ArcherTower': {
                 const pierce = tower.armorPiercingPercent || 0;
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 35)}</span>
-                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 140)}</span>
-                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 1.5, '/s')}</span>
-                    ${pierce > 0 ? `<span class="effect-badge">${pierce}%</span>` : ''}
+                    ${badge('DMG', Math.round(tower.damage))}
+                    ${badge('RANGE', Math.round(tower.range))}
+                    ${badge('RATE', tower.fireRate.toFixed(1) + '/s')}
+                    ${pierce > 0 ? badge('PIERCE', pierce + '%') : ''}
                 `;
                 break;
             }
             case 'CannonTower': {
                 const radius = tower.splashRadius || 50;
-                const baseRadius = tower.originalSplashRadius || 50;
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 100)}</span>
-                    <span class="effect-badge">${sv(radius, baseRadius, 'px')}</span>
-                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 120)}</span>
-                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.4, '/s')}</span>
+                    ${badge('DMG', Math.round(tower.damage))}
+                    ${badge('SPLASH', Math.round(radius) + 'px')}
+                    ${badge('RANGE', Math.round(tower.range))}
+                    ${badge('RATE', tower.fireRate.toFixed(1) + '/s')}
                 `;
                 break;
             }
             case 'BarricadeTower': {
                 const radius = tower.effectRadius || 40;
-                const baseRadius = tower.originalEffectRadius || 40;
                 const slowPercent = Math.round((tower.slowPercent || 0.65) * 100);
-                const baseSlowPercent = Math.round((tower.originalSlowPercent || 0.65) * 100);
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(radius, baseRadius, 'px')}</span>
-                    <span class="effect-badge">${sv(slowPercent, baseSlowPercent, '%')}</span>
-                    <span class="effect-badge">Continuous</span>
+                    ${badge('RADIUS', Math.round(radius) + 'px')}
+                    ${badge('SLOW', slowPercent + '%')}
+                    ${badge('EFFECT', 'Continuous')}
                 `;
                 break;
             }
@@ -3257,51 +3236,47 @@ export class UIManager {
                     poisonForgeBonus = fm.poisonDamageBonus || 0;
                 }
                 const poisonTickDmg = 13 + poisonForgeBonus;
-                const basePoisonTickDmg = 13;
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(poisonTickDmg, basePoisonTickDmg, '/2s')}</span>
-                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 130)}</span>
-                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.25, '/s')}</span>
+                    ${badge('POISON', poisonTickDmg + '/2s')}
+                    ${badge('RANGE', Math.round(tower.range))}
+                    ${badge('RATE', tower.fireRate.toFixed(1) + '/s')}
                 `;
                 break;
             }
             case 'SlingerTower': {
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 20)}</span>
-                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 120)}</span>
-                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 3.0, '/s')}</span>
+                    ${badge('DMG', Math.round(tower.damage))}
+                    ${badge('RANGE', Math.round(tower.range))}
+                    ${badge('RATE', tower.fireRate.toFixed(1) + '/s')}
                 `;
                 break;
             }
             case 'SharpshooterTower': {
                 const rangeDisplay = (tower.range === Infinity) ? '∞' : Math.round(tower.range);
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 150)}</span>
-                    <span class="effect-badge" style="color: #FFD700; font-weight: bold;">${rangeDisplay}</span>
-                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.3, '/s')}</span>
+                    ${badge('DMG', Math.round(tower.damage))}
+                    ${badge('RANGE', rangeDisplay)}
+                    ${badge('RATE', tower.fireRate.toFixed(1) + '/s')}
                 `;
                 break;
             }
             case 'SpikeThrowerTower': {
                 const radius = tower.effectRadius || 40;
-                const baseRadius = tower.originalEffectRadius || 40;
                 const slowPercent = Math.round((tower.slowPercent || 0.65) * 100);
-                const baseSlowPercent = Math.round((tower.originalSlowPercent || 0.65) * 100);
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(radius, baseRadius, 'px')}</span>
-                    <span class="effect-badge">${sv(slowPercent, baseSlowPercent, '%')}</span>
-                    <span class="effect-badge">${tower.zoneDamage || 8}/${(tower.zoneTickInterval || 1.5).toFixed(1)}s</span>
+                    ${badge('RADIUS', Math.round(radius) + 'px')}
+                    ${badge('SLOW', slowPercent + '%')}
+                    ${badge('ZONE', `${tower.zoneDamage || 8}/${(tower.zoneTickInterval || 1.5).toFixed(1)}s`)}
                 `;
                 break;
             }
             case 'TripleTrebuchetTower': {
                 const radius = tower.splashRadius || 50;
-                const baseRadius = tower.originalSplashRadius || 50;
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(tower.damage, tower.originalDamage || 100)}</span>
-                    <span class="effect-badge">${sv(radius, baseRadius, 'px')}</span>
-                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 120)}</span>
-                    <span class="effect-badge" style="color: #FFD700; font-weight: bold;">×3 shots</span>
+                    ${badge('DMG', Math.round(tower.damage))}
+                    ${badge('SPLASH', Math.round(radius) + 'px')}
+                    ${badge('RANGE', Math.round(tower.range))}
+                    ${badge('SHOTS', '×3')}
                 `;
                 break;
             }
@@ -3312,30 +3287,23 @@ export class UIManager {
                     superPoisonForgeBonus = fm.poisonDamageBonus || 0;
                 }
                 const superPoisonTickDmg = 13 + superPoisonForgeBonus;
-                const superBasePoisonTickDmg = 13;
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(superPoisonTickDmg, superBasePoisonTickDmg, '/2s')}</span>
-                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 130)}</span>
-                    <span class="effect-badge" style="color: #FFD700; font-weight: bold;">-20% speed</span>
+                    ${badge('POISON', superPoisonTickDmg + '/2s')}
+                    ${badge('RANGE', Math.round(tower.range))}
+                    ${badge('SPEED', '-20%')}
                 `;
                 break;
             }
             default: {
                 statBadgesHTML = `
-                    <span class="effect-badge">${typeof tower.damage === 'number' ? Math.round(tower.damage) : tower.damage}</span>
-                    <span class="effect-badge">${Math.round(tower.range)}</span>
-                    <span class="effect-badge">${typeof tower.fireRate === 'number' ? tower.fireRate.toFixed(1) + '/s' : tower.fireRate}</span>
+                    ${badge('DMG', typeof tower.damage === 'number' ? Math.round(tower.damage) : tower.damage)}
+                    ${badge('RANGE', Math.round(tower.range))}
+                    ${badge('RATE', typeof tower.fireRate === 'number' ? tower.fireRate.toFixed(1) + '/s' : tower.fireRate)}
                 `;
                 break;
             }
         }
-        
-        // Show upgrade status indicator
-        let upgradeNote = '';
-        if (hasUpgrades) {
-            upgradeNote = '<div style="font-size: 0.65rem; color: #aaffaa; margin-top: 0.2rem;">✦ Includes upgrade bonuses</div>';
-        }
-        
+
         const towerImageMap = {
             'BasicTower': 'basic', 'ArcherTower': 'archer', 'CannonTower': 'cannon', 'BarricadeTower': 'barricade', 'PoisonArcherTower': 'poison',
             'SlingerTower': 'basic', 'SharpshooterTower': 'archer', 'SpikeThrowerTower': 'barricade', 'TripleTrebuchetTower': 'cannon', 'SuperPoisonTower': 'poison'
@@ -3346,9 +3314,7 @@ export class UIManager {
         // transform has been purchased; shown disabled (with a reason) until the Tower
         // Forge and Training Grounds are both level 5 this level, or gold is short.
         // Full-width, reuses the same forge-upgrade-btn/btn-label/btn-cost convention as
-        // the Tower Forge level-up button so the (variable-length) "Transform -> X" label
-        // and cost always have room to lay out cleanly instead of being squeezed into the
-        // narrow icon column alongside Sell.
+        // the Tower Forge level-up button so it reads as the same kind of button.
         let transformButtonHTML = '';
         const transformDef = TowerTransformRegistry.getTransform(tower.type);
         if (transformDef && !tower.transformedType) {
@@ -3358,14 +3324,14 @@ export class UIManager {
                 const buildingsReady = this.towerManager.canTransformTowers();
                 const canAfford = this.gameState.gold >= transformDef.transformCost;
                 const disabled = !buildingsReady || !canAfford;
+                const targetName = transformDef.class.getInfo().name;
                 const reason = !buildingsReady
                     ? 'Requires Tower Forge & Training Grounds at Level 5'
-                    : (!canAfford ? 'Not enough gold' : `Transform into ${transformDef.class.getInfo().name}`);
-                const targetName = transformDef.class.getInfo().name;
+                    : (!canAfford ? 'Not enough gold' : `Upgrade to ${targetName}`);
                 transformButtonHTML = `
-                    <button id="transform-tower-btn-${tower.gridX}-${tower.gridY}" class="forge-upgrade-btn forge-level-upgrade-btn transform-upgrade-btn" ${disabled ? 'disabled' : ''} title="${reason}">
+                    <button id="transform-tower-btn-${tower.gridX}-${tower.gridY}" class="forge-upgrade-btn forge-level-upgrade-btn" ${disabled ? 'disabled' : ''} title="${reason}">
                         <div class="forge-upgrade-btn-content">
-                            <span class="btn-label">⚡ Transform &rarr; ${targetName}</span>
+                            <span class="btn-label">Upgrade to ${targetName}</span>
                             <span class="btn-cost"><span class="coin-xs"></span> ${transformDef.transformCost}</span>
                         </div>
                     </button>
@@ -3389,7 +3355,6 @@ export class UIManager {
                         <div class="forge-effects-row">
                             ${statBadgesHTML}
                         </div>
-                        ${hasUpgrades ? upgradeNote : ''}
                     </div>
                 </div>
                 ${transformButtonHTML}
