@@ -19,16 +19,17 @@ export class TrainingGrounds extends Building {
         this.maxGuardPosts = 1; // 1 guard post allowed from placement
 
         // Range upgrades for manned towers - each tower has 5 levels
-        // Towers: ArcherTower, BasicTower, CannonTower (PoisonArcherTower and BarricadeTower use fire rate instead)
+        // Towers: ArcherTower, BasicTower, CannonTower (PoisonArcherTower uses fire rate,
+        // BarricadeTower uses slow strength instead)
         this.rangeUpgrades = {
             archerTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
             basicTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
             cannonTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 }
         };
 
-        // Tower-specific fire rate upgrades
+        // Tower-specific fire rate / effect-strength upgrades
         this.upgrades = {
-            barricadeFireRate: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.1 }, // Fire rate: 0.33 → 0.83 at level 5
+            barricadeSlowPower: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.05 }, // Slow strength: 65% → 90% at level 5
             poisonArcherTowerFireRate: { level: 0, maxLevel: 5, baseCost: 140, effect: 0.05 } // Fire rate: 0.25 → 0.50 at level 5
         };
 
@@ -1702,9 +1703,9 @@ export class TrainingGrounds extends Building {
         const towerUpgradeOrder = [
             { kind: 'range', id: 'basicTower', registryId: 'basic', name: 'Watch Tower', icon: '<img src="assets/towers/basic.png" class="upgrade-tower-icon">' },
             {
-                kind: 'fireRate', id: 'barricadeFireRate', registryId: 'barricade',
-                name: 'Barricade Tower Fire Rate Training',
-                description: `Increase Barricade Tower barrel rolling speed (0.33 → 0.83 at level 5)`,
+                kind: 'slowPower', id: 'barricadeSlowPower', registryId: 'barricade',
+                name: 'Barricade Tower Slow Training',
+                description: `Increase Barricade Tower slow strength (65% → 90% speed reduction at level 5)`,
                 icon: '<img src="assets/towers/barricade.png" class="upgrade-tower-icon">'
             },
             { kind: 'range', id: 'archerTower', registryId: 'archer', name: 'Archer Tower', icon: '<img src="assets/towers/archer.png" class="upgrade-tower-icon">' },
@@ -1914,7 +1915,7 @@ export class TrainingGrounds extends Building {
             archerTowerRangeBonus: this.rangeUpgrades.archerTower.level * this.rangeUpgrades.archerTower.effect,
             basicTowerRangeBonus: this.rangeUpgrades.basicTower.level * this.rangeUpgrades.basicTower.effect,
             cannonTowerRangeBonus: this.rangeUpgrades.cannonTower.level * this.rangeUpgrades.cannonTower.effect,
-            barricadeFireRateBonus: this.upgrades.barricadeFireRate.level * this.upgrades.barricadeFireRate.effect,
+            barricadeSlowBonus: this.upgrades.barricadeSlowPower.level * this.upgrades.barricadeSlowPower.effect,
             poisonArcherFireRateBonus: this.upgrades.poisonArcherTowerFireRate.level * this.upgrades.poisonArcherTowerFireRate.effect
         };
     }

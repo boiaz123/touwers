@@ -49,7 +49,7 @@ export class TowerForge extends Building {
         this.upgrades = {
             // Basic towers - always available at forge level 1
             'basic': { level: 0, baseCost: 80, effect: 8 },
-            'barricade_effectiveness': { level: 0, baseCost: 125, effect: { capacity: 2.0, duration: 1.5 } }, // Capacity: 4→14, Duration: 4s→11.5s
+            'barricade_radius': { level: 0, baseCost: 125, effect: 4 }, // Radius: 20px → 40px at level 5
             'archer': { level: 0, baseCost: 100, damageEffect: 8, pierceEffect: 5 },
             
             // Poison upgrades - available at forge level 2+
@@ -1726,15 +1726,15 @@ export class TowerForge extends Building {
         });
         
         // Barricade Tower - available from forge level 1
-        // Barricade Effectiveness - increases both capacity and duration
+        // Barricade Radius - grows the rubble zone's slow radius
         options.push({
-            id: 'barricade_effectiveness',
+            id: 'barricade_radius',
             name: 'Barricade Tower Upgrade',
-            description: `Increases enemies slowed per rubble and slow duration`,
-            level: this.upgrades.barricade_effectiveness.level,
+            description: `Increases the rubble patch's slow radius by ${this.upgrades.barricade_radius.effect}px per level`,
+            level: this.upgrades.barricade_radius.level,
             maxLevel: this.maxForgeLevel,
-            baseCost: this.upgrades.barricade_effectiveness.baseCost,
-            cost: this.calculateUpgradeCost('barricade_effectiveness'),
+            baseCost: this.upgrades.barricade_radius.baseCost,
+            cost: this.calculateUpgradeCost('barricade_radius'),
             icon: '<img src="assets/towers/barricade.png" class="upgrade-tower-icon">'
         });
         
@@ -1834,7 +1834,7 @@ export class TowerForge extends Building {
         const costTables = {
             'basic':                    [100, 150, 250, 375, 550],
             'archer':                   [150, 275, 450, 800, 1225],
-            'barricade_effectiveness':  [125, 250, 500, 750, 1000],
+            'barricade_radius':         [125, 250, 500, 750, 1000],
             'poison':                   [200, 300, 500, 830, 1350],
             'cannon':                   [225, 450, 800, 1215, 1525]
         };
@@ -1897,8 +1897,7 @@ export class TowerForge extends Building {
         
         return {
             basicDamageBonus: this.upgrades.basic.level * this.upgrades.basic.effect,
-            barricadeCapacityBonus: this.upgrades.barricade_effectiveness.level * this.upgrades.barricade_effectiveness.effect.capacity,
-            barricadeDurationBonus: this.upgrades.barricade_effectiveness.level * this.upgrades.barricade_effectiveness.effect.duration,
+            barricadeRadiusBonus: this.upgrades.barricade_radius.level * this.upgrades.barricade_radius.effect,
             archerDamageBonus: this.upgrades.archer.level * this.upgrades.archer.damageEffect,
             archerArmorPierceBonus: this.upgrades.archer.level * this.upgrades.archer.pierceEffect,
             poisonDamageBonus: poisonDamageBonus,

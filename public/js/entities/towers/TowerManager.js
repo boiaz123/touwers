@@ -105,12 +105,19 @@ export class TowerManager {
         const isFree = this.stateManager?.gameplayState?.checkFreePlacement(type, true) || false;
         if (isFree || this.gameState.spend(towerType.cost)) {
             const tower = TowerRegistry.createTower(type, x, y, gridX, gridY);
-            
+
             // Assign audio manager to tower for sound effects
             if (this.audioManager) {
                 tower.audioManager = this.audioManager;
             }
-            
+
+            // Barricade Tower doesn't target enemies - it keeps a permanent slow patch at a
+            // fixed spot on the path in front of it, so resolve that spot once, right after
+            // placement (cellSize lets it size the patch's road-hugging width to match).
+            if (type === 'barricade' && this.level && this.level.path) {
+                tower.setPath(this.level.path, this.level.cellSize);
+            }
+
             this.towers.push(tower);
 
             // Mark the 2x2 area as occupied by this tower
@@ -435,14 +442,6 @@ export class TowerManager {
                     tower.originalFireRate = tower.fireRate;
                 }
 
-                // Store barricade-specific original values if not already stored
-                if (tower.type === 'barricade') {
-                    if (!tower.originalSlowDuration && tower.hasOwnProperty('slowDuration')) {
-                        tower.originalSlowDuration = tower.slowDuration;
-                        tower.originalMaxEnemiesSlowed = tower.maxEnemiesSlowed;
-                    }
-                }
-
                 // Apply base building upgrades (still in base-resolution units, matching the
                 // numbers shown in UI stat panels)
                 tower.damage = tower.originalDamage * upgrades.damage;
@@ -466,6 +465,9 @@ export class TowerManager {
                 tower.effectiveRange = tower.range * rangeScaleFactor;
                 if (tower.type === 'cannon') {
                     tower.effectiveSplashRadius = tower.splashRadius * rangeScaleFactor;
+                }
+                if (tower.type === 'barricade') {
+                    tower.effectiveEffectRadius = tower.effectRadius * rangeScaleFactor;
                 }
             }
         }
@@ -660,11 +662,11 @@ export class TowerManager {
             
             // Reset barricade-specific stats
             if (tower.type === 'barricade') {
-                if (tower.originalSlowDuration) {
-                    tower.slowDuration = tower.originalSlowDuration;
+                if (tower.originalEffectRadius) {
+                    tower.effectRadius = tower.originalEffectRadius;
                 }
-                if (tower.originalMaxEnemiesSlowed) {
-                    tower.maxEnemiesSlowed = tower.originalMaxEnemiesSlowed;
+                if (tower.originalSlowPercent) {
+                    tower.slowPercent = tower.originalSlowPercent;
                 }
             }
         }
@@ -686,13 +688,9 @@ export class TowerManager {
                 break;
                 
             case 'barricade':
-                // Apply capacity upgrades using original base value
-                if (multipliers.barricadeCapacityBonus > 0) {
-                    tower.maxEnemiesSlowed = tower.originalMaxEnemiesSlowed + multipliers.barricadeCapacityBonus;
-                }
-                // Apply duration upgrades using original base value
-                if (multipliers.barricadeDurationBonus > 0) {
-                    tower.slowDuration = tower.originalSlowDuration + multipliers.barricadeDurationBonus;
+                // Apply slow-zone radius upgrades using original base value
+                if (multipliers.barricadeRadiusBonus > 0) {
+                    tower.effectRadius = tower.originalEffectRadius + multipliers.barricadeRadiusBonus;
                 }
                 break;
                 
@@ -725,17 +723,28 @@ export class TowerManager {
     applyTrainingGroundsUpgrades(tower) {
         // Use cached Training Grounds buildings
         if (!this.cachedTrainingGrounds || this.cachedTrainingGrounds.length === 0) return;
-        
+
         const towerType = tower.type;
+
+        // Barricade Tower has no range/target-acquisition to upgrade here (it throws at a
+        // fixed spot) - Training Grounds instead grows how much its slow zone slows enemies.
+        if (towerType === 'barricade') {
+            for (let i = 0; i < this.cachedTrainingGrounds.length; i++) {
+                const grounds = this.cachedTrainingGrounds[i];
+                const upgrade = grounds.upgrades.barricadeSlowPower;
+                if (upgrade && upgrade.level > 0) {
+                    tower.slowPercent = tower.originalSlowPercent + (upgrade.level * upgrade.effect);
+                }
+            }
+            return;
+        }
+
         let towerTypeKey = null;
-        
+
         // Map tower type keys to range upgrade keys
         switch (towerType) {
             case 'archer':
                 towerTypeKey = 'archerTower';
-                break;
-            case 'barricade':
-                towerTypeKey = 'barricadeTower';
                 break;
             case 'basic':
                 towerTypeKey = 'basicTower';
@@ -749,7 +758,7 @@ export class TowerManager {
             default:
                 return; // No upgrades for this tower type
         }
-        
+
         // Apply Training Grounds range upgrades
         for (let i = 0; i < this.cachedTrainingGrounds.length; i++) {
             const grounds = this.cachedTrainingGrounds[i];
@@ -758,12 +767,7 @@ export class TowerManager {
                 // Apply range bonus: each level adds 'effect' pixels to range
                 tower.range = tower.originalRange + (upgrade.level * upgrade.effect);
             }
-            
-            // Apply Barricade Tower fire rate upgrade if present
-            if (towerType === 'barricade' && grounds.upgrades.barricadeFireRate && grounds.upgrades.barricadeFireRate.level > 0) {
-                tower.fireRate = tower.originalFireRate + (grounds.upgrades.barricadeFireRate.level * grounds.upgrades.barricadeFireRate.effect);
-            }
-            
+
             // Apply Poison Archer Tower fire rate upgrade if present
             if (towerType === 'poison' && grounds.upgrades.poisonArcherTowerFireRate && grounds.upgrades.poisonArcherTowerFireRate.level > 0) {
                 tower.fireRate = tower.originalFireRate + (grounds.upgrades.poisonArcherTowerFireRate.level * grounds.upgrades.poisonArcherTowerFireRate.effect);
@@ -970,7 +974,7 @@ export class TowerManager {
     /**
      * Compute what a newly placed tower of the given type would have for stats,
      * accounting for all current building upgrades (forge, training grounds, etc).
-     * Returns numeric stats: { damage, range, fireRate, armorPiercing, splashRadius, capacity, duration }
+     * Returns numeric stats: { damage, range, fireRate, armorPiercing, splashRadius, radius, slowPercent }
      */
     getUpgradedTowerStats(type) {
         // Base stats per tower type (from constructors)
@@ -978,21 +982,24 @@ export class TowerManager {
             'basic':       { damage: 20,  range: 120, fireRate: 1.0 },
             'archer':      { damage: 35,  range: 155, fireRate: 1.5 },
             'cannon':      { damage: 100, range: 155, fireRate: 0.4, splashRadius: 50 },
-            'barricade':   { damage: 0,   range: 120, fireRate: 1/3, capacity: 4, duration: 4.0 },
+            'barricade':   { damage: 0,   range: 120, fireRate: 0, radius: 20, slowPercent: 0.65 },
             'poison':      { damage: 10,  range: 130, fireRate: 0.4 },
             'magic':       { damage: 40,  range: 130, fireRate: 1.0 },
             'guard-post':  { damage: 0,   range: 0,   fireRate: 0 },
             'combination': { damage: 55,  range: 140, fireRate: 0.9 }
         };
-        
+
         const BASE_POISON_TICK_DAMAGE = 13; // Base poison damage per tick (every 2s)
-        
+
         const base = baseStats[type];
         if (!base) return null;
-        
+
         const result = { ...base, baseDamage: base.damage, baseRange: base.range, baseFireRate: base.fireRate };
         if (base.splashRadius) result.baseSplashRadius = base.splashRadius;
-        if (base.capacity) { result.baseCapacity = base.capacity; result.baseDuration = base.duration; }
+        if (base.radius !== undefined) {
+            result.baseRadius = base.radius;
+            result.baseSlowPercent = base.slowPercent;
+        }
         
         // 1. Apply building presence multipliers (defaults to 1.0; other buildings may modify)
         const upgrades = this.buildingManager.towerUpgrades;
@@ -1009,10 +1016,9 @@ export class TowerManager {
             const forgeMap = {
                 'basic': { damageKey: 'basicDamageBonus' },
                 'archer': { damageKey: 'archerDamageBonus', armorPierceKey: 'archerArmorPierceBonus' },
-                'cannon': { damageKey: 'cannonDamageBonus', radiusKey: 'cannonRadiusBonus' },
-                'barricade': { capacityKey: 'barricadeCapacityBonus', durationKey: 'barricadeDurationBonus' }
+                'cannon': { damageKey: 'cannonDamageBonus', radiusKey: 'cannonRadiusBonus' }
             };
-            
+
             const mapping = forgeMap[type];
             if (mapping) {
                 if (mapping.damageKey && m[mapping.damageKey] > 0) {
@@ -1024,14 +1030,14 @@ export class TowerManager {
                 if (mapping.radiusKey && m[mapping.radiusKey] > 0) {
                     result.splashRadius = (base.splashRadius || 50) + m[mapping.radiusKey];
                 }
-                if (mapping.capacityKey && m[mapping.capacityKey] > 0) {
-                    result.capacity = base.capacity + m[mapping.capacityKey];
-                }
-                if (mapping.durationKey && m[mapping.durationKey] > 0) {
-                    result.duration = base.duration + m[mapping.durationKey];
-                }
             }
-            
+
+            // Special case: barricade's Forge upgrade grows the slow-zone radius, which
+            // needs its own result field (not the generic splashRadius cannon uses above)
+            if (type === 'barricade' && m.barricadeRadiusBonus > 0) {
+                result.radius = base.radius + m.barricadeRadiusBonus;
+            }
+
             // Special case: poison tick damage is separate from direct hit damage
             if (type === 'poison') {
                 result.poisonTickDamage = BASE_POISON_TICK_DAMAGE + (m.poisonDamageBonus || 0);
@@ -1054,20 +1060,21 @@ export class TowerManager {
                 'basic': 'basicTower',
                 'archer': 'archerTower',
                 'cannon': 'cannonTower',
-                'poison': 'poisonArcherTower',
-                'barricade': 'barricadeTower'
+                'poison': 'poisonArcherTower'
             };
             const rangeKey = rangeKeyMap[type];
             if (rangeKey && grounds.rangeUpgrades[rangeKey] && grounds.rangeUpgrades[rangeKey].level > 0) {
                 const ru = grounds.rangeUpgrades[rangeKey];
                 result.range = base.range + (ru.level * ru.effect);
             }
-            
-            // Fire rate upgrades (barricade, poison)
-            if (type === 'barricade' && grounds.upgrades.barricadeFireRate && grounds.upgrades.barricadeFireRate.level > 0) {
-                const u = grounds.upgrades.barricadeFireRate;
-                result.fireRate = base.fireRate + (u.level * u.effect);
+
+            // Barricade's Training Grounds upgrade grows slow strength instead of range/fire rate
+            if (type === 'barricade' && grounds.upgrades.barricadeSlowPower && grounds.upgrades.barricadeSlowPower.level > 0) {
+                const u = grounds.upgrades.barricadeSlowPower;
+                result.slowPercent = base.slowPercent + (u.level * u.effect);
             }
+
+            // Fire rate upgrades (poison)
             if (type === 'poison' && grounds.upgrades.poisonArcherTowerFireRate && grounds.upgrades.poisonArcherTowerFireRate.level > 0) {
                 const u = grounds.upgrades.poisonArcherTowerFireRate;
                 result.fireRate = base.fireRate + (u.level * u.effect);

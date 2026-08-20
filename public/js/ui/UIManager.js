@@ -638,13 +638,12 @@ export class UIManager {
                 break;
             case 'barricade':
                 statsHTML = `
-                    <div><span>Effect:</span> <span style="color: #FFD700;">Slows enemies</span></div>
+                    <div><span>Effect:</span> <span style="color: #FFD700;">Continuously slows enemies</span></div>
+                    <div><span>Patch Radius:</span> ${statVal(s.radius, s.baseRadius, 'px')}</div>
+                    <div><span>Slow Amount:</span> ${statVal(Math.round(s.slowPercent * 100), Math.round(s.baseSlowPercent * 100), '%')}</div>
                     <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>Capacity:</span> ${statVal(s.capacity, s.baseCapacity, ' enemies')}</div>
-                    <div><span>Duration:</span> ${statValDecimal(s.duration, s.baseDuration, 's')}</div>
-                    <div><span>Deploy Rate:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Rolls barrels creating rubble clouds that slow enemies. Capacity and duration upgrade at Forge.</div>';
+                specialHTML = '<div style="color: #aad4ff;">Keeps a permanent patch of rubble on the road, continuously slowing every enemy standing in it. Patch size upgrades at the Forge, slow strength at Training Grounds.</div>';
                 break;
             case 'poison':
                 statsHTML = `
@@ -812,7 +811,7 @@ export class UIManager {
                 `;
                 specialHTML = `<div style="color: #aad4ff;">
                     Provides range upgrades for Archer, Watch, and Trebuchet towers.
-                    Also improves Barricade and Poison fire rates, and unlocks path defenders for Guard Posts.
+                    Also improves Barricade slow strength and Poison fire rate, and unlocks path defenders for Guard Posts.
                 </div>`;
                 if (!unlockSystem.unlockedBuildings.has('training')) {
                     unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 3</div>';
@@ -1699,12 +1698,9 @@ export class UIManager {
                 effectsList.push(`Archer: +${forge.upgrades.archer.level * 8}`);
             }
             
-            if (forge.upgrades.barricade_effectiveness.level > 0) {
-                const capEffect = forge.upgrades.barricade_effectiveness.effect.capacity;
-                const durEffect = forge.upgrades.barricade_effectiveness.effect.duration;
-                const capacity = 4 + Math.round(forge.upgrades.barricade_effectiveness.level * capEffect);
-                const duration = 4 + forge.upgrades.barricade_effectiveness.level * durEffect;
-                effectsList.push(`Barricade: ${capacity} (${duration.toFixed(1)}s)`);
+            if (forge.upgrades.barricade_radius.level > 0) {
+                const radiusBonus = forge.upgrades.barricade_radius.level * forge.upgrades.barricade_radius.effect;
+                effectsList.push(`Barricade: +${radiusBonus}px`);
             }
             
             if (forge.forgeLevel >= 2 && forge.upgrades.poison.level > 0) {
@@ -1784,7 +1780,7 @@ export class UIManager {
             const baseTowerStats = {
                 'basic': { damage: 20 },
                 'archer': { damage: 35 },
-                'barricade_effectiveness': { capacity: 4 },
+                'barricade_radius': { radius: 20 },
                 'poison': { damage: 13 },
                 'cannon': { damage: 100, radius: 50 },
 
@@ -1817,17 +1813,13 @@ export class UIManager {
                     const nextPierce = baseArmorPierce + ((forge.upgrades.archer.level + 1) * 5);
                     currentValue = `${baseDmg + currentDmgBonus} (+${currentPierce}%)`;
                     nextValue = `${baseDmg + nextDmgBonus} (+${nextPierce}%)`;
-                } else if (upgrade.id === 'barricade_effectiveness') {
-                    const baseCapacity = baseTowerStats.barricade_effectiveness.capacity;
-                    const capEffect = forge.upgrades.barricade_effectiveness.effect.capacity;
-                    const durEffect = forge.upgrades.barricade_effectiveness.effect.duration;
-                    const currentCapacity = baseCapacity + Math.round(forge.upgrades.barricade_effectiveness.level * capEffect);
-                    const nextCapacity = baseCapacity + Math.round((forge.upgrades.barricade_effectiveness.level + 1) * capEffect);
-                    const baseDuration = 4; // Base slow duration in seconds
-                    const currentDuration = baseDuration + forge.upgrades.barricade_effectiveness.level * durEffect;
-                    const nextDuration = baseDuration + (forge.upgrades.barricade_effectiveness.level + 1) * durEffect;
-                    currentValue = `${currentCapacity} (${currentDuration.toFixed(1)}s)`;
-                    nextValue = `${nextCapacity} (${nextDuration.toFixed(1)}s)`;
+                } else if (upgrade.id === 'barricade_radius') {
+                    const baseRadius = baseTowerStats.barricade_radius.radius;
+                    const radiusEffect = forge.upgrades.barricade_radius.effect;
+                    const currentRadius = baseRadius + (forge.upgrades.barricade_radius.level * radiusEffect);
+                    const nextRadius = baseRadius + ((forge.upgrades.barricade_radius.level + 1) * radiusEffect);
+                    currentValue = `${currentRadius}px`;
+                    nextValue = `${nextRadius}px`;
                 } else if (upgrade.id === 'poison') {
                     const baseDmg = baseTowerStats.poison.damage;
                     const currentBonus = this.calculatePoisonBonus(forge.upgrades.poison.level);
@@ -1862,13 +1854,9 @@ export class UIManager {
                     const curPierce = forge.upgrades.archer.level * 5;
                     tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${baseDmg + curDmg}</span></div>`;
                     tooltipText += `<div>Armor Pierce: <span style="color: #FFD700;">${curPierce}%</span></div>`;
-                } else if (upgrade.id === 'barricade_effectiveness') {
-                    const capEffect = forge.upgrades.barricade_effectiveness.effect.capacity;
-                    const durEffect = forge.upgrades.barricade_effectiveness.effect.duration;
-                    const curCap = baseTowerStats.barricade_effectiveness.capacity + Math.round(forge.upgrades.barricade_effectiveness.level * capEffect);
-                    const curDur = 4 + forge.upgrades.barricade_effectiveness.level * durEffect;
-                    tooltipText += `<div>Enemies Slowed: <span style="color: #FFD700;">${curCap}</span></div>`;
-                    tooltipText += `<div>Slow Duration: <span style="color: #FFD700;">${curDur.toFixed(1)}s</span></div>`;
+                } else if (upgrade.id === 'barricade_radius') {
+                    const curRadius = baseTowerStats.barricade_radius.radius + (forge.upgrades.barricade_radius.level * forge.upgrades.barricade_radius.effect);
+                    tooltipText += `<div>◯ Slow Radius: <span style="color: #FFD700;">${curRadius}px</span></div>`;
                 } else if (upgrade.id === 'poison') {
                     const baseDmg = baseTowerStats.poison.damage;
                     const curBonus = this.calculatePoisonBonus(forge.upgrades.poison.level);
@@ -1890,11 +1878,8 @@ export class UIManager {
                     } else if (upgrade.id === 'archer') {
                         tooltipText += `<div>Damage: +8</div>`;
                         tooltipText += `<div>Armor Pierce: +5%</div>`;
-                    } else if (upgrade.id === 'barricade_effectiveness') {
-                        const capEff = forge.upgrades.barricade_effectiveness.effect.capacity;
-                        const durEff = forge.upgrades.barricade_effectiveness.effect.duration;
-                        tooltipText += `<div>Enemies Slowed: +${capEff.toFixed(1)} (~${Math.round(capEff)})</div>`;
-                        tooltipText += `<div>Slow Duration: +${durEff.toFixed(1)}s</div>`;
+                    } else if (upgrade.id === 'barricade_radius') {
+                        tooltipText += `<div>Slow Radius: +${forge.upgrades.barricade_radius.effect}px</div>`;
                     } else if (upgrade.id === 'poison') {
                         tooltipText += `<div>Damage: +5</div>`;
                     } else if (upgrade.id === 'cannon') {
@@ -3250,15 +3235,14 @@ export class UIManager {
                 break;
             }
             case 'BarricadeTower': {
-                const capacity = tower.maxEnemiesSlowed || 4;
-                const duration = tower.slowDuration || 4.0;
-                const baseCapacity = tower.originalMaxEnemiesSlowed || 4;
-                const baseDuration = tower.originalSlowDuration || 4.0;
+                const radius = tower.effectRadius || 40;
+                const baseRadius = tower.originalEffectRadius || 40;
+                const slowPercent = Math.round((tower.slowPercent || 0.65) * 100);
+                const baseSlowPercent = Math.round((tower.originalSlowPercent || 0.65) * 100);
                 statBadgesHTML = `
-                    <span class="effect-badge">${sv(capacity, baseCapacity)}</span>
-                    <span class="effect-badge">${svDec(duration, baseDuration, 's')}</span>
-                    <span class="effect-badge">${sv(tower.range, tower.originalRange || 120)}</span>
-                    <span class="effect-badge">${svDec(tower.fireRate, tower.originalFireRate || 0.1, '/s')}</span>
+                    <span class="effect-badge">${sv(radius, baseRadius, 'px')}</span>
+                    <span class="effect-badge">${sv(slowPercent, baseSlowPercent, '%')}</span>
+                    <span class="effect-badge">Continuous</span>
                 `;
                 break;
             }
@@ -4200,9 +4184,9 @@ export class UIManager {
             effectsList.push(`Trebuchet: +${trainingGrounds.rangeUpgrades.cannonTower.level * 15}`);
         }
         
-        if (trainingGrounds.upgrades.barricadeFireRate.level > 0) {
-            const fireRate = (0.2 + trainingGrounds.upgrades.barricadeFireRate.level * 0.1).toFixed(1);
-            effectsList.push(`Barricade: ${fireRate}/sec`);
+        if (trainingGrounds.upgrades.barricadeSlowPower.level > 0) {
+            const slowBonus = Math.round(trainingGrounds.upgrades.barricadeSlowPower.level * trainingGrounds.upgrades.barricadeSlowPower.effect * 100);
+            effectsList.push(`Barricade: +${slowBonus}% slow`);
         }
         
         if (trainingGrounds.upgrades.poisonArcherTowerFireRate.level > 0) {
@@ -4277,12 +4261,12 @@ export class UIManager {
                     const nextRange = (upgrade.level + 1) * 15;
                     currentValue = `+${currentRange} range`;
                     nextValue = `+${nextRange} range`;
-                } else if (upgrade.id === 'barricadeFireRate') {
-                    // Barricade fire rate
-                    const currentRate = (0.2 + upgrade.level * 0.1).toFixed(1);
-                    const nextRate = (0.2 + (upgrade.level + 1) * 0.1).toFixed(1);
-                    currentValue = `${currentRate}/sec`;
-                    nextValue = `${nextRate}/sec`;
+                } else if (upgrade.id === 'barricadeSlowPower') {
+                    // Barricade slow strength
+                    const currentPct = Math.round((0.65 + upgrade.level * 0.05) * 100);
+                    const nextPct = Math.round((0.65 + (upgrade.level + 1) * 0.05) * 100);
+                    currentValue = `${currentPct}% slow`;
+                    nextValue = `${nextPct}% slow`;
                 } else if (upgrade.id === 'poisonArcherTowerFireRate') {
                     // Poison archer fire rate
                     const currentRate = (0.25 + upgrade.level * 0.05).toFixed(2);
@@ -4300,21 +4284,21 @@ export class UIManager {
                 if (upgrade.id && upgrade.id.startsWith('range_')) {
                     const curRange = upgrade.level * 15;
                     tooltipText += `<div>\uD83C\uDFAF Range Bonus: <span style="color: #FFD700;">+${curRange}px</span></div>`;
-                } else if (upgrade.id === 'barricadeFireRate') {
-                    const curRate = (0.2 + upgrade.level * 0.1).toFixed(1);
-                    tooltipText += `<div>\u26A1 Fire Rate: <span style="color: #FFD700;">${curRate}/sec</span></div>`;
+                } else if (upgrade.id === 'barricadeSlowPower') {
+                    const curPct = Math.round((0.65 + upgrade.level * 0.05) * 100);
+                    tooltipText += `<div>\u2744 Slow Strength: <span style="color: #FFD700;">${curPct}%</span></div>`;
                 } else if (upgrade.id === 'poisonArcherTowerFireRate') {
                     const curRate = (0.25 + upgrade.level * 0.05).toFixed(2);
                     tooltipText += `<div>\u26A1 Fire Rate: <span style="color: #FFD700;">${curRate}/sec</span></div>`;
                 }
-                
+
                 if (!isMaxed && !isLocked) {
                     tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
                     tooltipText += `<div style="font-weight: bold;">Next Upgrade (+1):</div>`;
                     if (upgrade.id && upgrade.id.startsWith('range_')) {
                         tooltipText += `<div>Range: +15px</div>`;
-                    } else if (upgrade.id === 'barricadeFireRate') {
-                        tooltipText += `<div>Fire Rate: +0.1/sec</div>`;
+                    } else if (upgrade.id === 'barricadeSlowPower') {
+                        tooltipText += `<div>Slow Strength: +5%</div>`;
                     } else if (upgrade.id === 'poisonArcherTowerFireRate') {
                         tooltipText += `<div>Fire Rate: +0.05/sec</div>`;
                     }

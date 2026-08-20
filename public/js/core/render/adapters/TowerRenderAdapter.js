@@ -63,6 +63,14 @@ export class TowerRenderAdapter {
         const entryContainer = new Container();
         entryContainer.sortableChildren = true;
 
+        // Ground-level effects (e.g. BarricadeTower's rubble patch) sit on the road itself,
+        // beneath the tower's own baked structure - a separate layer behind `back` so the
+        // platform/supports correctly occlude it instead of it painting over them. Optional
+        // per-tower via renderGroundEffects() (see sync()); an empty Graphics costs nothing
+        // for towers that don't implement it.
+        const ground = new Graphics();
+        ground.zIndex = -1;
+
         const back = new Sprite(backTexture);
         back.anchor.set(0.5, 0.5);
         back.zIndex = 0;
@@ -74,13 +82,14 @@ export class TowerRenderAdapter {
         front.anchor.set(0.5, 0.5);
         front.zIndex = 2;
 
-        entryContainer.addChild(back, dynamic, front);
+        entryContainer.addChild(ground, back, dynamic, front);
         this.container.addChild(entryContainer);
 
         const shim = new CanvasGraphicsShim(dynamic);
+        const groundShim = new CanvasGraphicsShim(ground);
 
         this._entries.set(tower, {
-            container: entryContainer, back, front, dynamic, shim,
+            container: entryContainer, back, front, dynamic, ground, shim, groundShim,
             lastAnimKey: -1,
             // Per-instance offset into the 33ms bucket below (see sync()) - without this,
             // performance.now() is identical for every tower at a given instant, so every
@@ -112,6 +121,7 @@ export class TowerRenderAdapter {
         this.container.removeChild(entry.container);
         entry.container.destroy({ children: true }); // textures are shared/cached - never destroyed here
         entry.shim.destroyGradients(); // any gradient the entity was still caching (e.g. CombinationTower's per-instance gradients) needs explicit GPU cleanup too
+        entry.groundShim.destroyGradients();
         this._entries.delete(tower);
         tower.skipCanvas2DBodyRender = false;
     }
@@ -153,6 +163,16 @@ export class TowerRenderAdapter {
         // render() (see each tower's skipCanvas2DBodyRender-gated call site).
         if (typeof tower.renderProjectiles === 'function') {
             tower.renderProjectiles(entry.shim);
+        }
+
+        // Ground-level effects (see the `ground` layer's doc comment in register()) draw
+        // into their own Graphics beneath `back`, not the dynamic one above - same
+        // optional-hook convention as renderProjectiles.
+        if (typeof tower.renderGroundEffects === 'function') {
+            entry.groundShim.reset();
+            entry.groundShim.level = level;
+            entry.groundShim.resolutionManager = level && level.resolutionManager;
+            tower.renderGroundEffects(entry.groundShim);
         }
     }
 
