@@ -1275,7 +1275,8 @@ export class MagicAcademy extends Building {
             {
                 id: 'air',
                 name: 'Air Mastery',
-                description: `Increase Magic Tower air chain range by ${this.elementalUpgrades.air.chainRange}px per level (up to Level ${this.elementalUpgrades.air.maxLevel})`,
+                // Magic Tower's base lightning chain range is 50px (see MagicTower.shoot()).
+                description: `Increase Magic Tower air chain range by ${Math.round(this.elementalUpgrades.air.chainRange / 50 * 100)}% per level (up to Level ${this.elementalUpgrades.air.maxLevel})`,
                 level: this.elementalUpgrades.air.level,
                 maxLevel: this.elementalUpgrades.air.maxLevel,
                 cost: this.calculateElementalCost('air'),

@@ -4,7 +4,7 @@ import { ObjectPool } from '../../core/ObjectPool.js';
 export class ArcherTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
-        this.range = 155;
+        this.range = 140;
         this.damage = 35;
         this.fireRate = 1.5;
         
@@ -698,9 +698,9 @@ export class ArcherTower extends Tower {
     static getInfo() {
         return {
             name: 'Archer Tower',
-            description: 'Fast-firing tower with long range. Gains armor piercing through Forge upgrades.',
+            description: 'Fast-firing tower with a shorter starting range that scales the highest of any tower through Training Grounds upgrades. Gains armor piercing through Forge upgrades.',
             damage: '35',
-            range: '155',
+            range: '140',
             fireRate: '1.5/sec',
             cost: 150,
             icon: ''

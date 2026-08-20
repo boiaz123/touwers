@@ -980,7 +980,7 @@ export class TowerManager {
         // Base stats per tower type (from constructors)
         const baseStats = {
             'basic':       { damage: 20,  range: 120, fireRate: 1.0 },
-            'archer':      { damage: 35,  range: 155, fireRate: 1.5 },
+            'archer':      { damage: 35,  range: 140, fireRate: 1.5 },
             'cannon':      { damage: 100, range: 155, fireRate: 0.4, splashRadius: 50 },
             'barricade':   { damage: 0,   range: 120, fireRate: 0, radius: 20, slowPercent: 0.65 },
             'poison':      { damage: 10,  range: 130, fireRate: 0.4 },

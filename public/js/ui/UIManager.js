@@ -623,7 +623,7 @@ export class UIManager {
                     <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                     ${s.armorPiercing > 0 ? `<div><span>Armor Pierce:</span> <span style="color: #FFD700;">${s.armorPiercing}%</span></div>` : ''}
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Fast-firing with long range. Gains armor piercing from Forge upgrades.</div>';
+                specialHTML = '<div style="color: #aad4ff;">Fast-firing. Starts with a shorter range than most towers but scales the highest of any tower through Training Grounds upgrades. Gains armor piercing from Forge upgrades.</div>';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Tower Forge</div>';
                 break;
             case 'cannon':
@@ -1879,12 +1879,14 @@ export class UIManager {
                         tooltipText += `<div>Damage: +8</div>`;
                         tooltipText += `<div>Armor Pierce: +5%</div>`;
                     } else if (upgrade.id === 'barricade_radius') {
-                        tooltipText += `<div>Slow Radius: +${forge.upgrades.barricade_radius.effect}px</div>`;
+                        const radiusPercent = Math.round((forge.upgrades.barricade_radius.effect / baseTowerStats.barricade_radius.radius) * 100);
+                        tooltipText += `<div>Slow Radius: +${radiusPercent}%</div>`;
                     } else if (upgrade.id === 'poison') {
                         tooltipText += `<div>Damage: +5</div>`;
                     } else if (upgrade.id === 'cannon') {
+                        const radiusPercent = Math.round((forge.upgrades.cannon.radiusEffect / baseTowerStats.cannon.radius) * 100);
                         tooltipText += `<div>Damage: +25</div>`;
-                        tooltipText += `<div>Blast Radius: +5px</div>`;
+                        tooltipText += `<div>Blast Radius: +${radiusPercent}%</div>`;
                     }
                     if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;"><span class="coin-xs"></span>${upgrade.cost}</span></div>`;
                     tooltipText += `</div>`;
@@ -1970,9 +1972,10 @@ export class UIManager {
             case 'magma':
                 return `<div>Fire Damage: +12</div><div>Armor Piercing: +3</div>`;
             case 'tempest':
-                return `<div>Chain Range: +20px</div><div>Slow Strength: +5.7% (maxes out at Lv 7)</div>`;
+                // Base chain jump range is 100px (see CombinationTower.shoot()); +20px/level = +20%.
+                return `<div>Chain Range: +20%</div><div>Slow Strength: +5.7% (maxes out at Lv 7)</div>`;
             case 'meteor':
-                return `<div>Chain Range: +20px</div><div>Armor Piercing: +3</div>`;
+                return `<div>Chain Range: +20%</div><div>Armor Piercing: +3</div>`;
             default:
                 return '';
         }
@@ -2488,7 +2491,8 @@ export class UIManager {
                         } else if (upgrade.id === 'water') {
                             tooltipText += `<div>Slow Effect: +${(academy.elementalUpgrades.water.slowBonus * 100).toFixed(0)}%</div>`;
                         } else if (upgrade.id === 'air') {
-                            tooltipText += `<div>Chain Range: +${academy.elementalUpgrades.air.chainRange}px</div>`;
+                            const chainRangePercent = Math.round(academy.elementalUpgrades.air.chainRange / 50 * 100);
+                            tooltipText += `<div>Chain Range: +${chainRangePercent}%</div>`;
                         } else if (upgrade.id === 'earth') {
                             tooltipText += `<div>Armor Pierce: +${academy.elementalUpgrades.earth.armorPiercing}</div>`;
                         }
@@ -4173,15 +4177,18 @@ export class UIManager {
         let effectsList = [];
         
         if (trainingGrounds.rangeUpgrades.archerTower.level > 0) {
-            effectsList.push(`Archer: +${trainingGrounds.rangeUpgrades.archerTower.level * 15}`);
+            const ru = trainingGrounds.rangeUpgrades.archerTower;
+            effectsList.push(`Archer: +${ru.level * ru.effect}`);
         }
-        
+
         if (trainingGrounds.rangeUpgrades.basicTower.level > 0) {
-            effectsList.push(`Watch: +${trainingGrounds.rangeUpgrades.basicTower.level * 15}`);
+            const ru = trainingGrounds.rangeUpgrades.basicTower;
+            effectsList.push(`Watch: +${ru.level * ru.effect}`);
         }
-        
+
         if (trainingGrounds.rangeUpgrades.cannonTower.level > 0) {
-            effectsList.push(`Trebuchet: +${trainingGrounds.rangeUpgrades.cannonTower.level * 15}`);
+            const ru = trainingGrounds.rangeUpgrades.cannonTower;
+            effectsList.push(`Trebuchet: +${ru.level * ru.effect}`);
         }
         
         if (trainingGrounds.upgrades.barricadeSlowPower.level > 0) {
@@ -4256,9 +4263,12 @@ export class UIManager {
                 
                 // Calculate current and next values based on upgrade type
                 if (upgrade.id && upgrade.id.startsWith('range_')) {
-                    // Range upgrades
-                    const currentRange = upgrade.level * 15;
-                    const nextRange = (upgrade.level + 1) * 15;
+                    // Range upgrades - upgrade.effect is this tower's own per-level px bonus
+                    // (towers scale at different rates, e.g. Archer trades a lower base range
+                    // for the steepest growth), so it must come from the upgrade data rather
+                    // than a shared constant.
+                    const currentRange = upgrade.level * upgrade.effect;
+                    const nextRange = (upgrade.level + 1) * upgrade.effect;
                     currentValue = `+${currentRange} range`;
                     nextValue = `+${nextRange} range`;
                 } else if (upgrade.id === 'barricadeSlowPower') {
@@ -4282,7 +4292,7 @@ export class UIManager {
                 tooltipText += `<div>Level: <span style="color: #FFD700;">${upgrade.level}/${upgrade.maxLevel}</span></div>`;
                 
                 if (upgrade.id && upgrade.id.startsWith('range_')) {
-                    const curRange = upgrade.level * 15;
+                    const curRange = upgrade.level * upgrade.effect;
                     tooltipText += `<div>\uD83C\uDFAF Range Bonus: <span style="color: #FFD700;">+${curRange}px</span></div>`;
                 } else if (upgrade.id === 'barricadeSlowPower') {
                     const curPct = Math.round((0.65 + upgrade.level * 0.05) * 100);
@@ -4296,7 +4306,8 @@ export class UIManager {
                     tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
                     tooltipText += `<div style="font-weight: bold;">Next Upgrade (+1):</div>`;
                     if (upgrade.id && upgrade.id.startsWith('range_')) {
-                        tooltipText += `<div>Range: +15px</div>`;
+                        const perLevelPercent = Math.round((upgrade.effect / upgrade.baseRange) * 100);
+                        tooltipText += `<div>Range: +${perLevelPercent}%</div>`;
                     } else if (upgrade.id === 'barricadeSlowPower') {
                         tooltipText += `<div>Slow Strength: +5%</div>`;
                     } else if (upgrade.id === 'poisonArcherTowerFireRate') {

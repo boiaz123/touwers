@@ -1,6 +1,11 @@
 import { Building } from './Building.js';
 
 export class TrainingGrounds extends Building {
+    // Base (unupgraded) attack range for each manned tower - mirrors the values set in
+    // ArcherTower/BasicTower/CannonTower constructors. Used to express range upgrades as a
+    // percentage of base range in menu text instead of a bare pixel count.
+    static RANGE_UPGRADE_BASE = { archerTower: 140, basicTower: 120, cannonTower: 155 };
+
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
         this.isSelected = false;
@@ -21,8 +26,12 @@ export class TrainingGrounds extends Building {
         // Range upgrades for manned towers - each tower has 5 levels
         // Towers: ArcherTower, BasicTower, CannonTower (PoisonArcherTower uses fire rate,
         // BarricadeTower uses slow strength instead)
+        // "effect" is px added to base range per level. Base ranges (see ArcherTower/
+        // BasicTower/CannonTower constructors): Archer 140, Watch 120, Trebuchet 155.
+        // Archer trades a lower starting range for the steepest scaling of the three:
+        // +21/level = +15% of its base per level (140 -> 245, +75% at max level).
         this.rangeUpgrades = {
-            archerTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
+            archerTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 21 },
             basicTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 },
             cannonTower: { level: 0, maxLevel: 5, baseCost: 150, effect: 15 }
         };
@@ -1728,18 +1737,23 @@ export class TrainingGrounds extends Building {
             if (entry.kind === 'range') {
                 const upgrade = this.rangeUpgrades[entry.id];
                 const isUnlocked = this.trainingLevel > upgrade.level;
+                const baseRange = TrainingGrounds.RANGE_UPGRADE_BASE[entry.id];
+                const percentPerLevel = Math.round((upgrade.effect / baseRange) * 100);
+                const maxRange = baseRange + upgrade.maxLevel * upgrade.effect;
 
                 options.push({
                     id: `range_${entry.id}`,
                     towerType: entry.id,
                     name: `${entry.name} Range Training`,
-                    description: `Increase ${entry.name} range by ${upgrade.effect} per level`,
+                    description: `Increases ${entry.name} attack range by ${percentPerLevel}% per level (${baseRange} → ${maxRange} at max level)`,
                     level: upgrade.level,
                     maxLevel: upgrade.maxLevel,
                     baseCost: upgrade.baseCost,
                     cost: this.calculateRangeUpgradeCost(entry.id),
                     icon: entry.icon,
-                    isUnlocked: isUnlocked
+                    isUnlocked: isUnlocked,
+                    effect: upgrade.effect,
+                    baseRange: baseRange
                 });
             } else {
                 const upgrade = this.upgrades[entry.id];

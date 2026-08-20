@@ -12,6 +12,11 @@ export class TowerForge extends Building {
      */
     static STRUCTURE_SCALE = 0.78;
 
+    // Base (unupgraded) effect radii these Forge upgrades grow, used to express their
+    // per-level effect as a percentage in menu text instead of a bare pixel count.
+    static BARRICADE_BASE_RADIUS = 20; // BarricadeTower's slow-zone radius
+    static CANNON_BASE_SPLASH_RADIUS = 50; // CannonTower's blast radius
+
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
         this.sparks = [];
@@ -1727,17 +1732,23 @@ export class TowerForge extends Building {
         
         // Barricade Tower - available from forge level 1
         // Barricade Radius - grows the rubble zone's slow radius
-        options.push({
-            id: 'barricade_radius',
-            name: 'Barricade Tower Upgrade',
-            description: `Increases the rubble patch's slow radius by ${this.upgrades.barricade_radius.effect}px per level`,
-            level: this.upgrades.barricade_radius.level,
-            maxLevel: this.maxForgeLevel,
-            baseCost: this.upgrades.barricade_radius.baseCost,
-            cost: this.calculateUpgradeCost('barricade_radius'),
-            icon: '<img src="assets/towers/barricade.png" class="upgrade-tower-icon">'
-        });
-        
+        {
+            const baseRadius = TowerForge.BARRICADE_BASE_RADIUS;
+            const effect = this.upgrades.barricade_radius.effect;
+            const percentPerLevel = Math.round((effect / baseRadius) * 100);
+            const maxRadius = baseRadius + effect * this.maxForgeLevel;
+            options.push({
+                id: 'barricade_radius',
+                name: 'Barricade Tower Upgrade',
+                description: `Increases the rubble patch's slow radius by ${percentPerLevel}% per level (${baseRadius} → ${maxRadius}px at max level)`,
+                level: this.upgrades.barricade_radius.level,
+                maxLevel: this.maxForgeLevel,
+                baseCost: this.upgrades.barricade_radius.baseCost,
+                cost: this.calculateUpgradeCost('barricade_radius'),
+                icon: '<img src="assets/towers/barricade.png" class="upgrade-tower-icon">'
+            });
+        }
+
         // Archer Tower - available from forge level 1 (damage + armor piercing combined)
         options.push({
             id: 'archer',
@@ -1766,10 +1777,12 @@ export class TowerForge extends Building {
         
         // Trebuchet Tower - available from forge level 3+
         if (this.forgeLevel >= 3) {
+            const cannonBaseRadius = TowerForge.CANNON_BASE_SPLASH_RADIUS;
+            const cannonRadiusPercent = Math.round((this.upgrades.cannon.radiusEffect / cannonBaseRadius) * 100);
             options.push({
                 id: 'cannon',
                 name: 'Trebuchet Tower Upgrade',
-                description: `+${this.upgrades.cannon.damageEffect} damage & +${this.upgrades.cannon.radiusEffect} blast radius per level`,
+                description: `+${this.upgrades.cannon.damageEffect} damage & +${cannonRadiusPercent}% blast radius per level (${cannonBaseRadius} → ${cannonBaseRadius + this.upgrades.cannon.radiusEffect * this.maxForgeLevel}px at max level)`,
                 level: this.upgrades.cannon.level,
                 maxLevel: this.maxForgeLevel,
                 baseCost: this.upgrades.cannon.baseCost,

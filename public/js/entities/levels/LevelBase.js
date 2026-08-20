@@ -538,7 +538,7 @@ export class LevelBase {
         const baseRanges = {
             'basic': 120,
             'cannon': 155,
-            'archer': 155,
+            'archer': 140,
             'magic': 130,
             'barricade': 120,
             'poison': 130,
