@@ -328,7 +328,7 @@ export class SettlementHub {
             // purchased (see UpgradesMenu.handleItemAction's 'commanders-workshop' branch,
             // which calls _addWorkshopBuilding() to insert this without a full re-enter()).
             ...(workshopUnlocked ? [{
-                building: new WorkshopHall(centerX + 440 * sf, centerY + 185 * sf, 0, 0),
+                building: new WorkshopHall(centerX + 440 * sf, centerY + 165 * sf, 0, 0),
                 scale: 24 * sf,
                 clickable: true,
                 action: 'workshop',
@@ -402,7 +402,7 @@ export class SettlementHub {
         const centerX = canvas.width / 2;
         const centerY = canvas.height * 0.76;
         this.settlementBuildings.push({
-            building: new WorkshopHall(centerX + 440 * sf, centerY + 185 * sf, 0, 0),
+            building: new WorkshopHall(centerX + 440 * sf, centerY + 165 * sf, 0, 0),
             scale: 24 * sf,
             clickable: true,
             action: 'workshop',
@@ -3199,7 +3199,7 @@ export class SettlementHub {
         const headerX = item.building.x;
         // WorkshopHall is shorter than the other headered buildings, so its default header
         // offset leaves an oversized gap above the building - sits a little lower than the rest.
-        const headerOffset = buildingType === 'WorkshopHall' ? 100 : 120;
+        const headerOffset = buildingType === 'WorkshopHall' ? 82 : 120;
         const headerY = item.building.y - headerOffset * sf;
         const fontSize = Math.round(22 * sf);
 

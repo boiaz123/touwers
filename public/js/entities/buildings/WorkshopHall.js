@@ -98,8 +98,8 @@ export class WorkshopHall extends Building {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.fillRect(this.x - buildingWidth / 2 + 4, this.y - wallHeight + 4, buildingWidth, wallHeight);
 
-        this.renderYardProps(ctx, size);
         this.renderStoneWalls(ctx, buildingWidth, buildingHeight, wallHeight);
+        this.renderYardProps(ctx, size);
         this.renderDoor(ctx, size, buildingWidth, wallHeight);
         this.renderWindow(ctx, size, buildingWidth, wallHeight);
         this.renderEmblem(ctx, size, wallHeight);
@@ -127,45 +127,79 @@ export class WorkshopHall extends Building {
     renderYardProps(ctx, size) {
         const s = size / 128;
 
-        // Spear bundle leaning against the wall, left of the door
-        const spearX = this.x - size * 0.4;
-        const spearBaseY = this.y + size * 0.03;
-        ctx.strokeStyle = '#6a5028';
-        ctx.lineCap = 'round';
-        [-8, 0, 8].forEach((dx, i) => {
-            ctx.lineWidth = 2 * s;
-            ctx.beginPath();
-            ctx.moveTo(spearX + dx * s, spearBaseY);
-            ctx.lineTo(spearX + dx * s * 0.4, spearBaseY - 34 * s);
-            ctx.stroke();
-            // Spearhead
-            ctx.fillStyle = '#c8ccd4';
-            ctx.beginPath();
-            ctx.moveTo(spearX + dx * s * 0.4, spearBaseY - 34 * s - 6 * s);
-            ctx.lineTo(spearX + dx * s * 0.4 - 2.2 * s, spearBaseY - 34 * s);
-            ctx.lineTo(spearX + dx * s * 0.4 + 2.2 * s, spearBaseY - 34 * s);
-            ctx.closePath();
-            ctx.fill();
-            ctx.strokeStyle = '#6a5028';
-        });
-
-        // A single round shield leaning against the wall, near the spears
-        const shX = this.x - size * 0.32;
-        const shY = this.y - size * 0.03;
+        // A round shield propped low against the wall's foundation, left of the door
+        const shR = 9 * s;
+        const shX = this.x - size * 0.34;
+        const shY = this.y + size * 0.06;
         ctx.save();
         ctx.translate(shX, shY);
         ctx.rotate(0.18);
-        const shieldGrad = ctx.createRadialGradient(-3 * s, -3 * s, 1, 0, 0, 12 * s);
+        const shieldGrad = ctx.createRadialGradient(-2.4 * s, -2.4 * s, 1, 0, 0, shR);
         shieldGrad.addColorStop(0, '#c0342c');
         shieldGrad.addColorStop(1, '#7a1c18');
         ctx.fillStyle = shieldGrad;
-        ctx.beginPath(); ctx.arc(0, 0, 12 * s, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#3a1210'; ctx.lineWidth = 1.3 * s; ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, shR, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#3a1210'; ctx.lineWidth = 1.2 * s; ctx.stroke();
         ctx.fillStyle = '#d4af37';
-        ctx.beginPath(); ctx.arc(0, 0, 3.2 * s, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1 * s;
-        ctx.beginPath(); ctx.arc(0, 0, 9 * s, -2.4, -1.2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, shR * 0.27, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 0.9 * s;
+        ctx.beginPath(); ctx.arc(0, 0, shR * 0.75, -2.4, -1.2); ctx.stroke();
         ctx.restore();
+
+        // Two swords leaning against the wall above the shield, left of the door -
+        // echoes the crossed sword-and-shield emblem over the door and the trophy
+        // shield rack. Based higher than the shield so the two never overlap: with
+        // the shield hugging the foundation, the full blade/crossguard/pommel of
+        // each sword stays clear and readable against the stone instead of being
+        // hidden behind it.
+        const swordX = this.x - size * 0.4;
+        const swordBaseY = this.y - size * 0.05;
+        const armLen = 30 * s;
+        [-7, 6].forEach((dx) => {
+            const baseX = swordX + dx * s;
+            const tipX = swordX + dx * s * 0.35;
+            const tipY = swordBaseY - armLen;
+            const angle = Math.atan2(tipX - baseX, swordBaseY - tipY);
+            ctx.save();
+            ctx.translate(baseX, swordBaseY);
+            ctx.rotate(angle);
+            // Dark silhouette pass first so the pale blade reads clearly against the
+            // similarly-toned stone wall instead of blending into it.
+            ctx.fillStyle = 'rgba(20, 18, 16, 0.55)';
+            ctx.beginPath();
+            ctx.moveTo(0, -armLen - 0.6 * s);
+            ctx.lineTo(2.4 * s, -armLen * 0.2);
+            ctx.lineTo(-2.4 * s, -armLen * 0.2);
+            ctx.closePath();
+            ctx.fill();
+            const bladeGrad = ctx.createLinearGradient(0, -armLen, 0, 0);
+            bladeGrad.addColorStop(0, '#f5f7fb');
+            bladeGrad.addColorStop(0.55, '#c7cdd8');
+            bladeGrad.addColorStop(1, '#8b909c');
+            ctx.fillStyle = bladeGrad;
+            ctx.beginPath();
+            ctx.moveTo(0, -armLen);
+            ctx.lineTo(1.8 * s, -armLen * 0.2);
+            ctx.lineTo(-1.8 * s, -armLen * 0.2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#2a2c32';
+            ctx.lineWidth = 0.7 * s;
+            ctx.stroke();
+            // Crossguard
+            ctx.fillStyle = '#d4af37';
+            ctx.fillRect(-4.6 * s, -armLen * 0.22, 9.2 * s, 1.8 * s);
+            ctx.strokeStyle = '#8a651c'; ctx.lineWidth = 0.5 * s;
+            ctx.strokeRect(-4.6 * s, -armLen * 0.22, 9.2 * s, 1.8 * s);
+            // Grip + pommel
+            ctx.fillStyle = '#4a3018';
+            ctx.fillRect(-1.2 * s, -armLen * 0.22 + 1.8 * s, 2.4 * s, 5.8 * s);
+            ctx.fillStyle = '#d4af37';
+            ctx.beginPath();
+            ctx.arc(0, -armLen * 0.22 + 1.8 * s + 5.8 * s + 1.3 * s, 1.5 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
 
         // Banner pole, right of the door (flag drawn dynamically in renderBanner)
         const poleX = this.x + size * 0.4;
@@ -211,6 +245,14 @@ export class WorkshopHall extends Building {
         const doorBoundRight = this.x - buildingWidth * 0.24 + buildingWidth * 0.09;
         const doorBoundTop = this.y - wallHeight * 0.62;
 
+        // Clip the staggered block grid + mortar seams to the wall rectangle so the
+        // row stagger (offsetX) and column overscan (col -1..9) can't overshoot the
+        // wall's left/right silhouette with ragged half-blocks.
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(leftX, this.y - wallHeight, buildingWidth, wallHeight);
+        ctx.clip();
+
         for (let row = 0; row < 7; row++) {
             const offsetX = (row % 2) * stoneW / 2;
             const rowY = this.y - wallHeight + row * stoneH;
@@ -247,6 +289,8 @@ export class WorkshopHall extends Building {
             ctx.lineTo(leftX + buildingWidth, rowY);
             ctx.stroke();
         }
+
+        ctx.restore();
 
         // Reinforced stone corner pilasters
         const pilasterW = stoneW * 0.6;
