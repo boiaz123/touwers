@@ -57,10 +57,17 @@ export class GoldMine extends Building {
         
         // Natural environment elements within the mine area
         this.trees = [];
+        this.frontTrees = [];
         this.environmentRocks = [];
         this.bushes = [];
-        
-        // Generate a sparser, well-arranged pine forest – frames the mine without crowding it
+        this.frontBushes = [];
+
+        // Generate a sparser, well-arranged pine forest – frames the mine without crowding it.
+        // Entries flagged `front: true` stand in front of the mine (closer to the camera than
+        // the cave entrance) and are routed into this.frontTrees below, rendered separately via
+        // renderStaticFront so they always composite on top of the whole baked structure instead
+        // of needing to win a Y-sort against it - see Building.getClearingRadius's doc comment.
+        // Together with the back/side rows, this forms a full circle of trees around the mine.
         const treePositions = [
             // Back row – wide-spread backdrop
             { x: -55, y: -50, height: 'tall' },
@@ -73,16 +80,24 @@ export class GoldMine extends Building {
             { x: -58, y: -18, height: 'medium' },
             { x: -60, y:  12, height: 'small' },
 
-            // Front-left corner (partially frames entrance)
-            { x: -48, y:  32, height: 'small' },
-            { x: -32, y:  36, height: 'small' },
-
             // Behind entrance (upper mid section)
             { x: -10, y: -28, height: 'small' },
             { x:  28, y: -32, height: 'small' },
 
             // Upper right (keeps right side open for cart track)
-            { x:  50, y: -28, height: 'small' }
+            { x:  50, y: -28, height: 'small' },
+
+            // Right side framing (mirrors the left side; kept clear of the cart track's
+            // exit line - see renderMineTrack's trackY/trackEndX)
+            { x:  62, y:  12, height: 'small' },
+
+            // Front-left corner (frames the cave entrance from in front) - FRONT ring
+            { x: -48, y:  32, height: 'small', front: true },
+            { x: -32, y:  36, height: 'small', front: true },
+
+            // Front-right corner (mirrors the front-left pair, clear of the cart track) - FRONT ring
+            { x:  36, y:  42, height: 'small', front: true },
+            { x:  55, y:  38, height: 'small', front: true }
         ];
         
         // Use fixed seed for consistent tree generation
@@ -114,7 +129,7 @@ export class GoldMine extends Building {
                     break;
             }
             
-            this.trees.push({
+            const tree = {
                 x: pos.x,
                 y: pos.y,
                 height: baseHeight,
@@ -125,7 +140,8 @@ export class GoldMine extends Building {
                 heightCategory: pos.height,
                 // Fixed layers for Christmas tree shape
                 layers: pos.height === 'tall' ? 5 : (pos.height === 'medium' ? 4 : 3)
-            });
+            };
+            (pos.front ? this.frontTrees : this.trees).push(tree);
         });
         
         // Generate rocks with fixed positions to prevent movement
@@ -151,15 +167,16 @@ export class GoldMine extends Building {
             });
         });
         
-        // Generate fewer bushes with fixed positions
+        // Generate fewer bushes with fixed positions - front: true routes into
+        // this.frontBushes (see treePositions' doc comment above for why).
         const bushPositions = [
-            { x: -30, y: 30 },
-            { x: 20, y: 35 },
+            { x: -30, y: 30, front: true },
+            { x: 20, y: 35, front: true },
             { x: -15, y: -15 }
         ];
-        
+
         bushPositions.forEach((pos, i) => {
-            this.bushes.push({
+            const bush = {
                 x: pos.x,
                 y: pos.y,
                 radius: 6 + (seededRandom() * 6),
@@ -167,7 +184,8 @@ export class GoldMine extends Building {
                 color: seededRandom() < 0.3 ? '#228B22' : '#2E8B57',
                 // Fixed segment positions to prevent movement
                 segmentPositions: this.generateFixedBushSegments(6 + (seededRandom() * 6), 4 + Math.floor(seededRandom() * 3), seededRandom)
-            });
+            };
+            (pos.front ? this.frontBushes : this.bushes).push(bush);
         });
         
         // Initialize workers with repositioned positions (moved to left)
@@ -532,9 +550,14 @@ export class GoldMine extends Building {
         this.renderFloatingTexts(ctx);
     }
 
-    /** No front-of-building overlay for this type - present for BuildingRenderAdapter's uniform convention. */
+    /** Front ring — trees/bushes standing in front of the mine, closer to the camera
+     * than the cave entrance (see this.frontTrees/this.frontBushes). Baked as the
+     * separate BuildingRenderAdapter "front" sprite, which always composites on top of
+     * the whole back-baked cave/timber/lantern structure, so this ring correctly stands
+     * in front of the mine instead of needing a cross-entity Y-sort against it. */
     renderStaticFront(ctx, size) {
-        // intentionally empty
+        this.renderTrees(ctx, this.frontTrees, 40);
+        this.renderBushList(ctx, this.frontBushes, 60);
     }
 
     /** Strategy A (baked once per campaign, shared across instances): excavated ground, trees/rocks/bushes/cave entrance with lantern - none of it depends on animationTime/production state. */
@@ -569,17 +592,48 @@ export class GoldMine extends Building {
     // ============ OPTIMIZED RENDERING METHODS ============
     
     renderStaticEnvironment(ctx, size) {
-        // Always render trees and environment for consistent visuals
-        this.renderTrees(ctx);
-        
+        // Always render trees and environment for consistent visuals - back/side ring
+        // only, see renderStaticFront for the front ring standing in front of the cave.
+        this.renderTrees(ctx, this.trees);
+
         // Always render debris
         this.renderDebris(ctx);
-        
-        // Bushes - always render (lightweight)
-        this.bushes.forEach((bush, index) => {
+
+        // Bushes - always render (lightweight) - back ring only, see renderStaticFront.
+        this.renderBushList(ctx, this.bushes, 10);
+
+        // Cave entrance
+        this.renderCaveEntrance(ctx, size);
+    }
+
+    // PERF: Removed shouldSimplifyRendering method - now using cached mine count directly
+
+    renderTrees(ctx, trees, seedOffset = 0) {
+        trees.forEach((tree, index) => {
+            if (ctx.level) {
+                // Campaign-aware vegetation using absolute coordinates
+                ctx.level.renderVegetation(ctx, this.x + tree.x, this.y + tree.y, tree.crownRadius * 2, 0, 0, index + seedOffset);
+            } else {
+                // Fallback: forest trees (uses translate-based rendering)
+                ctx.save();
+                ctx.translate(this.x + tree.x, this.y + tree.y);
+                const treeType = (index + seedOffset + Math.floor(tree.x + tree.y)) % 4;
+                switch(treeType) {
+                    case 0: this.renderTreeType1(ctx, tree); break;
+                    case 1: this.renderTreeType2(ctx, tree); break;
+                    case 2: this.renderTreeType3(ctx, tree); break;
+                    default: this.renderTreeType4(ctx, tree);
+                }
+                ctx.restore();
+            }
+        });
+    }
+
+    renderBushList(ctx, bushes, seedOffset = 10) {
+        bushes.forEach((bush, index) => {
             if (ctx.level) {
                 // Campaign-aware small vegetation
-                ctx.level.renderVegetation(ctx, this.x + bush.x, this.y + bush.y, bush.radius * 2, 0, 0, index + 10);
+                ctx.level.renderVegetation(ctx, this.x + bush.x, this.y + bush.y, bush.radius * 2, 0, 0, index + seedOffset);
             } else {
                 // Fallback: forest bushes
                 ctx.save();
@@ -597,32 +651,6 @@ export class GoldMine extends Building {
                     ctx.fill();
                 });
 
-                ctx.restore();
-            }
-        });
-        
-        // Cave entrance
-        this.renderCaveEntrance(ctx, size);
-    }
-    
-    // PERF: Removed shouldSimplifyRendering method - now using cached mine count directly
-    
-    renderTrees(ctx) {
-        this.trees.forEach((tree, index) => {
-            if (ctx.level) {
-                // Campaign-aware vegetation using absolute coordinates
-                ctx.level.renderVegetation(ctx, this.x + tree.x, this.y + tree.y, tree.crownRadius * 2, 0, 0, index);
-            } else {
-                // Fallback: forest trees (uses translate-based rendering)
-                ctx.save();
-                ctx.translate(this.x + tree.x, this.y + tree.y);
-                const treeType = (index + Math.floor(tree.x + tree.y)) % 4;
-                switch(treeType) {
-                    case 0: this.renderTreeType1(ctx, tree); break;
-                    case 1: this.renderTreeType2(ctx, tree); break;
-                    case 2: this.renderTreeType3(ctx, tree); break;
-                    default: this.renderTreeType4(ctx, tree);
-                }
                 ctx.restore();
             }
         });
@@ -1143,7 +1171,14 @@ export class GoldMine extends Building {
         // Base income adjusted by forge level via building manager
         return 30; // This will be multiplied by forge bonus in BuildingManager
     }
-    
+
+    /** The back+front tree ring reaches roughly 2 grid cells past the 4x4 footprint on
+     * every side (see this.trees/this.frontTrees above) - clear real terrain that far out
+     * so it doesn't visually compete with the ring. See Building.getClearingRadius. */
+    getClearingRadius() {
+        return 2;
+    }
+
     darkenColor(color, factor) { return darkenColor(color, factor); }
     
     applyEffect(towerManager) {

@@ -1390,7 +1390,24 @@ export class GameplayState {
                 
                 if (this.towerManager.placeBuilding(this.selectedBuildingType, screenX, screenY, gridX, gridY)) {
                     this.level.placeBuilding(gridX, gridY, buildingSize);
-                    
+
+                    // Buildings whose baked art carries its own decorative ring of trees
+                    // (Academy, GoldMine) clear real level terrain out of that ring's
+                    // footprint on placement - see Building.getClearingRadius's doc
+                    // comment for why a Y-sort against real terrain can't do this instead.
+                    const placedBuilding = this.towerManager.buildingManager.buildings[this.towerManager.buildingManager.buildings.length - 1];
+                    if (placedBuilding && typeof placedBuilding.getClearingRadius === 'function') {
+                        const clearingRadius = placedBuilding.getClearingRadius();
+                        if (clearingRadius > 0) {
+                            const removedTerrain = this.level.clearTerrainNear(gridX, gridY, buildingSize, clearingRadius);
+                            if (this.terrainRenderAdapter) {
+                                for (const el of removedTerrain) {
+                                    this.terrainRenderAdapter.unregister(el);
+                                }
+                            }
+                        }
+                    }
+
                     // Play building placement SFX
                     if (this.stateManager.audioManager) {
                         if (this.selectedBuildingType === 'forge') {

@@ -68,9 +68,16 @@ export class BuildingRenderAdapter {
         this._entries.set(building, { container: entryContainer, back, front, dynamic, shim, lastAnimKey: -1 });
         building.skipCanvas2DBodyRender = true;
 
-        // Buildings never move — position and zIndex are set once here.
+        // Buildings never move — position and zIndex are set once here. Use the building's
+        // ground-contact depth (front footprint edge), not raw building.y, so surrounding
+        // terrain trees sort correctly against it instead of always drawing underneath -
+        // see Building.getSortDepthY's doc comment. Castle shares this same adapter (see
+        // GameplayState's 'castle' branch) but doesn't extend Building/implement this
+        // hook, so fall back to its raw y like before.
         this._positionStaticLayers(building);
-        entryContainer.zIndex = building.y;
+        entryContainer.zIndex = typeof building.getSortDepthY === 'function'
+            ? building.getSortDepthY(buildingSize)
+            : building.y;
     }
 
     _positionStaticLayers(building) {

@@ -49,8 +49,8 @@ export class MagicAcademy extends Building {
         this.waterRipples = [];
         this.nextRippleTime = 0;
         
-        // Trees at back and sides — all at Y <= 10 so they stand behind/beside the main tower.
-        // More trees restore the forested academy feel without appearing "in front" of the building.
+        // Back/side ring — rendered in renderStaticBack, before the wall/spires/tower are
+        // drawn, so this ring stands behind/beside the building's silhouette.
         this.trees = [
             // Back row
             { x: -55, y: -58, size: 0.85 },
@@ -69,7 +69,7 @@ export class MagicAcademy extends Building {
             { x: -62, y:  10, size: 0.55 },
             { x:  62, y:   8, size: 0.50 }
         ];
-        
+
         // Bushes at back and sides only
         this.bushes = [
             { x: -46, y: -40, size: 8 },
@@ -82,6 +82,31 @@ export class MagicAcademy extends Building {
             { x:  48, y:  10, size: 6 }
         ];
 
+        // Front ring — trees/bushes standing in front of the building, closer to the
+        // camera than the gate/bridge. Rendered via renderStaticFront with groundShift
+        // (see that method and renderTrees' doc comment) so `y` here is where each tree
+        // actually plants its ground contact, not a raw draw anchor - ground contact
+        // just past the wall's own ground line (renderCobblestoneBase's baseBottom sits
+        // at exactly this.y) reads as "standing right in front of the wall", and a big
+        // enough `size` gives the canopy enough height to reach back up and genuinely
+        // overlap/occlude the wall face above it, instead of just brushing its bottom
+        // edge (which is what too-small a size, or the unshifted anchor a first attempt
+        // at this ring used, both produce - trees that never actually cover any wall).
+        // A gap is left directly ahead of the gate (roughly -30..30) so the bridge stays
+        // visible. Together with this.trees above, this completes a full circle of trees
+        // around the building - see Building.getClearingRadius, which also clears real
+        // level terrain out of this ring's footprint on placement.
+        this.frontTrees = [
+            { x: -66, y: 12, size: 0.85 },
+            { x: -46, y: 18, size: 0.75 },
+            { x:  46, y: 18, size: 0.75 },
+            { x:  66, y: 12, size: 0.85 }
+        ];
+        this.frontBushes = [
+            { x: -34, y: 18, size: 6 },
+            { x:  34, y: 18, size: 6 }
+        ];
+
         // Set by BuildingRenderAdapter once it has baked/synced this building's static
         // structure via Pixi (magic particles still draw here regardless - not yet migrated).
         this.skipCanvas2DBodyRender = false;
@@ -90,6 +115,13 @@ export class MagicAcademy extends Building {
     /** Grounds the academy lower in its placement square - see VISUAL_SCALE's doc comment. */
     getVisualYOffset(buildingSize) {
         return buildingSize * 0.12;
+    }
+
+    /** The back+front tree ring reaches roughly 2 grid cells past the 4x4 footprint on
+     * every side (see this.trees/this.frontTrees above) - clear real terrain that far out
+     * so it doesn't visually compete with the ring. See Building.getClearingRadius. */
+    getClearingRadius() {
+        return 2;
     }
 
     update(deltaTime) {
@@ -189,9 +221,15 @@ export class MagicAcademy extends Building {
         this.renderMagicEffects(ctx, size);
     }
 
-    /** No front-of-building overlay for this type - present for BuildingRenderAdapter's uniform convention. */
+    /** Front ring — trees/bushes in front of the building (see this.frontTrees/
+     * this.frontBushes above). Baked as the separate BuildingRenderAdapter "front"
+     * sprite, which always composites on top of the whole back-baked wall/spire/tower
+     * silhouette, so this ring correctly stands in front of the building instead of
+     * needing a cross-entity Y-sort against it. */
     renderStaticFront(ctx, size) {
-        // intentionally empty
+        size *= MagicAcademy.VISUAL_SCALE;
+        this.renderTrees(ctx, size, this.frontTrees, 40, true);
+        this.renderBushes(ctx, size, this.frontBushes, 60, true);
     }
 
     /**
@@ -215,16 +253,18 @@ export class MagicAcademy extends Building {
         // bank and water can naturally overlap their base - grounding them behind the
         // pond instead of pasting them flat on top of everything drawn so far. The
         // near/side planting renders after, so it stands in front of the bank the way
-        // undergrowth actually grows right up to a shoreline.
-        this.renderTrees(ctx, size, true);
-        this.renderBushes(ctx, size, true);
+        // undergrowth actually grows right up to a shoreline. Both groups are still part
+        // of this.trees/this.bushes (the back/side ring) - the front ring lives in
+        // this.frontTrees/this.frontBushes and renders separately, see renderStaticFront.
+        this.renderTrees(ctx, size, this.trees.filter(t => t.y <= MagicAcademy.VEGETATION_BACK_Y));
+        this.renderBushes(ctx, size, this.bushes.filter(b => b.y <= MagicAcademy.VEGETATION_BACK_Y));
 
         // All layers render naturally — tower tops and trees extend beyond the
         // placement square just like towers do, no clip applied.
         this.renderWaterMoatStatic(ctx, size);
         this.renderPavementPlaza(ctx, size);
-        this.renderTrees(ctx, size, false);
-        this.renderBushes(ctx, size, false);
+        this.renderTrees(ctx, size, this.trees.filter(t => t.y > MagicAcademy.VEGETATION_BACK_Y));
+        this.renderBushes(ctx, size, this.bushes.filter(b => b.y > MagicAcademy.VEGETATION_BACK_Y));
         this.renderCobblestoneBase(ctx, size);
         this.renderSideSpiresStatic(ctx, size);
         this.renderCentralTowerStatic(ctx, size);
@@ -650,43 +690,60 @@ export class MagicAcademy extends Building {
      * the rest render after, standing beside the bank. See renderStaticBack(). */
     static VEGETATION_BACK_Y = -15;
 
-    renderTrees(ctx, size, backLayer) {
+    /**
+     * @param {boolean} groundShift - pre-shifts the draw anchor up by scale*0.45 before
+     * handing off to renderVegetation, exactly like LevelBase.renderSingleTerrainElement
+     * does for real terrain trees (see that method and getTerrainElementDepthY's doc
+     * comment). renderTree()/renderTreeTypeN() draw their canopy roughly symmetric
+     * around the anchor (extending up to ~0.6*scale above it) but the trunk/ground-
+     * shadow only extends ~0.43*scale below it - so an UNSHIFTED anchor (this param
+     * false, the back-ring's existing behavior, left alone here to avoid moving trees
+     * that already look right) plants the tree with its ground contact noticeably
+     * *below* tree.y and its canopy barely reaching tree.y at all. That's fine for
+     * trees standing beside the wall, but a front-ring tree needs its canopy to reach
+     * meaningfully *above* its own ground contact to actually overlap/occlude the wall
+     * face - true here shifts the anchor so tree.y itself becomes the ground-contact
+     * point (the two offsets almost cancel: -0.45+0.43 ≈ 0, matching LevelBase's own
+     * "lands almost exactly at the unshifted point" note), letting frontTrees be placed
+     * by where they should stand rather than by trial-and-error against the canopy.
+     */
+    renderTrees(ctx, size, trees, seedOffset = 0, groundShift = false) {
         // Scale tree positions and sizes relative to the nominal design size of 128
         const sf = size / 128;
-        this.trees.forEach((tree, index) => {
-            if (backLayer !== undefined && (tree.y <= MagicAcademy.VEGETATION_BACK_Y) !== backLayer) return;
+        trees.forEach((tree, index) => {
             const treeX = this.x + tree.x * sf;
-            const treeY = this.y + tree.y * sf;
             const scale = tree.size * 40 * sf;
+            const treeY = this.y + tree.y * sf - (groundShift ? scale * 0.45 : 0);
 
             if (ctx.level) {
                 // Campaign-aware vegetation
-                ctx.level.renderVegetation(ctx, treeX, treeY, scale, 0, 0, index);
+                ctx.level.renderVegetation(ctx, treeX, treeY, scale, 0, 0, index + seedOffset);
             } else {
                 // No ctx.level (e.g. settlement hub) - force the same forest-style trees
                 // via the shared TerrainRenderer instead of this building's own stale
                 // duplicate tree code.
-                TerrainRenderer.renderVegetation(ctx, treeX, treeY, scale, 0, 0, index, 'forest');
+                TerrainRenderer.renderVegetation(ctx, treeX, treeY, scale, 0, 0, index + seedOffset, 'forest');
             }
         });
     }
 
-    renderBushes(ctx, size, backLayer) {
+    /** See renderTrees' groundShift doc comment - same reasoning applies here. */
+    renderBushes(ctx, size, bushes, seedOffset = 20, groundShift = false) {
         const sf = size / 128;
-        this.bushes.forEach((bush, index) => {
-            if (backLayer !== undefined && (bush.y <= MagicAcademy.VEGETATION_BACK_Y) !== backLayer) return;
+        bushes.forEach((bush, index) => {
             const bushX = this.x + bush.x * sf;
-            const bushY = this.y + bush.y * sf;
             const bs = bush.size * sf;
+            const scale = bs * 3.5;
+            const bushY = this.y + bush.y * sf - (groundShift ? scale * 0.45 : 0);
 
             if (ctx.level) {
                 // Campaign-aware small vegetation
-                ctx.level.renderVegetation(ctx, bushX, bushY, bs * 3.5, 0, 0, index + 20);
+                ctx.level.renderVegetation(ctx, bushX, bushY, scale, 0, 0, index + seedOffset);
             } else {
                 // No ctx.level (e.g. settlement hub) - force the same forest-style bushes
                 // via the shared TerrainRenderer instead of this building's own stale
                 // duplicate bush code.
-                TerrainRenderer.renderVegetation(ctx, bushX, bushY, bs * 3.5, 0, 0, index + 20, 'forest');
+                TerrainRenderer.renderVegetation(ctx, bushX, bushY, scale, 0, 0, index + seedOffset, 'forest');
             }
         });
     }

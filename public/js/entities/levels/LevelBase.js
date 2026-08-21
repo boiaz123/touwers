@@ -478,7 +478,32 @@ export class LevelBase {
             }
         }
     }
-    
+
+    /**
+     * Removes real terrain elements (trees/rocks/vegetation - never water) whose grid
+     * position falls within `radius` cells of a just-placed building's footprint - see
+     * Building.getClearingRadius's doc comment for why this exists. Called once from
+     * GameplayState right after placement succeeds, for building types that declare a
+     * positive clearing radius. terrainElements is otherwise treated as immutable after
+     * level load everywhere else (see TerrainRenderAdapter.js's class doc comment) - the
+     * caller is responsible for also unregistering the removed elements' already-baked
+     * Pixi sprites, since nothing here touches rendering.
+     *
+     * @returns {Array} the removed elements, so the caller can unregister their sprites
+     */
+    clearTerrainNear(gridX, gridY, size, radius) {
+        const minX = gridX - radius, maxX = gridX + size + radius;
+        const minY = gridY - radius, maxY = gridY + size + radius;
+        const removed = [];
+        this.terrainElements = this.terrainElements.filter(el => {
+            if (el.type === 'water') return true;
+            const inRange = el.gridX >= minX && el.gridX < maxX && el.gridY >= minY && el.gridY < maxY;
+            if (inRange) removed.push(el);
+            return !inRange;
+        });
+        return removed;
+    }
+
     removeTower(gridX, gridY) {
         // Free up the 2x2 area from occupied cells
         for (let x = gridX; x < gridX + this.towerSize; x++) {
