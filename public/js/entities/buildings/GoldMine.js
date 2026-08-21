@@ -536,6 +536,12 @@ export class GoldMine extends Building {
         if (!this.skipCanvas2DBodyRender) {
             this.renderStaticBack(ctx, size);
             this.renderDynamicParts(ctx, size);
+            // Front tree ring - see renderStaticFront's doc comment. Guarded the same as
+            // the two calls above: in-game, once BuildingRenderAdapter has taken over,
+            // Pixi's own front sprite already draws this - only unguarded Canvas2D
+            // callers (e.g. a settlement/menu preview that calls render() directly)
+            // need it drawn here too.
+            this.renderStaticFront(ctx, size);
         }
 
         // Render dust clouds - not yet migrated

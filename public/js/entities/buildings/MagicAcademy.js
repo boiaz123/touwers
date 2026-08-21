@@ -215,6 +215,15 @@ export class MagicAcademy extends Building {
         if (!this.skipCanvas2DBodyRender) {
             this.renderStaticBack(ctx, size);
             this.renderDynamicParts(ctx, size);
+            // Front tree ring - see renderStaticFront's doc comment. Guarded the same as
+            // the two calls above: when skipCanvas2DBodyRender is true (in-game, once
+            // BuildingRenderAdapter has taken over), Pixi's own front sprite already
+            // draws this - calling it again here would double-render it straight onto
+            // the live canvas on top of everything. Only unguarded callers (e.g. the
+            // Settlement Hub's decorative preview, which calls render() directly and
+            // never sets that flag) reach this and previously never got the front ring
+            // at all, still showing the old "trees never overlap the building" look.
+            this.renderStaticFront(ctx, size);
         }
 
         // Not yet migrated (Phase 6-shaped particle effects)
