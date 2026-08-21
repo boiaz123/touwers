@@ -933,31 +933,33 @@ export class GoldMine extends Building {
     }
     
     renderProductionStatus(ctx, size) {
+        const barY = this.y + size * 0.28;
+
         if (!this.goldReady) {
             const progress = this.currentProduction / this.productionTime;
-            
+
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(this.x - 25, this.y - size/2 - 15, 50, 8);
-            
+            ctx.fillRect(this.x - 25, barY, 50, 8);
+
             ctx.fillStyle = '#4CAF50';
-            ctx.fillRect(this.x - 25, this.y - size/2 - 15, 50 * progress, 8);
-            
+            ctx.fillRect(this.x - 25, barY, 50 * progress, 8);
+
             ctx.strokeStyle = '#FFF';
             ctx.lineWidth = 1;
-            ctx.strokeRect(this.x - 25, this.y - size/2 - 15, 50, 8);
-            
+            ctx.strokeRect(this.x - 25, barY, 50, 8);
+
             const timeLeft = Math.ceil(this.productionTime - this.currentProduction);
             ctx.fillStyle = '#FFF';
             ctx.font = 'bold 10px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(`${timeLeft}s`, this.x, this.y - size/2 - 20);
+            ctx.fillText(`${timeLeft}s`, this.x, barY + 8 + 12);
         } else {
-            // Show "READY" text when gold is ready
+            // Show "READY" text above the (hidden) progress bar row
             const readyText = this.gemMode ? '\u25C6 READY' : 'READY';
             ctx.fillStyle = '#FFD700';
             ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(readyText, this.x, this.y - size/2 - 15);
+            ctx.fillText(readyText, this.x, barY - 6);
         }
     }
     

@@ -1839,7 +1839,13 @@ export class TowerForge extends Building {
     
     calculateUpgradeCost(upgradeType) {
         const upgrade = this.upgrades[upgradeType];
-        if (!upgrade || upgrade.level >= this.forgeLevel) return null;
+        // Once a tower type is unlocked (see getUpgradeOptions()'s forgeLevel checks for
+        // poison/cannon), its own upgrade level is gold-gated only, up to whatever the
+        // cost table below actually has entries for (5 levels) - it no longer additionally
+        // has to wait for the Forge's own building level (a separate purchase, see
+        // purchaseForgeUpgrade()) to catch up. table[upgrade.level] below already returns
+        // null past the table's last entry, so level 5 is still a real ceiling.
+        if (!upgrade) return null;
         const costTables = {
             'basic':                    [100, 150, 250, 375, 550],
             'archer':                   [150, 275, 450, 800, 1225],
@@ -1859,8 +1865,8 @@ export class TowerForge extends Building {
         
         const upgrade = this.upgrades[upgradeType];
         const cost = this.calculateUpgradeCost(upgradeType);
-        
-        if (!upgrade || !cost || gameState.gold < cost || upgrade.level >= this.forgeLevel) {
+
+        if (!upgrade || !cost || gameState.gold < cost) {
             return false;
         }
         

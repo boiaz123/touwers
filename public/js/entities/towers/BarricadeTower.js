@@ -46,13 +46,12 @@ export class BarricadeTower extends Tower {
 
         // Deterministic rubble/wood/metal debris scattered across the patch, revealed
         // progressively as more barrels land (see landRubble()) - purely cosmetic, doesn't
-        // gate the (continuous) slow effect below. stainBlobs/cloudPuffs are the soft,
-        // irregular dirt-stain + haze layer underneath the debris (see _rebuildAtmosphere()).
+        // gate the (continuous) slow effect below. stainBlobs is the soft, irregular
+        // dirt-stain layer underneath the debris (see _rebuildAtmosphere()).
         this.debrisSlots = [];
         this.debrisRevealed = 0;
         this._maxDebrisSlots = 0;
         this.stainBlobs = [];
-        this.cloudPuffs = [];
         // A deliberate line of debris laid across the road at each END of the patch (see
         // _rebuildBoundaryMarkers()), so the affected stretch of road has a clear start and
         // finish instead of just trailing off into the scattered debris above.
@@ -60,8 +59,12 @@ export class BarricadeTower extends Tower {
         this.zoneIntensity = 0; // Fades with isDisabled, not with a timer - see update()
         this._landPulse = 0; // Brief cosmetic flash on the newest debris piece when a throw lands
 
-        // Short-lived smoke puffs kicked up at the exact moment a barrel lands - distinct
-        // from the persistent cloudPuffs haze above, which is always there.
+        // Short-lived dust puffs kicked up at the exact moment a barrel lands - the ONLY
+        // dust-cloud visual this tower has. An earlier version also had a permanent, always-
+        // drifting haze layer sitting over the whole patch at all times; removed because it
+        // was needless visual (and render) noise for a zone that's supposed to read as "a
+        // pile of rubble", not "a permanent fog bank" - dust only makes sense right after
+        // something actually lands.
         this.impactPuffs = [];
 
         this.effectRadius = 20; // Base slow-patch radius, upgraded at the Tower Forge (max 40px)
@@ -260,11 +263,9 @@ export class BarricadeTower extends Tower {
     }
 
     /**
-     * Regenerate the soft dirt-stain + haze layer underneath the debris - several
-     * overlapping soft-edged blobs instead of one uniform-width shape, so the patch's edge
-     * reads as an irregular, natural mess rather than a geometric capsule/circle outline.
-     * cloudPuffs sit on top as a gentle, slowly drifting haze (the "little bit of a cloudy
-     * area" - secondary to the debris, not the focal point).
+     * Regenerate the soft dirt-stain layer underneath the debris - several overlapping
+     * soft-edged blobs instead of one uniform-width shape, so the patch's edge reads as an
+     * irregular, natural mess rather than a geometric capsule/circle outline.
      */
     _rebuildAtmosphere(effRadius) {
         const totalLen = this.coveragePoints ? this._polylineLength(this.coveragePoints) : effRadius * 2;
@@ -283,21 +284,6 @@ export class BarricadeTower extends Tower {
             });
         }
         this.stainBlobs = stains;
-
-        const cloudCount = Math.max(3, Math.round(effRadius * 0.18));
-        const clouds = [];
-        for (let i = 0; i < cloudCount; i++) {
-            const along = this._hash(i * 53 + 5) * totalLen;
-            const perp = (this._hash(i * 59 + 9) - 0.5) * 2 * maxPerp * 0.75;
-            const sample = this._sampleCoverage(along, perp);
-            clouds.push({
-                x: sample.x,
-                y: sample.y,
-                radius: this.roadHalfWidth * (0.5 + this._hash(i * 61 + 13) * 0.5),
-                phase: this._hash(i * 67 + 17) * Math.PI * 2
-            });
-        }
-        this.cloudPuffs = clouds;
     }
 
     /**
@@ -655,8 +641,9 @@ export class BarricadeTower extends Tower {
         }
         this._landPulse = 1;
 
-        // Extra cloudy smoke burst right at the impact point - short-lived, on top of the
-        // persistent haze (cloudPuffs) that's always drifting over the patch.
+        // Short-lived dust burst right at the impact point - the tower's only dust-cloud
+        // visual (see the constructor's impactPuffs comment), so it's the one moment this
+        // zone actually looks "dusty" instead of the effect being on permanently.
         const puffCount = 5;
         for (let i = 0; i < puffCount; i++) {
             const angle = (i / puffCount) * Math.PI * 2 + Math.random() * 0.8;
@@ -976,27 +963,35 @@ export class BarricadeTower extends Tower {
             ctx.fillRect(railX - 1.5, platformY - 22, 3, 4);
         }
 
-        // Barrel storage on platform
+        // Ammunition storage on platform - factored into its own per-piece method (see
+        // _renderStorageBarrel()) so a transform that throws something other than barrels
+        // (e.g. SpikeThrowerTower's spikeballs) can swap just this piece.
         for (let i = 0; i < 3; i++) {
-            const barrelX = this.x - platformWidth/3 + (i * platformWidth/4);
-            const barrelY = platformY - 8;
-
-            ctx.fillStyle = '#8B4513';
-            ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 2;
-            ctx.fillRect(barrelX - 4, barrelY - 6, 8, 12);
-            ctx.strokeRect(barrelX - 4, barrelY - 6, 8, 12);
-
-            // Barrel bands
-            ctx.strokeStyle = '#2F2F2F';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(barrelX - 4, barrelY - 2);
-            ctx.lineTo(barrelX + 4, barrelY - 2);
-            ctx.moveTo(barrelX - 4, barrelY + 2);
-            ctx.lineTo(barrelX + 4, barrelY + 2);
-            ctx.stroke();
+            const pieceX = this.x - platformWidth/3 + (i * platformWidth/4);
+            const pieceY = platformY - 8;
+            this._renderStorageBarrel(ctx, pieceX, pieceY);
         }
+    }
+
+    /** One stored barrel on the upper platform (see renderUpperPlatform()) - baked as part
+     *  of the static back layer, so this must stay a pure function of (x, y) with no
+     *  per-instance/animated state. */
+    _renderStorageBarrel(ctx, x, y) {
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 2;
+        ctx.fillRect(x - 4, y - 6, 8, 12);
+        ctx.strokeRect(x - 4, y - 6, 8, 12);
+
+        // Barrel bands
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - 4, y - 2);
+        ctx.lineTo(x + 4, y - 2);
+        ctx.moveTo(x - 4, y + 2);
+        ctx.lineTo(x + 4, y + 2);
+        ctx.stroke();
     }
 
     renderDefenders(ctx, baseWidth, baseHeight, towerSize) {
@@ -1167,32 +1162,37 @@ export class BarricadeTower extends Tower {
             ctx.save();
             ctx.translate(barrel.x, barrel.y);
             ctx.rotate(barrel.rotation);
-
-            ctx.fillStyle = '#8B4513';
-            ctx.strokeStyle = '#654321';
-            ctx.lineWidth = 2;
-            ctx.fillRect(-barrel.size, -barrel.size, barrel.size * 2, barrel.size * 2);
-            ctx.strokeRect(-barrel.size, -barrel.size, barrel.size * 2, barrel.size * 2);
-
-            // Barrel bands
-            ctx.strokeStyle = '#2F2F2F';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(-barrel.size, -barrel.size/3);
-            ctx.lineTo(barrel.size, -barrel.size/3);
-            ctx.moveTo(-barrel.size, barrel.size/3);
-            ctx.lineTo(barrel.size, barrel.size/3);
-            ctx.stroke();
-
+            this._renderRollingBarrel(ctx, barrel);
             ctx.restore();
         }
     }
 
+    /** One barrel currently rolling toward the landing spot (see _releaseBarrel()) - local
+     *  space, already translated/rotated to the barrel's position by renderRollingBarrels().
+     *  Factored out so a transform that throws something else (e.g. SpikeThrowerTower's
+     *  spikeballs) can swap just this piece. */
+    _renderRollingBarrel(ctx, barrel) {
+        ctx.fillStyle = '#8B4513';
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 2;
+        ctx.fillRect(-barrel.size, -barrel.size, barrel.size * 2, barrel.size * 2);
+        ctx.strokeRect(-barrel.size, -barrel.size, barrel.size * 2, barrel.size * 2);
+
+        // Barrel bands
+        ctx.strokeStyle = '#2F2F2F';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-barrel.size, -barrel.size/3);
+        ctx.lineTo(barrel.size, -barrel.size/3);
+        ctx.moveTo(-barrel.size, barrel.size/3);
+        ctx.lineTo(barrel.size, barrel.size/3);
+        ctx.stroke();
+    }
+
     /** Active slow-patch visual: mainly a pile of debris - wood planks, nails, rubble and
      *  scrap metal (denser the more the radius is upgraded, revealed piece by piece as
-     *  throws land) - scattered over a soft, irregular dirt stain and a little bit of
-     *  drifting cloudy haze underneath, plus a short smoke burst right after each throw
-     *  lands. The debris is the focal point, not the patch's outline. */
+     *  throws land) - scattered over a soft, irregular dirt stain, plus a short dust burst
+     *  right after each throw lands. The debris is the focal point, not the patch's outline. */
     renderRubbleZone(ctx) {
         if (this.zoneIntensity < 0.01) return;
 
@@ -1200,7 +1200,6 @@ export class BarricadeTower extends Tower {
         const pulse = this._landPulse;
 
         this._renderCoverageStain(ctx, alpha);
-        this._renderCoverageHaze(ctx, alpha, pulse);
         this._renderImpactPuffs(ctx);
 
         for (let i = 0; i < this.debrisRevealed && i < this.debrisSlots.length; i++) {
@@ -1224,54 +1223,49 @@ export class BarricadeTower extends Tower {
 
     /** Several overlapping soft-edged dirt blobs (see _rebuildAtmosphere()) instead of one
      *  uniform-width shape, so the ground beneath the debris reads as an irregular, natural
-     *  mess rather than a geometric capsule/circle. */
+     *  mess rather than a geometric capsule/circle.
+     *
+     *  Approximated with flat alpha-blended circles instead of a radial gradient (compare
+     *  MagicTower's window-glow comment in its renderDynamicParts) - a FillGradient rebuilt
+     *  every ~33ms redraw allocates a real GPU texture each time it's recreated (see
+     *  CanvasGraphicsShim's createRadialGradient doc), and this zone is a PERMANENT fixture
+     *  redrawn on every sync() for as long as the tower exists, with up to a dozen blobs -
+     *  this was the actual source of the frame-rate hit from placing several Barricade
+     *  towers (or their transform, Spike Thrower, which inherits this unchanged). Flat
+     *  circle fills cost nothing comparable. */
     _renderCoverageStain(ctx, alpha) {
         for (let i = 0; i < this.stainBlobs.length; i++) {
             const b = this.stainBlobs[i];
-            const gradient = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.radius);
-            gradient.addColorStop(0, `rgba(72, 56, 40, ${alpha * 0.3})`);
-            gradient.addColorStop(0.7, `rgba(72, 56, 40, ${alpha * 0.14})`);
-            gradient.addColorStop(1, `rgba(72, 56, 40, 0)`);
-            ctx.fillStyle = gradient;
+            ctx.fillStyle = `rgba(72, 56, 40, ${alpha * 0.14})`;
             ctx.beginPath();
             ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
             ctx.fill();
-        }
-    }
-
-    /** A handful of soft, slowly drifting/breathing cloud puffs - "a little bit of a cloudy
-     *  area", secondary to the debris rather than a dominant flat tint. */
-    _renderCoverageHaze(ctx, alpha, pulse) {
-        for (let i = 0; i < this.cloudPuffs.length; i++) {
-            const c = this.cloudPuffs[i];
-            const drift = Math.sin(this.animationTime * 0.5 + c.phase) * 2.5;
-            const breathe = Math.sin(this.animationTime * 0.8 + c.phase) * 0.15 + 1;
-            const cx = c.x + Math.cos(c.phase) * drift * 0.4;
-            const cy = c.y + Math.sin(c.phase) * drift * 0.4;
-            const r = c.radius * breathe;
-            const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-            gradient.addColorStop(0, `rgba(195, 190, 180, ${alpha * (0.1 + pulse * 0.12)})`);
-            gradient.addColorStop(1, `rgba(195, 190, 180, 0)`);
-            ctx.fillStyle = gradient;
+            ctx.fillStyle = `rgba(72, 56, 40, ${alpha * 0.3})`;
             ctx.beginPath();
-            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.arc(b.x, b.y, b.radius * 0.55, 0, Math.PI * 2);
             ctx.fill();
         }
     }
 
+
     /** Short-lived smoke burst kicked up at the exact moment a barrel lands (see
-     *  landRubble()) - separate from the persistent haze above, which is always there. */
+     *  landRubble()) - separate from the persistent haze above, which is always there. Flat
+     *  concentric circles instead of a radial gradient - see _renderCoverageStain's doc
+     *  above (impact puffs are shorter-lived and fewer, but still recreated every redraw
+     *  for their whole ~1s life, so the same GPU-texture-churn cost applied here too). */
     _renderImpactPuffs(ctx) {
         for (let i = 0; i < this.impactPuffs.length; i++) {
             const puff = this.impactPuffs[i];
             const t = Math.max(0, puff.life / puff.maxLife);
             const r = puff.size * (1 + (1 - t) * 2.5);
-            const gradient = ctx.createRadialGradient(puff.x, puff.y, 0, puff.x, puff.y, r);
-            gradient.addColorStop(0, `rgba(200, 195, 185, ${t * 0.5})`);
-            gradient.addColorStop(1, `rgba(200, 195, 185, 0)`);
-            ctx.fillStyle = gradient;
+            const baseAlpha = t * 0.5;
+            ctx.fillStyle = `rgba(200, 195, 185, ${baseAlpha * 0.4})`;
             ctx.beginPath();
             ctx.arc(puff.x, puff.y, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = `rgba(200, 195, 185, ${baseAlpha})`;
+            ctx.beginPath();
+            ctx.arc(puff.x, puff.y, r * 0.5, 0, Math.PI * 2);
             ctx.fill();
         }
     }

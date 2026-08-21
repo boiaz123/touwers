@@ -202,16 +202,18 @@ export class ArcherTower extends Tower {
         // intentionally empty
     }
 
-    /** Strategy A (baked once per campaign, shared across instances): watchtower structure + roof. */
-    renderStaticBack(ctx, towerSize) {
+    /** Stone foundation + wooden shaft only, no platform/roof - factored out of
+     *  renderStaticBack() so SharpshooterTower can reuse this unmodified and only
+     *  replace the platform/roof above it (see that class's renderStaticBack). */
+    renderFoundationAndShaft(ctx, towerSize) {
         // 3D shadow for entire structure
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.fillRect(this.x - towerSize * 0.3 + 4, this.y - towerSize * 0.1 + 4, towerSize * 0.6, towerSize * 0.8);
-        
+
         // Wooden watchtower base (square foundation)
         const baseWidth = towerSize * 0.6;
         const baseHeight = towerSize * 0.15;
-        
+
         // Foundation stones
         ctx.fillStyle = '#A9A9A9';
         ctx.strokeStyle = '#2F2F2F';
@@ -231,18 +233,18 @@ export class ArcherTower extends Tower {
             ctx.lineTo(this.x + baseWidth/2, sy);
             ctx.stroke();
         }
-        
+
         // Main wooden tower structure (tall and narrow)
         const towerWidth = baseWidth * 0.8;
         const towerHeight = towerSize * 0.7;
-        
+
         // Tower wood planks
         ctx.fillStyle = '#CD853F';
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 2;
         ctx.fillRect(this.x - towerWidth/2, this.y - towerHeight, towerWidth, towerHeight);
         ctx.strokeRect(this.x - towerWidth/2, this.y - towerHeight, towerWidth, towerHeight);
-        
+
         // Vertical wood planks
         ctx.strokeStyle = '#8B7355';
         ctx.lineWidth = 1;
@@ -253,7 +255,7 @@ export class ArcherTower extends Tower {
             ctx.lineTo(plankX, this.y);
             ctx.stroke();
         }
-        
+
         // Horizontal support beams
         for (let i = 1; i <= 3; i++) {
             const beamY = this.y - towerHeight + (towerHeight * i / 4);
@@ -264,7 +266,18 @@ export class ArcherTower extends Tower {
             ctx.lineTo(this.x + towerWidth/2, beamY);
             ctx.stroke();
         }
-        
+    }
+
+    /** Strategy A (baked once per campaign, shared across instances): watchtower structure + roof. */
+    renderStaticBack(ctx, towerSize) {
+        this.renderFoundationAndShaft(ctx, towerSize);
+
+        // Same dimensions renderFoundationAndShaft() just drew, recomputed here rather
+        // than threaded back as a return value - see SharpshooterTower.renderStaticBack,
+        // which reuses renderFoundationAndShaft() but replaces everything from here down.
+        const towerWidth = towerSize * 0.6 * 0.8;
+        const towerHeight = towerSize * 0.7;
+
         // Watchtower platform at top - wide enough for the 4 archers to stand
         // with a little room, but not so wide it reads as a broad mushroom cap
         // over the narrow shaft below.

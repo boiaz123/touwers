@@ -560,35 +560,51 @@ export class CannonTower extends Tower {
             ctx.stroke();
         }
         
-        // Fireball in sling (when loading)
-        if (this.armPosition > 0.1 && this.armPosition < 1.9) {
-            ctx.save();
-            ctx.translate(longArmEndX, longArmEndY);
-            ctx.rotate(armAngle + Math.PI/8);
-            
-            // Fireball in sling
-            const fireballRadius = 5;
-            ctx.fillStyle = '#FF8C00';
-            ctx.beginPath();
-            ctx.arc(0, 6, fireballRadius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Flame effects
-            for (let i = 0; i < 6; i++) {
-                const flameAngle = (i / 6) * Math.PI * 2;
-                const flameX = Math.cos(flameAngle) * (fireballRadius + 3);
-                const flameY = 6 + Math.sin(flameAngle) * (fireballRadius + 3);
-                
-                ctx.fillStyle = `rgba(255, ${100 + (i * 25) % 155}, 0, 0.7)`;
-                ctx.beginPath();
-                ctx.arc(flameX, flameY, 1.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            
-            ctx.restore();
-        }
-        
+        // Fireball in sling (when loading) - factored into its own method (see
+        // renderSlingLoad()) so a transform that launches more than one projectile per
+        // shot (e.g. TripleTrebuchetTower) can swap in multiple without duplicating the
+        // frame/arm/counterweight mechanism above.
+        this.renderSlingLoad(ctx, longArmEndX, longArmEndY, armAngle);
+
         ctx.restore();
+    }
+
+    /** The projectile(s) resting in the sling pouch while winding up - local space,
+     *  already translated to the arm's throwing end by renderDynamicParts() above. Only
+     *  visible mid-windup (this.armPosition strictly between 0.1 and 1.9, i.e. not at
+     *  rest and not mid-recoil after release). */
+    renderSlingLoad(ctx, longArmEndX, longArmEndY, armAngle) {
+        if (!(this.armPosition > 0.1 && this.armPosition < 1.9)) return;
+
+        ctx.save();
+        ctx.translate(longArmEndX, longArmEndY);
+        ctx.rotate(armAngle + Math.PI / 8);
+        this._renderSlingFireball(ctx, 0, 6);
+        ctx.restore();
+    }
+
+    /** One fireball at (x, y) within the sling pouch's local space (see
+     *  renderSlingLoad()) - factored out so a transform loading several at once (see
+     *  TripleTrebuchetTower.renderSlingLoad) can call this once per projectile instead of
+     *  duplicating the fireball+flame drawing. */
+    _renderSlingFireball(ctx, x, y) {
+        const fireballRadius = 5;
+        ctx.fillStyle = '#FF8C00';
+        ctx.beginPath();
+        ctx.arc(x, y, fireballRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Flame effects
+        for (let i = 0; i < 6; i++) {
+            const flameAngle = (i / 6) * Math.PI * 2;
+            const flameX = x + Math.cos(flameAngle) * (fireballRadius + 3);
+            const flameY = y + Math.sin(flameAngle) * (fireballRadius + 3);
+
+            ctx.fillStyle = `rgba(255, ${100 + (i * 25) % 155}, 0, 0.7)`;
+            ctx.beginPath();
+            ctx.arc(flameX, flameY, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 
     /** Not yet migrated (Phase 5/6) - always drawn on Canvas2D regardless of renderer. */

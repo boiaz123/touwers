@@ -6,11 +6,12 @@ import { CanvasGraphicsShim } from '../CanvasGraphicsShim.js';
 const BAKE_CANVAS_SCALE = 4;
 
 // Blends a '#RRGGBB' hex color toward white by `amount` (0-1) and returns a Pixi tint
-// number. Used to recolor a transformed tower's baked back/front sprites in place -
-// Sprite.tint is a per-pixel multiply against the (shared, cached) baked texture, so
+// number. Used to recolor a transformed tower's whole body in place - Container.tint
+// (inherited by every Pixi display object, Sprite's baked back/front AND Graphics'
+// dynamic/ground alike) is a per-pixel multiply against whatever that layer draws, so
 // applying a raw saturated color straight would crush shadow detail toward black;
 // blending toward white first keeps the tower's structure/shading readable while still
-// clearly recoloring it. Applied once per Sprite at registration (towers never move or
+// clearly recoloring it. Applied once per layer at registration (towers never move or
 // get re-registered after placement), so this costs nothing on a per-frame basis.
 function transformTint(hexColor, amount = 0.45) {
     const n = parseInt(hexColor.slice(1), 16);
@@ -28,7 +29,12 @@ function transformTint(hexColor, amount = 0.45) {
  *   - renderStaticFront(ctx, gridSize)  - Strategy A, baked once per (type, campaign),
  *                                         drawn in front of the live dynamic parts
  *
- * Per-instance Pixi structure: a Container holding [backSprite (shared texture),
+ * A transformed tower (SlingerTower, SharpshooterTower, ...) is free to override any of
+ * the three - see _bakeClassName()'s doc for how that changes what gets baked/shared.
+ * Every transformed instance also gets its whole body (every layer, not just the baked
+ * back/front sprites) recolored via Container.tint - see register()'s tint block.
+ *
+ * Per-instance Pixi structure: a Container holding [ground, backSprite (shared texture),
  * dynamicGraphics (per-instance, redrawn live), frontSprite (shared texture)], so the
  * baked back/front layers are reused across every tower of the same type+campaign while
  * only the genuinely dynamic part is drawn per-instance.
@@ -47,12 +53,32 @@ export class TowerRenderAdapter {
         this.container = sharedEntityLayer;
 
         this.textureCache = textureCache;
-        /** @type {Map<object, {container: Container, back: Sprite, front: Sprite, dynamic: Graphics, shim: CanvasGraphicsShim}>} */
+        /** @type {Map<object, {container: Container, back: Sprite, front: Sprite, dynamic: Graphics, ground: Graphics, shim: CanvasGraphicsShim, groundShim: CanvasGraphicsShim}>} */
         this._entries = new Map();
     }
 
     has(tower) {
         return this._entries.has(tower);
+    }
+
+    /**
+     * Which class name to bake/cache a transformed tower's static layers under. A
+     * transform (SlingerTower, SpikeThrowerTower, ...) that doesn't override
+     * renderStaticBack/renderStaticFront - i.e. its body art is byte-identical to its
+     * base type's, just tinted (see register()'s tint block) - bakes under the BASE
+     * class's name instead of its own, so it reuses whatever's already cached for that
+     * tower type instead of paying for (and permanently caching, since PixiTextureCache
+     * never evicts) a second full-resolution texture that would render identically.
+     * A transform that DOES override either method (e.g. SpikeThrowerTower's rooftop,
+     * SharpshooterTower's reinforced platform, TripleTrebuchetTower's larger frame) has
+     * genuinely different pixels and must bake under its own name instead.
+     */
+    _bakeClassName(tower) {
+        if (!tower.transformedType) return tower.constructor.name;
+        const proto = tower.constructor.prototype;
+        const hasOwnVisual = Object.prototype.hasOwnProperty.call(proto, 'renderStaticBack')
+            || Object.prototype.hasOwnProperty.call(proto, 'renderStaticFront');
+        return hasOwnVisual ? tower.constructor.name : Object.getPrototypeOf(tower.constructor).name;
     }
 
     /**
@@ -62,19 +88,7 @@ export class TowerRenderAdapter {
      * @param {number} gridSize - this tower's current cell-size-derived footprint
      */
     register(tower, campaign, level, gridSize) {
-        // Transform subclasses (SlingerTower, SharpshooterTower, ...) never override
-        // renderStaticBack/Front - they inherit their base class's (BasicTower,
-        // ArcherTower, ...) unmodified, per each subclass's own doc comment. Baking under
-        // tower.constructor.name would treat every transform type as a brand-new visual
-        // variant needing its own full bake pass + permanently-cached texture, even
-        // though the pixels are byte-identical to what's already cached under the base
-        // type - wasted bake time (a real stutter) the first time each transform type
-        // appears, plus 2 extra full-resolution GPU textures held for the rest of the
-        // process lifetime (PixiTextureCache never evicts). Baking under the base
-        // class's name instead lets a transform reuse whatever's already baked for that
-        // tower type, exactly like an upgraded instance of the same base type would.
-        const bakeClassName = tower.transformedType ? Object.getPrototypeOf(tower.constructor).name : tower.constructor.name;
-        const typeKey = bakeClassName + ':' + campaign;
+        const typeKey = this._bakeClassName(tower) + ':' + campaign;
 
         const backTexture = this._getOrBakeLayer(typeKey + ':back', tower, level, gridSize, 'renderStaticBack');
         const frontTexture = this._getOrBakeLayer(typeKey + ':front', tower, level, gridSize, 'renderStaticFront');
@@ -108,13 +122,17 @@ export class TowerRenderAdapter {
         front.anchor.set(0.5, 0.5);
         front.zIndex = 2;
 
-        // Transformed towers get their whole body recolored via sprite tint (see
-        // transformTint's doc above) instead of just the small badge drawn into
-        // `dynamic` - the shared baked texture itself is untouched, so this only affects
-        // this tower's own back/front Sprite instances.
+        // Transformed towers get their WHOLE body recolored - every layer, not just the
+        // baked back/front sprites - via Container.tint (see transformTint's doc above),
+        // a property every Pixi display object inherits, Graphics included, not just
+        // Sprite. The shared baked texture itself is untouched; this only affects this
+        // tower's own layer instances, so ground/dynamic (rubble zones, defenders,
+        // trebuchet arms, bushes, ...) read as transformed too, not just the static body.
         if (tower.transformedType && tower.constructor.TRANSFORM_COLOR) {
             const tint = transformTint(tower.constructor.TRANSFORM_COLOR);
+            ground.tint = tint;
             back.tint = tint;
+            dynamic.tint = tint;
             front.tint = tint;
         }
 

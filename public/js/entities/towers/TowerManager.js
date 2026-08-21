@@ -1130,16 +1130,17 @@ export class TowerManager {
     }
     
     /**
-     * True once this level's Tower Forge AND Training Grounds are both fully upgraded
-     * (level 5/5) - the in-level gate for the tower transform feature. Both buildings are
-     * capped at 1 per level (see UnlockSystem.canBuildBuilding), so cachedForges[0]/
-     * cachedTrainingGrounds[0] is always the relevant instance when present.
+     * True once THIS tower type's own Tower Forge upgrade AND Training Grounds upgrade are
+     * both maxed (level 5/5) - the in-level gate for the tower transform feature, per tower
+     * type rather than tied to the Forge/Training Grounds buildings' own overall level. Both
+     * buildings are capped at 1 per level (see UnlockSystem.canBuildBuilding), so
+     * cachedForges[0]/cachedTrainingGrounds[0] is always the relevant instance when present.
      */
-    canTransformTowers() {
+    canTransformTowerType(baseType) {
         const forge = this.cachedForges && this.cachedForges[0];
         const training = this.cachedTrainingGrounds && this.cachedTrainingGrounds[0];
         if (!forge || !training) return false;
-        return forge.forgeLevel >= forge.maxForgeLevel && training.trainingLevel >= training.maxTrainingLevel;
+        return TowerTransformRegistry.isMaxUpgraded(baseType, forge, training);
     }
 
     /**
@@ -1153,8 +1154,9 @@ export class TowerManager {
 
     /**
      * Transform a placed tower into its advanced variant in place (same tile). Requires
-     * the settlement unlock for this transform to have been purchased, the Tower Forge
-     * and Training Grounds both at level 5 this level, and enough in-level gold.
+     * the settlement unlock for this transform to have been purchased, this tower type's
+     * own Tower Forge and Training Grounds upgrades both maxed this level, and enough
+     * in-level gold.
      * @returns {Object|false} - the new tower instance on success, false otherwise
      */
     transformTower(tower) {
@@ -1163,7 +1165,7 @@ export class TowerManager {
 
         const upgradeSystem = this.stateManager && this.stateManager.upgradeSystem;
         if (!upgradeSystem || !upgradeSystem.hasUpgrade(transform.unlockId)) return false;
-        if (!this.canTransformTowers()) return false;
+        if (!this.canTransformTowerType(tower.type)) return false;
         if (this.gameState.gold < transform.transformCost) return false;
 
         this.gameState.gold -= transform.transformCost;

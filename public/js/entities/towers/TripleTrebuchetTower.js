@@ -6,11 +6,20 @@ import { CannonTower } from './CannonTower.js';
  * only shoot() is overridden to launch three fireballs fanned slightly around the
  * predicted impact point (instead of stacking all three on the exact same spot),
  * widening AoE coverage against a cluster of enemies.
+ *
+ * Visually: a reinforced, visibly larger frame (see SCALE below) built to sling three
+ * loads at once instead of one - see renderSlingLoad()'s override - plus the shared
+ * "transformed" red hue every transform gets (see TowerRenderAdapter's tint block).
  */
 export class TripleTrebuchetTower extends CannonTower {
     // Radians each side shot is rotated away from the center shot's aim point.
     static SPREAD_ANGLES = [-0.22, 0, 0.22];
-    static TRANSFORM_COLOR = '#7B2FBE';
+    static TRANSFORM_COLOR = '#B22222';
+    // How much bigger the whole structure (stone tower + trebuchet mechanism) draws
+    // than a base CannonTower's - applied to towerSize before handing off to
+    // CannonTower's unmodified renderStaticBack/renderDynamicParts (see below), so every
+    // dimension in those methods scales together instead of needing its own override.
+    static SCALE = 1.25;
 
     shoot() {
         if (!this.target) return;
@@ -58,11 +67,39 @@ export class TripleTrebuchetTower extends CannonTower {
         this.fireballs.push(fireball);
     }
 
-    renderDynamicParts(ctx, gridSize) {
-        super.renderDynamicParts(ctx, gridSize);
-        // CannonTower's stone body (see its renderStaticBack) bottoms out exactly at
-        // this.y - tuned here to match.
-        this.renderTransformBadge(ctx, gridSize, { color: TripleTrebuchetTower.TRANSFORM_COLOR, symbol: 'triorb', groundYFactor: 0.15 });
+    /** Strategy A: CannonTower's stone tower, unmodified, just handed a bigger towerSize -
+     *  every dimension in that method is towerSize-proportional and anchored at
+     *  (this.x, this.y), so scaling the parameter grows the whole structure around the
+     *  same footprint instead of needing a rewritten copy. Genuinely different pixels
+     *  from the base type, so this bakes under its own name (see
+     *  TowerRenderAdapter._bakeClassName's doc). */
+    renderStaticBack(ctx, towerSize) {
+        super.renderStaticBack(ctx, towerSize * TripleTrebuchetTower.SCALE);
+    }
+
+    /** Strategy B: same scaling trick as renderStaticBack, so the trebuchet mechanism
+     *  (frame/arm/counterweight/sling) grows to match the bigger platform underneath it
+     *  instead of looking undersized on top of a scaled-up base. */
+    renderDynamicParts(ctx, towerSize) {
+        super.renderDynamicParts(ctx, towerSize * TripleTrebuchetTower.SCALE);
+    }
+
+    /** Three fireballs nested in the (now larger) sling pouch instead of CannonTower's
+     *  one - see CannonTower.renderSlingLoad's doc for why this is its own overridable
+     *  method. Reuses _renderSlingFireball unmodified for each one. */
+    renderSlingLoad(ctx, longArmEndX, longArmEndY, armAngle) {
+        if (!(this.armPosition > 0.1 && this.armPosition < 1.9)) return;
+
+        // Spaced exactly 2*fireballRadius apart so adjacent balls' edges just touch
+        // instead of their centers overlapping into one bigger blob - three ball speaks
+        // more clearly as "three" than a single wide smear does.
+        ctx.save();
+        ctx.translate(longArmEndX, longArmEndY);
+        ctx.rotate(armAngle + Math.PI / 8);
+        this._renderSlingFireball(ctx, -10, 6);
+        this._renderSlingFireball(ctx, 0, 3);
+        this._renderSlingFireball(ctx, 10, 6);
+        ctx.restore();
     }
 
     static getInfo() {

@@ -1736,7 +1736,11 @@ export class TrainingGrounds extends Building {
 
             if (entry.kind === 'range') {
                 const upgrade = this.rangeUpgrades[entry.id];
-                const isUnlocked = this.trainingLevel > upgrade.level;
+                // Once the tower type itself is unlocked (see isTowerUnlocked above), each
+                // of its 5 levels is gold-gated only - no longer additionally waiting for
+                // the Training Grounds' own building level (a separate purchase, see
+                // purchaseTrainingLevelUpgrade()) to catch up.
+                const isUnlocked = true;
                 const baseRange = TrainingGrounds.RANGE_UPGRADE_BASE[entry.id];
                 const percentPerLevel = Math.round((upgrade.effect / baseRange) * 100);
                 const maxRange = baseRange + upgrade.maxLevel * upgrade.effect;
@@ -1757,7 +1761,8 @@ export class TrainingGrounds extends Building {
                 });
             } else {
                 const upgrade = this.upgrades[entry.id];
-                const isUnlocked = this.trainingLevel > upgrade.level;
+                // Same reasoning as the range branch above.
+                const isUnlocked = true;
 
                 options.push({
                     id: entry.id,
@@ -1841,11 +1846,6 @@ export class TrainingGrounds extends Building {
             const upgrade = this.rangeUpgrades[towerType];
             if (!upgrade) return false;
 
-            // Check if upgrade level is unlocked by training grounds level
-            if (this.trainingLevel <= upgrade.level) {
-                return false;
-            }
-
             const cost = this.calculateRangeUpgradeCost(towerType);
             if (!cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
                 return false;
@@ -1862,11 +1862,6 @@ export class TrainingGrounds extends Building {
         const cost = this.calculateUpgradeCost(upgradeType);
 
         if (!upgrade) return false;
-
-        // Check if upgrade level is unlocked by training grounds level
-        if (this.trainingLevel <= upgrade.level) {
-            return false;
-        }
 
         if (!cost || gameState.gold < cost || upgrade.level >= upgrade.maxLevel) {
             return false;

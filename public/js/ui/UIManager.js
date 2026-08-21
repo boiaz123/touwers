@@ -616,7 +616,7 @@ export class UIManager {
                     <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
                     <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Reliable starter tower. Upgradeable at Tower Forge.</div>';
+                specialHTML = 'A reliable wooden watchtower with defenders hurling rocks. Upgradeable at the Tower Forge.';
                 break;
             case 'archer':
                 statsHTML = `
@@ -625,7 +625,7 @@ export class UIManager {
                     <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                     ${s.armorPiercing > 0 ? `<div><span>Armor Pierce:</span> <span style="color: #FFD700;">${s.armorPiercing}%</span></div>` : ''}
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Fast-firing. Starts with a shorter range than most towers but scales the highest of any tower through Training Grounds upgrades. Gains armor piercing from Forge upgrades.</div>';
+                specialHTML = 'Fast-firing tower with a shorter starting range than most towers, but scales the highest of any tower through Training Grounds upgrades. Gains armor piercing through Tower Forge upgrades.';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Tower Forge</div>';
                 break;
             case 'cannon':
@@ -635,7 +635,7 @@ export class UIManager {
                     <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
                     <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Area of effect damage. Blast radius upgradeable at Forge.</div>';
+                specialHTML = 'Powerful stone tower with a massive trebuchet. Deals heavy area-of-effect damage at long range; blast radius upgradeable at the Tower Forge.';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 3</div>';
                 break;
             case 'barricade':
@@ -645,7 +645,7 @@ export class UIManager {
                     <div><span>Slow Amount:</span> ${statVal(Math.round(s.slowPercent * 100), Math.round(s.baseSlowPercent * 100), '%')}</div>
                     <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Keeps a permanent patch of rubble on the road, continuously slowing every enemy standing in it. Patch size upgrades at the Forge, slow strength at Training Grounds.</div>';
+                specialHTML = 'Defenders keep a permanent patch of rubble piled on the road ahead, continuously slowing every enemy standing in it. Patch size grows at the Tower Forge; slow strength grows at Training Grounds.';
                 break;
             case 'poison':
                 statsHTML = `
@@ -653,7 +653,7 @@ export class UIManager {
                     <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
                     <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Creates toxic clouds dealing damage over time. DoT upgradeable at Forge.</div>';
+                specialHTML = "Ranger shoots poison arrows that apply a permanent toxin, dealing heavy damage over time until the enemy dies. Poison tick damage upgradeable at the Tower Forge; fire rate upgradeable at Training Grounds.";
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 2</div>';
                 break;
             case 'magic':
@@ -662,7 +662,7 @@ export class UIManager {
                     <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
                     <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Select element: Fire, Water, Air, Earth. Bonuses from Magic Academy.</div>';
+                specialHTML = 'Elemental tower with a selectable damage type — Fire, Water, Air, or Earth. Requires the Magic Academy; each element gains its own bonuses from Magic Academy elemental research.';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Magic Academy</div>';
                 break;
             case 'guard-post':
@@ -671,7 +671,7 @@ export class UIManager {
                     <div><span>Hire Cost:</span> <span style="color: #FFD700;"><span class="coin-xs"></span>100</span></div>
                     <div><span>Respawn CD:</span> <span style="color: #FFD700;">10s</span></div>
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Place on path to hire a defender that blocks and fights enemies. Defender levels upgrade at Training Grounds.</div>';
+                specialHTML = 'Small fortified outpost placed on the path that hires a Level 1 defender to block and fight enemies. Defenders spawn for 100g with a 10-second cooldown after defeat; defender levels upgrade at Training Grounds.';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 4</div>';
                 break;
             case 'combination':
@@ -680,7 +680,7 @@ export class UIManager {
                     <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
                     <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Casts powerful combination spells. Unlock spells by investing gems at the Magic Academy.</div>';
+                specialHTML = 'Advanced tower that casts devastating combination spells. Requires Magic Academy Level 1; unlock individual spells by investing elemental gems at the Magic Academy.';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Super Weapon Lab</div>';
                 break;
         }
@@ -697,13 +697,12 @@ export class UIManager {
                     <span>Cost:</span> <span style="color: #FFD700;"><span class="coin-xs"></span>${info.cost}</span>
                 </div>
             </div>
-            <div class="info-description">${info.description}</div>
-            ${specialHTML ? `<div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255, 215, 0, 0.15); font-size: 0.78rem; line-height: 1.3;">${specialHTML}</div>` : ''}
+            <div class="info-description">${specialHTML || info.description}</div>
             ${unlockHTML ? `<div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255, 100, 100, 0.3); font-size: 0.8rem;">${unlockHTML}</div>` : ''}
         `;
-        
+
         document.body.appendChild(menu);
-        
+
         // Position the menu near the button
         const btnRect = towerBtn.getBoundingClientRect();
         const menuWidth = menu.offsetWidth;
@@ -764,10 +763,7 @@ export class UIManager {
                     <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
                     <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
-                specialHTML = `<div style="color: #aad4ff;">
-                    Core building that unlocks new towers and provides upgrade paths for all tower types.
-                    Also increases Gold Mine income and unlocks buildings at higher levels.
-                </div>`;
+                specialHTML = 'Core building that unlocks new tower types and provides upgrade paths and specialized enhancements for all towers. Also increases Gold Mine income and unlocks further buildings at higher Forge levels.';
                 if (unlockSystem.forgeCount >= unlockSystem.maxForges) {
                     unlockHTML = '<div style="color: #ff6b6b;">Already built (limit 1)</div>';
                 }
@@ -781,7 +777,7 @@ export class UIManager {
                     <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
                     <div><span>Limit:</span> <span style="color: #FFD700;">${maxMines} (Forge Level ${unlockSystem.forgeLevel})</span></div>
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Produces gold periodically. Click to collect. Higher Forge levels increase income and max mine count.</div>';
+                specialHTML = 'Produces gold every 30 seconds — click to collect. Higher Tower Forge levels increase income per cycle and raise the maximum number of mines you can build.';
                 if (!unlockSystem.unlockedBuildings.has('mine')) {
                     unlockHTML = '<div style="color: #ff6b6b;">Requires: Tower Forge</div>';
                 } else if (unlockSystem.mineCount >= maxMines) {
@@ -794,11 +790,7 @@ export class UIManager {
                     <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
                     <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
-                specialHTML = `<div style="color: #aad4ff;">
-                    Level 1 (on build) unlocks Magic Towers and Gem Mining.
-                    Level 2 unlocks Magic Tower Leveling (Fire/Water/Air/Earth, up to Level 20 each) using elemental gems.
-                    Level 3 unlocks the Super Weapon Lab.
-                </div>`;
+                specialHTML = 'Magical fortress that unlocks Magic Towers and provides elemental upgrades. Level 1 (on build) unlocks Magic Towers and Gem Mining. Level 2 unlocks Magic Tower Leveling (Fire/Water/Air/Earth, up to Level 20 each) using elemental gems. Level 3 unlocks the Super Weapon Lab.';
                 if (!unlockSystem.unlockedBuildings.has('academy')) {
                     unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 4</div>';
                 } else if (unlockSystem.academyCount >= 1) {
@@ -811,10 +803,7 @@ export class UIManager {
                     <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
                     <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
-                specialHTML = `<div style="color: #aad4ff;">
-                    Provides range upgrades for Archer, Watch, and Trebuchet towers.
-                    Also improves Barricade slow strength and Poison fire rate, and unlocks path defenders for Guard Posts.
-                </div>`;
+                specialHTML = 'Medieval training facility with archer lanes and sword fighting duels. Provides range upgrades for the Watch, Archer, and Trebuchet towers, improves Barricade slow strength and Poison Archer fire rate, and unlocks path defenders for Guard Posts.';
                 if (!unlockSystem.unlockedBuildings.has('training')) {
                     unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 3</div>';
                 } else if (unlockSystem.trainingGroundsCount >= 1) {
@@ -831,10 +820,7 @@ export class UIManager {
                     <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
                     <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
-                specialHTML = `<div style="color: #aad4ff;">
-                    Unlocks devastating area spells: Arcane Blast, Frost Nova, Inferno, Chain Lightning.
-                    Higher levels unlock more spells and enable spell upgrades.
-                </div>`;
+                specialHTML = 'Mystical spire that channels powerful spells against enemies: Arcane Blast, Frozen Nova, Meteor Strike, and Chain Lightning, unlocked in order as the lab levels up. Higher levels unlock more spells and enable spell power upgrades.';
                 if (!unlockSystem.superweaponUnlocked) {
                     unlockHTML = '<div style="color: #ff6b6b;">Requires: Academy Level 3</div>';
                 } else {
@@ -851,7 +837,7 @@ export class UIManager {
                     <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
                     <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
-                specialHTML = '<div style="color: #aad4ff;">Converts elemental gems (Fire/Water/Air/Earth) into diamonds used for Super Weapon Lab upgrades and spell enhancements.</div>';
+                specialHTML = 'Exchanges elemental gems (Fire/Water/Air/Earth) for diamonds, 3 of each gem per diamond, used for Super Weapon Lab upgrades and spell enhancements.';
                 if (!unlockSystem.unlockedBuildings.has('diamond-press')) {
                     unlockHTML = '<div style="color: #ff6b6b;">Requires: Super Weapon Lab Level 2</div>';
                 } else if (unlockSystem.diamondPressCount >= 1) {
@@ -872,13 +858,12 @@ export class UIManager {
                     <span>Cost:</span> <span style="color: #FFD700;">${costString}</span>
                 </div>
             </div>
-            <div class="info-description">${info.description}</div>
-            ${specialHTML ? `<div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255, 215, 0, 0.15); font-size: 0.78rem; line-height: 1.3;">${specialHTML}</div>` : ''}
+            <div class="info-description">${specialHTML || info.description}</div>
             ${unlockHTML ? `<div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255, 100, 100, 0.3); font-size: 0.8rem;">${unlockHTML}</div>` : ''}
         `;
-        
+
         document.body.appendChild(menu);
-        
+
         // Position the menu near the button
         const btnRect = buildingBtn.getBoundingClientRect();
         const menuWidth = menu.offsetWidth;
@@ -3312,25 +3297,25 @@ export class UIManager {
         const towerImg = towerImageMap[towerType] || 'basic';
 
         // Transform button - only offered once the settlement unlock for this tower's
-        // transform has been purchased; shown disabled (with a reason) until the Tower
-        // Forge and Training Grounds are both level 5 this level, or gold is short.
-        // Full-width, reuses the same forge-upgrade-btn/btn-label/btn-cost convention as
-        // the Tower Forge level-up button so it reads as the same kind of button.
+        // transform has been purchased AND this specific tower type's own Tower Forge and
+        // Training Grounds upgrades are both maxed this level (see
+        // TowerManager.canTransformTowerType) - hidden entirely (not just disabled) until
+        // that per-tower requirement is met, since it's a feature-unlock rather than a
+        // transient affordability check. Once shown, it can still be disabled for a short
+        // gold balance. Full-width, reuses the same forge-upgrade-btn/btn-label/btn-cost
+        // convention as the Tower Forge level-up button so it reads as the same kind of button.
         let transformButtonHTML = '';
         const transformDef = TowerTransformRegistry.getTransform(tower.type);
         if (transformDef && !tower.transformedType) {
             const upgradeSystem = this.stateManager.upgradeSystem;
             const transformUnlocked = upgradeSystem && upgradeSystem.hasUpgrade(transformDef.unlockId);
-            if (transformUnlocked) {
-                const buildingsReady = this.towerManager.canTransformTowers();
+            const towerTypeReady = transformUnlocked && this.towerManager.canTransformTowerType(tower.type);
+            if (towerTypeReady) {
                 const canAfford = this.gameState.gold >= transformDef.transformCost;
-                const disabled = !buildingsReady || !canAfford;
                 const targetName = transformDef.class.getInfo().name;
-                const reason = !buildingsReady
-                    ? 'Requires Tower Forge & Training Grounds at Level 5'
-                    : (!canAfford ? 'Not enough gold' : `Upgrade to ${targetName}`);
+                const reason = canAfford ? `Upgrade to ${targetName}` : 'Not enough gold';
                 transformButtonHTML = `
-                    <button id="transform-tower-btn-${tower.gridX}-${tower.gridY}" class="forge-upgrade-btn forge-level-upgrade-btn" ${disabled ? 'disabled' : ''} title="${reason}">
+                    <button id="transform-tower-btn-${tower.gridX}-${tower.gridY}" class="forge-upgrade-btn forge-level-upgrade-btn" ${canAfford ? '' : 'disabled'} title="${reason}">
                         <div class="forge-upgrade-btn-content">
                             <span class="btn-label">Upgrade to ${targetName}</span>
                             <span class="btn-cost"><span class="coin-xs"></span> ${transformDef.transformCost}</span>
