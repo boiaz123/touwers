@@ -1363,8 +1363,16 @@ export class GameplayState {
                 
                 if (this.level.canPlaceTower(gridX, gridY, this.towerManager)) {
                     const { screenX, screenY } = this.level.gridToScreen(gridX, gridY);
-                    
-                    if (this.towerManager.placeTower(this.selectedTowerType, screenX, screenY, gridX, gridY)) {
+
+                    // Barricade doesn't aim at enemies - it throws onto a fixed patch
+                    // anchored to the path (see BarricadeTower.setPath), so a spot too far
+                    // from any path can't reach it at all. Mirrors the same check the
+                    // placement preview already renders (LevelBase.barricadeReachesPath),
+                    // so a click can never place a tower the preview showed as invalid.
+                    const reachesPath = this.selectedTowerType !== 'barricade' ||
+                        this.level.barricadeReachesPath(screenX, screenY, this.towerManager);
+
+                    if (reachesPath && this.towerManager.placeTower(this.selectedTowerType, screenX, screenY, gridX, gridY)) {
                         this.level.placeTower(gridX, gridY);
                         this.uiManager.updateUI();
                         this.uiManager.updateButtonStates();

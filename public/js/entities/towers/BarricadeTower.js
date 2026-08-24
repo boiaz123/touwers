@@ -216,6 +216,15 @@ export class BarricadeTower extends Tower {
         this.coveragePoints = points;
     }
 
+    /** Force a coveragePoints rebuild outside the normal update() cadence - used by
+     *  LevelBase's placement-time preview (a scratch, never-updated ghost instance of this
+     *  class - see LevelBase.barricadeReachesPath()) to get the exact same road-hugging
+     *  patch shape renderEffectZonePreview() draws for an actually-placed, selected tower,
+     *  without waiting for update() to run it. */
+    refreshCoveragePreview(effRadius) {
+        this._rebuildCoverage(effRadius);
+    }
+
     /**
      * Regenerate the deterministic debris layout - mostly wood planks and nails, with some
      * rubble and scrap metal mixed in. Count scales with effRadius (a bigger, more-upgraded

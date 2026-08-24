@@ -1,4 +1,5 @@
 import * as TerrainRenderer from '../../core/render/TerrainRenderer.js';
+import { BarricadeTower } from '../towers/BarricadeTower.js';
 
 export class LevelBase {
     constructor(resolutionManager = null) {
@@ -442,7 +443,48 @@ export class LevelBase {
 
         return true;
     }
-    
+
+    /**
+     * Lazily-created scratch BarricadeTower reused every frame to compute and draw the
+     * placement-time preview of its actual road-hugging slow patch - see
+     * BarricadeTower.renderEffectZonePreview(). Never registered with TowerManager or
+     * rendered as a real tower - display/validity computation only.
+     */
+    _getBarricadePreviewGhost() {
+        if (!this._barricadePreviewGhost) {
+            this._barricadePreviewGhost = new BarricadeTower(0, 0, 0, 0);
+            this._barricadePreviewGhost.isSelected = true;
+        }
+        return this._barricadePreviewGhost;
+    }
+
+    /**
+     * True if a Barricade tower placed at (screenX, screenY) would actually reach the
+     * path within its throw range - mirrors the reachability BarricadeTower.setPath()
+     * itself computes once actually placed (_rubbleOnPath), so placement validity and the
+     * tower's real behavior never disagree. A tower whose patch can't reach any path is
+     * useless, so both the placement preview and the click-to-place gate use this. As a
+     * side effect, positions the scratch ghost tower (see _getBarricadePreviewGhost) so
+     * the caller can render its up-to-date renderEffectZonePreview() afterward.
+     */
+    barricadeReachesPath(screenX, screenY, towerManager) {
+        const ghost = this._getBarricadePreviewGhost();
+        const stats = towerManager && typeof towerManager.getUpgradedTowerStats === 'function'
+            ? towerManager.getUpgradedTowerStats('barricade')
+            : null;
+        const scaleFactor = this.resolutionManager ? this.resolutionManager.scaleFactor : 1;
+
+        ghost.x = screenX;
+        ghost.y = screenY;
+        ghost.range = (stats && typeof stats.range === 'number' ? stats.range : ghost.originalRange) * scaleFactor;
+        const effRadius = (stats && typeof stats.radius === 'number' ? stats.radius : ghost.originalEffectRadius) * scaleFactor;
+        ghost.effectRadius = effRadius;
+        ghost.effectiveEffectRadius = effRadius;
+        ghost.setPath(this.path, this.cellSize);
+        ghost.refreshCoveragePreview(effRadius);
+        return ghost._rubbleOnPath === true;
+    }
+
     canPlaceBuilding(gridX, gridY, size = 4, towerManager = null) {
         // Check if a building of specified size can be placed
         for (let x = gridX; x < gridX + size; x++) {
@@ -1772,27 +1814,55 @@ export class LevelBase {
             // Regular grid-based placement preview for other towers and buildings
             else if (this.previewGridX !== undefined && this.previewGridY !== undefined) {
                 const isBuilding = this.previewSize === 4;
+                const isBarricade = !isBuilding && this.previewTowerType === 'barricade';
                 const fitsOnGrid = isBuilding ?
                     this.canPlaceBuilding(this.previewGridX, this.previewGridY, this.previewSize, this.previewTowerManager) :
                     this.canPlaceTower(this.previewGridX, this.previewGridY, this.previewTowerManager);
                 const canAfford = this.previewCanAffordFn ? this.previewCanAffordFn() : true;
-                const canPlace = fitsOnGrid && canAfford;
 
-                ctx.fillStyle = canPlace ? 'rgba(0, 255, 0, 0.4)' : 'rgba(255, 0, 0, 0.4)';
-                
                 const size = this.previewSize * this.cellSize;
                 // Center the preview on the grid cell
                 const centerX = (this.previewGridX + this.previewSize / 2) * this.cellSize;
                 const centerY = (this.previewGridY + this.previewSize / 2) * this.cellSize;
+
+                // Barricade doesn't aim at enemies - it throws onto a fixed patch anchored
+                // to the path (see BarricadeTower.setPath), so a spot too far from any
+                // path is a dead placement even though the grid cells themselves are free.
+                // Computed fresh every frame (regardless of fitsOnGrid) so the scratch
+                // ghost tower below always reflects the current candidate position.
+                const reachesPath = isBarricade
+                    ? this.barricadeReachesPath(centerX, centerY, this.previewTowerManager)
+                    : true;
+                const canPlace = fitsOnGrid && canAfford && reachesPath;
+
+                ctx.fillStyle = canPlace ? 'rgba(0, 255, 0, 0.4)' : 'rgba(255, 0, 0, 0.4)';
                 ctx.fillRect(centerX - size / 2, centerY - size / 2, size, size);
-                
+
                 // Add border to preview
                 ctx.strokeStyle = canPlace ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)';
                 ctx.lineWidth = 2;
                 ctx.strokeRect(centerX - size / 2, centerY - size / 2, size, size);
-                
-                // Show radius for tower previews (not buildings)
-                if (!isBuilding && this.previewTowerType) {
+
+                if (isBarricade) {
+                    // Reuse the tower's OWN renderEffectZonePreview() (via the scratch
+                    // ghost barricadeReachesPath() just positioned/updated) so this preview
+                    // is pixel-identical to what gets drawn once the tower is actually
+                    // placed and selected - see BarricadeTower.renderEffectZonePreview.
+                    const ghost = this._getBarricadePreviewGhost();
+                    ctx.strokeStyle = canPlace ? 'rgba(100, 200, 100, 0.6)' : 'rgba(220, 70, 70, 0.7)';
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.arc(ghost.x, ghost.y, ghost.range, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    if (reachesPath) {
+                        ghost.renderEffectZonePreview(ctx);
+                    }
+                }
+                // Show radius for other tower previews (not buildings, not barricade)
+                else if (!isBuilding && this.previewTowerType) {
                     // getEffectiveTowerRange() returns a base-resolution (1920x1080) stat;
                     // scale it to the current resolution's pixel space so the placement
                     // preview circle matches the range circle the tower will render once
@@ -1806,7 +1876,7 @@ export class LevelBase {
                         ctx.beginPath();
                         ctx.arc(centerX, centerY, towerRange, 0, Math.PI * 2);
                         ctx.stroke();
-                        
+
                         // Draw dashed circle for better visibility
                         ctx.strokeStyle = 'rgba(100, 200, 100, 0.3)';
                         ctx.lineWidth = 1;
