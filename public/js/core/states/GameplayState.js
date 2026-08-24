@@ -1816,6 +1816,10 @@ export class GameplayState {
             : [];
         const lastLevelForCampaign = campaignSequence[campaignSequence.length - 1];
         const isLastLevel = !!lastLevelForCampaign && (this.currentLevel === lastLevelForCampaign) && !this.isSandbox;
+        // Bonus levels (e.g. Frog King's Realm, reached via a realm shard) aren't part of any
+        // campaign sequence - the results screen should still only offer "RETURN TO SETTLEMENT",
+        // but this must NOT feed into the campaign-completion logic below (isLastLevel stays as-is).
+        const isBonusLevel = !!this.level?.levelFlags?.isBonusLevel;
         // Only trigger the Frogerty "campaign complete" narrative and unlock toast the first
         // time this campaign is completed - replaying the last level shouldn't re-fire it.
         const wasAlreadyCompleted = !!(this.stateManager.currentSaveData
@@ -1948,7 +1952,7 @@ export class GameplayState {
             goldEarned: this.goldEarnedThisLevel,
             currentGold: this.gameState.gold,
             timeTaken: Math.round((Date.now() / 1000) - this.levelStartTime),
-            noNextLevel: isLastLevel
+            noNextLevel: isLastLevel || isBonusLevel
         }, this.lootManager.getCollectedLoot(), this.lootManager);
     }
     

@@ -5502,6 +5502,23 @@ class UpgradesMenu {
         if (this.stateManager.audioManager) {
             this.stateManager.audioManager.playSFX('upgrade');
         }
+        this._persistLiveSettlementState();
+    }
+
+    // Writes the live in-memory gold/inventory/upgrades/marketplace/workshop into the
+    // current save slot's working copy (localStorage), same fields completeLevel() persists
+    // on victory. Without this, buying/selling only updates stateManager's live properties -
+    // navigating to any screen other than 'game' and back (e.g. Level Select, Campaign Map)
+    // reloads playerGold/playerInventory from the stale save and silently reverts the change.
+    _persistLiveSettlementState() {
+        if (!this.stateManager.currentSaveSlot || !this.stateManager.currentSaveData) return;
+        const saveData = this.stateManager.currentSaveData;
+        saveData.playerGold = this.stateManager.playerGold || 0;
+        saveData.playerInventory = this.stateManager.playerInventory || [];
+        if (this.stateManager.upgradeSystem) saveData.upgrades = this.stateManager.upgradeSystem.serialize();
+        if (this.stateManager.marketplaceSystem) saveData.marketplace = this.stateManager.marketplaceSystem.serialize();
+        if (this.stateManager.workshopSystem) saveData.workshop = this.stateManager.workshopSystem.serialize();
+        SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, saveData);
     }
 
     _openPortalPrompt() {
@@ -5516,10 +5533,8 @@ class UpgradesMenu {
             inv[idx].count -= 1;
             if (inv[idx].count <= 0) inv.splice(idx, 1);
         }
-        // Save and launch the realm level
-        if (this.stateManager.saveSystem) {
-            this.stateManager.saveSystem.save(this.stateManager.currentSaveSlot, this.stateManager.getSaveData());
-        }
+        // Save before launching the realm level
+        this._persistLiveSettlementState();
         this.showingPortalConfirm = false;
         this._portalConfirmBounds = null;
         this.isOpen = false;
@@ -6089,6 +6104,8 @@ class UpgradesMenu {
             // Rebuild buy items to reflect purchase restrictions and active status
             this.allBuyItems = this.buildBuyItems();
             this.buyItems = this.filterBuyItemsByCategory(this.activeBuyCategory);
+
+            this._persistLiveSettlementState();
         } else if (this.activeTab === 'sell') {
             // Handle realm shard items specially
             if (item.isRealmShard) {
@@ -6137,12 +6154,14 @@ class UpgradesMenu {
             
             // Rebuild sell items to reflect the change
             this.sellItems = this.buildSellItems();
-            
-            
+
+
             if (this.stateManager.audioManager) {
                 // Use LootCollect sound for selling (as per user request)
                 this.stateManager.audioManager.playSFX('loot-collect');
             }
+
+            this._persistLiveSettlementState();
         }
     }
 

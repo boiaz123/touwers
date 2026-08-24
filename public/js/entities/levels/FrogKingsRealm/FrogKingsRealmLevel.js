@@ -24,7 +24,10 @@ export class FrogKingsRealmLevel extends LevelBase {
             autoPlaceSuperWeaponLab: { gridX: 33, gridY: 12 },
             realmLootConfig: { normalChance: 0.20, rareChance: 0.10, realmShardChance: 0 },
             musicTrack: 'bonus-level-theme',
-            disableEnemyInfo: true
+            disableEnemyInfo: true,
+            // Reached only via a realm shard from the settlement, not a campaign sequence -
+            // the results screen should offer just "RETURN TO SETTLEMENT", not a campaign map.
+            isBonusLevel: true
         };
 
         // Realm ambient particles (magical atmosphere)
