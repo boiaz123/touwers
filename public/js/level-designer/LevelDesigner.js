@@ -2,10 +2,10 @@
  * Main Level Designer Class
  * Orchestrates the level design UI, canvas interactions, and code generation
  */
-import { CampaignThemeConfig } from '../core/CampaignThemeConfig.js';
+import { CampaignThemeConfig } from '../core/config/CampaignThemeConfig.js';
 import { DesignerRenderAdapter } from '../core/render/adapters/DesignerRenderAdapter.js';
 import * as TerrainRenderer from '../core/render/TerrainRenderer.js';
-import { WorkshopRegistry } from '../core/WorkshopRegistry.js';
+import { WorkshopRegistry } from '../core/registries/WorkshopRegistry.js';
 
 // Vite glob patterns must be literal strings (no variables), hence one call per
 // campaign folder. This replaces a hardcoded per-campaign level count that would

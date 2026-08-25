@@ -1,5 +1,5 @@
-import { SaveSystem } from '../SaveSystem.js';
-import { ParticleSystem } from '../ParticleSystem.js';
+import { SaveSystem } from '../systems/SaveSystem.js';
+import { ParticleSystem } from '../render/ParticleSystem.js';
 
 export class LoadGame {
     constructor(stateManager) {

@@ -1,7 +1,7 @@
 import { BaseEnemy } from './BaseEnemy.js';
 import { EnemyColorCache, FROG_COLOR_VARIANTS } from '../../utils/EnemyColorCache.js';
-import { drawFlipperFoot } from './FrogFlipperRenderer.js';
-import { drawTwoSegmentLimb, computeWalkCycle, kneeFlex, solveLegIK } from './HumanoidLimbRenderer.js';
+import { drawFlipperFoot } from './rendering/FrogFlipperRenderer.js';
+import { drawTwoSegmentLimb, computeWalkCycle, kneeFlex, solveLegIK } from './rendering/HumanoidLimbRenderer.js';
 
 /**
  * A huge swamp-matriarch frog that walks on all four IK-driven legs (a real

@@ -1,8 +1,8 @@
-import { ParticleSystem } from '../ParticleSystem.js';
+import { ParticleSystem } from '../render/ParticleSystem.js';
 import { ControlsScreen } from '../../ui/ControlsScreen.js';
 import { ResolutionSelector } from '../../ui/ResolutionSelector.js';
-import { ResolutionSettings } from '../ResolutionSettings.js';
-import { SaveSystem } from '../SaveSystem.js';
+import { ResolutionSettings } from '../config/ResolutionSettings.js';
+import { SaveSystem } from '../systems/SaveSystem.js';
 
 export class OptionsMenu {
     constructor(stateManager) {

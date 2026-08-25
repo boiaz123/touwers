@@ -2,7 +2,7 @@ import { CampaignBase } from './CampaignBase.js';
 import { LevelRegistry } from '../levels/LevelRegistry.js';
 import { Castle } from '../buildings/Castle.js';
 import { LevelBase } from '../levels/LevelBase.js';
-import { SaveSystem } from '../../core/SaveSystem.js';
+import { SaveSystem } from '../../core/systems/SaveSystem.js';
 // Import level classes - they auto-register when imported
 import { DesertLevel1 } from '../levels/Desert/DesertLevel1.js';
 import { DesertLevel2 } from '../levels/Desert/DesertLevel2.js';

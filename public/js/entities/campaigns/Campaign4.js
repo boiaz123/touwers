@@ -2,7 +2,7 @@ import { CampaignBase } from './CampaignBase.js';
 import { LevelRegistry } from '../levels/LevelRegistry.js';
 import { Castle } from '../buildings/Castle.js';
 import { LevelBase } from '../levels/LevelBase.js';
-import { SaveSystem } from '../../core/SaveSystem.js';
+import { SaveSystem } from '../../core/systems/SaveSystem.js';
 // Import Space levels for Frog Realm campaign
 import { SpaceLevel1 } from '../levels/Space/SpaceLevel1.js';
 import { SpaceLevel2 } from '../levels/Space/SpaceLevel2.js';

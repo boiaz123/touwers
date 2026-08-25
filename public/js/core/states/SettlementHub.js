@@ -1,23 +1,23 @@
-import { SaveSystem } from '../SaveSystem.js';
-import { GameStatistics } from '../GameStatistics.js';
-import { AchievementSystem } from '../AchievementSystem.js';
-import { AchievementPanel, AchievementsContentView } from '../AchievementPanel.js';
+import { SaveSystem } from '../systems/SaveSystem.js';
+import { GameStatistics } from '../systems/GameStatistics.js';
+import { AchievementSystem } from '../systems/AchievementSystem.js';
+import { AchievementPanel, AchievementsContentView } from '../ui/AchievementPanel.js';
 import { LootRegistry } from '../../entities/loot/LootRegistry.js';
 import { TrainingGrounds } from '../../entities/buildings/TrainingGrounds.js';
 import { TowerForge } from '../../entities/buildings/TowerForge.js';
 import { MagicAcademy } from '../../entities/buildings/MagicAcademy.js';
 import { Castle } from '../../entities/buildings/Castle.js';
 import { GuardPost } from '../../entities/towers/GuardPost.js';
-import { SettlementBuildingVisuals } from '../SettlementBuildingVisuals.js';
-import { UpgradeSystem } from '../UpgradeSystem.js';
-import { UpgradeRegistry } from '../UpgradeRegistry.js';
-import { MarketplaceSystem } from '../MarketplaceSystem.js';
-import { MarketplaceRegistry } from '../MarketplaceRegistry.js';
-import { EnemyIntelRegistry } from '../EnemyIntelRegistry.js';
+import { SettlementBuildingVisuals } from '../render/SettlementBuildingVisuals.js';
+import { UpgradeSystem } from '../systems/UpgradeSystem.js';
+import { UpgradeRegistry } from '../registries/UpgradeRegistry.js';
+import { MarketplaceSystem } from '../systems/MarketplaceSystem.js';
+import { MarketplaceRegistry } from '../registries/MarketplaceRegistry.js';
+import { EnemyIntelRegistry } from '../registries/EnemyIntelRegistry.js';
 import { SirFrogerty } from '../../ui/SirFrogerty.js';
 import { CampaignRegistry } from '../../game/CampaignRegistry.js';
-import { WorkshopSystem } from '../WorkshopSystem.js';
-import { WorkshopMenu } from '../WorkshopMenu.js';
+import { WorkshopSystem } from '../systems/WorkshopSystem.js';
+import { WorkshopMenu } from '../ui/WorkshopMenu.js';
 import { WorkshopHall } from '../../entities/buildings/WorkshopHall.js';
 import * as TerrainRenderer from '../render/TerrainRenderer.js';
 
@@ -7685,136 +7685,6 @@ class SettlementOptionsMenu {
         ctx.globalAlpha = 1;
     }
 
-}
-
-class StatsPanel {
-    constructor(stateManager, settlementHub) {
-        this.stateManager = stateManager;
-        this.settlementHub = settlementHub;
-        this.animationProgress = 0;
-        this.targetAnimationProgress = 1;
-        this.isOpen = false;
-        
-        // Get stats from SaveSystem
-        const currentSlot = SaveSystem.getCurrentSlot();
-        const saveData = SaveSystem.getSave(currentSlot) || {};
-        
-        this.stats = {
-            'Total Enemies Killed': saveData.enemiesKilled || 0,
-            'Total Gold Earned': saveData.totalGoldEarned || 0,
-            'Level Progress': (saveData.currentLevel || 0) + ' / 5',
-            'Time Played': this.formatTime(saveData.timePlayed || 0),
-            'Wave Record': saveData.waveRecord || 0,
-            'Towers Built': saveData.towersBuild || 0
-        };
-    }
-
-    formatTime(seconds) {
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
-        const secs = Math.floor(seconds % 60);
-        
-        if (hours > 0) {
-            return `${hours}h ${minutes}m`;
-        }
-        return `${minutes}m ${secs}s`;
-    }
-
-    open() {
-        this.isOpen = true;
-        this.animationProgress = 0;
-        this.targetAnimationProgress = 1;
-    }
-
-    close() {
-        this.isOpen = false;
-        this.targetAnimationProgress = 0;
-    }
-
-    update(deltaTime) {
-        this.animationProgress += (this.targetAnimationProgress - this.animationProgress) * deltaTime * 5;
-    }
-
-    updateHoverState(x, y) {
-        // Not needed for stats panel
-    }
-
-    handleClick(x, y) {
-        const canvas = this.stateManager.canvas;
-        const menuX = canvas.width / 2 - 200;
-        const menuY = canvas.height / 2 - 150;
-        const closeButtonX = menuX + 360;
-        const closeButtonY = menuY + 10;
-        
-        // Check if close button clicked
-        if (x >= closeButtonX && x <= closeButtonX + 30 &&
-            y >= closeButtonY && y <= closeButtonY + 30) {
-            this.close();
-            this.settlementHub.closePopup();
-        }
-    }
-
-    render(ctx) {
-        const canvas = this.stateManager.canvas;
-        
-        // Semi-transparent overlay
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.globalAlpha = 1;
-
-        const menuX = canvas.width / 2 - 200;
-        const menuY = canvas.height / 2 - 150;
-        const menuWidth = 400;
-        const menuHeight = 300;
-
-        // Popup background
-        ctx.globalAlpha = Math.min(1, this.animationProgress);
-        ctx.fillStyle = '#2a1a0f';
-        ctx.fillRect(menuX, menuY, menuWidth, menuHeight);
-
-        // Border
-        ctx.strokeStyle = '#d4af37';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(menuX, menuY, menuWidth, menuHeight);
-
-        // Title
-        ctx.font = 'bold 22px serif';
-        ctx.fillStyle = '#d4af37';
-        ctx.textAlign = 'center';
-        ctx.fillText('STATS', canvas.width / 2, menuY + 40);
-
-        // Close button
-        ctx.fillStyle = '#d4af37';
-        ctx.fillRect(menuX + 360, menuY + 10, 30, 30);
-        ctx.fillStyle = '#2a1a0f';
-        ctx.font = 'bold 16px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('X', menuX + 375, menuY + 25);
-
-        // Stats display
-        let yOffset = 70;
-        const statSpacing = 35;
-        
-        Object.entries(this.stats).forEach(([label, value]) => {
-            // Label
-            ctx.font = '14px serif';
-            ctx.fillStyle = '#c9a876';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'top';
-            ctx.fillText(label + ':', menuX + 30, menuY + yOffset);
-
-            // Value
-            ctx.font = 'bold 14px serif';
-            ctx.fillStyle = '#d4af37';
-            ctx.textAlign = 'right';
-            ctx.fillText(String(value), menuX + menuWidth - 30, menuY + yOffset);
-
-            yOffset += statSpacing;
-        });
-
-        ctx.globalAlpha = 1;
-    }
 }
 
 /**

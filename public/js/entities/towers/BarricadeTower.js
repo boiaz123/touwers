@@ -1,5 +1,5 @@
 import { Tower } from './Tower.js';
-import { ObjectPool } from '../../core/ObjectPool.js';
+import { ObjectPool } from '../../core/utils/ObjectPool.js';
 
 // A throw is a deliberate grab -> aim -> throw -> recover sequence (see
 // _updateDefenderAnimation()) rather than one instant swing, so it reads as a natural

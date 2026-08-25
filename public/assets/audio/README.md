@@ -4,23 +4,39 @@ This directory contains all audio assets for Touwers Tower Defense Game.
 
 ## Directory Structure
 
+This reflects the actual on-disk layout (registered track/SFX names are defined in the
+registries linked below, not derived from these filenames):
+
 ```
 audio/
 ├── music/
-│   ├── menu-theme.mp3      # Main menu, settlement, campaign, level selection music
-│   ├── level-1-theme.mp3   # Level 1 gameplay music
-│   ├── level-2-theme.mp3   # Level 2 gameplay music
-│   ├── level-3-theme.mp3   # Level 3 gameplay music
-│   ├── level-4-theme.mp3   # Level 4 gameplay music
-│   └── level-5-theme.mp3   # Level 5 gameplay music
+│   ├── TouwersTheme.mp3           # Main menu / title theme
+│   ├── CampaignSongs/
+│   │   ├── Bonuslevel.mp3
+│   │   ├── Defeat_Tune.mp3
+│   │   ├── Victory_Tune.mp3
+│   │   ├── DesertSongs/           # Desert_Battle.mp3 ... Desert_Battle5.mp3
+│   │   ├── ForestSongs/           # Forest_Battle.mp3 ... Forest_Battle5.mp3
+│   │   ├── MountainSongs/         # Mountain_Battle.mp3 ... Mountain_Battle4.mp3
+│   │   └── SpaceSongs/            # Space_Battle.mp3 ... Space_Battle8.mp3, FrogKingTheme.mp3
+│   ├── IntroJingle/
+│   │   ├── IntroJingle_LilysAdventures.mp3
+│   │   └── IntroJingle_Paseyan.mp3
+│   └── SettlementSongs/
+│       └── Settlement_Theme1.mp3 ... Settlement_Theme4.mp3
 └── sfx/
-    ├── button-click.mp3    # Button click sound
-    ├── menu-open.mp3       # Menu opening sound
-    ├── tower-place.mp3     # Tower placement sound
-    ├── tower-shoot.mp3     # Tower shooting sound
-    ├── enemy-hit.mp3       # Enemy hit/damage sound
-    └── enemy-death.mp3     # Enemy death sound
+    ├── BuildingSounds/    # Academy, ArcaneBlast, CastleSelect, ChainLightning, DiamondPress,
+    │                      # FrostNova, HiringDefender, MeteorStrike, MineGoldClick,
+    │                      # MineGoldReady, SuperWeaponLab, TowerForge, TrainingGround
+    ├── LevelSounds/       # LootCollect, LootDrop, RareLootCollect, RareLootDrop, ShardDrop,
+    │                      # SpellAttack, Upgrade, WaveStart
+    ├── MenuSounds/        # Achievement, ButtonClick, OpenCampaign, SwordSmoke
+    └── TowerSounds/       # Arrow, BarricadeTouwer, BasicTouwer, CombinationTower, MagicTower,
+                           # PoisonTouwer, TrebuchetImpact, TrebuchetTouwer
 ```
+
+Note the `sfx/TowerSounds/` folder mixes two spellings (`BarricadeTouwer.mp3` vs
+`CombinationTower.mp3`) — that's existing, unresolved naming drift, not a typo introduced here.
 
 ## Adding Music Files
 
@@ -57,7 +73,7 @@ const levelMusicMap = {
 };
 ```
 
-Then register the track in [MusicRegistry.js](../../js/core/MusicRegistry.js):
+Then register the track in [MusicRegistry.js](../../js/core/registries/MusicRegistry.js):
 
 ```javascript
 MusicRegistry.registerMusic(
@@ -73,7 +89,7 @@ MusicRegistry.registerMusic(
 
 ## Adding Sound Effects
 
-Place sound effect files in the `sfx/` directory and register them in [SFXRegistry.js](../../js/core/SFXRegistry.js):
+Place sound effect files in the `sfx/` directory and register them in [SFXRegistry.js](../../js/core/registries/SFXRegistry.js):
 
 ```javascript
 SFXRegistry.registerSFX(

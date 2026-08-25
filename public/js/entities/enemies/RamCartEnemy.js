@@ -1,6 +1,6 @@
 import { BaseEnemy } from './BaseEnemy.js';
 import { darkenColor, lightenColor } from '../../utils/colorUtils.js';
-import { drawTaperedPath } from './TaperedShapeRenderer.js';
+import { drawTaperedPath } from './rendering/TaperedShapeRenderer.js';
 
 /**
  * A real siege mantlet - open timber-frame shed on wheels, peaked shingle roof,

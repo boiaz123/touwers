@@ -461,15 +461,20 @@ export class RealmShardDrop {
             });
         }
 
-        // Update particles
-        for (let i = this.particles.length - 1; i >= 0; i--) {
+        // Update particles (compact-in-place: avoids O(n) splice-shift per removal,
+        // matching the removal pattern LootBag itself already uses elsewhere)
+        let particleWriteIdx = 0;
+        for (let i = 0; i < this.particles.length; i++) {
             const p = this.particles[i];
             p.life -= deltaTime;
             p.x += p.vx * deltaTime;
             p.y += p.vy * deltaTime;
             p.vy += 60 * deltaTime;
-            if (p.life <= 0) this.particles.splice(i, 1);
+            if (p.life > 0) {
+                this.particles[particleWriteIdx++] = p;
+            }
         }
+        this.particles.length = particleWriteIdx;
     }
 
     isClickable() {

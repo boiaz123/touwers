@@ -1,6 +1,6 @@
 import { BaseEnemy } from './BaseEnemy.js';
 import { EnemyColorCache, FROG_COLOR_VARIANTS } from '../../utils/EnemyColorCache.js';
-import { drawFlipperFoot } from './FrogFlipperRenderer.js';
+import { drawFlipperFoot } from './rendering/FrogFlipperRenderer.js';
 
 export class FrogEnemy extends BaseEnemy {
     // Shared cached color-variant lookup (skinColor -> lighten/darken variants).
@@ -87,18 +87,19 @@ export class FrogEnemy extends BaseEnemy {
             this.particleSpawnCounter = 0;
         }
         
-        // Update magic particles - inline to avoid function call overhead
-        let i = this.magicParticles.length;
-        while (i--) {
+        // Update magic particles (compact-in-place: avoids O(n) splice-shift per removal)
+        let magicWriteIdx = 0;
+        for (let i = 0; i < this.magicParticles.length; i++) {
             const particle = this.magicParticles[i];
             particle.x += particle.vx * deltaTime;
             particle.y += particle.vy * deltaTime;
             particle.life -= deltaTime;
             particle.size = Math.max(0, particle.size * (particle.life / particle.maxLife));
-            if (particle.life <= 0) {
-                this.magicParticles.splice(i, 1);
+            if (particle.life > 0) {
+                this.magicParticles[magicWriteIdx++] = particle;
             }
         }
+        this.magicParticles.length = magicWriteIdx;
         
         // Update jump animation timer
         this.jumpAnimationTimer += deltaTime;

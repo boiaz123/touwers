@@ -1,8 +1,8 @@
 import { BaseEnemy } from './BaseEnemy.js';
 import { EnemyColorCache, FROG_COLOR_VARIANTS } from '../../utils/EnemyColorCache.js';
-import { drawFlipperFoot } from './FrogFlipperRenderer.js';
-import { drawTaperedPath } from './TaperedShapeRenderer.js';
-import { drawSkinAura } from './EnemyAuraRenderer.js';
+import { drawFlipperFoot } from './rendering/FrogFlipperRenderer.js';
+import { drawTaperedPath } from './rendering/TaperedShapeRenderer.js';
+import { drawSkinAura } from './rendering/EnemyAuraRenderer.js';
 import { hexToRgbaTable } from '../../utils/colorUtils.js';
 
 /**
@@ -132,18 +132,19 @@ export class ElementalFrogEnemy extends BaseEnemy {
             this.particleSpawnCounter = 0;
         }
 
-        // Update magic particles
-        let i = this.magicParticles.length;
-        while (i--) {
+        // Update magic particles (compact-in-place: avoids O(n) splice-shift per removal)
+        let magicWriteIdx = 0;
+        for (let i = 0; i < this.magicParticles.length; i++) {
             const particle = this.magicParticles[i];
             particle.x += particle.vx * deltaTime;
             particle.y += particle.vy * deltaTime;
             particle.life -= deltaTime;
             particle.size = Math.max(0, particle.size * (particle.life / particle.maxLife));
-            if (particle.life <= 0) {
-                this.magicParticles.splice(i, 1);
+            if (particle.life > 0) {
+                this.magicParticles[magicWriteIdx++] = particle;
             }
         }
+        this.magicParticles.length = magicWriteIdx;
 
         // Update jump cycle timer for animation and movement synchronization
         this.jumpCycleTimer += deltaTime;

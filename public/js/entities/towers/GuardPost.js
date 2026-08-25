@@ -34,9 +34,6 @@ export class GuardPost extends Tower {
         this.clickBoxWidth = 80;
         this.clickBoxHeight = 80;
         
-        // Build cost
-        this.buildCost = 250;
-        
         // Defender spawning position - will be set based on path
         this.defenderSpawnX = x - 35;
         this.defenderSpawnY = y;
@@ -499,7 +496,7 @@ export class GuardPost extends Tower {
             damage: 'N/A',
             range: 'N/A',
             fireRate: 'N/A',
-            cost: 150,
+            cost: 250,
             icon: ''
         };
     }

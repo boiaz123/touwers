@@ -1,6 +1,6 @@
 import { LootBag, RealmShardDrop } from './LootBag.js';
 import { LootRegistry } from './LootRegistry.js';
-import { ObjectPool } from '../../core/ObjectPool.js';
+import { ObjectPool } from '../../core/utils/ObjectPool.js';
 
 /**
  * LootManager - Manages all loot bags in the current level

@@ -1,9 +1,8 @@
-import { SaveSystem } from '../core/SaveSystem.js';
-import { EnemyIntelRegistry } from '../core/EnemyIntelRegistry.js';
-import { InputManager } from '../core/InputManager.js';
+import { SaveSystem } from '../core/systems/SaveSystem.js';
+import { EnemyIntelRegistry } from '../core/registries/EnemyIntelRegistry.js';
+import { InputManager } from '../core/managers/InputManager.js';
 import { ControlsScreen } from './ControlsScreen.js';
-import { ResolutionSelector } from './ResolutionSelector.js';
-import { ResolutionSettings } from '../core/ResolutionSettings.js';
+import { ResolutionSettings } from '../core/config/ResolutionSettings.js';
 import { TowerTransformRegistry } from '../entities/towers/TowerTransformRegistry.js';
 import { SharpshooterTower } from '../entities/towers/SharpshooterTower.js';
 
@@ -166,8 +165,9 @@ export class UIManager {
         const inputManager = this.stateManager.inputManager;
         if (!inputManager) return;
 
-        // Update tower buttons
-        document.querySelectorAll('.tower-btn').forEach(btn => {
+        // Update tower buttons (reuse the cached button list built in setupUIEventListeners
+        // instead of re-querying the DOM every call)
+        this._towerBtns.forEach(btn => {
             const towerType = btn.dataset.type;
             const action = 'tower_' + towerType;
             const key = inputManager.getBinding(action);
@@ -181,7 +181,7 @@ export class UIManager {
         });
 
         // Update building buttons
-        document.querySelectorAll('.building-btn').forEach(btn => {
+        this._buildingBtns.forEach(btn => {
             const buildingType = btn.dataset.type;
             const action = 'building_' + buildingType;
             const key = inputManager.getBinding(action);
@@ -1174,7 +1174,7 @@ export class UIManager {
     updateUIAvailability() {
         // In no-tower-building levels, keep all placement buttons hidden
         if (this.noTowerBuilding) {
-            document.querySelectorAll('.tower-btn, .building-btn').forEach(btn => {
+            [...this._towerBtns, ...this._buildingBtns].forEach(btn => {
                 btn.style.display = 'none';
                 btn.disabled = true;
             });
@@ -1185,7 +1185,7 @@ export class UIManager {
 
         if (!this.noTowerBuilding) {
         // Update tower button states - show only when unlocked, disable based on resources
-        document.querySelectorAll('.tower-btn').forEach(btn => {
+        this._towerBtns.forEach(btn => {
             const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             const isUnlocked = unlockSystem.unlockedTowers.has(type);
@@ -1225,7 +1225,7 @@ export class UIManager {
         });
 
         // Update building button states - show when unlocked, disable based on limits and resources
-        document.querySelectorAll('.building-btn').forEach(btn => {
+        this._buildingBtns.forEach(btn => {
             const type = btn.dataset.type;
             const cost = parseInt(btn.dataset.cost);
             
@@ -4925,26 +4925,6 @@ export class UIManager {
         }
     }
 
-    getUpgradeCurrentEffect(upgrade) {
-        if (upgrade.id === 'basic_damage') {
-            return `Damage: +${upgrade.level * 2}`;
-        } else if (upgrade.id === 'basic_fire_rate') {
-            return `Fire Rate: +${(upgrade.level * 0.1).toFixed(1)}/sec`;
-        } else if (upgrade.id === 'basic_range') {
-            return `Range: +${upgrade.level * 10}px`;
-        } else if (upgrade.id === 'archer_armor_pierce') {
-            return `Armor Pierce: +${upgrade.level * 5}%`;
-        } else if (upgrade.id === 'archer_fire_rate') {
-            return `Fire Rate: +${(upgrade.level * 0.15).toFixed(1)}/sec`;
-        } else if (upgrade.id === 'poison_damage') {
-            return `Poison Damage: +${upgrade.level}`;
-        } else if (upgrade.id === 'cannon_aoe') {
-            return `AOE Radius: +${upgrade.level * 5}px`;
-        } else {
-            return `Level ${upgrade.level}`;
-        }
-    }
-
     // ============ ENEMY INTEL PANEL ============
 
     showEnemyIntelMenu(enemy) {
@@ -5536,13 +5516,6 @@ export class UIManager {
             });
         }
 
-    }
-
-    _openResolutionSelector() {
-        if (!this._resolutionSelector) {
-            this._resolutionSelector = new ResolutionSelector(this.stateManager.game);
-        }
-        this._resolutionSelector.show();
     }
 
     openControlsScreen() {

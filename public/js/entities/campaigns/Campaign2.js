@@ -1,7 +1,7 @@
 import { CampaignBase } from './CampaignBase.js';
 import { LevelRegistry } from '../levels/LevelRegistry.js';
 import { Castle } from '../buildings/Castle.js';
-import { SaveSystem } from '../../core/SaveSystem.js';
+import { SaveSystem } from '../../core/systems/SaveSystem.js';
 import { MountainLevel1 } from '../levels/Mountain/MountainLevel1.js';
 import { MountainLevel2 } from '../levels/Mountain/MountainLevel2.js';
 import { MountainLevel3 } from '../levels/Mountain/MountainLevel3.js';

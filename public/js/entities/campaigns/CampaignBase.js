@@ -1,4 +1,4 @@
-import { AchievementPanel } from '../../core/AchievementPanel.js';
+import { AchievementPanel } from '../../core/ui/AchievementPanel.js';
 
 /**
  * CampaignBase

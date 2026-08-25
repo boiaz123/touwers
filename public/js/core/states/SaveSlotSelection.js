@@ -1,5 +1,5 @@
-import { SaveSystem } from '../SaveSystem.js';
-import { ParticleSystem } from '../ParticleSystem.js';
+import { SaveSystem } from '../systems/SaveSystem.js';
+import { ParticleSystem } from '../render/ParticleSystem.js';
 
 /**
  * SaveSlotSelection State
@@ -371,6 +371,7 @@ export class SaveSlotSelection {
             
             // Cancel button
             const cancelButtonX = panelX + panelWidth / 2 + 10;
+            const cancelButtonY = panelY + panelHeight - 80;
             this.warningCancelHovered = x >= cancelButtonX && x <= cancelButtonX + buttonWidth &&
                                        y >= cancelButtonY && y <= cancelButtonY + buttonHeight;
             

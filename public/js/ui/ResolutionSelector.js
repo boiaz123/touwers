@@ -1,7 +1,7 @@
 /**
  * ResolutionSelector - UI component for selecting game resolution
  */
-import { ResolutionSettings } from '../core/ResolutionSettings.js';
+import { ResolutionSettings } from '../core/config/ResolutionSettings.js';
 
 export class ResolutionSelector {
     constructor(game) {

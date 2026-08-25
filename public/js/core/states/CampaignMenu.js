@@ -1,5 +1,5 @@
 ﻿import { CampaignRegistry } from '../../game/CampaignRegistry.js';
-import { drawCoverImage, drawMedallion } from '../EmblemRenderer.js';
+import { drawCoverImage, drawMedallion } from '../render/EmblemRenderer.js';
 
 // Unified stone base with campaign-specific accent colours
 const CAMPAIGN_BIOME = {
@@ -433,60 +433,83 @@ export class CampaignMenu {
     }
 
     _renderBackground(ctx, canvas) {
+        // PRE-RENDER OPTIMIZATION: this wood-plank backdrop never changes frame-to-frame
+        // (no animationTime dependence, deterministic plank/grain geometry), but was
+        // previously redrawn from scratch every frame - per-plank bezierCurveTo grain
+        // lines plus a radial-gradient vignette. Cache it to an offscreen canvas once and
+        // just blit it, same pattern as SettlementHub._ensureBackdropLayers.
+        this._ensureBackgroundLayer(canvas);
+        ctx.drawImage(this._bgCanvas, 0, 0);
+    }
+
+    _ensureBackgroundLayer(canvas) {
+        const W = canvas.width;
+        const H = canvas.height;
+        if (this._bgCanvas && this._bgLayerW === W && this._bgLayerH === H) {
+            return;
+        }
+        this._bgLayerW = W;
+        this._bgLayerH = H;
+
+        this._bgCanvas = document.createElement('canvas');
+        this._bgCanvas.width = W;
+        this._bgCanvas.height = H;
+        const bctx = this._bgCanvas.getContext('2d');
+
         // Base coat
-        ctx.fillStyle = '#100802';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        bctx.fillStyle = '#100802';
+        bctx.fillRect(0, 0, W, H);
 
         // Wood planks - horizontal bands with alternating tones
         const plankHeight = 88;
         const plankTones = ['#1c1005', '#1a0f05', '#1e1106', '#190e04', '#1b1005'];
-        const planksCount = Math.ceil(canvas.height / plankHeight) + 1;
+        const planksCount = Math.ceil(H / plankHeight) + 1;
         for (let p = 0; p < planksCount; p++) {
             const py = p * plankHeight;
             const tone = plankTones[p % plankTones.length];
-            ctx.fillStyle = tone;
-            ctx.fillRect(0, py, canvas.width, plankHeight);
+            bctx.fillStyle = tone;
+            bctx.fillRect(0, py, W, plankHeight);
 
             // Top plank shadow line
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-            ctx.fillRect(0, py, canvas.width, 2);
+            bctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+            bctx.fillRect(0, py, W, 2);
             // Highlight just below seam
-            ctx.fillStyle = 'rgba(200, 130, 60, 0.04)';
-            ctx.fillRect(0, py + 2, canvas.width, 5);
+            bctx.fillStyle = 'rgba(200, 130, 60, 0.04)';
+            bctx.fillRect(0, py + 2, W, 5);
 
             // Wood grain lines — subtle horizontal curves
             const grainLines = 5 + (p % 3);
-            ctx.save();
-            ctx.beginPath();
-            ctx.rect(0, py, canvas.width, plankHeight);
-            ctx.clip();
+            bctx.save();
+            bctx.beginPath();
+            bctx.rect(0, py, W, plankHeight);
+            bctx.clip();
             for (let g = 0; g < grainLines; g++) {
                 const grainY = py + (plankHeight / (grainLines + 1)) * (g + 1);
                 const waveA = Math.sin(p * 1.3 + g * 0.7) * 6;
                 const waveB = Math.cos(p * 0.9 + g * 1.1) * 4;
-                ctx.strokeStyle = 'rgba(70, 35, 8, 0.22)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(0, grainY + waveA);
-                ctx.bezierCurveTo(
-                    canvas.width * 0.3, grainY + waveA + waveB,
-                    canvas.width * 0.7, grainY - waveA + waveB,
-                    canvas.width, grainY - waveA * 0.5
+                bctx.strokeStyle = 'rgba(70, 35, 8, 0.22)';
+                bctx.lineWidth = 1;
+                bctx.beginPath();
+                bctx.moveTo(0, grainY + waveA);
+                bctx.bezierCurveTo(
+                    W * 0.3, grainY + waveA + waveB,
+                    W * 0.7, grainY - waveA + waveB,
+                    W, grainY - waveA * 0.5
                 );
-                ctx.stroke();
+                bctx.stroke();
             }
-            ctx.restore();
+            bctx.restore();
         }
 
         // Vignette — darkens edges for depth
-        const vign = ctx.createRadialGradient(
-            canvas.width / 2, canvas.height / 2, canvas.height * 0.15,
-            canvas.width / 2, canvas.height / 2, canvas.height * 0.9
+        const vign = bctx.createRadialGradient(
+            W / 2, H / 2, H * 0.15,
+            W / 2, H / 2, H * 0.9
         );
         vign.addColorStop(0, 'rgba(0,0,0,0)');
         vign.addColorStop(1, 'rgba(0,0,0,0.72)');
-        ctx.fillStyle = vign;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        bctx.fillStyle = vign;
+        bctx.fillRect(0, 0, W, H);
     }
 
     _renderTitle(ctx, canvas) {

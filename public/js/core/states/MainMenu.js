@@ -1,5 +1,5 @@
-import { ParticleSystem } from '../ParticleSystem.js';
-import { drawMedievalSword } from '../SwordRenderer.js';
+import { ParticleSystem } from '../render/ParticleSystem.js';
+import { drawMedievalSword } from '../render/SwordRenderer.js';
 
 // Import Tauri invoke for app control
 let invoke = null;

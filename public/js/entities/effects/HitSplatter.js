@@ -1,4 +1,4 @@
-import { ObjectPool } from '../../core/ObjectPool.js';
+import { ObjectPool } from '../../core/utils/ObjectPool.js';
 
 /**
  * HitSplatter - Floating damage indicator that rises and fades with type-specific styling

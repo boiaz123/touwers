@@ -6,8 +6,8 @@ import { BuildingRegistry } from '../../entities/buildings/BuildingRegistry.js';
 import { CastleDefender } from '../../entities/defenders/CastleDefender.js';
 import { LevelRegistry } from '../../entities/levels/LevelRegistry.js';
 import { UIManager } from '../../ui/UIManager.js';
-import { SaveSystem } from '../SaveSystem.js';
-import { AchievementSystem } from '../AchievementSystem.js';
+import { SaveSystem } from '../systems/SaveSystem.js';
+import { AchievementSystem } from '../systems/AchievementSystem.js';
 
 import { ResultsScreen } from './ResultsScreen.js';
 import { LootManager } from '../../entities/loot/LootManager.js';
@@ -20,8 +20,8 @@ import { SpellEffectRenderAdapter } from '../render/adapters/SpellEffectRenderAd
 import { DefenderRenderAdapter } from '../render/adapters/DefenderRenderAdapter.js';
 import { TerrainRenderAdapter } from '../render/adapters/TerrainRenderAdapter.js';
 import { PixiTextureCache } from '../render/PixiTextureCache.js';
-import { ObjectPool } from '../ObjectPool.js';
-import { PerformanceMonitor } from '../PerformanceMonitor.js';
+import { ObjectPool } from '../utils/ObjectPool.js';
+import { PerformanceMonitor } from '../utils/PerformanceMonitor.js';
 import { Container } from 'pixi.js';
 
 const INITIAL_WAVE_COOLDOWN = 30;

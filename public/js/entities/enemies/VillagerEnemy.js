@@ -1,5 +1,5 @@
 import { BaseEnemy } from './BaseEnemy.js';
-import { drawTwoSegmentLimb, computeWalkCycle, mirroredLimbAngle, kneeFlex, solveLegIK } from './HumanoidLimbRenderer.js';
+import { drawTwoSegmentLimb, computeWalkCycle, mirroredLimbAngle, kneeFlex, solveLegIK } from './rendering/HumanoidLimbRenderer.js';
 
 export class VillagerEnemy extends BaseEnemy {
     // Static counter to alternate weapon types across spawns
@@ -135,17 +135,19 @@ export class VillagerEnemy extends BaseEnemy {
             });
         }
 
-        // Update and remove dead particles
-        for (let i = this.torchParticles.length - 1; i >= 0; i--) {
+        // Update and remove dead particles (compact-in-place: avoids O(n) splice-shift per removal)
+        let torchWriteIdx = 0;
+        for (let i = 0; i < this.torchParticles.length; i++) {
             const p = this.torchParticles[i];
             p.life -= deltaTime;
             p.x += p.vx * deltaTime;
             p.y += p.vy * deltaTime;
 
-            if (p.life <= 0) {
-                this.torchParticles.splice(i, 1);
+            if (p.life > 0) {
+                this.torchParticles[torchWriteIdx++] = p;
             }
         }
+        this.torchParticles.length = torchWriteIdx;
 
         // Keep particle count reasonable
         if (this.torchParticles.length > 8) {

@@ -1,9 +1,9 @@
 import { BaseEnemy } from './BaseEnemy.js';
 import { EnemyColorCache, FROG_KING_COLOR_VARIANTS } from '../../utils/EnemyColorCache.js';
 import { darkenColor, lightenColor, hexToRgbaTable } from '../../utils/colorUtils.js';
-import { drawFlipperFoot } from './FrogFlipperRenderer.js';
-import { drawTaperedPath } from './TaperedShapeRenderer.js';
-import { drawSkinAura } from './EnemyAuraRenderer.js';
+import { drawFlipperFoot } from './rendering/FrogFlipperRenderer.js';
+import { drawTaperedPath } from './rendering/TaperedShapeRenderer.js';
+import { drawSkinAura } from './rendering/EnemyAuraRenderer.js';
 
 export class FrogKingEnemy extends BaseEnemy {
     // Shared cached color-variant lookup (skinColor -> lighten/darken variants).
@@ -238,18 +238,19 @@ export class FrogKingEnemy extends BaseEnemy {
             this.particleSpawnCounter = 0;
         }
         
-        // Update magic particles
-        let i = this.magicParticles.length;
-        while (i--) {
+        // Update magic particles (compact-in-place: avoids O(n) splice-shift per removal)
+        let magicWriteIdx = 0;
+        for (let i = 0; i < this.magicParticles.length; i++) {
             const particle = this.magicParticles[i];
             particle.x += particle.vx * deltaTime;
             particle.y += particle.vy * deltaTime;
             particle.life -= deltaTime;
             particle.size = Math.max(0, particle.size * (particle.life / particle.maxLife));
-            if (particle.life <= 0) {
-                this.magicParticles.splice(i, 1);
+            if (particle.life > 0) {
+                this.magicParticles[magicWriteIdx++] = particle;
             }
         }
+        this.magicParticles.length = magicWriteIdx;
 
         // === BLOCKADE SPELL: fire a dark orb to disable a nearby tower for 5 seconds ===
         if (this._towersRef && !this.reachedEnd) {
@@ -298,10 +299,15 @@ export class FrogKingEnemy extends BaseEnemy {
             if (!lastT || Math.hypot(proj.x - lastT.x, proj.y - lastT.y) > 5) {
                 proj.trail.push({ x: proj.x, y: proj.y, age: 0 });
             }
-            for (let j = proj.trail.length - 1; j >= 0; j--) {
-                proj.trail[j].age += deltaTime;
-                if (proj.trail[j].age > 0.25) proj.trail.splice(j, 1);
+            let trailWriteIdx = 0;
+            for (let j = 0; j < proj.trail.length; j++) {
+                const point = proj.trail[j];
+                point.age += deltaTime;
+                if (point.age <= 0.25) {
+                    proj.trail[trailWriteIdx++] = point;
+                }
             }
+            proj.trail.length = trailWriteIdx;
             if (proj.targetTower && !proj.targetTower.isDisabled) {
                 const dx = proj.targetTower.x - proj.x;
                 const dy = proj.targetTower.y - proj.y;

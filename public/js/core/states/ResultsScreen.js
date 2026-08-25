@@ -1,5 +1,5 @@
 import { LootRegistry } from '../../entities/loot/LootRegistry.js';
-import { SaveSystem } from '../SaveSystem.js';
+import { SaveSystem } from '../systems/SaveSystem.js';
 
 /**
  * ResultsScreen - In-game modal for displaying level completion with animations

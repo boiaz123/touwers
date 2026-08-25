@@ -1,5 +1,5 @@
 import { BaseEnemy } from './BaseEnemy.js';
-import { drawTwoSegmentLimb, computeWalkCycle, kneeFlex, solveLegIK } from './HumanoidLimbRenderer.js';
+import { drawTwoSegmentLimb, computeWalkCycle, kneeFlex, solveLegIK } from './rendering/HumanoidLimbRenderer.js';
 
 export class KnightEnemy extends BaseEnemy {
     static BASE_STATS = {

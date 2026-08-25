@@ -1,5 +1,5 @@
 import { Tower } from './Tower.js';
-import { ObjectPool } from '../../core/ObjectPool.js';
+import { ObjectPool } from '../../core/utils/ObjectPool.js';
 
 export class CannonTower extends Tower {
     // How fast the whole mechanism can turn to face a target while winding up, in

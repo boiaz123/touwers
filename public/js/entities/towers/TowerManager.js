@@ -1,8 +1,8 @@
 import { TowerRegistry } from './TowerRegistry.js';
 import { TowerTransformRegistry } from './TowerTransformRegistry.js';
 import { BuildingManager } from '../buildings/BuildingManager.js';
-import { UnlockSystem } from '../../core/UnlockSystem.js';
-import { SpatialGrid } from '../../core/SpatialGrid.js';
+import { UnlockSystem } from '../../core/systems/UnlockSystem.js';
+import { SpatialGrid } from '../../core/utils/SpatialGrid.js';
 
 const TOWER_SOUND_MAP = {
     'basic':       'basic-tower',
@@ -984,8 +984,8 @@ export class TowerManager {
             'archer':      { damage: 35,  range: 140, fireRate: 1.5 },
             'cannon':      { damage: 100, range: 155, fireRate: 0.4, splashRadius: 50 },
             'barricade':   { damage: 0,   range: 120, fireRate: 0, radius: 20, slowPercent: 0.65 },
-            'poison':      { damage: 10,  range: 130, fireRate: 0.4 },
-            'magic':       { damage: 40,  range: 130, fireRate: 1.0 },
+            'poison':      { damage: 10,  range: 130, fireRate: 0.25 },
+            'magic':       { damage: 45,  range: 130, fireRate: 1.0 },
             'guard-post':  { damage: 0,   range: 0,   fireRate: 0 },
             'combination': { damage: 55,  range: 140, fireRate: 0.9 }
         };

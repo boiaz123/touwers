@@ -1,5 +1,5 @@
 import { Tower } from './Tower.js';
-import { ObjectPool } from '../../core/ObjectPool.js';
+import { ObjectPool } from '../../core/utils/ObjectPool.js';
 
 const BASE_SLOW_EFFECT = 0.7;
 

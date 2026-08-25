@@ -78,17 +78,19 @@ export class MageEnemy extends BaseEnemy {
             this.particleEmissionCounter = 0;
         }
         
-        // Update magic particles - optimized filtering (in local space)
-        for (let i = this.magicParticles.length - 1; i >= 0; i--) {
+        // Update magic particles (compact-in-place: avoids O(n) splice-shift per removal)
+        let magicWriteIdx = 0;
+        for (let i = 0; i < this.magicParticles.length; i++) {
             const p = this.magicParticles[i];
             p.localX += p.vx * deltaTime;
             p.localY += p.vy * deltaTime;
             p.life -= deltaTime;
             p.size = Math.max(0, p.size * (p.life / p.maxLife));
-            if (p.life <= 0) {
-                this.magicParticles.splice(i, 1);
+            if (p.life > 0) {
+                this.magicParticles[magicWriteIdx++] = p;
             }
         }
+        this.magicParticles.length = magicWriteIdx;
 
         // === BLOCKADE SPELL: fire a dark orb to disable a nearby tower for 5 seconds ===
         if (this._towersRef && !this.reachedEnd) {
@@ -139,10 +141,15 @@ export class MageEnemy extends BaseEnemy {
             if (!lastT || Math.hypot(proj.x - lastT.x, proj.y - lastT.y) > 5) {
                 proj.trail.push({ x: proj.x, y: proj.y, age: 0 });
             }
-            for (let i = proj.trail.length - 1; i >= 0; i--) {
-                proj.trail[i].age += deltaTime;
-                if (proj.trail[i].age > 0.25) proj.trail.splice(i, 1);
+            let trailWriteIdx = 0;
+            for (let i = 0; i < proj.trail.length; i++) {
+                const point = proj.trail[i];
+                point.age += deltaTime;
+                if (point.age <= 0.25) {
+                    proj.trail[trailWriteIdx++] = point;
+                }
             }
+            proj.trail.length = trailWriteIdx;
 
             // Home in on target tower
             if (proj.targetTower && !proj.targetTower.isDisabled) {

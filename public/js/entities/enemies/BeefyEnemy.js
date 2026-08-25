@@ -1,5 +1,5 @@
 import { BaseEnemy } from './BaseEnemy.js';
-import { drawTwoSegmentLimb, computeWalkCycle, mirroredLimbAngle, kneeFlex, solveLegIK } from './HumanoidLimbRenderer.js';
+import { drawTwoSegmentLimb, computeWalkCycle, mirroredLimbAngle, kneeFlex, solveLegIK } from './rendering/HumanoidLimbRenderer.js';
 
 export class BeefyEnemy extends BaseEnemy {
     static BASE_STATS = {

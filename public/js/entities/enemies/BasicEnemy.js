@@ -1,6 +1,6 @@
 import { BaseEnemy } from './BaseEnemy.js';
-import { drawTwoSegmentLimb, computeWalkCycle, mirroredLimbAngle, kneeFlex, solveLegIK } from './HumanoidLimbRenderer.js';
-import { drawTaperedPath } from './TaperedShapeRenderer.js';
+import { drawTwoSegmentLimb, computeWalkCycle, mirroredLimbAngle, kneeFlex, solveLegIK } from './rendering/HumanoidLimbRenderer.js';
+import { drawTaperedPath } from './rendering/TaperedShapeRenderer.js';
 
 export class BasicEnemy extends BaseEnemy {
     static BASE_STATS = {

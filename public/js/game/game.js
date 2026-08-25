@@ -13,17 +13,17 @@ import { PlayerWorkshop } from '../entities/campaigns/PlayerWorkshop.js';
 import { LevelDesignerState } from '../core/states/LevelDesignerState.js';
 import { GameplayState } from '../core/states/GameplayState.js';
 import { SettlementHub } from '../core/states/SettlementHub.js';
-import { SaveSystem } from '../core/SaveSystem.js';
-import { ResolutionManager } from '../core/ResolutionManager.js';
-import { ResolutionSettings } from '../core/ResolutionSettings.js';
+import { SaveSystem } from '../core/systems/SaveSystem.js';
+import { ResolutionManager } from '../core/managers/ResolutionManager.js';
+import { ResolutionSettings } from '../core/config/ResolutionSettings.js';
 import { CampaignRegistry } from './CampaignRegistry.js';
 import { LevelRegistry } from '../entities/levels/LevelRegistry.js';
 import { SandboxLevel } from '../entities/levels/SandboxLevel.js';
-import { AudioManager } from '../core/AudioManager.js';
-import { MusicRegistry, initializeMusicRegistry } from '../core/MusicRegistry.js';
-import { SFXRegistry, initializeSFXRegistry } from '../core/SFXRegistry.js';
-import { InputManager } from '../core/InputManager.js';
-import { CursorOverlay } from '../core/CursorOverlay.js';
+import { AudioManager } from '../core/managers/AudioManager.js';
+import { MusicRegistry, initializeMusicRegistry } from '../core/registries/MusicRegistry.js';
+import { SFXRegistry, initializeSFXRegistry } from '../core/registries/SFXRegistry.js';
+import { InputManager } from '../core/managers/InputManager.js';
+import { CursorOverlay } from '../core/render/CursorOverlay.js';
 import { PixiApp } from '../core/render/PixiApp.js';
 
 export class Game {

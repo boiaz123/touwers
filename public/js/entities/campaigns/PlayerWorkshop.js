@@ -1,6 +1,6 @@
 import { CampaignBase } from './CampaignBase.js';
 import { LevelRegistry } from '../levels/LevelRegistry.js';
-import { SandboxLevel } from '../levels/Campaign5/SandboxLevel.js';
+import { SandboxLevel } from '../levels/SandboxLevel.js';
 import { PlayerCreatedLevel } from '../levels/PlayerCreatedLevel.js';
 import { FrogKingsRealmLevel } from '../levels/FrogKingsRealm/FrogKingsRealmLevel.js';
 

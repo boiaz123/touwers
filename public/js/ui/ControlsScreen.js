@@ -1,4 +1,4 @@
-import { InputManager } from '../core/InputManager.js';
+import { InputManager } from '../core/managers/InputManager.js';
 
 /**
  * ControlsScreen - Comprehensive controls/keybinding overlay

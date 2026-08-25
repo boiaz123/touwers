@@ -21,7 +21,7 @@
  *   this.achievementPanel.handleClick(x, y);          // on click
  */
 
-import { drawMedallion, drawCoverImage, drawChestIcon } from './EmblemRenderer.js';
+import { drawMedallion, drawCoverImage, drawChestIcon } from '../render/EmblemRenderer.js';
 
 const CAT_COLORS = {
     combat:      '#8b1a1a',

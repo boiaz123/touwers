@@ -3,7 +3,7 @@
  * (enemy types and campaign themes for use in the Level Designer).
  */
 import { EnemyIntelRegistry } from './EnemyIntelRegistry.js';
-import { CampaignRegistry } from '../game/CampaignRegistry.js';
+import { CampaignRegistry } from '../../game/CampaignRegistry.js';
 
 // Chance (0-1) that a killed enemy drops a token for its own type. Only rolled
 // once the Commander's Workshop upgrade has been purchased (see EnemyManager).

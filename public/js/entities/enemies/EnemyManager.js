@@ -1,6 +1,6 @@
 import { EnemyRegistry } from './EnemyRegistry.js';
 import { HitSplatter } from '../effects/HitSplatter.js';
-import { TOKEN_DROP_CHANCE } from '../../core/WorkshopRegistry.js';
+import { TOKEN_DROP_CHANCE } from '../../core/registries/WorkshopRegistry.js';
 
 export class EnemyManager {
     constructor(path) {

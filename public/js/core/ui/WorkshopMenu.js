@@ -5,8 +5,8 @@
  * Opened from the Workshop building on the Settlement Hub map, only once
  * the Commander's Workshop upgrade has been purchased.
  */
-import { WorkshopRegistry } from './WorkshopRegistry.js';
-import { CampaignRegistry } from '../game/CampaignRegistry.js';
+import { WorkshopRegistry } from '../registries/WorkshopRegistry.js';
+import { CampaignRegistry } from '../../game/CampaignRegistry.js';
 
 const INTEL_PACK_NAMES = {
     'intel-pack-1': 'Spy Report I',
