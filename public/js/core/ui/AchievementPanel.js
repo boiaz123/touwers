@@ -6,7 +6,7 @@
  *
  * The actual grid/detail rendering + input handling lives in AchievementsContentView
  * below, which is also embedded directly inside the Arcane Library's ACHIEVEMENTS tab
- * (see ArcaneLibraryMenu in SettlementHub.js) so the two never drift out of sync and
+ * (see ArcaneLibraryMenu in core/ui/panels/ArcaneLibraryMenu.js) so the two never drift out of sync and
  * achievements never need their own duplicate implementation.
  *
  * `host` just needs to implement closePopup() — whichever screen owns this popup

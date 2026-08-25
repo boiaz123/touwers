@@ -48,25 +48,15 @@
     box-sizing: border-box;
 }
 
-/* The game shows its own sword cursor (see CursorOverlay.js, which injects the
-   actual `cursor: url(...)` rule once the sprite is generated) for every screen,
-   button, and menu - including disabled/"not-allowed" states - so the native
-   arrow cursor is hidden everywhere. This rule is the pre-init/fallback value
-   (nothing shown until CursorOverlay's injected rule takes over) and the
-   !important overrides the many per-element cursor rules below as well as
-   inline canvas.style.cursor assignments in JS. */
+/* The game shows its own sword cursor as a page-rendered element (see
+   CursorOverlay.js) for every screen, button, and menu - including disabled/
+   "not-allowed" states - so the native arrow cursor must never show, full stop.
+   Unconditional (no cursor-hidden/gamepad-active exception here): unlike the
+   `cursor: url()` rule this used to make room for, CursorOverlay's element
+   handles hiding itself (see its render()), so this rule doesn't need to yield
+   to anything - !important overrides the many per-element cursor rules below
+   as well as inline canvas.style.cursor assignments in JS. */
 *, *::before, *::after {
-    cursor: none !important;
-}
-
-/* Higher specificity than the plain `*` rule above (and CursorOverlay's injected
-   one, which uses the same `*` selector), so these always win regardless of
-   source order: cursor-hidden is toggled by CursorOverlay for states that want
-   no cursor at all (e.g. the splash screen, the main menu's intro transition);
-   gamepad-active is toggled by InputManager while a gamepad is driving its own
-   on-canvas crosshair cursor instead. */
-.cursor-hidden, .cursor-hidden *,
-.gamepad-active, .gamepad-active * {
     cursor: none !important;
 }
 
