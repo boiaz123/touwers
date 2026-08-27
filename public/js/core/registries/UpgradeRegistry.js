@@ -14,11 +14,11 @@ export class UpgradeRegistry {
         },
         'musical-equipment': {
             name: 'Musical Equipment',
-            description: 'Places Joost the Bard on the settlement square. Click him to open your Musical Scores collection.',
+            description: 'Places Paseyan the Bard on the settlement square. Click him to open your Musical Scores collection.',
             cost: 300,
             icon: '▹',
             category: 'ui',
-            effect: 'Adds Joost the Bard to the settlement. Click him to open the Musical Scores screen.'
+            effect: 'Adds Paseyan the Bard to the settlement. Click him to open the Musical Scores screen.'
         },
         'wooden-chest': {
             name: 'Wooden Chest',

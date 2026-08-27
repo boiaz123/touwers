@@ -325,7 +325,7 @@ export class MusicalScoresMenu {
         ctx.textBaseline = 'top';
         ctx.fillText('MUSICAL SCORES', menuX + menuWidth / 2, menuY + 8);
 
-        // "Support the Bard" button - links out to Joost the Bard's website
+        // "Support the Bard" button - links out to Paseyan the Bard's website
         const supportBtnX = menuX + 20;
         const supportBtnY = menuY + 42;
         const supportBtnWidth = 160;
@@ -450,7 +450,7 @@ export class MusicalScoresMenu {
         ctx.fillStyle = '#e8d5b5';
         const lines = [
             'This will open a new window and take you to the',
-            "website of Joost the Bard:",
+            "website of Paseyan the Bard:",
             'kardipaseyan.nl'
         ];
         lines.forEach((line, idx) => {

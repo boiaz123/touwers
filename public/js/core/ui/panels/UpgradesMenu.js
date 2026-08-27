@@ -196,7 +196,7 @@ export class UpgradesMenu {
                 id: 'musical-equipment',
                 name: 'Musical Equipment',
                 description: 'A finely crafted lyre and carrying case, left behind by a traveling minstrel. With the right instrument, even a siege feels less grim.',
-                effect: 'Permanently adds Joost the Bard to your settlement\nSpeak to him to access your music collection\nAllows selecting tracks from his Musical Scores screen',
+                effect: 'Permanently adds Paseyan the Bard to your settlement\nSpeak to him to access your music collection\nAllows selecting tracks from his Musical Scores screen',
                 cost: 300,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();

@@ -188,7 +188,7 @@ export class Game {
             this.stateManager.addState('splashLily', splashLily);
 
             const splashMusic = new SplashScreen(this.stateManager, {
-                lines: ['Music and Sound by Joost'],
+                lines: ['Music and Sound by Paseyan'],
                 nextState: 'mainMenu',
                 musicTrack: 'intro-jingle-paseyan'
             });

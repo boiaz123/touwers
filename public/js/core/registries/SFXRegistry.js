@@ -138,7 +138,7 @@ export function initializeSFXRegistry() {
         'assets/audio/sfx/BuildingSounds/MineGoldClick.mp3',
         {
             category: 'building',
-            volume: 0.6
+            volume: 0.3
         }
     );
     
