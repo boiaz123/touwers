@@ -511,7 +511,10 @@ export class AudioManager {
         }
         
         const sfxData = this.sfxRegistry[sfxName] || this.musicRegistry[sfxName];
-        const finalVolume = volume !== null ? volume : this.sfxVolume;
+        // Per-SFX baseline (sfxData.volume, set in SFXRegistry) scales the master SFX
+        // slider rather than being ignored, so quieter/louder sounds stay quieter/louder
+        // relative to each other as the player adjusts volume - see SFXRegistry.js.
+        const finalVolume = volume !== null ? volume : this.sfxVolume * (sfxData.volume ?? 1);
         
         // Throttle: skip if same SFX played too recently (except tunes)
         if (sfxName !== 'victory-tune' && sfxName !== 'defeat-tune') {

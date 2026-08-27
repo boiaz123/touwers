@@ -296,7 +296,7 @@ export function initializeSFXRegistry() {
         'assets/audio/sfx/TowerSounds/BarricadeTouwer.mp3',
         {
             category: 'tower',
-            volume: 0.6
+            volume: 0.35
         }
     );
 

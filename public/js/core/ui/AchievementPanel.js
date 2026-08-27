@@ -21,7 +21,7 @@
  *   this.achievementPanel.handleClick(x, y);          // on click
  */
 
-import { drawMedallion, drawCoverImage, drawChestIcon } from '../render/EmblemRenderer.js';
+import { drawMedallion, drawCoverImage } from '../render/EmblemRenderer.js';
 
 const CAT_COLORS = {
     combat:      '#8b1a1a',
@@ -64,9 +64,11 @@ function tierRingFor(achievement) {
 
 // Emblem art — drop a same-named file in public/assets/achievements/ to override any
 // entry here (checked first, same convention as CampaignMenu's CAMPAIGN_EMBLEM_IMAGE).
-// Categories/ids not listed here have no confident real-art match yet and fall back to
-// a hand-drawn vector token (economy chests) or, failing that, the achievement's glyph —
-// swap in a proper screenshot for those whenever one's ready.
+// Every achievement has an entry. Categories with no dedicated photo shoot yet (waves
+// survived, spending, trading, alchemy, loot, playtime) borrow the closest thematically
+// fitting building/unit portrait already in the project rather than a hand-drawn vector
+// token or bare glyph — swap in a purpose-shot screenshot for any of these whenever one's
+// ready, no code changes needed beyond the path below.
 const ACHIEVEMENT_EMBLEM_IMAGE = {
     // Combat — the horde you're cutting down
     'getting-started':   'assets/enemies/knight.png',
@@ -86,29 +88,47 @@ const ACHIEVEMENT_EMBLEM_IMAGE = {
     'fallen-warrior': 'assets/enemies/shieldknight.png',
     'undaunted':       'assets/enemies/shieldknight.png',
     'unbreakable':      'assets/enemies/shieldknight.png',
+    // Resilience / waves survived — the Guardian tower standing firm through the assault
+    'wave-runner':          'assets/towers/guardian.png',
+    'storm-survivor':        'assets/towers/guardian.png',
+    'original-wavejumper':    'assets/towers/guardian.png',
     // Tower building
     'apprentice-builder': 'assets/towers/basic.png',
     'master-engineer':     'assets/towers/basic.png',
     'tower-overlord':       'assets/towers/basic.png',
     'grand-architect':       'assets/towers/basic.png',
     'eternal-fortress':       'assets/towers/basic.png',
+    // Spending — the Gold Mine bankrolling every purchase
+    'merchant':          'assets/buildings/mine.png',
+    'gold-hoarder':       'assets/buildings/mine.png',
+    'treasure-baron':      'assets/buildings/mine.png',
+    'master-of-coin':       'assets/buildings/mine.png',
+    // Trading — the Diamond Press turning loot into value
+    'profiteer':       'assets/buildings/diamondpress.png',
+    'market-baron':     'assets/buildings/diamondpress.png',
+    'trade-magnate':     'assets/buildings/diamondpress.png',
+    // Alchemy — the Magic Academy, source of every talisman consumed
+    'consumer':         'assets/buildings/academy.png',
+    'talisman-master':   'assets/buildings/academy.png',
+    'boonlord':           'assets/buildings/academy.png',
+    // Loot — the enemy supply cart, hauling everything you've collected
+    'opportunist':     'assets/enemies/ramcart.png',
+    'fortune-hunter':   'assets/enemies/ramcart.png',
+    'loot-goblin':       'assets/enemies/ramcart.png',
     // Campaigns — reuse the exact campaign-select portrait art
     'forest-conqueror':   'assets/campaigns/campaign-1.jpg',
     'mountain-conqueror': 'assets/campaigns/campaign-2.jpg',
     'desert-conqueror':   'assets/campaigns/campaign-3.jpg',
     'frog-slayer':        'assets/campaigns/campaign-4.jpg',
+    // Playtime — the Castle you've kept standing, watch after watch
+    'dedicated-defender': 'assets/towers/castle.png',
+    'arcane-scholar':      'assets/towers/castle.png',
+    'touwers-fanatic':      'assets/towers/castle.png',
+    'eternal-watcher':       'assets/towers/castle.png',
     // Super Weapon Lab
     'arcane-spire':    'assets/buildings/superweapon.png',
     'frost-shatter':    'assets/buildings/superweapon.png',
     'arcane-arsenal':    'assets/buildings/superweapon.png',
-};
-
-// Categories with no photographed token yet, but a fitting hand-drawn vector stand-in —
-// reuses the marketplace's own chest icon art (see SettlementHub.js's Wooden/Golden/
-// Platinum Chest upgrades) since both ladders are about gold moving through the market.
-const ACHIEVEMENT_CHEST_VARIANT = {
-    spending: 'golden',
-    trading: 'platinum',
 };
 
 /**
@@ -146,17 +166,14 @@ export class AchievementsContentView {
 
     /**
      * Resolves the medallion's picture content for one achievement — a real cropped
-     * photo when available, else a themed vector token, else the achievement's own
-     * glyph rendered large as a placeholder to be replaced later.
+     * photo when available, else the achievement's own glyph rendered large as a
+     * placeholder (only reachable if an id is missing from ACHIEVEMENT_EMBLEM_IMAGE
+     * or its file fails to load).
      */
     _emblemContentFor(achievement) {
         const img = this.emblemImageCache[achievement.id];
         if (img) {
             return (ctx, cx, cy, r) => drawCoverImage(ctx, img, cx - r, cy - r, r * 2, r * 2);
-        }
-        const chestVariant = ACHIEVEMENT_CHEST_VARIANT[achievement.category];
-        if (chestVariant) {
-            return (ctx, cx, cy, r) => drawChestIcon(ctx, cx, cy, r * 1.9, chestVariant);
         }
         return (ctx, cx, cy, r) => {
             ctx.font = `${Math.round(r * 1.1)}px Trebuchet MS, sans-serif`;

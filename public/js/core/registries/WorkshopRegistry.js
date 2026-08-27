@@ -4,6 +4,7 @@
  */
 import { EnemyIntelRegistry } from './EnemyIntelRegistry.js';
 import { CampaignRegistry } from '../../game/CampaignRegistry.js';
+import { drawMedallion, drawCoverImage } from '../render/EmblemRenderer.js';
 
 // Chance (0-1) that a killed enemy drops a token for its own type. Only rolled
 // once the Commander's Workshop upgrade has been purchased (see EnemyManager).
@@ -149,14 +150,41 @@ const ENEMY_TIERS = [
     { ids: ['earthfrog', 'waterfrog', 'firefrog', 'airfrog'], requiredIntelPack: 'intel-pack-4', cost: 450 }
 ];
 
-// Campaign themes reuse the matching campaign's own icon art wholesale (drawn lazily via
-// CampaignRegistry.getCampaign so this module doesn't need to import campaign classes) -
-// no new art needed, and it visually ties each theme back to the campaign that unlocks it.
+// Campaign themes reuse the matching campaign's own emblem art wholesale - the exact
+// same photo (public/assets/campaigns/campaign-N.jpg) and bevelled-medallion frame the
+// campaign-select screen uses (see CampaignMenu.js's CAMPAIGN_EMBLEM_IMAGE / _drawEmblem),
+// so a theme tile visually ties straight back to the campaign that unlocks it. Falls back
+// to the campaign's vector drawIcon() while the photo is still loading or if it's missing.
+const _themeImageCache = new Map();
+function _getThemeImage(campaignId) {
+    let entry = _themeImageCache.get(campaignId);
+    if (entry) return entry;
+    entry = { img: null, loaded: false };
+    _themeImageCache.set(campaignId, entry);
+    const img = new Image();
+    img.onload = () => { entry.img = img; entry.loaded = true; };
+    img.onerror = () => { entry.loaded = true; };
+    img.src = `assets/campaigns/${campaignId}.jpg`;
+    return entry;
+}
+
+const THEME_RING_COLORS = { top: '#c8b488', mid: '#8f7748', bottom: '#4a3c22' };
+
 function _drawThemeIcon(campaignId, ctx, cx, cy, size) {
     const campaign = CampaignRegistry.getCampaign(campaignId);
-    if (campaign && campaign.drawIcon) {
-        campaign.drawIcon(ctx, cx, cy, size);
-    }
+    const entry = _getThemeImage(campaignId);
+    drawMedallion(ctx, {
+        x: cx, y: cy, radius: size / 2,
+        ringColors: THEME_RING_COLORS,
+        backdrop: '#141414',
+        drawContent: (ctx, ccx, ccy, r) => {
+            if (entry.loaded && entry.img) {
+                drawCoverImage(ctx, entry.img, ccx - r, ccy - r, r * 2, r * 2);
+            } else if (campaign && campaign.drawIcon) {
+                campaign.drawIcon(ctx, ccx, ccy, r * 1.9);
+            }
+        }
+    });
 }
 
 const THEME_ITEMS = {

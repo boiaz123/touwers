@@ -73,8 +73,8 @@ export class BarricadeTower extends Tower {
         // Sporadic, randomized throw cadence - purely cosmetic (see throwRubble()/landRubble()):
         // the slow effect itself is always active, this only paces the visual "new rubble
         // gets tossed on the pile" beat so it doesn't fire constantly.
-        this.minThrowInterval = 6.0;
-        this.maxThrowInterval = 9.0;
+        this.minThrowInterval = 12.0;
+        this.maxThrowInterval = 18.0;
         this.throwTimer = this.minThrowInterval + Math.random() * (this.maxThrowInterval - this.minThrowInterval);
 
         // Store original values for upgrade calculations
