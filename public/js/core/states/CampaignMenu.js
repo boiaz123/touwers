@@ -694,14 +694,8 @@ export class CampaignMenu {
         // for campaigns with a fixed level list; Commander's Workshop is a
         // free-form sandbox with no levels to track completion of.
         if (campaign.levelCount) {
-            // Level count (top right of card)
             const totalLevels = campaign.levelCount;
             const levelsCompleted = Math.round((campaign.progress / 100) * totalLevels);
-            const lvlText = `${levelsCompleted} / ${totalLevels} Levels`;
-            ctx.font = 'bold 13px serif';
-            ctx.textAlign = 'right';
-            ctx.fillStyle = campaign.progress >= 100 ? '#7edd6e' : '#b09060';
-            ctx.fillText(lvlText, b.x + b.width - 18, nameY + 4);
 
             // Progress bar inside the bottom strip
             const stripH = 22;

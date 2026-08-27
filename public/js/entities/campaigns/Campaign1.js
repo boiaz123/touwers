@@ -43,6 +43,7 @@ export class Campaign1 extends CampaignBase {
         // Falling leaves particle effect
         this.fallingLeaves = [];
         this.maxLeaves = 40;
+        this.leafSpawnTimer = 0;
 
         // Forest-themed label banner: dark wood tones, green accent border
         this.labelStyle = {
@@ -106,6 +107,16 @@ export class Campaign1 extends CampaignBase {
         
         // Generate static terrain cache once
         this.generateTerrainCache();
+
+        // Seed falling leaves scattered across the whole screen (mid-fall,
+        // not just at the top) so the drop reads as continuous from the
+        // first frame instead of visibly filling up over the next ~15s.
+        const canvas = this.stateManager.canvas;
+        this.fallingLeaves = [];
+        this.leafSpawnTimer = 0;
+        for (let i = 0; i < this.maxLeaves; i++) {
+            this.fallingLeaves.push(this._createLeaf(canvas, true));
+        }
 
         // Invalidate render caches so they rebuild at the current resolution
         this.backgroundCanvas = null;
@@ -1406,24 +1417,44 @@ export class Campaign1 extends CampaignBase {
         this.updateSharedUI(deltaTime);
     }
     
+    // `prefilled` scatters the leaf's y across the whole fall instead of
+    // starting at the top — used to seed the screen on entry so it looks
+    // continuous from frame one instead of visibly filling up over time.
+    _createLeaf(canvas, prefilled) {
+        return {
+            x: Math.random() * canvas.width,
+            y: prefilled ? Math.random() * (canvas.height + 20) - 10 : -10,
+            vx: (Math.random() - 0.5) * 30,
+            vy: 40 + Math.random() * 40,
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: (Math.random() - 0.5) * 8,
+            swayPhase: Math.random() * Math.PI * 2,
+            color: Math.random() > 0.5 ? '#d4a574' : '#a68d5b'
+        };
+    }
+
     updateFallingLeaves(deltaTime) {
-        // Spawn new leaves occasionally
-        if (this.fallingLeaves.length < this.maxLeaves && Math.random() < 0.15) {
-            const canvas = this.stateManager.canvas;
-            this.fallingLeaves.push({
-                x: Math.random() * canvas.width,
-                y: -10,
-                vx: (Math.random() - 0.5) * 30,
-                vy: 40 + Math.random() * 40,
-                rotation: Math.random() * Math.PI * 2,
-                rotationSpeed: (Math.random() - 0.5) * 8,
-                swayPhase: Math.random() * Math.PI * 2,
-                color: Math.random() > 0.5 ? '#d4a574' : '#a68d5b'
-            });
-        }
-        
         const canvas = this.stateManager.canvas;
-        
+
+        // Spawn at (roughly) the same average rate leaves exit at the
+        // bottom, instead of a fixed fast interval. A fixed fast interval
+        // fills the screen to maxLeaves well before the first leaf finishes
+        // its ~10-20s fall, so spawning then stalls for a long stretch
+        // until leaves start exiting — the "bunch, then a gap" pattern.
+        // Matching the rate to (average fall distance / average fall
+        // speed) / maxLeaves keeps the population hovering near maxLeaves
+        // smoothly, so replacements trickle in as leaves leave.
+        const avgLifetime = (canvas.height + 20) / 60;
+        const spawnInterval = avgLifetime / this.maxLeaves;
+
+        this.leafSpawnTimer -= deltaTime;
+        if (this.leafSpawnTimer <= 0) {
+            if (this.fallingLeaves.length < this.maxLeaves) {
+                this.fallingLeaves.push(this._createLeaf(canvas, false));
+            }
+            this.leafSpawnTimer = spawnInterval * (0.7 + Math.random() * 0.6);
+        }
+
         // Update leaves
         for (let i = this.fallingLeaves.length - 1; i >= 0; i--) {
             const leaf = this.fallingLeaves[i];
