@@ -434,7 +434,7 @@ export class SettlementHub {
             // Only handle wheel events when upgrades panel is open
             if (this.activePopup === 'upgrades' && this.upgradesPopup && this.upgradesPopup.isOpen) {
                 e.preventDefault();
-                const rect = this.stateManager.canvas.getBoundingClientRect();
+                const rect = this._getCanvasRect();
                 const scaleX = this.stateManager.canvas.width / rect.width;
                 const scaleY = this.stateManager.canvas.height / rect.height;
                 const x = (e.clientX - rect.left) * scaleX;
@@ -454,8 +454,22 @@ export class SettlementHub {
         }
     }
 
+    // getBoundingClientRect() forces a synchronous layout read. handleMouseMove fires on
+    // every mousemove and wheelHandler above fires on every wheel tick, so both route
+    // through Game's cached rect (see Game.getCachedCanvasRect, kept fresh by its
+    // ResizeObserver + resize/orientation listeners) instead of paying a forced reflow
+    // per input event - the same fix GameplayState.js's handleMouseMove uses (see commit
+    // "full screen back, mouse fix?"). This is exactly the mouse-lag bug that fix solved,
+    // just left unported to this file - do NOT replace this with a direct
+    // canvas.getBoundingClientRect() call, that reintroduces the stutter in the Settlement Hub.
+    _getCanvasRect() {
+        return this.stateManager.game
+            ? this.stateManager.game.getCachedCanvasRect()
+            : this.stateManager.canvas.getBoundingClientRect();
+    }
+
     handleMouseMove(e) {
-        const rect = this.stateManager.canvas.getBoundingClientRect();
+        const rect = this._getCanvasRect();
         // Account for CSS scaling
         const scaleX = this.stateManager.canvas.width / rect.width;
         const scaleY = this.stateManager.canvas.height / rect.height;
@@ -483,35 +497,29 @@ export class SettlementHub {
         } else if (this.activePopup === 'workshop' && this.workshopPopup) {
             this.workshopPopup.updateHoverState(x, y);
         } else {
-            // Check settlement building hover states
+            // Check settlement building hover states. Hit-tested inline (no per-building
+            // bounds object) and via .some() (stops at the first hit) since this reruns on
+            // every mousemove - allocating a fresh {x,y,width,height} per building per event
+            // was generating constant GC garbage and was a real contributor to the Settlement
+            // Hub's mouse lag. Keep it allocation-free if you touch this again.
             const sf = this._sf || 1;
-            let isHoveringBuilding = false;
-            this.settlementBuildings.forEach(item => {
-                if (item.clickable) {
-                    let bounds;
-                    if (item.building instanceof TrainingGrounds) {
-                        const hitR = 150 * sf;
-                        bounds = {
-                            x: item.building.x - hitR,
-                            y: item.building.y - hitR,
-                            width: hitR * 2,
-                            height: hitR * 2
-                        };
-                    } else {
-                        const size = item.scale * 4;
-                        bounds = {
-                            x: item.building.x - size / 2,
-                            y: item.building.y - size / 2,
-                            width: size,
-                            height: size
-                        };
-                    }
-
-                    if (x >= bounds.x && x <= bounds.x + bounds.width &&
-                        y >= bounds.y && y <= bounds.y + bounds.height) {
-                        isHoveringBuilding = true;
-                    }
+            const isHoveringBuilding = this.settlementBuildings.some(item => {
+                if (!item.clickable) return false;
+                let hx, hy, hw, hh;
+                if (item.building instanceof TrainingGrounds) {
+                    const hitR = 150 * sf;
+                    hx = item.building.x - hitR;
+                    hy = item.building.y - hitR;
+                    hw = hitR * 2;
+                    hh = hitR * 2;
+                } else {
+                    const size = item.scale * 4;
+                    hx = item.building.x - size / 2;
+                    hy = item.building.y - size / 2;
+                    hw = size;
+                    hh = size;
                 }
+                return x >= hx && x <= hx + hw && y >= hy && y <= hy + hh;
             });
             // Update Sir Frogerty button hovers
             if (this.sirFrogerty) {

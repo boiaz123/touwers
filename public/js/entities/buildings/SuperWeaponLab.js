@@ -36,11 +36,10 @@ export class SuperWeaponLab extends Building {
                 id: 'frostNova',
                 name: 'Frozen Nova',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#60D5FA" stroke-width="1.5" stroke-linecap="round"><line x1="10" y1="2" x2="10" y2="18"/><line x1="3.1" y1="14" x2="16.9" y2="6"/><line x1="3.1" y1="6" x2="16.9" y2="14"/><line x1="10" y1="4.5" x2="8" y2="7"/><line x1="10" y1="4.5" x2="12" y2="7"/><line x1="10" y1="15.5" x2="8" y2="13"/><line x1="10" y1="15.5" x2="12" y2="13"/><circle cx="10" cy="10" r="2" fill="#38BDF8" stroke="none"/></svg>',
-                description: 'Freezes all enemies for a duration and deals ice damage',
+                description: 'Freezes all enemies for a duration (no damage)',
                 baseLevel: 2,  // Unlocked at lab level 2
                 upgradeLevel: 0,
                 maxUpgradeLevel: 50,
-                damage: 25,
                 freezeDuration: 3,
                 radius: 150,
                 cooldown: 45,
@@ -1202,7 +1201,6 @@ export class SuperWeaponLab extends Building {
                 spell.radius += 2;          // +2 radius/level → +100 at max (total 220)
                 break;
             case 'frostNova':
-                spell.damage += 2;          // +2 ice dmg/level → +100 at max (total 125)
                 spell.freezeDuration += 0.1; // +0.1s/level → +5s at max (total 8s)
                 spell.radius += 2;          // +2 radius/level → +100 at max (total 250)
                 break;
@@ -1220,10 +1218,10 @@ export class SuperWeaponLab extends Building {
                 }
                 break;
         }
-        
+
         return true;
     }
-    
+
     // Upgrade combination spell using gold (anytime after lab level 2+)
     upgradeComboSpell(spellId, goldCost) {
         if (this.labLevel < 2) {

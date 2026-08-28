@@ -926,7 +926,6 @@ export class UIManager {
                 break;
             case 'frostNova':
                 statsHTML = `
-                    <div><span>Damage:</span> <span style="color: #FFD700;">${spell.damage}</span></div>
                     <div><span>Freeze:</span> <span style="color: #FFD700;">${spell.freezeDuration}s</span></div>
                     <div><span>Radius:</span> <span style="color: #FFD700;">${spell.radius}</span></div>
                     ${cooldownHTML}
@@ -3511,7 +3510,6 @@ export class UIManager {
                     } else if (spell.id === 'frostNova') {
                         // Base freeze radius is 150px (see SuperWeaponLab spell definitions).
                         const radiusPercent = Math.round(2 / 150 * 100);
-                        tooltipText += `<div>Ice Damage: +2</div>`;
                         tooltipText += `<div>Freeze Duration: +0.1s</div>`;
                         tooltipText += `<div>Radius: +${radiusPercent}%</div>`;
                         tooltipText += `<div style="color: #88ddff;">Freeze always applies (ignores immunity)</div>`;

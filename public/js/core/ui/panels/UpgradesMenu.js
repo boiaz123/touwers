@@ -1298,8 +1298,9 @@ export class UpgradesMenu {
                 
                 
                 if (this.stateManager.audioManager) {
-                    // Use upgrade sound for buying in marketplace
-                    this.stateManager.audioManager.playSFX('upgrade');
+                    // Non-upgrade purchases (consumables, intel, music, boons) use LootCollect;
+                    // the 'upgrade' sfx is reserved for actual upgrades (item.type === 'upgrade' above).
+                    this.stateManager.audioManager.playSFX('loot-collect');
                 }
             }
             

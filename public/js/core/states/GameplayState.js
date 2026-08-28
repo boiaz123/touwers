@@ -1056,13 +1056,11 @@ export class GameplayState {
                 this.enemyManager.enemies.forEach(enemy => {
                     const dist = Math.hypot(enemy.x - x, enemy.y - y);
                     if (dist <= spell.radius) {
-                        // Apply freeze (direct speed manipulation - affects all enemies including frogs)
+                        // Freeze only - this is a crowd-control spell, not a damage spell
+                        // (direct speed manipulation - affects all enemies including frogs)
                         enemy.freezeTimer = spell.freezeDuration;
                         enemy.originalSpeed = enemy.originalSpeed || enemy.speed;
                         enemy.speed = 0;
-                        // Apply ice damage for visual feedback (elemental frogs are immune to ice but still get frozen)
-                        const iceDamage = (spell.damage || 25) * (1 - dist / spell.radius * 0.5);
-                        enemy.takeDamage(iceDamage, 0, 'ice');
                     }
                 });
                 this.createSpellEffect('frostNova', x, y, spell);
