@@ -28,13 +28,10 @@ const INITIAL_WAVE_COOLDOWN = 30;
 const BETWEEN_WAVE_COOLDOWN = 15;
 const ENEMY_CLICK_RADIUS = 28;
 
-// Sandbox mode: endless discrete waves cycling this fixed enemy roster (same mix the old
-// continuous-spawn stream used), gradually scaled up in health each wave rather than enemy
-// count - see startWave()'s isSandbox branch.
+// Dev-only stress-spawn enemy roster (see _devStressSpawn below) - unrelated to sandbox
+// mode's actual wave format, which now comes from SandboxLevel.getWaveConfig() like any
+// other level.
 const SANDBOX_ENEMY_PATTERN = ['basic', 'villager', 'beefyenemy', 'archer', 'mage', 'knight', 'frog'];
-const SANDBOX_WAVE_ENEMY_COUNT = 20;
-const SANDBOX_SPAWN_INTERVAL = 0.6;
-const SANDBOX_HEALTH_GROWTH_PER_WAVE = 0.08; // +8% enemy health per wave, compounding
 
 export class GameplayState {
     constructor(stateManager) {
@@ -1673,21 +1670,8 @@ export class GameplayState {
     }
     
     getWaveConfig(level, wave) {
-        if (this.levelType === 'sandbox') {
-            // Sandbox mode: continuously increasing difficulty
-            const baseEnemies = 8;
-            const baseHealth_multiplier = 1.0;
-            const baseSpeed = 40;
-            
-            return {
-                enemyCount: baseEnemies + Math.floor(wave * 1.2),
-                enemyHealth_multiplier: baseHealth_multiplier + (wave - 1) * 0.05,
-                speedMultiplier: Math.min(2.0, 0.8 + (wave - 1) * 0.04),
-                spawnInterval: Math.max(0.3, 1.0 - (wave - 1) * 0.03)
-            };
-        }
-        
-        // Get wave config from the level itself
+        // Get wave config from the level itself (sandbox included - SandboxLevel defines
+        // its own 100-wave getWaveConfig() just like a campaign level).
         if (this.level && typeof this.level.getWaveConfig === 'function') {
             const config = this.level.getWaveConfig(wave);
             if (config) {
@@ -1729,59 +1713,44 @@ export class GameplayState {
         this.waveInProgress = true;
         this.waveCompleted = false;
         
-        if (this.isSandbox) {
-            // Sandbox mode: endless discrete waves (same enemy-manager wave path as
-            // campaign levels, so it naturally hooks into the existing wave-complete/
-            // cooldown/next-wave cycle in _checkWaveCompletion() - maxWavesForLevel is
-            // Infinity for sandbox so that cycle just never terminates). Enemy count per
-            // wave stays fixed; health compounds each wave so it keeps getting harder
-            // instead of the old flat forever-stream.
-            const healthMultiplier = Math.pow(1 + SANDBOX_HEALTH_GROWTH_PER_WAVE, this.gameState.wave - 1);
-            this.enemyManager.spawnWaveWithPattern(
-                this.gameState.wave,
-                SANDBOX_WAVE_ENEMY_COUNT,
-                healthMultiplier,
-                1.0,
-                SANDBOX_SPAWN_INTERVAL,
-                SANDBOX_ENEMY_PATTERN
-            );
-        } else {
-            // Campaign mode: traditional wave spawning
-            const waveConfig = this.getWaveConfig(this.currentLevel, this.gameState.wave);
-            
-            if (waveConfig && waveConfig.enemyCount > 0) {
-                // Track total enemies spawned across all waves
-                this.totalEnemiesSpawned += waveConfig.enemyCount;
+        // Traditional wave spawning, driven entirely by the level's getWaveConfig() -
+        // sandbox included (SandboxLevel.getWaveConfig() clamps to its last defined wave
+        // and keeps reusing it, which is how sandbox stays endless even though
+        // maxWavesForLevel is Infinity and completeLevel() never fires for it).
+        const waveConfig = this.getWaveConfig(this.currentLevel, this.gameState.wave);
 
-                // Frog King boss fanfare - plays once when he spawns in the space campaign's final level
-                if (this.currentCampaignId === 'campaign-4' && this.currentLevel === 'level8' &&
-                    waveConfig.wavePattern && waveConfig.wavePattern.includes('frogking')) {
-                    this.stateManager.audioManager.playMusic('frog-king-theme');
-                }
+        if (waveConfig && waveConfig.enemyCount > 0) {
+            // Track total enemies spawned across all waves
+            this.totalEnemiesSpawned += waveConfig.enemyCount;
 
-                if (waveConfig.wavePattern) {
-                    // Use custom pattern from level
-                    this.enemyManager.spawnWaveWithPattern(
-                        this.gameState.wave,
-                        waveConfig.enemyCount,
-                        waveConfig.enemyHealth_multiplier,
-                        waveConfig.speedMultiplier,
-                        waveConfig.spawnInterval,
-                        waveConfig.wavePattern
-                    );
-                } else {
-                    // Use standard spawning
-                    this.enemyManager.spawnWave(
-                        this.gameState.wave, 
-                        waveConfig.enemyCount,
-                        waveConfig.enemyHealth_multiplier,
-                        waveConfig.speedMultiplier,
-                        waveConfig.spawnInterval
-                    );
-                }
-            } else {
-                console.error('startWave: Invalid wave config - no enemies to spawn. Wave:', this.gameState.wave, 'Config:', waveConfig);
+            // Frog King boss fanfare - plays once when he spawns in the space campaign's final level
+            if (this.currentCampaignId === 'campaign-4' && this.currentLevel === 'level8' &&
+                waveConfig.wavePattern && waveConfig.wavePattern.includes('frogking')) {
+                this.stateManager.audioManager.playMusic('frog-king-theme');
             }
+
+            if (waveConfig.wavePattern) {
+                // Use custom pattern from level
+                this.enemyManager.spawnWaveWithPattern(
+                    this.gameState.wave,
+                    waveConfig.enemyCount,
+                    waveConfig.enemyHealth_multiplier,
+                    waveConfig.speedMultiplier,
+                    waveConfig.spawnInterval,
+                    waveConfig.wavePattern
+                );
+            } else {
+                // Use standard spawning
+                this.enemyManager.spawnWave(
+                    this.gameState.wave,
+                    waveConfig.enemyCount,
+                    waveConfig.enemyHealth_multiplier,
+                    waveConfig.speedMultiplier,
+                    waveConfig.spawnInterval
+                );
+            }
+        } else {
+            console.error('startWave: Invalid wave config - no enemies to spawn. Wave:', this.gameState.wave, 'Config:', waveConfig);
         }
         
         this.uiManager.updateUI();

@@ -29,6 +29,17 @@ export class SharpshooterTower extends ArcherTower {
         this.range = SharpshooterTower.MASSIVE_RANGE;
     }
 
+    /**
+     * MASSIVE_RANGE covers essentially the whole map, so Tower.findTarget()'s default
+     * spatial-grid query would scan a huge bounding box of grid cells (radius/cellSize
+     * cells per axis, squared - thousands of cells at this range) on every retarget, when a
+     * wave only ever has a few dozen live enemies to begin with. Skip the grid and scan
+     * enemies directly - see Tower.linearScanTarget's doc.
+     */
+    findTarget(enemies) {
+        return this.linearScanTarget(enemies, this.effectiveRange ?? this.range);
+    }
+
     /** Reuses ArcherTower's stone foundation + wooden shaft unmodified (see
      *  renderFoundationAndShaft()), then replaces the plain platform and thatched roof
      *  with a fortified stone battlement and a severe iron spire - a patient marksman's

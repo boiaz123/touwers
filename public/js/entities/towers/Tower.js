@@ -95,7 +95,16 @@ export class Tower {
             return closest;
         }
 
-        // Fallback: linear scan of all enemies
+        return this.linearScanTarget(enemies, range);
+    }
+
+    /**
+     * Direct O(enemies) nearest-target scan, bypassing the spatial grid entirely. Used as
+     * findTarget()'s fallback when no grid is set, and directly by SharpshooterTower - whose
+     * near-map-covering range makes the grid's bounding-box cell query (radius/cellSize cells
+     * per axis, squared) scan far more grid cells than there are live enemies to check.
+     */
+    linearScanTarget(enemies, range) {
         let closest = null;
         let closestDistSq = range * range;
 
@@ -109,7 +118,7 @@ export class Tower {
                 closestDistSq = distSq;
             }
         }
-        
+
         return closest;
     }
 
