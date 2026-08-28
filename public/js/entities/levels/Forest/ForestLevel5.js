@@ -199,16 +199,16 @@ export class ForestLevel5 extends LevelBase {
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 1.1, 
+            enemyHealth_multiplier: 1.2, 
             speedMultiplier: 0.7, 
-            spawnInterval: 0.9, 
+            spawnInterval: 1.4, 
             pattern: [{ type: 'villager', count: 22 }] 
         }
         // Wave 4
         , { 
             enemyHealth_multiplier: 1, 
             speedMultiplier: 1, 
-            spawnInterval: 1, 
+            spawnInterval: 1.3, 
             pattern: [{ type: 'archer', count: 12 }] 
         }
         // Wave 5
@@ -222,12 +222,12 @@ export class ForestLevel5 extends LevelBase {
         , { 
             enemyHealth_multiplier: 1.1, 
             speedMultiplier: 1, 
-            spawnInterval: 0.7, 
+            spawnInterval: 1.2, 
             pattern: [{ type: 'archer', count: 22 }] 
         }
         // Wave 7
         , { 
-            enemyHealth_multiplier: 1.5, 
+            enemyHealth_multiplier: 1.3, 
             speedMultiplier: 0.6, 
             spawnInterval: 1.2, 
             pattern: [{ type: 'basic', count: 15 }, { type: 'villager', count: 15 }] 
@@ -236,19 +236,19 @@ export class ForestLevel5 extends LevelBase {
         , { 
             enemyHealth_multiplier: 2, 
             speedMultiplier: 0.5, 
-            spawnInterval: 1, 
-            pattern: [{ type: 'basic', count: 10 }, { type: 'villager', count: 10 }, { type: 'beefyenemy', count: 4 }] 
+            spawnInterval: 1.7, 
+            pattern: [{ type: 'basic', count: 10 }, { type: 'beefyenemy', count: 4 }, { type: 'villager', count: 10 }] 
         }
         // Wave 9
         , { 
             enemyHealth_multiplier: 2, 
             speedMultiplier: 0.5, 
-            spawnInterval: 1.5, 
+            spawnInterval: 2, 
             pattern: [{ type: 'beefyenemy', count: 10 }] 
         }
         // Wave 10
         , { 
-            enemyHealth_multiplier: 1.8, 
+            enemyHealth_multiplier: 1.6, 
             speedMultiplier: 0.5, 
             spawnInterval: 1.2, 
             pattern: [{ type: 'beefyenemy', count: 7, healthMultiplier: 2 }, { type: 'archer', count: 5 }, { type: 'basic', count: 5 }, { type: 'villager', count: 5 }] 
@@ -257,26 +257,26 @@ export class ForestLevel5 extends LevelBase {
         , { 
             enemyHealth_multiplier: 1.3, 
             speedMultiplier: 0.9, 
-            spawnInterval: 0.5, 
+            spawnInterval: 1, 
             pattern: [{ type: 'archer', count: 35 }] 
         }
         // Wave 12
         , { 
-            enemyHealth_multiplier: 2.5, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 0.85, 
-            spawnInterval: 0.8, 
+            spawnInterval: 1.3, 
             pattern: [{ type: 'beefyenemy', count: 10 }] 
         }
         // Wave 13
         , { 
             enemyHealth_multiplier: 1.2, 
-            speedMultiplier: 1.25, 
-            spawnInterval: 0.9, 
+            speedMultiplier: 1.1, 
+            spawnInterval: 1.2, 
             pattern: [{ type: 'villager', count: 12 }, { type: 'basic', count: 14 }, { type: 'archer', count: 12 }, { type: 'beefyenemy', count: 6, healthMultiplier: 2 }] 
         }
         // Wave 14
         , { 
-            enemyHealth_multiplier: 2.7, 
+            enemyHealth_multiplier: 1.5, 
             speedMultiplier: 1, 
             spawnInterval: 1, 
             pattern: [{ type: 'knight', count: 1 }] 
