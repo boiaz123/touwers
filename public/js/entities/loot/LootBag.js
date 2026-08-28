@@ -210,24 +210,32 @@ export class LootBag {
         ctx.rotate(angle);
 
         // Draw glow effect behind the sack
-        const glowIntensity = this.isRare ? 
-            0.4 + Math.sin(Date.now() / 300) * 0.25 : 
+        const glowIntensity = this.isRare ?
+            0.4 + Math.sin(Date.now() / 300) * 0.25 :
             0.3 + Math.sin(Date.now() / 400) * 0.2;
-        
-        // Create radial gradient for glow
+
+        // Radial gradient for the glow - the gradient's own color stops only depend on
+        // isRare (constant for this bag's whole lifetime), so it's built once and cached
+        // instead of every frame. Every on-screen bag was otherwise creating a fresh
+        // GPU-backed gradient 60x/sec just to animate a pulse - the actual per-frame
+        // intensity is applied afterward via globalAlpha instead, which is mathematically
+        // identical (gradient alpha × globalAlpha) since the outer stop is 0 either way.
         if (ctx.createRadialGradient) {
-            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.width * 0.8);
-            if (this.isRare) {
-                gradient.addColorStop(0, `rgba(196, 181, 253, ${glowIntensity * 0.5})`);
-                gradient.addColorStop(1, `rgba(196, 181, 253, 0)`);
-            } else {
-                gradient.addColorStop(0, `rgba(255, 215, 0, ${glowIntensity * 0.4})`);
-                gradient.addColorStop(1, `rgba(255, 215, 0, 0)`);
+            if (!this._glowGrad || this._glowGradIsRare !== this.isRare) {
+                this._glowGradIsRare = this.isRare;
+                this._glowGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, this.width * 0.8);
+                const glowRgb = this.isRare ? '196, 181, 253' : '255, 215, 0';
+                this._glowGrad.addColorStop(0, `rgba(${glowRgb}, 1)`);
+                this._glowGrad.addColorStop(1, `rgba(${glowRgb}, 0)`);
             }
-            ctx.fillStyle = gradient;
+            const baseAlpha = this.isRare ? glowIntensity * 0.5 : glowIntensity * 0.4;
+            const prevAlpha = ctx.globalAlpha;
+            ctx.fillStyle = this._glowGrad;
+            ctx.globalAlpha = (prevAlpha === undefined ? 1 : prevAlpha) * baseAlpha;
             ctx.beginPath();
             ctx.ellipse(0, 1, this.width * 0.9, this.height * 0.7, 0, 0, Math.PI * 2);
             ctx.fill();
+            ctx.globalAlpha = prevAlpha;
         }
 
         // Main satchel body - wide and flat like a proper satchel/pouch
@@ -532,12 +540,24 @@ export class RealmShardDrop {
 
         // Large outer glow
         const glowColor = this.lootId === 'realm-shard-top' ? '#FF80FF' : '#00FFCC';
+        // The middle/outer stops are constant but the inner stop's alpha pulses with time,
+        // so (unlike the 2-stop glow above) this can't be reduced to a single globalAlpha
+        // multiply without also incorrectly dimming the constant middle stop. Instead,
+        // bucket the pulse value so the gradient is only rebuilt when it's changed enough
+        // to matter (~20 steps/cycle - imperceptible vs. every-frame, same principle as
+        // EnemyRenderAdapter's HB_BUCKETS health-bar redraw threshold) instead of on every
+        // single frame regardless of whether the pulse actually moved.
         if (ctx.createRadialGradient) {
-            const outerGlow = ctx.createRadialGradient(0, 0, 2, 0, 0, 28);
-            outerGlow.addColorStop(0, `rgba(255,220,50,${0.55 * pulse})`);
-            outerGlow.addColorStop(0.4, `${glowColor}44`);
-            outerGlow.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = outerGlow;
+            const pulseBucket = Math.round(pulse * 20);
+            if (!this._outerGlowGrad || this._outerGlowLootId !== this.lootId || this._outerGlowPulseBucket !== pulseBucket) {
+                this._outerGlowLootId = this.lootId;
+                this._outerGlowPulseBucket = pulseBucket;
+                this._outerGlowGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, 28);
+                this._outerGlowGrad.addColorStop(0, `rgba(255,220,50,${0.55 * pulse})`);
+                this._outerGlowGrad.addColorStop(0.4, `${glowColor}44`);
+                this._outerGlowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            }
+            ctx.fillStyle = this._outerGlowGrad;
             ctx.beginPath(); ctx.arc(0, 0, 28, 0, Math.PI * 2); ctx.fill();
         }
 
@@ -556,17 +576,22 @@ export class RealmShardDrop {
         ctx.lineTo(-10, -6);
         ctx.closePath();
 
-        const cg = ctx.createLinearGradient(-12, -16, 12, 18);
-        if (this.lootId === 'realm-shard-top') {
-            cg.addColorStop(0, '#FFCCFF');
-            cg.addColorStop(0.45, '#CC44CC');
-            cg.addColorStop(1, '#440044');
-        } else {
-            cg.addColorStop(0, '#AAFFEE');
-            cg.addColorStop(0.45, '#00CCAA');
-            cg.addColorStop(1, '#003322');
+        // Fully static per lootId (no time-dependent stops at all) - cached instead of
+        // rebuilt every frame, same reasoning as the glows above.
+        if (!this._crystalGrad || this._crystalGradLootId !== this.lootId) {
+            this._crystalGradLootId = this.lootId;
+            this._crystalGrad = ctx.createLinearGradient(-12, -16, 12, 18);
+            if (this.lootId === 'realm-shard-top') {
+                this._crystalGrad.addColorStop(0, '#FFCCFF');
+                this._crystalGrad.addColorStop(0.45, '#CC44CC');
+                this._crystalGrad.addColorStop(1, '#440044');
+            } else {
+                this._crystalGrad.addColorStop(0, '#AAFFEE');
+                this._crystalGrad.addColorStop(0.45, '#00CCAA');
+                this._crystalGrad.addColorStop(1, '#003322');
+            }
         }
-        ctx.fillStyle = cg;
+        ctx.fillStyle = this._crystalGrad;
         ctx.fill();
         ctx.strokeStyle = glowColor;
         ctx.lineWidth = 1.5 * pulse;

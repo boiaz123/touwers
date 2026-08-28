@@ -669,13 +669,23 @@ export class MagicAcademy extends Building {
         const glintAngle = Math.PI * 0.65 + Math.sin(this.animationTime * 0.3) * 0.4;
         const glintX = cx + Math.cos(glintAngle) * (innerRX + (outerRX - innerRX) * 0.5);
         const glintY = cy + Math.sin(glintAngle) * (innerRY + (outerRY - innerRY) * 0.5);
-        const glintGrad = ctx.createRadialGradient(glintX, glintY, 0, glintX, glintY, 8);
-        glintGrad.addColorStop(0, 'rgba(220, 235, 255, 0.3)');
-        glintGrad.addColorStop(1, 'rgba(220, 235, 255, 0)');
-        ctx.fillStyle = glintGrad;
+        // Colors are fully static and the shape is fixed size - only the position drifts
+        // (glintAngle) - so the gradient is built once in local space and repositioned via
+        // translate() each frame instead of rebuilt, same approach as
+        // SuperWeaponLab.renderFloatingRunes' orbiting glow.
+        if (!this._glintGrad || this._glintGradCtx !== ctx) {
+            this._glintGradCtx = ctx;
+            this._glintGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
+            this._glintGrad.addColorStop(0, 'rgba(220, 235, 255, 0.3)');
+            this._glintGrad.addColorStop(1, 'rgba(220, 235, 255, 0)');
+        }
+        ctx.save();
+        ctx.translate(glintX, glintY);
+        ctx.fillStyle = this._glintGrad;
         ctx.beginPath();
-        ctx.ellipse(glintX, glintY, 8, 3.4, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 8, 3.4, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
 
         // Ripples clipped to moat ring
         ctx.save();
@@ -1117,13 +1127,22 @@ export class MagicAcademy extends Building {
         ctx.arc(this.x, towerY - roofHeight, 6, 0, Math.PI * 2);
         ctx.fill();
 
-        const orbGlow = ctx.createRadialGradient(this.x, towerY - roofHeight, 0, this.x, towerY - roofHeight, 15);
-        orbGlow.addColorStop(0, `rgba(138, 43, 226, ${orbPulse * 0.5})`);
-        orbGlow.addColorStop(1, 'rgba(138, 43, 226, 0)');
-        ctx.fillStyle = orbGlow;
+        // Position/radius are fixed; only the pulse alpha (a single scalar multiple)
+        // varies, so cached at full intensity and modulated via globalAlpha instead of
+        // rebuilt every frame.
+        if (!this._orbGlowGrad || this._orbGlowGradCtx !== ctx) {
+            this._orbGlowGradCtx = ctx;
+            this._orbGlowGrad = ctx.createRadialGradient(this.x, towerY - roofHeight, 0, this.x, towerY - roofHeight, 15);
+            this._orbGlowGrad.addColorStop(0, 'rgba(138, 43, 226, 0.5)');
+            this._orbGlowGrad.addColorStop(1, 'rgba(138, 43, 226, 0)');
+        }
+        const prevAlpha = ctx.globalAlpha;
+        ctx.fillStyle = this._orbGlowGrad;
+        ctx.globalAlpha = (prevAlpha === undefined ? 1 : prevAlpha) * orbPulse;
         ctx.beginPath();
         ctx.arc(this.x, towerY - roofHeight, 15, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = prevAlpha;
     }
 
     /** Strategy A piece: spire body, windows, cap - fully static (window glow is a fixed color, not animationTime-driven). */
@@ -1229,17 +1248,34 @@ export class MagicAcademy extends Building {
             { x: this.x + 30, y: this.y, height: size * 0.35 }
         ];
 
-        spirePositions.forEach(spire => {
+        // spirePositions above is a fresh array literal every call (not stable object
+        // references across frames like the archer/fighter data this session's other
+        // fixes cache gradients on), so the cache lives here on `this`, indexed by spire
+        // position instead. Position/radius are fixed per spire; only the pulse alpha (a
+        // single scalar multiple) varies, so cached at full intensity and modulated via
+        // globalAlpha instead of rebuilt every frame.
+        if (!this._crystalGlowGrads || this._crystalGlowGradsCtx !== ctx) {
+            this._crystalGlowGradsCtx = ctx;
+            this._crystalGlowGrads = [];
+        }
+
+        spirePositions.forEach((spire, spireIdx) => {
             const capHeight = size * 0.12;
             const crystalPulse = Math.sin(this.animationTime * 4 + spire.x) * 0.3 + 0.7;
 
-            const crystalGlow = ctx.createRadialGradient(spire.x, spire.y - spire.height - capHeight, 0, spire.x, spire.y - spire.height - capHeight, 10);
-            crystalGlow.addColorStop(0, `rgba(138, 43, 226, ${crystalPulse * 0.4})`);
-            crystalGlow.addColorStop(1, 'rgba(138, 43, 226, 0)');
-            ctx.fillStyle = crystalGlow;
+            if (!this._crystalGlowGrads[spireIdx]) {
+                const crystalGlow = ctx.createRadialGradient(spire.x, spire.y - spire.height - capHeight, 0, spire.x, spire.y - spire.height - capHeight, 10);
+                crystalGlow.addColorStop(0, 'rgba(138, 43, 226, 0.4)');
+                crystalGlow.addColorStop(1, 'rgba(138, 43, 226, 0)');
+                this._crystalGlowGrads[spireIdx] = crystalGlow;
+            }
+            const prevAlpha = ctx.globalAlpha;
+            ctx.fillStyle = this._crystalGlowGrads[spireIdx];
+            ctx.globalAlpha = (prevAlpha === undefined ? 1 : prevAlpha) * crystalPulse;
             ctx.beginPath();
             ctx.arc(spire.x, spire.y - spire.height - capHeight, 10, 0, Math.PI * 2);
             ctx.fill();
+            ctx.globalAlpha = prevAlpha;
 
             ctx.fillStyle = `rgba(200, 100, 255, ${crystalPulse})`;
             ctx.beginPath();

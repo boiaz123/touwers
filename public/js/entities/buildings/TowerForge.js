@@ -1566,16 +1566,27 @@ export class TowerForge extends Building {
         const openingX = this.x - openingWidth / 2 - 15;
         const openingY = this.y - openingHeight / 2 - 5;
 
-        const fireGlow = ctx.createRadialGradient(
-            openingX + openingWidth/2, openingY + openingHeight/2, 0,
-            openingX + openingWidth/2, openingY + openingHeight/2, openingWidth
-        );
-        fireGlow.addColorStop(0, `rgba(255, 100, 0, ${this.fireIntensity * 0.8})`);
-        fireGlow.addColorStop(0.6, `rgba(255, 50, 0, ${this.fireIntensity * 0.4})`);
-        fireGlow.addColorStop(1, 'rgba(255, 0, 0, 0)');
-
-        ctx.fillStyle = fireGlow;
+        // Position is fixed (buildings never move) and every non-zero stop is a scalar
+        // multiple of fireIntensity, so this is cached at full intensity and modulated via
+        // globalAlpha instead of rebuilt every frame - same reasoning as the other glows
+        // fixed elsewhere this session (LootBag, GoldMine, SuperWeaponLab). Keyed on `size`
+        // too since that can change on a resolution switch.
+        if (!this._fireGlowGrad || this._fireGlowGradSize !== size || this._fireGlowGradCtx !== ctx) {
+            this._fireGlowGradSize = size;
+            this._fireGlowGradCtx = ctx;
+            this._fireGlowGrad = ctx.createRadialGradient(
+                openingX + openingWidth/2, openingY + openingHeight/2, 0,
+                openingX + openingWidth/2, openingY + openingHeight/2, openingWidth
+            );
+            this._fireGlowGrad.addColorStop(0, 'rgba(255, 100, 0, 0.8)');
+            this._fireGlowGrad.addColorStop(0.6, 'rgba(255, 50, 0, 0.4)');
+            this._fireGlowGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+        }
+        const prevAlpha = ctx.globalAlpha;
+        ctx.fillStyle = this._fireGlowGrad;
+        ctx.globalAlpha = (prevAlpha === undefined ? 1 : prevAlpha) * this.fireIntensity;
         ctx.fillRect(openingX - openingWidth/2, openingY - openingHeight/2, openingWidth * 2, openingHeight * 2);
+        ctx.globalAlpha = prevAlpha;
     }
 
     /** Strategy B piece: chimney interior fire glow - fireIntensity-driven, not bakeable. Recomputes the same chimney geometry as renderChimney() above. */

@@ -483,7 +483,18 @@ export class SuperWeaponLab extends Building {
             { t: -0.586, size: size * 0.031 }
         ];
 
-        windowPositions.forEach(win => {
+        // Per-window glow gradients are cached below (keyed by window index) instead of
+        // rebuilt every frame - a building never moves so each window's (x, wy) and size
+        // are fixed, and every non-zero stop in both gradients is a plain scalar multiple
+        // of runeGlow, so baking at runeGlow=1 and applying the real value via globalAlpha
+        // reproduces the exact original blend (outer stop is 0 regardless either way).
+        if (!this._windowGlowGrads || this._windowGlowCtx !== ctx) {
+            this._windowGlowCtx = ctx;
+            this._windowOuterGlowGrads = [];
+            this._windowGlowGrads = [];
+        }
+
+        windowPositions.forEach((win, winIdx) => {
             const wy = this.y + win.t * size;
 
             // Window frame
@@ -494,23 +505,34 @@ export class SuperWeaponLab extends Building {
 
             // Magical glow - outer soft halo plus the original inner glow, for a bit more
             // depth than a single-radius gradient gave.
-            const outerGlow = ctx.createRadialGradient(this.x, wy, 0, this.x, wy, win.size * 3.2);
-            outerGlow.addColorStop(0, `rgba(139, 92, 246, ${this.runeGlow * 0.25})`);
-            outerGlow.addColorStop(1, 'rgba(139, 92, 246, 0)');
-            ctx.fillStyle = outerGlow;
+            if (!this._windowOuterGlowGrads[winIdx]) {
+                const outerGlow = ctx.createRadialGradient(this.x, wy, 0, this.x, wy, win.size * 3.2);
+                outerGlow.addColorStop(0, 'rgba(139, 92, 246, 1)');
+                outerGlow.addColorStop(1, 'rgba(139, 92, 246, 0)');
+                this._windowOuterGlowGrads[winIdx] = outerGlow;
+            }
+            const prevAlpha1 = ctx.globalAlpha;
+            ctx.fillStyle = this._windowOuterGlowGrads[winIdx];
+            ctx.globalAlpha = (prevAlpha1 === undefined ? 1 : prevAlpha1) * (this.runeGlow * 0.25);
             ctx.beginPath();
             ctx.arc(this.x, wy, win.size * 3.2, 0, Math.PI * 2);
             ctx.fill();
+            ctx.globalAlpha = prevAlpha1;
 
-            const windowGlow = ctx.createRadialGradient(this.x, wy, 0, this.x, wy, win.size * 2);
-            windowGlow.addColorStop(0, `rgba(139, 92, 246, ${this.runeGlow})`);
-            windowGlow.addColorStop(0.5, `rgba(99, 102, 241, ${this.runeGlow * 0.5})`);
-            windowGlow.addColorStop(1, 'rgba(79, 70, 229, 0)');
-
-            ctx.fillStyle = windowGlow;
+            if (!this._windowGlowGrads[winIdx]) {
+                const windowGlow = ctx.createRadialGradient(this.x, wy, 0, this.x, wy, win.size * 2);
+                windowGlow.addColorStop(0, 'rgba(139, 92, 246, 1)');
+                windowGlow.addColorStop(0.5, 'rgba(99, 102, 241, 0.5)');
+                windowGlow.addColorStop(1, 'rgba(79, 70, 229, 0)');
+                this._windowGlowGrads[winIdx] = windowGlow;
+            }
+            const prevAlpha2 = ctx.globalAlpha;
+            ctx.fillStyle = this._windowGlowGrads[winIdx];
+            ctx.globalAlpha = (prevAlpha2 === undefined ? 1 : prevAlpha2) * this.runeGlow;
             ctx.beginPath();
             ctx.arc(this.x, wy, win.size * 2, 0, Math.PI * 2);
             ctx.fill();
+            ctx.globalAlpha = prevAlpha2;
 
             // Window inner glow
             ctx.fillStyle = `rgba(167, 139, 250, ${this.runeGlow})`;
@@ -552,6 +574,20 @@ export class SuperWeaponLab extends Building {
         const orbitRadius = size * 0.273; // was fixed rune.radius=35 @ size=128
         const orbitY = this.y - size * 0.3125; // was "-40" @ size=128
         const glowRadius = size * 0.094; // was fixed 12 @ size=128
+
+        // Every rune's glow is visually identical (same radius/color, just orbiting to a
+        // different position each frame) - one gradient centered at the local origin is
+        // built/cached once and reused for all 6 via translate(), instead of building a
+        // fresh position-specific gradient per rune per frame. Pulse is applied via
+        // globalAlpha (outer stop is 0 either way), same reasoning as the other glows here.
+        if (!this._runeGlowGrad || this._runeGlowGradRadius !== glowRadius || this._runeGlowGradCtx !== ctx) {
+            this._runeGlowGradRadius = glowRadius;
+            this._runeGlowGradCtx = ctx;
+            this._runeGlowGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, glowRadius);
+            this._runeGlowGrad.addColorStop(0, 'rgba(139, 92, 246, 1)');
+            this._runeGlowGrad.addColorStop(1, 'rgba(139, 92, 246, 0)');
+        }
+
         this.floatingRunes.forEach((rune, index) => {
             const floatY = Math.sin(this.animationTime * 2 + rune.floatOffset) * size * 0.039;
             const currentAngle = rune.angle + this.crystalRotation * 0.3;
@@ -559,13 +595,16 @@ export class SuperWeaponLab extends Building {
             const y = orbitY + Math.sin(currentAngle) * orbitRadius * 0.3 + floatY;
 
             // Rune glow
-            const runeGlow = ctx.createRadialGradient(x, y, 0, x, y, glowRadius);
-            runeGlow.addColorStop(0, `rgba(139, 92, 246, ${this.runeGlow * 0.5})`);
-            runeGlow.addColorStop(1, 'rgba(139, 92, 246, 0)');
-            ctx.fillStyle = runeGlow;
+            const prevAlpha = ctx.globalAlpha;
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.fillStyle = this._runeGlowGrad;
+            ctx.globalAlpha = (prevAlpha === undefined ? 1 : prevAlpha) * (this.runeGlow * 0.5);
             ctx.beginPath();
-            ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
+            ctx.arc(0, 0, glowRadius, 0, Math.PI * 2);
             ctx.fill();
+            ctx.restore();
+            ctx.globalAlpha = prevAlpha;
 
             // Rune symbol
             ctx.fillStyle = `rgba(255, 255, 255, ${this.runeGlow})`;
@@ -600,30 +639,46 @@ export class SuperWeaponLab extends Building {
         // Main crystal
         const crystalPulse = 0.7 + 0.3 * Math.sin(this.animationTime * 3);
 
-        // Crystal glow
-        const crystalGlow = ctx.createRadialGradient(
-            this.x, crystalY, 0,
-            this.x, crystalY, crystalSize * 3
-        );
-        crystalGlow.addColorStop(0, `rgba(167, 139, 250, ${crystalPulse * 0.6})`);
-        crystalGlow.addColorStop(0.5, `rgba(139, 92, 246, ${crystalPulse * 0.3})`);
-        crystalGlow.addColorStop(1, 'rgba(99, 102, 241, 0)');
-        ctx.fillStyle = crystalGlow;
+        // Crystal glow - position/size are fixed (building never moves), and every non-zero
+        // stop is a scalar multiple of crystalPulse, so bake at pulse=1 and apply the real
+        // value via globalAlpha instead of rebuilding the gradient every frame.
+        if (!this._crystalGlowGrad || this._crystalGlowCtx !== ctx) {
+            this._crystalGlowCtx = ctx;
+            this._crystalGlowGrad = ctx.createRadialGradient(
+                this.x, crystalY, 0,
+                this.x, crystalY, crystalSize * 3
+            );
+            this._crystalGlowGrad.addColorStop(0, 'rgba(167, 139, 250, 0.6)');
+            this._crystalGlowGrad.addColorStop(0.5, 'rgba(139, 92, 246, 0.3)');
+            this._crystalGlowGrad.addColorStop(1, 'rgba(99, 102, 241, 0)');
+        }
+        const prevGlowAlpha = ctx.globalAlpha;
+        ctx.fillStyle = this._crystalGlowGrad;
+        ctx.globalAlpha = (prevGlowAlpha === undefined ? 1 : prevGlowAlpha) * crystalPulse;
         ctx.beginPath();
         ctx.arc(this.x, crystalY, crystalSize * 3, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = prevGlowAlpha;
 
         // Crystal body
         ctx.save();
         ctx.translate(this.x, crystalY);
         ctx.rotate(this.crystalRotation);
 
-        const crystalGradient = ctx.createLinearGradient(-crystalSize, -crystalSize, crystalSize, crystalSize);
-        crystalGradient.addColorStop(0, `rgba(196, 181, 253, ${crystalPulse})`);
-        crystalGradient.addColorStop(0.5, `rgba(139, 92, 246, ${crystalPulse})`);
-        crystalGradient.addColorStop(1, `rgba(99, 102, 241, ${crystalPulse})`);
+        // Every stop uses the exact same crystalPulse coefficient, so this reduces to a
+        // single cached full-opacity gradient modulated by globalAlpha, same as above.
+        if (!this._crystalBodyGrad || this._crystalBodyGradSize !== crystalSize || this._crystalBodyGradCtx !== ctx) {
+            this._crystalBodyGradSize = crystalSize;
+            this._crystalBodyGradCtx = ctx;
+            this._crystalBodyGrad = ctx.createLinearGradient(-crystalSize, -crystalSize, crystalSize, crystalSize);
+            this._crystalBodyGrad.addColorStop(0, 'rgba(196, 181, 253, 1)');
+            this._crystalBodyGrad.addColorStop(0.5, 'rgba(139, 92, 246, 1)');
+            this._crystalBodyGrad.addColorStop(1, 'rgba(99, 102, 241, 1)');
+        }
 
-        ctx.fillStyle = crystalGradient;
+        const prevBodyAlpha = ctx.globalAlpha;
+        ctx.fillStyle = this._crystalBodyGrad;
+        ctx.globalAlpha = (prevBodyAlpha === undefined ? 1 : prevBodyAlpha) * crystalPulse;
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -633,6 +688,7 @@ export class SuperWeaponLab extends Building {
         ctx.lineTo(-crystalSize * 0.7, 0);
         ctx.closePath();
         ctx.fill();
+        ctx.globalAlpha = prevBodyAlpha;
         ctx.stroke();
 
         // Crystal highlight

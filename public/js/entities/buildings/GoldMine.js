@@ -925,16 +925,26 @@ export class GoldMine extends Building {
             ctx.save();
             ctx.translate(this.x + pile.x, this.y + pile.y + bobOffset);
             
-            // Glow
+            // Glow - gradient shape is identical every frame (only the glimmer intensity
+            // pulses, and the outer stop is always 0 either way), so it's built once per
+            // pile and cached instead of recreated 60x/sec per pile - same reasoning as
+            // LootBag.renderBag's glow. Re-baked only if this pile hasn't drawn through
+            // this exact ctx before (guards against the brief Canvas2D->Pixi-shim handoff
+            // window at level load, matching e.g. FrogKingEnemy's _bodyGrad cache).
             const glimmerIntensity = Math.sin(pile.glimmer) * 0.3 + 0.7;
-            const goldGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
-            goldGlow.addColorStop(0, `rgba(255, 215, 0, ${glimmerIntensity * 0.8})`);
-            goldGlow.addColorStop(1, 'rgba(255, 215, 0, 0)');
-            
-            ctx.fillStyle = goldGlow;
+            if (!pile._glowGrad || pile._glowGradCtx !== ctx) {
+                pile._glowGradCtx = ctx;
+                pile._glowGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
+                pile._glowGrad.addColorStop(0, 'rgba(255, 215, 0, 1)');
+                pile._glowGrad.addColorStop(1, 'rgba(255, 215, 0, 0)');
+            }
+            const prevAlpha = ctx.globalAlpha;
+            ctx.fillStyle = pile._glowGrad;
+            ctx.globalAlpha = (prevAlpha === undefined ? 1 : prevAlpha) * (glimmerIntensity * 0.8);
             ctx.beginPath();
             ctx.arc(0, 0, 8, 0, Math.PI * 2);
             ctx.fill();
+            ctx.globalAlpha = prevAlpha;
             
             // Nuggets
             ctx.fillStyle = '#FFD700';
@@ -1026,13 +1036,22 @@ export class GoldMine extends Building {
         ctx.fillRect(toggleX - toggleIconSize/2 - 1, toggleY + toggleIconSize/2 - cornSize + 1, cornSize, cornSize);
         ctx.fillRect(toggleX + toggleIconSize/2 - cornSize + 1, toggleY + toggleIconSize/2 - cornSize + 1, cornSize, cornSize);
         
-        const toggleGlow = ctx.createRadialGradient(toggleX, toggleY, 0, toggleX, toggleY, toggleIconSize);
-        const glowColor0 = this.gemMode ? `rgba(138, 43, 226, ${togglePulse * 0.2})` : `rgba(200, 200, 200, ${togglePulse * 0.2})`;
-        const glowColor1 = this.gemMode ? 'rgba(138, 43, 226, 0)' : 'rgba(200, 200, 200, 0)';
-        toggleGlow.addColorStop(0, glowColor0);
-        toggleGlow.addColorStop(1, glowColor1);
-        ctx.fillStyle = toggleGlow;
+        // Position/color depend only on gemMode + this building's fixed layout, not on the
+        // pulse itself (outer stop is always 0) - cached and re-baked only when gemMode
+        // flips or the ctx changes (Canvas2D->Pixi-shim handoff), instead of every frame.
+        if (!this._toggleGlowGrad || this._toggleGlowGemMode !== this.gemMode || this._toggleGlowCtx !== ctx) {
+            this._toggleGlowGemMode = this.gemMode;
+            this._toggleGlowCtx = ctx;
+            this._toggleGlowGrad = ctx.createRadialGradient(toggleX, toggleY, 0, toggleX, toggleY, toggleIconSize);
+            const glowRgb = this.gemMode ? '138, 43, 226' : '200, 200, 200';
+            this._toggleGlowGrad.addColorStop(0, `rgba(${glowRgb}, 1)`);
+            this._toggleGlowGrad.addColorStop(1, `rgba(${glowRgb}, 0)`);
+        }
+        const prevToggleAlpha = ctx.globalAlpha;
+        ctx.fillStyle = this._toggleGlowGrad;
+        ctx.globalAlpha = (prevToggleAlpha === undefined ? 1 : prevToggleAlpha) * (togglePulse * 0.2);
         ctx.fillRect(toggleX - toggleIconSize/2 - 3, toggleY - toggleIconSize/2 - 3, toggleIconSize + 6, toggleIconSize + 6);
+        ctx.globalAlpha = prevToggleAlpha;
         
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 16px Arial';

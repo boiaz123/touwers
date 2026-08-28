@@ -968,12 +968,24 @@ export class TrainingGrounds extends Building {
             ctx.fillRect(-1.8, -1.5, 1.4, 2.4);
             ctx.fillRect(0.4, -1.5, 1.4, 2.4);
 
-            // Tunic (gradient for volume, tapered waist)
-            const tunicGradient = ctx.createLinearGradient(-2.6, -6.5, 2.6, -6.5);
-            tunicGradient.addColorStop(0, '#3C6B22');
-            tunicGradient.addColorStop(0.5, '#2D5016');
-            tunicGradient.addColorStop(1, '#1E3A0E');
-            ctx.fillStyle = tunicGradient;
+            // Tunic (gradient for volume, tapered waist). Position/orientation are fixed
+            // per archer (only drawback animates, not position), so the gradient is cached
+            // on the archer's own data object and reused every frame instead of rebuilt -
+            // it was otherwise recreated (and its GPU texture destroyed/recreated) for
+            // every archer, every redraw. Cached per-archer rather than shared across
+            // archers because CanvasGraphicsShim bakes world position into the gradient at
+            // creation time (unlike real Canvas2D, which reinterprets at fill time), so a
+            // gradient built under one archer's translate/mirror can't be reused verbatim
+            // under another's. Guarded by ctx identity for the brief Canvas2D->Pixi-shim
+            // handoff window at level load (see e.g. GoldMine's pile._glowGrad).
+            if (!archer._tunicGrad || archer._tunicGradCtx !== ctx) {
+                archer._tunicGradCtx = ctx;
+                archer._tunicGrad = ctx.createLinearGradient(-2.6, -6.5, 2.6, -6.5);
+                archer._tunicGrad.addColorStop(0, '#3C6B22');
+                archer._tunicGrad.addColorStop(0.5, '#2D5016');
+                archer._tunicGrad.addColorStop(1, '#1E3A0E');
+            }
+            ctx.fillStyle = archer._tunicGrad;
             ctx.beginPath();
             ctx.moveTo(-2.4, -6.6);
             ctx.lineTo(2.4, -6.6);
@@ -1055,11 +1067,15 @@ export class TrainingGrounds extends Building {
             const tipTopX = bowX + 1.7, tipTopY = -9.4;
             const tipBotX = bowX + 1.7, tipBotY = -0.6;
 
-            const bowGradient = ctx.createLinearGradient(bowX, tipTopY, bowX, tipBotY);
-            bowGradient.addColorStop(0, '#A9782E');
-            bowGradient.addColorStop(0.5, '#8B6914');
-            bowGradient.addColorStop(1, '#6B4E0E');
-            ctx.strokeStyle = bowGradient;
+            // Cached per-archer, same reasoning as the tunic gradient above.
+            if (!archer._bowGrad || archer._bowGradCtx !== ctx) {
+                archer._bowGradCtx = ctx;
+                archer._bowGrad = ctx.createLinearGradient(bowX, tipTopY, bowX, tipBotY);
+                archer._bowGrad.addColorStop(0, '#A9782E');
+                archer._bowGrad.addColorStop(0.5, '#8B6914');
+                archer._bowGrad.addColorStop(1, '#6B4E0E');
+            }
+            ctx.strokeStyle = archer._bowGrad;
             ctx.lineWidth = 1.1;
             ctx.lineCap = 'round';
 
@@ -1223,12 +1239,18 @@ export class TrainingGrounds extends Building {
             ctx.closePath();
             ctx.fill();
 
-            // Fighter armor with gradient shading + rim highlight
-            const armorGradient = ctx.createLinearGradient(-2.3, -6.5, 2.3, -1.2);
-            armorGradient.addColorStop(0, '#8C8C8C');
-            armorGradient.addColorStop(0.5, '#696969');
-            armorGradient.addColorStop(1, '#454545');
-            ctx.fillStyle = armorGradient;
+            // Fighter armor with gradient shading + rim highlight. Cached on the fighter's
+            // own data object (position/scale under this gradient are fixed per fighter),
+            // same reasoning as the archer gradients above - avoids rebuilding a GPU-backed
+            // gradient for every fighter, every redraw.
+            if (!fighter._armorGrad || fighter._armorGradCtx !== ctx) {
+                fighter._armorGradCtx = ctx;
+                fighter._armorGrad = ctx.createLinearGradient(-2.3, -6.5, 2.3, -1.2);
+                fighter._armorGrad.addColorStop(0, '#8C8C8C');
+                fighter._armorGrad.addColorStop(0.5, '#696969');
+                fighter._armorGrad.addColorStop(1, '#454545');
+            }
+            ctx.fillStyle = fighter._armorGrad;
             ctx.fillRect(-2.3, -6.5, 4.6, 5.3);
             ctx.fillStyle = 'rgba(255,255,255,0.15)';
             ctx.fillRect(-2.3, -6.5, 1.1, 5.3);
@@ -1266,11 +1288,16 @@ export class TrainingGrounds extends Building {
             ctx.closePath();
             ctx.fill();
 
-            // Shield
+            // Shield - direction is fixed per fighter, so shieldX (and the gradient built
+            // from it) is stable; cached the same way as the armor gradient above.
             const shieldX = fighter.direction > 0 ? -3.2 : 3.2;
-            const shieldGradient = ctx.createRadialGradient(shieldX - 0.6, -4.6, 0, shieldX, -4, 2);
-            shieldGradient.addColorStop(0, '#E0A868');
-            shieldGradient.addColorStop(1, '#B5793A');
+            if (!fighter._shieldGrad || fighter._shieldGradCtx !== ctx) {
+                fighter._shieldGradCtx = ctx;
+                fighter._shieldGrad = ctx.createRadialGradient(shieldX - 0.6, -4.6, 0, shieldX, -4, 2);
+                fighter._shieldGrad.addColorStop(0, '#E0A868');
+                fighter._shieldGrad.addColorStop(1, '#B5793A');
+            }
+            const shieldGradient = fighter._shieldGrad;
             ctx.fillStyle = shieldGradient;
             ctx.beginPath();
             ctx.arc(shieldX, -4, 2, 0, Math.PI * 2);
@@ -1386,12 +1413,26 @@ export class TrainingGrounds extends Building {
 
             ctx.rotate(dummy.rotation + dummy.wobble);
 
+            // These gradients bake world position AND orientation into the gradient at
+            // creation time (CanvasGraphicsShim's textureSpace:'global'), and this dummy's
+            // rotation isn't perfectly static like the archers'/fighters' - it wobbles
+            // after a hit (spring-damper decay). Rebuilding on every meaningful wobble
+            // change (bucketed - imperceptible below ~0.05 rad) instead of every single
+            // frame still eliminates the rebuild entirely while at rest (the vast majority
+            // of the time) and only rebuilds a handful of times during a wobble's brief
+            // decay, rather than 30x/sec regardless of whether anything actually moved.
+            const wobbleBucket = Math.round((dummy.rotation + dummy.wobble) * 20);
+
             // Dummy post/stand with cylindrical shading
-            const postGradient = ctx.createLinearGradient(-0.75, 0, 0.75, 0);
-            postGradient.addColorStop(0, '#8A6238');
-            postGradient.addColorStop(0.5, '#654321');
-            postGradient.addColorStop(1, '#40290F');
-            ctx.fillStyle = postGradient;
+            if (!dummy._postGrad || dummy._postGradCtx !== ctx || dummy._postGradBucket !== wobbleBucket) {
+                dummy._postGradCtx = ctx;
+                dummy._postGradBucket = wobbleBucket;
+                dummy._postGrad = ctx.createLinearGradient(-0.75, 0, 0.75, 0);
+                dummy._postGrad.addColorStop(0, '#8A6238');
+                dummy._postGrad.addColorStop(0.5, '#654321');
+                dummy._postGrad.addColorStop(1, '#40290F');
+            }
+            ctx.fillStyle = dummy._postGrad;
             ctx.fillRect(-0.75, 0, 1.5, 3);
 
             ctx.fillStyle = '#3F2C14';
@@ -1405,11 +1446,15 @@ export class TrainingGrounds extends Building {
             ctx.lineTo(2, -3);
             ctx.stroke();
 
-            // Head - straw sack
-            const headGradient = ctx.createRadialGradient(-0.6, -8.5, 0, 0, -8, 2);
-            headGradient.addColorStop(0, '#B79161');
-            headGradient.addColorStop(1, '#7A5A34');
-            ctx.fillStyle = headGradient;
+            // Head - straw sack. Bucketed on wobble, same reasoning as the post gradient above.
+            if (!dummy._headGrad || dummy._headGradCtx !== ctx || dummy._headGradBucket !== wobbleBucket) {
+                dummy._headGradCtx = ctx;
+                dummy._headGradBucket = wobbleBucket;
+                dummy._headGrad = ctx.createRadialGradient(-0.6, -8.5, 0, 0, -8, 2);
+                dummy._headGrad.addColorStop(0, '#B79161');
+                dummy._headGrad.addColorStop(1, '#7A5A34');
+            }
+            ctx.fillStyle = dummy._headGrad;
             ctx.beginPath();
             ctx.arc(0, -8, 2, 0, Math.PI * 2);
             ctx.fill();
@@ -1430,12 +1475,17 @@ export class TrainingGrounds extends Building {
             ctx.moveTo(0.25, -8.25); ctx.lineTo(0.75, -8.75);
             ctx.stroke();
 
-            // Torso - straw-stuffed sack with gradient + seams
-            const torsoGradient = ctx.createLinearGradient(-2, 0, 2, 0);
-            torsoGradient.addColorStop(0, '#C08650');
-            torsoGradient.addColorStop(0.5, '#A0522D');
-            torsoGradient.addColorStop(1, '#703A1C');
-            ctx.fillStyle = torsoGradient;
+            // Torso - straw-stuffed sack with gradient + seams. Bucketed on wobble, same
+            // reasoning as the post/head gradients above.
+            if (!dummy._torsoGrad || dummy._torsoGradCtx !== ctx || dummy._torsoGradBucket !== wobbleBucket) {
+                dummy._torsoGradCtx = ctx;
+                dummy._torsoGradBucket = wobbleBucket;
+                dummy._torsoGrad = ctx.createLinearGradient(-2, 0, 2, 0);
+                dummy._torsoGrad.addColorStop(0, '#C08650');
+                dummy._torsoGrad.addColorStop(0.5, '#A0522D');
+                dummy._torsoGrad.addColorStop(1, '#703A1C');
+            }
+            ctx.fillStyle = dummy._torsoGrad;
             ctx.fillRect(-2, -5, 4, 4.5);
 
             ctx.strokeStyle = '#5C3418';
@@ -1543,12 +1593,17 @@ export class TrainingGrounds extends Building {
             ctx.lineTo(1.1, 1.4);
             ctx.stroke();
 
-            // Tunic
-            const tunicGradient = ctx.createLinearGradient(-2.4, -7, 2.4, -7);
-            tunicGradient.addColorStop(0, '#6E5236');
-            tunicGradient.addColorStop(0.5, trainee.color);
-            tunicGradient.addColorStop(1, '#2B2015');
-            ctx.fillStyle = tunicGradient;
+            // Tunic - position/orientation are fixed per trainee (no rotation applied here,
+            // unlike the dummy itself), so cached and reused forever, same reasoning as the
+            // archer/fighter gradients above.
+            if (!trainee._tunicGrad || trainee._tunicGradCtx !== ctx) {
+                trainee._tunicGradCtx = ctx;
+                trainee._tunicGrad = ctx.createLinearGradient(-2.4, -7, 2.4, -7);
+                trainee._tunicGrad.addColorStop(0, '#6E5236');
+                trainee._tunicGrad.addColorStop(0.5, trainee.color);
+                trainee._tunicGrad.addColorStop(1, '#2B2015');
+            }
+            ctx.fillStyle = trainee._tunicGrad;
             ctx.beginPath();
             ctx.moveTo(-2.2, -7);
             ctx.lineTo(2.2, -7);

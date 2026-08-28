@@ -338,13 +338,24 @@ export class DiamondPress extends Building {
         ctx.fillStyle = '#1a2a3a';
         ctx.fillRect(rodX + size * 0.05, rodY + size * 0.02, size * 0.02, size * 0.11);
 
-        // Top pressing plate - polished steel with gradient
-        const plateGrad = ctx.createLinearGradient(0, plateY - plateThickness, 0, plateY);
-        plateGrad.addColorStop(0, '#9aadbd');
-        plateGrad.addColorStop(0.5, '#7a9aad');
-        plateGrad.addColorStop(1, '#5a7a8a');
-        ctx.fillStyle = plateGrad;
-        ctx.fillRect(centerX - chamberWidth * 0.46, plateY - plateThickness, chamberWidth * 0.92, plateThickness);
+        // Top pressing plate - polished steel with gradient. Colors are fixed; only the
+        // plate's Y position animates (piston stroke), so the gradient is built once in
+        // local space (spanning just its own fixed thickness) and repositioned via
+        // translate() each frame instead of rebuilt from scratch - avoids recreating a
+        // GPU-backed gradient 60x/sec purely because the plate is physically moving.
+        if (!this._plateGrad || this._plateGradThickness !== plateThickness || this._plateGradCtx !== ctx) {
+            this._plateGradThickness = plateThickness;
+            this._plateGradCtx = ctx;
+            this._plateGrad = ctx.createLinearGradient(0, -plateThickness, 0, 0);
+            this._plateGrad.addColorStop(0, '#9aadbd');
+            this._plateGrad.addColorStop(0.5, '#7a9aad');
+            this._plateGrad.addColorStop(1, '#5a7a8a');
+        }
+        ctx.save();
+        ctx.translate(0, plateY);
+        ctx.fillStyle = this._plateGrad;
+        ctx.fillRect(centerX - chamberWidth * 0.46, -plateThickness, chamberWidth * 0.92, plateThickness);
+        ctx.restore();
 
         // Plate top shine (stronger when idle)
         ctx.fillStyle = `rgba(255, 255, 255, ${0.35 - strokeIntensity * 0.1})`;

@@ -578,10 +578,21 @@ export class WorkshopHall extends Building {
         const torchY = this.y - size * 0.46 * 0.62 * 0.5 - size * 0.02;
         const x = this.x - size * 0.4, y = this.y - size * 0.02;
         const r = size * 0.13 * this.torchFlicker;
-        const glow = ctx.createRadialGradient(x, y, 0, x, y, r);
-        glow.addColorStop(0, `rgba(255, 150, 60, ${0.3 * this.torchFlicker})`);
-        glow.addColorStop(1, 'rgba(255, 150, 60, 0)');
-        ctx.fillStyle = glow;
+        // Position is fixed but the radius itself flickers, so this can't be reduced to a
+        // pure globalAlpha multiply on a fixed-shape gradient like the other glows fixed
+        // this session - bucketing the flicker value still cuts the rebuild rate sharply
+        // (imperceptible visually below ~1/24 of the flicker range) instead of rebuilding
+        // a GPU-backed gradient every single frame regardless of whether it moved enough
+        // to matter.
+        const flickerBucket = Math.round(this.torchFlicker * 24);
+        if (!this._torchGlowGrad || this._torchGlowGradCtx !== ctx || this._torchGlowGradBucket !== flickerBucket) {
+            this._torchGlowGradCtx = ctx;
+            this._torchGlowGradBucket = flickerBucket;
+            this._torchGlowGrad = ctx.createRadialGradient(x, y, 0, x, y, r);
+            this._torchGlowGrad.addColorStop(0, `rgba(255, 150, 60, ${0.3 * this.torchFlicker})`);
+            this._torchGlowGrad.addColorStop(1, 'rgba(255, 150, 60, 0)');
+        }
+        ctx.fillStyle = this._torchGlowGrad;
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
@@ -591,10 +602,17 @@ export class WorkshopHall extends Building {
         if (!this._windowGlowBounds) return;
         const { x, y, w } = this._windowGlowBounds;
         const r = w * (0.75 + this.mapGlowPulse * 0.2);
-        const glow = ctx.createRadialGradient(x, y, 0, x, y, r);
-        glow.addColorStop(0, `rgba(220, 170, 100, ${0.22 + this.mapGlowPulse * 0.1})`);
-        glow.addColorStop(1, 'rgba(220, 170, 100, 0)');
-        ctx.fillStyle = glow;
+        // Same reasoning as renderTorchGlow's bucketed cache above - radius pulses with
+        // mapGlowPulse, so it's bucketed rather than rebuilt every frame.
+        const pulseBucket = Math.round(this.mapGlowPulse * 24);
+        if (!this._mapGlowGrad || this._mapGlowGradCtx !== ctx || this._mapGlowGradBucket !== pulseBucket) {
+            this._mapGlowGradCtx = ctx;
+            this._mapGlowGradBucket = pulseBucket;
+            this._mapGlowGrad = ctx.createRadialGradient(x, y, 0, x, y, r);
+            this._mapGlowGrad.addColorStop(0, `rgba(220, 170, 100, ${0.22 + this.mapGlowPulse * 0.1})`);
+            this._mapGlowGrad.addColorStop(1, 'rgba(220, 170, 100, 0)');
+        }
+        ctx.fillStyle = this._mapGlowGrad;
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
@@ -609,10 +627,17 @@ export class WorkshopHall extends Building {
 
         ctx.save();
         ctx.translate(x, y + 2 * s);
-        const grad = ctx.createLinearGradient(0, 0, flagW, 0);
-        grad.addColorStop(0, '#a83028');
-        grad.addColorStop(1, '#7a1e18');
-        ctx.fillStyle = grad;
+        // Fully static colors and a fixed translate (pole position never moves) - cached
+        // and reused forever instead of rebuilt every frame, same reasoning as the fully
+        // static gradients fixed elsewhere this session.
+        if (!this._bannerGrad || this._bannerGradFlagW !== flagW || this._bannerGradCtx !== ctx) {
+            this._bannerGradFlagW = flagW;
+            this._bannerGradCtx = ctx;
+            this._bannerGrad = ctx.createLinearGradient(0, 0, flagW, 0);
+            this._bannerGrad.addColorStop(0, '#a83028');
+            this._bannerGrad.addColorStop(1, '#7a1e18');
+        }
+        ctx.fillStyle = this._bannerGrad;
         ctx.beginPath();
         ctx.moveTo(0, -flagH / 2);
         ctx.lineTo(flagW * (1 + sway * 0.3), -flagH / 2 + sway * 3 * s);

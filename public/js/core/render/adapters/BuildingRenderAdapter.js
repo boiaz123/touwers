@@ -65,7 +65,17 @@ export class BuildingRenderAdapter {
 
         const shim = new CanvasGraphicsShim(dynamic);
 
-        this._entries.set(building, { container: entryContainer, back, front, dynamic, shim, lastAnimKey: -1 });
+        this._entries.set(building, {
+            container: entryContainer, back, front, dynamic, shim, lastAnimKey: -1,
+            // Per-instance offset into the 33ms bucket below (see sync()) - without this,
+            // performance.now() is identical for every building at a given instant, so every
+            // building's redraw bucket flips on the SAME frame: cheap frames where nothing
+            // redraws, then one expensive frame every ~33ms where every building (Training
+            // Grounds' archers/duelists, Tower Forge's workers/sparks/smoke, ...) redraws at
+            // once - a periodic hiccup. Identical fix to TowerRenderAdapter.js/
+            // EnemyRenderAdapter.js's animPhaseOffset, just never ported here.
+            animPhaseOffset: Math.random() * 33,
+        });
         building.skipCanvas2DBodyRender = true;
 
         // Buildings never move — position and zIndex are set once here. Use the building's
@@ -113,8 +123,9 @@ export class BuildingRenderAdapter {
         building._lastRenderSize = buildingSize;
 
         // Rate-limit dynamic redraws to ~30fps — buildings have continuous fire/glow animations
-        // but sub-frame precision is imperceptible.
-        const animKey = (performance.now() / 33) | 0;
+        // but sub-frame precision is imperceptible. Phase-staggered per building (see
+        // register()) so redraw work spreads evenly across frames instead of clustering.
+        const animKey = ((performance.now() + entry.animPhaseOffset) / 33) | 0;
         if (animKey === entry.lastAnimKey) return;
         entry.lastAnimKey = animKey;
 
