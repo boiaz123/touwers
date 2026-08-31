@@ -22,30 +22,30 @@ export class UpgradeRegistry {
         },
         'wooden-chest': {
             name: 'Wooden Chest',
-            description: 'Increase starting gold by 100',
+            description: 'Increase starting gold by 200',
             cost: 250,
             icon: '◆',
             category: 'gold',
-            effect: 'Increases starting gold by 100',
+            effect: 'Increases starting gold by 200',
             campaignRequirement: 'campaign-1'
         },
         'golden-chest': {
             name: 'Golden Chest',
-            description: 'Increase starting gold by another 300 (requires Wooden Chest)',
+            description: 'Increase starting gold by another 250 (requires Wooden Chest)',
             cost: 400,
             icon: '◎',
             category: 'gold',
-            effect: 'Increases starting gold by 300',
+            effect: 'Increases starting gold by 250',
             prerequisite: 'wooden-chest',
             campaignRequirement: 'campaign-2'
         },
         'platinum-chest': {
             name: 'Platinum Chest',
-            description: 'Increase starting gold by another 500 (requires Golden Chest)',
+            description: 'Increase starting gold by another 350 (requires Golden Chest)',
             cost: 600,
             icon: '●',
             category: 'gold',
-            effect: 'Increases starting gold by 500',
+            effect: 'Increases starting gold by 350',
             prerequisite: 'golden-chest',
             campaignRequirement: 'campaign-3'
         },

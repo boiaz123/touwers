@@ -10,7 +10,7 @@ export class BaseEnemy {
         this.armour = armour;
         this.magicResistance = magicResistance;
         this.type = null; // Will be set by EnemyRegistry when creating
-        this.goldReward = Math.ceil(this.maxHealth / 10); // Gold reward based on health
+        this.goldReward = Math.ceil((this.maxHealth / 10) * 1.3); // Gold reward based on health, +30%
         this.lootDropChance = 0.01; // 1/100 base chance to drop normal loot on death (0-1)
         this.rareLootDropChance = 0.001; // 1/1000 base chance to drop rare loot on death (0-1)
         this.realmShardDropChance = 0; // Chance to drop a Frog King's Realm Shard

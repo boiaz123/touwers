@@ -248,7 +248,7 @@ export class UpgradesMenu {
                 id: 'wooden-chest',
                 name: 'Wooden Chest',
                 description: 'A battered supply chest recovered from an abandoned outpost. The coins inside smell of old campaigns.',
-                effect: 'Permanently grants +100 starting gold in every level',
+                effect: 'Permanently grants +200 starting gold in every level',
                 cost: 250,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -277,7 +277,7 @@ export class UpgradesMenu {
                 id: 'golden-chest',
                 name: 'Golden Chest',
                 description: 'A heavily reinforced chest bearing the royal seal. The lock is already broken — whoever owned this left in quite a hurry.',
-                effect: 'Permanently grants +300 starting gold in every level',
+                effect: 'Permanently grants +250 starting gold in every level',
                 cost: 400,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();
@@ -317,7 +317,7 @@ export class UpgradesMenu {
                 id: 'platinum-chest',
                 name: 'Platinum Chest',
                 description: 'A seamless chest carved from polished platinum ore. Enchanted to stay sealed — until it recognized you.',
-                effect: 'Permanently grants +500 starting gold in every level',
+                effect: 'Permanently grants +350 starting gold in every level',
                 cost: 600,
                 drawIcon(ctx, cx, cy, size) {
                     ctx.save();

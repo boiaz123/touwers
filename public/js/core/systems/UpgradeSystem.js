@@ -68,14 +68,14 @@ export class UpgradeSystem {
 
     /**
      * Get starting gold bonus from purchased upgrades
-     * Wooden chest: +100, Golden chest: +300, Platinum chest: +500
+     * Wooden chest: +200, Golden chest: +250, Platinum chest: +350
      * @returns {number} - Total gold bonus
      */
     getStartingGoldBonus() {
         let bonus = 0;
-        if (this.hasUpgrade('wooden-chest')) bonus += 100;
-        if (this.hasUpgrade('golden-chest')) bonus += 300;
-        if (this.hasUpgrade('platinum-chest')) bonus += 500;
+        if (this.hasUpgrade('wooden-chest')) bonus += 200;
+        if (this.hasUpgrade('golden-chest')) bonus += 250;
+        if (this.hasUpgrade('platinum-chest')) bonus += 350;
         return bonus;
     }
 }

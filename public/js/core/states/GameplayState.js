@@ -66,7 +66,7 @@ export class GameplayState {
         this.enemiesDefeated = 0;
         this.totalEnemiesSpawned = 0; // Track total enemies spawned across all waves
         this.goldEarnedThisLevel = 0;
-        this.startingGold = 100;
+        this.startingGold = 200;
         
         // Results screen for level completion / game over
         this.resultsScreen = new ResultsScreen(stateManager);
@@ -167,7 +167,7 @@ export class GameplayState {
         // CRITICAL: Always create a fresh, clean game state with default values
         const state = {
             health: 20,  // Default castle health
-            gold: 100,   // Default starting gold (before upgrades)
+            gold: 200,   // Default starting gold (before upgrades)
             wave: 1,     // ALWAYS start at wave 1
             canAfford: function(cost) {
                 return this.gold >= cost;
@@ -181,7 +181,7 @@ export class GameplayState {
             },
             reset: function() {
                 this.health = 20;
-                this.gold = 100;
+                this.gold = 200;
                 this.wave = 1;
             }
         };
