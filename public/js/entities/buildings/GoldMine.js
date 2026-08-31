@@ -66,7 +66,8 @@ export class GoldMine extends Building {
         // Entries flagged `front: true` stand in front of the mine (closer to the camera than
         // the cave entrance) and are routed into this.frontTrees below, rendered separately via
         // renderStaticFront so they always composite on top of the whole baked structure instead
-        // of needing to win a Y-sort against it - see Building.getClearingRadius's doc comment.
+        // of needing to win a Y-sort against it (this ring's sort against *real* level terrain
+        // is a separate concern - see getSortDepthY's doc comment further down).
         // Together with the back/side rows, this forms a full circle of trees around the mine.
         const treePositions = [
             // Back row – wide-spread backdrop
@@ -542,6 +543,10 @@ export class GoldMine extends Building {
             // callers (e.g. a settlement/menu preview that calls render() directly)
             // need it drawn here too.
             this.renderStaticFront(ctx, size);
+            // Progress bar/ready text/toggle icon - see renderTopUI's doc comment for why
+            // these draw last, after the front tree ring. Guarded the same as the calls
+            // above: in-game, BuildingRenderAdapter's own topUI layer already draws this.
+            this.renderTopUI(ctx, size);
         }
 
         // Render dust clouds - not yet migrated
@@ -575,7 +580,11 @@ export class GoldMine extends Building {
         this.renderStaticEnvironment(ctx, size);
     }
 
-    /** Strategy B (per-instance Graphics, redrawn every frame): mine cart, workers, gold piles, production status, toggle icon - all continuous per-instance state. */
+    /** Strategy B (per-instance Graphics, redrawn every frame): mine cart, workers, gold
+     * piles - continuous per-instance state that's meant to sit "in the scene," sandwiched
+     * between the back layer and the front tree ring like everything else placed on the
+     * ground (a worker or cart can reasonably stand behind a foreground tree). The
+     * always-on-top status readout lives in renderTopUI instead - see its doc comment. */
     renderDynamicParts(ctx, size) {
         // Render mine cart track and cart
         this.renderMineTrack(ctx, size);
@@ -587,7 +596,16 @@ export class GoldMine extends Building {
         if (this.goldReady) {
             this.renderGoldPiles(ctx, size);
         }
+    }
 
+    /** Production timer/"READY" text and the gem/gold toggle icon - unlike the rest of
+     * renderDynamicParts, these are player-facing UI, not scene content, so they must
+     * always stay readable regardless of how the front tree ring composites. Drawn as its
+     * own topmost BuildingRenderAdapter layer (above the front sprite), instead of inside
+     * renderDynamicParts (which sits *behind* the front ring - see BuildingRenderAdapter.js
+     * child order) where the front ring's trees would otherwise cover the timer/toggle
+     * whenever they overlap it on screen. */
+    renderTopUI(ctx, size) {
         // Production timer shown above mine
         this.renderProductionStatus(ctx, size);
 
@@ -925,26 +943,16 @@ export class GoldMine extends Building {
             ctx.save();
             ctx.translate(this.x + pile.x, this.y + pile.y + bobOffset);
             
-            // Glow - gradient shape is identical every frame (only the glimmer intensity
-            // pulses, and the outer stop is always 0 either way), so it's built once per
-            // pile and cached instead of recreated 60x/sec per pile - same reasoning as
-            // LootBag.renderBag's glow. Re-baked only if this pile hasn't drawn through
-            // this exact ctx before (guards against the brief Canvas2D->Pixi-shim handoff
-            // window at level load, matching e.g. FrogKingEnemy's _bodyGrad cache).
+            // Glow
             const glimmerIntensity = Math.sin(pile.glimmer) * 0.3 + 0.7;
-            if (!pile._glowGrad || pile._glowGradCtx !== ctx) {
-                pile._glowGradCtx = ctx;
-                pile._glowGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
-                pile._glowGrad.addColorStop(0, 'rgba(255, 215, 0, 1)');
-                pile._glowGrad.addColorStop(1, 'rgba(255, 215, 0, 0)');
-            }
-            const prevAlpha = ctx.globalAlpha;
-            ctx.fillStyle = pile._glowGrad;
-            ctx.globalAlpha = (prevAlpha === undefined ? 1 : prevAlpha) * (glimmerIntensity * 0.8);
+            const goldGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
+            goldGlow.addColorStop(0, `rgba(255, 215, 0, ${glimmerIntensity * 0.8})`);
+            goldGlow.addColorStop(1, 'rgba(255, 215, 0, 0)');
+            
+            ctx.fillStyle = goldGlow;
             ctx.beginPath();
             ctx.arc(0, 0, 8, 0, Math.PI * 2);
             ctx.fill();
-            ctx.globalAlpha = prevAlpha;
             
             // Nuggets
             ctx.fillStyle = '#FFD700';
@@ -1036,22 +1044,13 @@ export class GoldMine extends Building {
         ctx.fillRect(toggleX - toggleIconSize/2 - 1, toggleY + toggleIconSize/2 - cornSize + 1, cornSize, cornSize);
         ctx.fillRect(toggleX + toggleIconSize/2 - cornSize + 1, toggleY + toggleIconSize/2 - cornSize + 1, cornSize, cornSize);
         
-        // Position/color depend only on gemMode + this building's fixed layout, not on the
-        // pulse itself (outer stop is always 0) - cached and re-baked only when gemMode
-        // flips or the ctx changes (Canvas2D->Pixi-shim handoff), instead of every frame.
-        if (!this._toggleGlowGrad || this._toggleGlowGemMode !== this.gemMode || this._toggleGlowCtx !== ctx) {
-            this._toggleGlowGemMode = this.gemMode;
-            this._toggleGlowCtx = ctx;
-            this._toggleGlowGrad = ctx.createRadialGradient(toggleX, toggleY, 0, toggleX, toggleY, toggleIconSize);
-            const glowRgb = this.gemMode ? '138, 43, 226' : '200, 200, 200';
-            this._toggleGlowGrad.addColorStop(0, `rgba(${glowRgb}, 1)`);
-            this._toggleGlowGrad.addColorStop(1, `rgba(${glowRgb}, 0)`);
-        }
-        const prevToggleAlpha = ctx.globalAlpha;
-        ctx.fillStyle = this._toggleGlowGrad;
-        ctx.globalAlpha = (prevToggleAlpha === undefined ? 1 : prevToggleAlpha) * (togglePulse * 0.2);
+        const toggleGlow = ctx.createRadialGradient(toggleX, toggleY, 0, toggleX, toggleY, toggleIconSize);
+        const glowColor0 = this.gemMode ? `rgba(138, 43, 226, ${togglePulse * 0.2})` : `rgba(200, 200, 200, ${togglePulse * 0.2})`;
+        const glowColor1 = this.gemMode ? 'rgba(138, 43, 226, 0)' : 'rgba(200, 200, 200, 0)';
+        toggleGlow.addColorStop(0, glowColor0);
+        toggleGlow.addColorStop(1, glowColor1);
+        ctx.fillStyle = toggleGlow;
         ctx.fillRect(toggleX - toggleIconSize/2 - 3, toggleY - toggleIconSize/2 - 3, toggleIconSize + 6, toggleIconSize + 6);
-        ctx.globalAlpha = prevToggleAlpha;
         
         ctx.fillStyle = '#FFD700';
         ctx.font = 'bold 16px Arial';
@@ -1197,11 +1196,34 @@ export class GoldMine extends Building {
         return 30; // This will be multiplied by forge bonus in BuildingManager
     }
 
-    /** The back+front tree ring reaches roughly 2 grid cells past the 4x4 footprint on
-     * every side (see this.trees/this.frontTrees above) - clear real terrain that far out
-     * so it doesn't visually compete with the ring. See Building.getClearingRadius. */
+    /** No clearing - real terrain (trees/rocks/vegetation) around the mine is never
+     * touched. The mine works like every other building/tower: it's placed among the
+     * existing level art and depth-sorted against it, not carved a hole out of it. See
+     * getSortDepthY below for how that sort is kept unambiguous without deleting anything. */
     getClearingRadius() {
-        return 2;
+        return 0;
+    }
+
+    /** Every other building sorts by its FRONT edge (the default in Building.js) so real
+     * terrain in front of it correctly draws in front. The mine overrides that and sorts
+     * by its BACK edge instead (this.y - buildingSize/2, vs. the default this.y +
+     * buildingSize/2) - a small, deliberate exception, not an oversight: this building's
+     * own decorative tree ring (this.trees/this.frontTrees above) stands on every side of
+     * it, so a single scalar Y-sort key can't correctly interleave it against individual
+     * real trees the way a normal, contained building silhouette can (see
+     * Building.getClearingRadius's doc comment for the general version of this problem -
+     * the mine used to solve it by deleting the conflicting real terrain instead, which
+     * is exactly the "trees disappear" behavior this now avoids).
+     *
+     * Sorting by the back edge instead means the mine loses the depth tie against
+     * virtually everything at or past its own row - i.e. it always renders behind the
+     * real terrain immediately around it, nestled into the existing forest rather than
+     * cutting a clearing out of it. The ring's own art (still drawn on top of the mine's
+     * *own* baked layers, per BuildingRenderAdapter.js's back/dynamic/front order) is
+     * unaffected - only the mine's position in the cross-entity sort changes, not what
+     * gets drawn or where. */
+    getSortDepthY(buildingSize) {
+        return this.y - this.getVisualYOffset(buildingSize) - buildingSize / 2;
     }
 
     darkenColor(color, factor) { return darkenColor(color, factor); }
