@@ -7,8 +7,8 @@
     "tauri": "tauri",
     "android:init": "tauri android init",
     "android:dev": "tauri android dev",
-    "android:build": "tauri android build --apk true --split-per-abi",
-    "android:build:aab": "tauri android build --aab true",
+    "android:build": "tauri android build --apk --split-per-abi",
+    "android:build:aab": "tauri android build --aab",
     "ios:init": "tauri ios init",
     "ios:dev": "tauri ios dev",
     "ios:build": "tauri ios build"
