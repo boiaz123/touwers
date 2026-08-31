@@ -8,7 +8,11 @@ const BAKE_CANVAS_SCALE = 3;
  * Phase 3 of the Canvas2D -> Pixi migration: building rendering. Same convention and
  * structure as TowerRenderAdapter.js (see that file for the full design rationale) -
  * renderStaticBack/renderDynamicParts/renderStaticFront, baked back/front shared per
- * (type, campaign), per-instance dynamic Graphics via CanvasGraphicsShim.
+ * (type, campaign), per-instance dynamic Graphics via CanvasGraphicsShim. An optional
+ * 4th convention method, renderTopUI, draws into its own layer above even the front
+ * sprite - for buildings with player-facing UI that must stay on top regardless of the
+ * front layer's own art (see GoldMine.renderTopUI's doc comment). Only wired up for
+ * building classes that define it.
  *
  * Buildings' render(ctx, buildingSize) signature takes an externally-computed
  * buildingSize (cellSize * building.size) rather than deriving it internally like
@@ -24,7 +28,7 @@ export class BuildingRenderAdapter {
         this.container = sharedEntityLayer;
 
         this.textureCache = textureCache;
-        /** @type {Map<object, {container: Container, back: Sprite, front: Sprite, dynamic: Graphics, shim: CanvasGraphicsShim}>} */
+        /** @type {Map<object, {container: Container, back: Sprite, front: Sprite, dynamic: Graphics, shim: CanvasGraphicsShim, topUI: Graphics|null, topUIShim: CanvasGraphicsShim|null}>} */
         this._entries = new Map();
     }
 
@@ -61,21 +65,25 @@ export class BuildingRenderAdapter {
         front.zIndex = 2;
 
         entryContainer.addChild(back, dynamic, front);
+
+        // Optional 4th layer, above even the front sprite, for player-facing UI (status
+        // text, toggle icons) that must stay readable regardless of how the front tree
+        // ring composites - see GoldMine.renderTopUI's doc comment for the motivating
+        // case. Only created for building classes that actually define renderTopUI, so
+        // every other building's child order/z-fighting is completely unaffected.
+        let topUI = null, topUIShim = null;
+        if (typeof building.renderTopUI === 'function') {
+            topUI = new Graphics();
+            topUI.zIndex = 3;
+            entryContainer.addChild(topUI);
+            topUIShim = new CanvasGraphicsShim(topUI);
+        }
+
         this.container.addChild(entryContainer);
 
         const shim = new CanvasGraphicsShim(dynamic);
 
-        this._entries.set(building, {
-            container: entryContainer, back, front, dynamic, shim, lastAnimKey: -1,
-            // Per-instance offset into the 33ms bucket below (see sync()) - without this,
-            // performance.now() is identical for every building at a given instant, so every
-            // building's redraw bucket flips on the SAME frame: cheap frames where nothing
-            // redraws, then one expensive frame every ~33ms where every building (Training
-            // Grounds' archers/duelists, Tower Forge's workers/sparks/smoke, ...) redraws at
-            // once - a periodic hiccup. Identical fix to TowerRenderAdapter.js/
-            // EnemyRenderAdapter.js's animPhaseOffset, just never ported here.
-            animPhaseOffset: Math.random() * 33,
-        });
+        this._entries.set(building, { container: entryContainer, back, front, dynamic, shim, topUI, topUIShim, lastAnimKey: -1 });
         building.skipCanvas2DBodyRender = true;
 
         // Buildings never move — position and zIndex are set once here. Use the building's
@@ -109,6 +117,7 @@ export class BuildingRenderAdapter {
         this.container.removeChild(entry.container);
         entry.container.destroy({ children: true }); // textures are shared/cached - never destroyed here
         entry.shim.destroyGradients(); // any gradient the entity was still caching needs explicit GPU cleanup too
+        if (entry.topUIShim) entry.topUIShim.destroyGradients();
         this._entries.delete(building);
         building.skipCanvas2DBodyRender = false;
     }
@@ -123,9 +132,8 @@ export class BuildingRenderAdapter {
         building._lastRenderSize = buildingSize;
 
         // Rate-limit dynamic redraws to ~30fps — buildings have continuous fire/glow animations
-        // but sub-frame precision is imperceptible. Phase-staggered per building (see
-        // register()) so redraw work spreads evenly across frames instead of clustering.
-        const animKey = ((performance.now() + entry.animPhaseOffset) / 33) | 0;
+        // but sub-frame precision is imperceptible.
+        const animKey = (performance.now() / 33) | 0;
         if (animKey === entry.lastAnimKey) return;
         entry.lastAnimKey = animKey;
 
@@ -133,6 +141,13 @@ export class BuildingRenderAdapter {
         entry.shim.level = level;
         entry.shim.resolutionManager = level && level.resolutionManager;
         building.renderDynamicParts(entry.shim, buildingSize);
+
+        if (entry.topUIShim) {
+            entry.topUIShim.reset();
+            entry.topUIShim.level = level;
+            entry.topUIShim.resolutionManager = level && level.resolutionManager;
+            building.renderTopUI(entry.topUIShim, buildingSize);
+        }
     }
 
     _getOrBakeLayer(cacheKey, building, level, buildingSize, methodName) {
