@@ -66,17 +66,21 @@ export class Building {
     /**
      * Grid-cell radius of real level terrain (trees/rocks/vegetation) to remove around
      * this building's footprint when it's placed - see LevelBase.clearTerrainNear,
-     * called once from GameplayState right after a successful placement. Zero for most
-     * buildings (their baked art stays within the footprint, nothing to clash with).
+     * called once from GameplayState right after a successful placement. Zero for every
+     * building: real terrain is never deleted to make room for a building's own art -
+     * a building is placed among the existing level like any other entity, not carved
+     * a hole out of it.
      *
      * Subclasses whose baked artwork deliberately surrounds itself with a decorative
-     * ring of trees (MagicAcademy, GoldMine) override this to a positive radius. A
-     * single scalar Y-sort key can never correctly interleave a real terrain tree
-     * (its own sibling sprite, sorted independently - see BuildingRenderAdapter.js's
-     * zIndex comment) against a wide building silhouette that has trees standing on
-     * every side of it - so instead of fighting that sort, the building clears real
-     * terrain out of its own decorative ring's footprint and supplies the ring itself,
-     * baked into its own back/front layers where draw order is fully deterministic.
+     * ring of trees (MagicAcademy, GoldMine) face the same underlying problem: a single
+     * scalar Y-sort key (see BuildingRenderAdapter.js's zIndex comment) can never
+     * correctly interleave a real terrain tree (its own sibling sprite, sorted
+     * independently) against a wide building silhouette that has trees standing on every
+     * side of it. GoldMine resolves this by overriding getSortDepthY to sort by its own
+     * back edge instead of the usual front edge, so it reliably loses that sort against
+     * real terrain nearby and renders behind it (see GoldMine.getSortDepthY's doc
+     * comment) - deleting nothing. This clearing radius mechanism remains here for any
+     * building that would rather solve it the other way.
      */
     getClearingRadius() {
         return 0;
