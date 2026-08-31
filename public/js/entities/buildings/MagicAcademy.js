@@ -1491,6 +1491,7 @@ export class MagicAcademy extends Building {
                 break;
         }
 
+        this.notifyUpgradeChanged();
         return true;
     }
 
@@ -1526,10 +1527,15 @@ export class MagicAcademy extends Building {
         
         this.gems[element] -= cost;
         upgrade.level++;
-        
+
+        this.notifyUpgradeChanged();
         return true;
     }
-    
+
+    notifyUpgradeChanged() {
+        this.upgradesChanged = true;
+    }
+
     // New: Add diamond gem
     addDiamond() {
         this.gems.diamond++;

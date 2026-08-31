@@ -405,7 +405,21 @@ export class TowerManager {
                 forge.upgradesChanged = false; // Reset flag
             }
         }
-        
+        for (let i = 0; i < this.cachedTrainingGrounds.length; i++) {
+            const grounds = this.cachedTrainingGrounds[i];
+            if (grounds.upgradesChanged) {
+                upgradesChanged = true;
+                grounds.upgradesChanged = false; // Reset flag
+            }
+        }
+        for (let i = 0; i < this.cachedAcademies.length; i++) {
+            const academy = this.cachedAcademies[i];
+            if (academy.upgradesChanged) {
+                upgradesChanged = true;
+                academy.upgradesChanged = false; // Reset flag
+            }
+        }
+
         // If upgrades changed, recalculate all tower stats and mine income
         if (upgradesChanged) {
             this.recalculateAllTowerStats();
