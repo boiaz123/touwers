@@ -930,7 +930,7 @@ export class Castle {
             return [{
                 id: 'defender_locked',
                 name: 'Defender System Locked',
-                description: 'Upgrade Training Grounds to Level 3 to unlock the Defender system',
+                description: 'Upgrade Training Grounds to Level 2 to unlock the Defender system',
                 type: 'defender_status',
                 canHire: false,
                 icon: "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 22 22'><rect x='5' y='11' width='12' height='9' rx='1.5' fill='#6A6A6A' stroke='#404040' stroke-width='1.2'/><path d='M8 11 L8 7 Q8 3 11 3 Q14 3 14 7 L14 11' fill='none' stroke='#909090' stroke-width='2' stroke-linecap='round'/><circle cx='11' cy='16' r='1.8' fill='#3A3A3A'/></svg>"

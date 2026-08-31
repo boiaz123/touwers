@@ -5,7 +5,7 @@ import { PathDefender } from '../defenders/PathDefender.js';
  * GuardPost - A small tower that spawns at path intersections
  * Can only be placed on the path
  * Hires level 1 defenders to guard the path
- * Limited quantity: 1 at Training Grounds level 4, 2 at level 5
+ * Unlocked the moment Training Grounds is built; limited to 1 per level
  */
 export class GuardPost extends Tower {
     constructor(x, y, level = 1) {

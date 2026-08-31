@@ -672,7 +672,7 @@ export class UIManager {
                     <div><span>Respawn CD:</span> <span style="color: #FFD700;">10s</span></div>
                 `;
                 specialHTML = 'Small fortified outpost placed on the path that hires a Level 1 defender to block and fight enemies. Defenders spawn for 100g with a 10-second cooldown after defeat; defender levels upgrade at Training Grounds.';
-                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 4</div>';
+                if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Training Grounds</div>';
                 break;
             case 'combination':
                 statsHTML = `
@@ -799,13 +799,13 @@ export class UIManager {
                 break;
             case 'training':
                 statsHTML = `
-                    <div><span>Max Level:</span> <span style="color: #FFD700;">5</span></div>
+                    <div><span>Max Level:</span> <span style="color: #FFD700;">4</span></div>
                     <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
                     <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
-                specialHTML = 'Medieval training facility with archer lanes and sword fighting duels. Provides range upgrades for the Watch, Archer, and Trebuchet towers, improves Barricade slow strength and Poison Archer fire rate, and unlocks path defenders for Guard Posts.';
+                specialHTML = 'Medieval training yard with archer lanes and sword-fighting duels. Trains the Watch, Archer, Barricade, Poison Archer and Trebuchet towers for gold — always available once each tower itself is unlocked. Also unlocks the Guard Post the moment it\'s built; leveling it up (to a max of Level 4) instead strengthens the Castle\'s Defender system, up to Level 3.';
                 if (!unlockSystem.unlockedBuildings.has('training')) {
-                    unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 3</div>';
+                    unlockHTML = '<div style="color: #ff6b6b;">Requires: Training Gear (Marketplace)</div>';
                 } else if (unlockSystem.trainingGroundsCount >= 1) {
                     unlockHTML = '<div style="color: #ff6b6b;">Already built (limit 1)</div>';
                 }

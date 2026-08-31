@@ -148,19 +148,11 @@ export class UnlockSystem {
         this._tryUnlockSuperweapon();
     }
     
-    // New: Method to handle Training Grounds level upgrades
+    // New: Method to handle Training Grounds level upgrades. No per-level effects live here -
+    // the Guard Post unlocks at placement (see onTrainingGroundsBuilt) and Castle Defender
+    // levels are applied directly by TrainingGrounds.purchaseTrainingLevelUpgrade(). Kept as a
+    // hook for the UI to call into on every level-up.
     onTrainingGroundsUpgraded(newLevel) {
-        switch(newLevel) {
-            case 4:
-                // Guard post is now unlocked at placement, nothing special for level 4
-                break;
-            case 5:
-                // Training Grounds level 5 keeps guard post limit at 1
-                this.maxGuardPosts = 1;
-                break;
-            default:
-                break;
-        }
     }
     
     // New: Track Guard Post built

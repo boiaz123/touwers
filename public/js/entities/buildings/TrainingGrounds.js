@@ -11,13 +11,15 @@ export class TrainingGrounds extends Building {
         this.isSelected = false;
         this.unlockSystem = null; // Will be set by TowerManager when clicked
 
-        // Training Grounds building level - starts at 1 when built
+        // Training Grounds building level - starts at 1 when built. 4 levels total: level 1 is
+        // the build itself (tower training and the Guard Post are already available - see
+        // guardPostUnlocked below), and each further level raises the Castle Defender system.
         this.trainingLevel = 1;
-        this.maxTrainingLevel = 5;
+        this.maxTrainingLevel = 4;
 
         // Defender system unlock and upgrade
-        this.defenderUnlocked = false; // Unlocked at training level 3
-        this.defenderMaxLevel = 1; // Upgraded to level 2 at training level 4, level 3 at training level 5
+        this.defenderUnlocked = false; // Unlocked at training level 2
+        this.defenderMaxLevel = 1; // Upgraded to level 2 at training level 3, level 3 at training level 4
 
         // Guard Post system unlock and limits
         this.guardPostUnlocked = true; // Unlocked when training grounds is placed
@@ -1769,14 +1771,14 @@ export class TrainingGrounds extends Building {
             {
                 kind: 'slowPower', id: 'barricadeSlowPower', registryId: 'barricade',
                 name: 'Barricade Tower Slow Training',
-                description: `Increase Barricade Tower slow strength (65% → 90% speed reduction at level 5)`,
+                description: `Increases Barricade Tower slow strength by 5% per level (65% → 90% at max level)`,
                 icon: '<img src="assets/towers/barricade.png" class="upgrade-tower-icon">'
             },
             { kind: 'range', id: 'archerTower', registryId: 'archer', name: 'Archer Tower', icon: '<img src="assets/towers/archer.png" class="upgrade-tower-icon">' },
             {
                 kind: 'fireRate', id: 'poisonArcherTowerFireRate', registryId: 'poison',
                 name: 'Poison Archer Tower Fire Rate Training',
-                description: `Increase Poison Archer Tower fire rate (0.25 → 0.50 per second at level 5)`,
+                description: `Increases Poison Archer Tower fire rate by 0.05/sec per level (0.25 → 0.50/sec at max level)`,
                 icon: '<img src="assets/towers/poison.png" class="upgrade-tower-icon">'
             },
             { kind: 'range', id: 'cannonTower', registryId: 'cannon', name: 'Trebuchet Tower', icon: '<img src="assets/towers/cannon.png" class="upgrade-tower-icon">' }
@@ -1840,24 +1842,21 @@ export class TrainingGrounds extends Building {
         // Always return training upgrade info, even when maxed
         const isMaxed = this.trainingLevel >= this.maxTrainingLevel;
         const nextLevel = isMaxed ? this.trainingLevel : this.trainingLevel + 1;
-        let description = "Upgrade the training grounds to unlock the next range training level for manned towers and unlock elite units.";
+        let description = "Upgrade the Training Grounds to strengthen the Castle's Defender system. Tower training upgrades below are always available for gold, and the Guard Post was already unlocked when you built these Training Grounds.";
         let nextUnlock = "";
 
         if (isMaxed) {
-            nextUnlock = "MAX LEVEL - All available upgrades unlocked!\nCastle Defender Level 3 Unlocked";
+            nextUnlock = "MAX LEVEL - Castle Defender Level 3 fully unlocked";
         } else {
             switch(nextLevel) {
                 case 2:
-                    nextUnlock = "Unlocks: Range Level 1 Upgrades for all manned towers";
+                    nextUnlock = "Unlocks: Castle Defender system (hire a Level 1 Defender at the Castle)";
                     break;
                 case 3:
-                    nextUnlock = "Unlocks: Range Level 2 Upgrades for all manned towers\nCastle Defender Level 1 Unlocked (hire elite knights)";
+                    nextUnlock = "Upgrades your Castle Defender to Level 2";
                     break;
                 case 4:
-                    nextUnlock = "Unlocks: Range Level 3 Upgrades for all manned towers\nCastle Defender Level 2 Unlocked (medium armor)";
-                    break;
-                case 5:
-                    nextUnlock = "Unlocks: Range Level 4 Upgrades for all manned towers\nCastle Defender Level 3 Unlocked (heavy tank)\nMaximum Training Level";
+                    nextUnlock = "Upgrades your Castle Defender to Level 3\nMaximum Training Level";
                     break;
                 default:
                     nextUnlock = "Max Level Reached";
@@ -1886,7 +1885,7 @@ export class TrainingGrounds extends Building {
 
     calculateTrainingLevelCost() {
         if (this.trainingLevel >= this.maxTrainingLevel) return null;
-        // Cost progression: 500, 1000, 1500, 2000
+        // Cost progression: 500, 1000, 1500 (3 purchases to reach max level 4)
         return 500 * this.trainingLevel;
     }
 
@@ -1942,21 +1941,21 @@ export class TrainingGrounds extends Building {
         gameState.gold -= cost;
         this.trainingLevel++;
 
-        // Check for defender unlock at level 3
-        if (this.trainingLevel === 3) {
+        // Check for defender unlock at level 2
+        if (this.trainingLevel === 2) {
             this.defenderUnlocked = true;
             this.defenderMaxLevel = 1;
         }
 
-        // Check for guard post unlock at level 4 - now unlocked at placement, just upgrade defender
-        if (this.trainingLevel === 4) {
+        // Check for defender level 2 unlock at level 3
+        if (this.trainingLevel === 3) {
             this.defenderMaxLevel = 2;
         }
 
-        // Check for defender level 3 unlock at level 5 (no additional guard posts)
-        if (this.trainingLevel === 5) {
+        // Check for defender level 3 unlock at level 4 (max level; Guard Post is unlocked at
+        // placement, not by training level - see guardPostUnlocked in the constructor)
+        if (this.trainingLevel === 4) {
             this.defenderMaxLevel = 3;
-            // maxGuardPosts stays at 1 - no additional guard posts
         }
 
         return true;
@@ -1985,8 +1984,8 @@ export class TrainingGrounds extends Building {
     }
 
     getDefenderOption() {
-        // Only show if training level 3+ and not already at max
-        if (this.trainingLevel < 3) {
+        // Only show if training level 2+ and not already at max
+        if (this.trainingLevel < 2) {
             return null;
         }
 
@@ -1994,28 +1993,28 @@ export class TrainingGrounds extends Building {
         let option = null;
 
         if (!this.defenderUnlocked) {
-            // Should never happen if trainingLevel >= 3, but safety check
+            // Should never happen if trainingLevel >= 2, but safety check
             return null;
         }
 
-        // If training level 4, we can unlock level 2 defender
-        if (this.trainingLevel === 4 && this.defenderMaxLevel < 2) {
+        // If training level 3, we can unlock level 2 defender
+        if (this.trainingLevel === 3 && this.defenderMaxLevel < 2) {
             option = {
                 id: 'defender_upgrade_2',
                 name: 'Defender Level 2 Unlock',
-                description: 'Unlock the Level 2 Defender - Medium armored knight with improved stats',
+                description: 'Unlock the Level 2 Defender - medium-armored knight with a two-handed sword (100 HP, 20 DMG)',
                 type: 'defender_upgrade',
                 level: 2,
                 cost: 800,
                 icon: '○'
             };
         }
-        // If training level 5, we can unlock level 3 defender
-        else if (this.trainingLevel === 5 && this.defenderMaxLevel < 3) {
+        // If training level 4 (max), we can unlock level 3 defender
+        else if (this.trainingLevel === 4 && this.defenderMaxLevel < 3) {
             option = {
                 id: 'defender_upgrade_3',
                 name: 'Defender Level 3 Unlock',
-                description: 'Unlock the Level 3 Defender - Heavy armored tank with maximum strength',
+                description: 'Unlock the Level 3 Defender - heavy-armored tank with a massive sword (140 HP, 30 DMG)',
                 type: 'defender_upgrade',
                 level: 3,
                 cost: 1200,
@@ -2027,7 +2026,7 @@ export class TrainingGrounds extends Building {
     }
 
     purchaseDefenderUpgrade(level, gameState) {
-        if (level === 2 && this.trainingLevel >= 4 && this.defenderMaxLevel < 2) {
+        if (level === 2 && this.trainingLevel >= 3 && this.defenderMaxLevel < 2) {
             const cost = 800;
             if (gameState.gold < cost) {
                 return false;
@@ -2037,7 +2036,7 @@ export class TrainingGrounds extends Building {
             return true;
         }
 
-        if (level === 3 && this.trainingLevel >= 5 && this.defenderMaxLevel < 3) {
+        if (level === 3 && this.trainingLevel >= 4 && this.defenderMaxLevel < 3) {
             const cost = 1200;
             if (gameState.gold < cost) {
                 return false;
@@ -2051,11 +2050,8 @@ export class TrainingGrounds extends Building {
     }
 
     getGuardPostOption() {
-        // Only show if training level 4+ and not already at max
-        if (this.trainingLevel < 4) {
-            return null;
-        }
-
+        // Guard Post is unlocked the moment Training Grounds is built (see guardPostUnlocked
+        // in the constructor) - it has no training level requirement.
         if (!this.guardPostUnlocked) {
             return null;
         }
@@ -2063,7 +2059,7 @@ export class TrainingGrounds extends Building {
         return {
             id: 'guard_post_unlock',
             name: 'Guard Post Tower',
-            description: 'Build a Guard Post tower on the path. Hire level 1 defenders to guard key locations.',
+            description: 'Build a Guard Post on the path - a fortified outpost that hires Level 1 Defenders (100g each, 10s cooldown after defeat) to block and fight enemies.',
             type: 'guard_post',
             cost: 150,
             icon: '▹',
@@ -2088,10 +2084,10 @@ export class TrainingGrounds extends Building {
         // Return static information about the building
         return {
             name: 'Training Grounds',
-            description: 'Medieval training facility with archer lanes and sword fighting duels. Provides combat upgrades.',
-            effect: 'Global tower combat bonuses',
+            description: 'Medieval training yard with archer lanes and sword-fighting duels. Trains your towers and strengthens the Castle\'s Defender system.',
+            effect: 'Tower training + Castle Defenders',
             size: '4x4',
-            cost: 400
+            cost: 200
         };
     }
 }
