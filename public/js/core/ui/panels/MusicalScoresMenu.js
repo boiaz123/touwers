@@ -1,5 +1,6 @@
 import { SaveSystem } from '../../systems/SaveSystem.js';
 import { MarketplaceRegistry } from '../../registries/MarketplaceRegistry.js';
+import { MusicRegistry } from '../../registries/MusicRegistry.js';
 
 export class MusicalScoresMenu {
     constructor(stateManager, settlementHub) {
@@ -51,6 +52,22 @@ export class MusicalScoresMenu {
                         isPlaying: false
                     });
                 }
+            }
+        }
+
+        // Settlement theme songs aren't sold individually in the marketplace -
+        // they auto-unlock as soon as the musical-equipment upgrade is owned.
+        const upgradeSystem = this.stateManager.upgradeSystem;
+        if (upgradeSystem && upgradeSystem.hasUpgrade('musical-equipment')) {
+            const settlementTracks = MusicRegistry.getMusicByCategory('settlement');
+            for (const musicId of Object.keys(settlementTracks)) {
+                const num = musicId.match(/(\d+)$/);
+                this.unlockedMusicTracks.set(musicId, {
+                    id: musicId,
+                    name: num ? `Settlement Theme ${num[1]}` : 'Settlement Theme',
+                    musicId,
+                    isPlaying: false
+                });
             }
         }
     }

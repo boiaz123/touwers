@@ -289,7 +289,7 @@ export class MarketplaceRegistry {
         'training-materials': {
             name: 'Training Materials',
             description: 'The weathered scrolls speak of legendary warriors whose names echo through eternity—champions who pushed the boundaries of strength and skill. Their armor, still emanating residual power, crackles with ancient might. Carrying these relics into battle fills your troops with inspiration and untapped potential. In the next battle, you may construct Training Grounds at no cost. This sacred ground will unlock advanced tower techniques, granting your defenders enhanced range and devastating new abilities to defend your castle.',
-            cost: 350,
+            cost: 150,
             drawIcon: _drawMedal,
             category: 'building',
             type: 'consumable',
@@ -299,17 +299,17 @@ export class MarketplaceRegistry {
         'rabbits-foot': {
             name: 'Rabbit\'s Foot',
             description: 'The forest runs deep with magic old and true. Those who traverse its hidden groves sometimes catch glimpses of white rabbits—swift as starlight, blessed by nature itself. To claim their favor is to unlock prosperity beyond measure. This talisman, blessed by woodland spirits of abundance, doubles the wealth and treasure you discover in the next battle. Fallen enemies will yield twice the gold, gems, and relics, filling your coffers with untold riches.',
-            cost: 200,
+            cost: 100,
             drawIcon: _drawRabbitPaw,
             category: 'loot',
             type: 'consumable',
-            effect: 'The chances of normale loot are doubled in your next level\nItem is consumed as soon as you start\nQuiting the level will forfeit the item',
+            effect: 'The chances of normal loot are doubled in your next level\nItem is consumed as soon as you start\nQuiting the level will forfeit the item',
             requirements: []
         },
         'strange-talisman': {
             name: 'Strange Talisman',
             description: 'Found in the tomb of a forgotten sorcerer, this enigmatic artifact thrums with power that defies explanation. Its runes glow with ancient magic—a spell so potent that it seems to bend fate itself. When you carry it into battle, the very fabric of destiny shifts in your favor, drawing legendary treasures from the aether. In the next battle, all rare and legendary loot drops are doubled, multiplying your chances of acquiring the finest gems, artifacts, and enchanted relics the realm has to offer.',
-            cost: 400,
+            cost: 200,
             drawIcon: _drawCrystalOrb,
             category: 'loot',
             type: 'consumable',
@@ -320,7 +320,7 @@ export class MarketplaceRegistry {
         'magic-tower-flatpack': {
             name: 'Magic Tower Flatpack',
             description: 'In ages past, the greatest arcane scholars of the realm created a marvel of magical engineering—a tower of pure elemental force, capable of channeling devastating spells against enemies. This enchanted blueprint, preserved for centuries, contains all the knowledge and materials needed to construct such a tower in mere moments. In the next battle, you may erect a Magic Tower at no cost. This powerful tower can be infused with different elemental forces (fire, water, earth, air) to deal specialized damage and adapt to any threat. No gold required—only the will to embrace ancient magic.',
-            cost: 500,
+            cost: 300,
             drawIcon: _drawMagicBox,
             category: 'building',
             type: 'consumable',
@@ -330,7 +330,7 @@ export class MarketplaceRegistry {
         'frog-king-bane': {
             name: 'The Frog King\'s Bane',
             description: 'In ages long forgotten, the great kingdoms of the forest—ancient groves and sacred glades—were ruled by a tyrannical Frog King who hoarded power for himself. The old spirits of wood and water, rivals to his dominion, bound their collective essence into this talisman as an act of defiance. Carrying it into battle grants you their protection. Should your castle be destroyed, you are protected by the ancient spirits of the forest—the very foes of the Frog King himself. They conjure a mystical barrier that snatches your life back from the brink of destruction, reviving your castle and allowing you to continue the fight. A boon from nature\'s oldest guardians.',
-            cost: 800,
+            cost: 650,
             drawIcon: _drawFrogKingBane,
             category: 'boon',
             type: 'boon',
@@ -391,6 +391,17 @@ export class MarketplaceRegistry {
             category: 'music',
             type: 'music',
             musicId: 'campaign-1-battle-4',
+            effect: 'Unlock forest battle theme to be played within the Arcane Library',
+            requirements: ['musical-equipment']
+        },
+        'music-forest-5': {
+            name: 'Forest Battle - Last Stand',
+            description: 'When all seems lost, the forest rallies one final time. A desperate, defiant theme for the darkest hour.',
+            cost: 100,
+            drawIcon: _drawMusicNote,
+            category: 'music',
+            type: 'music',
+            musicId: 'campaign-1-battle-5',
             effect: 'Unlock forest battle theme to be played within the Arcane Library',
             requirements: ['musical-equipment']
         },
