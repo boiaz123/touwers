@@ -1,0 +1,24 @@
+"AppBuild"
+{
+	"AppID"		"5132600"
+	"Desc"		"Touwers build"
+
+	// Leave blank until you've verified a build via a beta branch (see
+	// STEAM_UPLOAD.md). Set to "default" to publish straight to the public
+	// branch once you trust the pipeline, or to a beta branch name to test.
+	"SetLive"	""
+
+	"Preview"	"0"
+
+	"BuildOutput"	"output\"
+	"ContentRoot"	"staging\"
+
+	"Depots"
+	{
+		// Depot ID below is a placeholder (AppID + 1, Valve's usual default
+		// for a game's single Windows depot). Confirm the real one in
+		// Steamworks -> App Admin -> SteamPipe -> Depots and rename this
+		// entry (and depot_build_5132601.vdf) to match if different.
+		"5132601"	"depot_build_5132601.vdf"
+	}
+}

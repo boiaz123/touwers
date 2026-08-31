@@ -18,6 +18,9 @@ tackle first.
 ## Track A — Steam store page
 
 1. Create the app in Steamworks Partner (needs step 0).
+1b. Upload a build via SteamPipe so it's attached to the app — scripts and
+    instructions now in `STEAM_UPLOAD.md`. Requires `steamcmd` and confirming
+    your real Depot ID in the dashboard first.
 2. Capture at least 5 gameplay screenshots across the four campaigns
    (Forest, Mountain, Desert, Frog King's Realm), min. 1280×720.
 3. Produce or commission capsule/header/library art at the exact sizes
@@ -44,11 +47,20 @@ What's left is Steamworks-dashboard-only, not code:
 1. In Steamworks Partner → App Admin → Stats & Achievements, create all 47
    achievements using the exact **API Name** values from the mapping table
    in `STEAM_ACHIEVEMENTS.md` (case-sensitive, immutable once players unlock
-   them). Until this is done, unlocks will fail silently (logged, not
-   fatal) since Steam won't recognize the API names yet.
-2. Playtest through Steam (launch via the Steam client, or with the App ID
-   owned by your Steamworks Partner account) to confirm real unlocks land
-   on your Steam profile.
+   them) — `steampipe/achievements.csv` has the same 47 rows in a
+   copy-paste-friendly format for filling out the dashboard form quickly.
+   Until this is done, unlocks will fail silently (logged, not fatal) since
+   Steam won't recognize the API names yet.
+2. Each achievement also needs a locked and unlocked **icon image**
+   (Steamworks requires actual PNG/JPG art per achievement, min 128×128 —
+   recommend uploading 256×256). The in-game system only has Unicode glyph
+   icons (⚔︎, ♛︎, etc.), not image assets, so this is real art work, not a
+   config step — same category of gap as the missing store-page capsule art
+   in `STEAM_PAGE.md`.
+3. Playtest through Steam (launch via the Steam client, or with the App ID
+   owned by your Steamworks Partner account, ideally on the beta branch
+   described in `STEAM_UPLOAD.md`) to confirm real unlocks land on your
+   Steam profile.
 
 ## Track C — Known publisher / code signing
 

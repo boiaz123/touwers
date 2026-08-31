@@ -84,8 +84,7 @@ composition: `public/assets/towers/*.png`, `public/assets/buildings/*.png`,
 
 ## Not covered here
 
-Steamworks depot/branch setup, pricing, age rating (steam requires ESRB/PEGI
-or IARC questionnaire), and store page publishing itself all happen inside
-Steamworks Partner and are out of scope for this doc — ping me once you have
-Steamworks access if you want help scripting the build upload (`steamcmd`)
-side.
+Pricing, age rating (steam requires ESRB/PEGI or IARC questionnaire), and
+store page publishing itself all happen inside Steamworks Partner and are out
+of scope for this doc. SteamPipe depot/build upload scripting is now covered
+in `STEAM_UPLOAD.md`.

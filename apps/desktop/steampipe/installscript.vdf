@@ -1,0 +1,24 @@
+// Runs once per Steam install/update, before the game is offered to launch.
+// Installs the WebView2 Runtime the same way the standalone NSIS installer's
+// embedBootstrapper does - Touwers is a WebView2-hosted app and won't render
+// anything without it. The bootstrapper is safe to run unconditionally: it's
+// a small (~2MB) Microsoft stub that checks the installed runtime version
+// itself and exits immediately as a no-op if it's already current, so no
+// registry/version guard is coded here.
+//
+// Reference: Steamworks docs -> SteamPipe -> Build Scripts and Installation
+// Scripts. Verify this still matches Valve's current schema before relying
+// on it - re-check via Steamworks Documentation search for "installscript.vdf"
+// if the upload rejects it.
+"InstallScript"
+{
+	"Run Process"
+	{
+		"webview2runtime"
+		{
+			"process 1"	"MicrosoftEdgeWebView2Setup.exe"
+			"command 1"	"/silent /install"
+			"no cleanup"	"1"
+		}
+	}
+}

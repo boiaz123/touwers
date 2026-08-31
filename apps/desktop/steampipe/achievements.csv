@@ -1,0 +1,48 @@
+category,api_name,display_name,description
+Combat,getting-started,Getting Started,Slay 500 enemies
+Combat,deadly-force,Deadly Force,"Slay 1,000 enemies"
+Combat,executioner,Executioner,"Slay 5,000 enemies"
+Combat,warlord,Warlord,"Slay 20,000 enemies"
+Combat,annihilator,Annihilator,"Slay 50,000 enemies"
+Combat,extinction-event,Extinction Protocol,"Slay 100,000 enemies"
+Victory,first-victory,First Victory,Win your first battle
+Victory,battle-hardened,Battle-Hardened,Win 10 battles
+Victory,seasoned-veteran,Seasoned Veteran,Win 25 battles
+Victory,campaign-champion,Campaign Champion,Win 75 battles
+Victory,legendary-commander,Legendary Commander,Win 150 battles
+Victory,eternal-guardian,Eternal Guardian,Win 300 battles
+Resilience,fallen-warrior,Fallen Warrior,Suffer your first defeat
+Resilience,undaunted,Undaunted,Suffer 10 defeats and keep fighting
+Resilience,unbreakable,Unbreakable,Suffer 25 defeats without giving up
+Tower building,apprentice-builder,Apprentice Builder,Build 100 towers
+Tower building,master-engineer,Master Engineer,Build 500 towers
+Tower building,tower-overlord,Tower Overlord,"Build 1,750 towers"
+Tower building,grand-architect,Grand Architect,"Build 3,000 towers"
+Tower building,eternal-fortress,The Eternal Fortress,"Build 10,000 towers"
+Economy - spending,merchant,Merchant,"Spend 1,000 gold at the market"
+Economy - spending,gold-hoarder,Gold Hoarder,"Spend 10,000 gold at the market"
+Economy - spending,treasure-baron,Treasure Baron,"Spend 50,000 gold at the market"
+Economy - spending,master-of-coin,Master of Coin,"Spend 200,000 gold at the market"
+Economy - selling,profiteer,Profiteer,"Earn 1,000 gold from selling items"
+Economy - selling,market-baron,Market Baron,Sell 250 items
+Economy - selling,trade-magnate,Trade Magnate,"Sell 1,000 items"
+Items / alchemy,consumer,Consumer,Use 10 items in battle
+Items / alchemy,talisman-master,Talisman Master,Use 50 items in battle
+Items / alchemy,boonlord,Boonlord,Use 200 items in battle
+Waves survived,wave-runner,Wave Runner,Survive 100 waves
+Waves survived,storm-survivor,Storm Survivor,Survive 1000 waves
+Waves survived,original-wavejumper,The Original Wavejumper,Survive 5000 waves
+Loot,opportunist,Opportunist,Collect 100 loot drops
+Loot,fortune-hunter,Fortune Hunter,Collect 500 loot drops
+Loot,loot-goblin,Loot Goblin,Collect 1250 loot drops
+Campaigns,forest-conqueror,Forest Conqueror,Complete the Forest campaign
+Campaigns,mountain-conqueror,Mountain Conqueror,Complete the Mountain campaign
+Campaigns,desert-conqueror,Desert Conqueror,Complete the Desert campaign
+Campaigns,frog-slayer,Frog Slayer,Survive the Frog King's Realm
+Playtime,dedicated-defender,Dedicated Defender,Play for 1 hour
+Playtime,arcane-scholar,Arcane Scholar,Play for 5 hours
+Playtime,touwers-fanatic,Touwers Fanatic,Play for 20 hours
+Playtime,eternal-watcher,Eternal Watcher,Play for 50 hours
+Super Weapon Lab,arcane-spire,Arcane Spire,Construct the Super Weapon Lab
+Super Weapon Lab,frost-shatter,Frost Shatter,Strike a frozen enemy with another Super Weapon Lab spell while it is under Frozen Nova
+Super Weapon Lab,arcane-arsenal,Arcane Arsenal,Cast Super Weapon Lab spells 100 times in total

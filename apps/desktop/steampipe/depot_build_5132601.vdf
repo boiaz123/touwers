@@ -1,0 +1,22 @@
+"DepotBuild"
+{
+	// Placeholder - confirm against Steamworks -> App Admin -> SteamPipe ->
+	// Depots and rename this file + the reference in app_build_5132600.vdf
+	// if your real depot ID differs.
+	"DepotID"	"5132601"
+
+	// ContentRoot is set once, at the AppBuild level in app_build_5132600.vdf
+	// (a depot-level ContentRoot here would resolve relative to that one,
+	// not replace it — declaring "staging\" in both doubles the path to
+	// staging\staging\ and fails with "Invalid content root").
+
+	"FileMapping"
+	{
+		"LocalPath"	"*"
+		"DepotPath"	"."
+		"recursive"	"1"
+	}
+
+	// Debug symbols - large, never needed by players, don't ship them.
+	"FileExclusion" "*.pdb"
+}

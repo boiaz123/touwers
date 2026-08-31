@@ -9,4 +9,6 @@ build/
 .cache/
 apps/*/src-tauri/target/
 /src-tauri/
+apps/desktop/steampipe/staging/
+apps/desktop/steampipe/output/
 
