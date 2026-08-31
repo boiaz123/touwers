@@ -1154,20 +1154,28 @@ export class UIManager {
             levelElement.textContent = this.level?.levelName || 'Unknown Level';
         }
         
-        // Update gem display in top bar with new structure
-        const gems = this.towerManager.getGemStocks();
-        const gemFireElement = document.getElementById('gems-fire');
-        const gemWaterElement = document.getElementById('gems-water');
-        const gemAirElement = document.getElementById('gems-air');
-        const gemEarthElement = document.getElementById('gems-earth');
-        const gemDiamondElement = document.getElementById('gems-diamond');
-        
-        if (gemFireElement) gemFireElement.textContent = gems.fire || 0;
-        if (gemWaterElement) gemWaterElement.textContent = gems.water || 0;
-        if (gemAirElement) gemAirElement.textContent = gems.air || 0;
-        if (gemEarthElement) gemEarthElement.textContent = gems.earth || 0;
-        if (gemDiamondElement) gemDiamondElement.textContent = gems.diamond || 0;
-        
+        // Gems UI is only relevant once a Magic Academy has been built in this level
+        const hasMagicAcademy = this.towerManager.buildingManager.buildings.some(
+            building => building.constructor.name === 'MagicAcademy'
+        );
+        const gemsContainer = document.querySelector('.gems-container');
+        if (gemsContainer) gemsContainer.style.display = hasMagicAcademy ? '' : 'none';
+
+        if (hasMagicAcademy) {
+            // Update gem display in top bar with new structure
+            const gems = this.towerManager.getGemStocks();
+            const gemFireElement = document.getElementById('gems-fire');
+            const gemWaterElement = document.getElementById('gems-water');
+            const gemAirElement = document.getElementById('gems-air');
+            const gemEarthElement = document.getElementById('gems-earth');
+            const gemDiamondElement = document.getElementById('gems-diamond');
+
+            if (gemFireElement) gemFireElement.textContent = gems.fire || 0;
+            if (gemWaterElement) gemWaterElement.textContent = gems.water || 0;
+            if (gemAirElement) gemAirElement.textContent = gems.air || 0;
+            if (gemEarthElement) gemEarthElement.textContent = gems.earth || 0;
+            if (gemDiamondElement) gemDiamondElement.textContent = gems.diamond || 0;
+        }
     }
 
     updateUIAvailability() {
