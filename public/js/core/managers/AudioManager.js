@@ -25,6 +25,14 @@ export class AudioManager {
         this._crossfadeLeadTime = 1.5; // seconds before a playlist track ends to start the next one
         this._crossfadeDuration = 1200; // ms
 
+        // Gapless playlist advance: as soon as a playlist track starts, we pick the track
+        // that will follow it and start loading that track's audio on the idle element right
+        // away (see _preloadNextPlaylistTrack), instead of waiting until the crossfade lead
+        // time to even start the load. { name, el } - the track name and which element it's
+        // being preloaded onto, so a later load onto that same element can tell whether it'd
+        // be reusing this in-flight/completed load or starting an unrelated one from scratch.
+        this._preloadedTrack = null;
+
         // Every playMusic() call stamps the current token and hands it down to its
         // (possibly async, waiting on 'canplaythrough') playback callback. If a newer
         // playMusic() call comes in before an older one's track finishes loading, the
@@ -141,8 +149,13 @@ export class AudioManager {
      * crossfades smoothly (both tracks overlap briefly) instead of hard-cutting.
      * @param {string} trackName - Name of the track to play
      * @param {boolean} fadeIn - Whether to fade in from silence (only applies when nothing is currently playing)
+     * @param {boolean} preservePlaylistMode - Internal use: keep playlist mode/category active
+     *   even though trackName doesn't belong to it, so that once this one-off track ends, the
+     *   still-active playlist picks up where it left off (see GameplayState's Frog King boss
+     *   fanfare, which hands back into the campaign playlist this way). Callers that just want
+     *   a standalone track (e.g. menu-theme) should leave this false (the default).
      */
-    playMusic(trackName, fadeIn = false) {
+    playMusic(trackName, fadeIn = false, preservePlaylistMode = false) {
         if (!this.musicRegistry[trackName]) {
             console.warn(`AudioManager: Music track '${trackName}' not found in registry`);
             return false;
@@ -153,6 +166,20 @@ export class AudioManager {
         // Don't restart if already playing this exact track
         if (this.currentMusicTrack === trackName && this.isMusicPlaying) {
             return true;
+        }
+
+        // A direct playMusic() call for a track outside the currently-active playlist
+        // category (e.g. menu-theme, played while settlement/campaign playlist mode is still
+        // set because whatever path got us here never explicitly stopped it - see
+        // SettlementHub's "back to main menu" flow) must not silently leave playlist mode on.
+        // If it did, _startTrackOnElement/_crossfadeToTrack would force the new track to not
+        // loop (playlist tracks never loop, they advance instead), and once it ended,
+        // _attachPlaylistAdvanceListener would hand playback off to a random track from the
+        // *stale* category instead of just looping menu-theme forever as intended.
+        if (!preservePlaylistMode && this.musicPlaylistMode && this.currentMusicCategory &&
+            trackData.category !== this.currentMusicCategory) {
+            this.musicPlaylistMode = false;
+            this.currentMusicCategory = null;
         }
 
         const wasPlaying = this.isMusicPlaying && this.currentMusicTrack;
@@ -175,10 +202,7 @@ export class AudioManager {
     _startTrackOnElement(el, trackData, trackName, fadeIn, token) {
         this._clearPlaylistAdvanceListener(el);
 
-        el.pause();
-        el.currentTime = 0;
-        el.src = trackData.path;
-        el.load();
+        this._loadTrackOnElement(el, trackData, trackName);
 
         let shouldLoop = trackData.loop !== false; // Default to true
         if (this.musicPlaylistMode && this.currentMusicCategory) {
@@ -200,6 +224,9 @@ export class AudioManager {
                 el.play().catch(err => this._handlePlayError(err));
             }
             this._attachPlaylistAdvanceListener(el, trackName);
+            // No crossfade involved on this path, so the backup element is genuinely idle
+            // right now - safe to start preloading the next playlist track onto it immediately.
+            this._preloadNextPlaylistTrack(trackName);
         };
 
         if (el.readyState >= 2) {
@@ -219,10 +246,7 @@ export class AudioManager {
 
         this._clearPlaylistAdvanceListener(newEl);
 
-        newEl.pause();
-        newEl.currentTime = 0;
-        newEl.src = trackData.path;
-        newEl.load();
+        this._loadTrackOnElement(newEl, trackData, trackName);
         newEl.volume = 0;
 
         let shouldLoop = trackData.loop !== false;
@@ -241,6 +265,10 @@ export class AudioManager {
             this._crossfade(oldEl, newEl, duration, () => {
                 oldEl.pause();
                 oldEl.currentTime = 0;
+                // Only NOW is oldEl (== this._musicElementB, post role-swap below) truly idle -
+                // it's been actively fading out via _crossfade() up until this callback fires,
+                // so preloading onto it any earlier would yank it out from under that fade-out.
+                this._preloadNextPlaylistTrack(trackName);
             });
 
             // Swap roles: the newly-playing element becomes the active one
@@ -260,6 +288,26 @@ export class AudioManager {
     _handlePlayError(err) {
         console.warn('AudioManager: Could not play music:', err);
         if (err && err.name === 'NotAllowedError') this._pendingPlayRequest = true;
+    }
+
+    /**
+     * Point `el` at trackData's audio and start loading it - unless `el` is already
+     * (in-flight or finished) loading this exact track via _preloadNextPlaylistTrack, in
+     * which case calling .load() again would abort that fetch/buffering and throw away the
+     * head start preloading exists to provide. A stale preload for a *different* track on
+     * this element is discarded so the fresh load proceeds normally.
+     */
+    _loadTrackOnElement(el, trackData, trackName) {
+        if (this._preloadedTrack && this._preloadedTrack.el === el) {
+            const reusingPreload = this._preloadedTrack.name === trackName;
+            this._preloadedTrack = null;
+            if (reusingPreload) return;
+        }
+
+        el.pause();
+        el.currentTime = 0;
+        el.src = trackData.path;
+        el.load();
     }
 
     /**
@@ -290,6 +338,11 @@ export class AudioManager {
         el.addEventListener('timeupdate', onTimeUpdate);
         el.addEventListener('ended', onEnded);
         this._playlistAdvanceHandlers.set(el, { onTimeUpdate, onEnded });
+
+        // Note: preloading the next track onto the idle element is triggered by the two
+        // callers of this method (_startTrackOnElement/_crossfadeToTrack), not from here -
+        // right after a crossfade, the "idle" element is still actively fading out and isn't
+        // safe to touch until that finishes. See _preloadNextPlaylistTrack's call sites.
     }
 
     _clearPlaylistAdvanceListener(el) {
@@ -299,6 +352,47 @@ export class AudioManager {
             el.removeEventListener('ended', handlers.onEnded);
             this._playlistAdvanceHandlers.delete(el);
         }
+    }
+
+    /**
+     * Pick the track that will follow `currentTrackName` in the active playlist and start
+     * loading it on the idle music element right away, well before the crossfade lead-time
+     * trigger fires. Playlist tracks don't loop (see _startTrackOnElement/_crossfadeToTrack -
+     * they advance instead), so without this, a track whose 'canplaythrough' takes longer
+     * than _crossfadeLeadTime to arrive (cold cache, slow disk/network) leaves the outgoing
+     * track with nothing ready to crossfade into once it runs out - an audible silent gap.
+     * Preloading from the moment the current track starts gives it the track's *entire*
+     * duration (minus the lead time) to finish loading instead of just _crossfadeLeadTime
+     * seconds, making that gap very unlikely in practice.
+     *
+     * Must only be called once `this._musicElementB` is genuinely idle - see the two call
+     * sites (_startTrackOnElement's playAudio, and _crossfadeToTrack's crossfade-complete
+     * callback) for why each is safe.
+     */
+    _preloadNextPlaylistTrack(currentTrackName) {
+        if (!(this.musicPlaylistMode && this.currentMusicCategory)) return;
+
+        const idleEl = this._musicElementB;
+        if (!idleEl) return;
+
+        const tracks = Object.entries(this.musicRegistry)
+            .filter(([_, data]) => data.category === this.currentMusicCategory)
+            .map(([name, _]) => name);
+        if (tracks.length === 0) return;
+
+        const differentTracks = tracks.filter(t => t !== currentTrackName);
+        const candidates = differentTracks.length > 0 ? differentTracks : tracks;
+        const nextTrack = candidates[Math.floor(Math.random() * candidates.length)];
+        const trackData = this.musicRegistry[nextTrack];
+        if (!trackData) return;
+
+        idleEl.pause();
+        idleEl.currentTime = 0;
+        idleEl.src = trackData.path;
+        idleEl.load();
+        idleEl.volume = 0;
+
+        this._preloadedTrack = { name: nextTrack, el: idleEl };
     }
 
     /**
@@ -345,6 +439,19 @@ export class AudioManager {
             return;
         }
 
+        // Prefer the track _preloadNextPlaylistTrack already started loading on the idle
+        // element back when the current track began - its 'canplaythrough' has very likely
+        // already fired by now, so the crossfade can start immediately instead of waiting on
+        // a fresh load. Picking a *different* random track here instead would abandon that
+        // head start and reintroduce the gap preloading exists to avoid.
+        if (this._preloadedTrack && this._preloadedTrack.el === this._musicElementB) {
+            const preloadedData = this.musicRegistry[this._preloadedTrack.name];
+            if (preloadedData && preloadedData.category === this.currentMusicCategory) {
+                this.playMusic(this._preloadedTrack.name);
+                return;
+            }
+        }
+
         // Get all tracks in this category
         const tracks = Object.entries(this.musicRegistry)
             .filter(([_, data]) => data.category === this.currentMusicCategory)
@@ -385,6 +492,7 @@ export class AudioManager {
         // Stop playlist mode
         this.musicPlaylistMode = false;
         this.currentMusicCategory = null;
+        this._preloadedTrack = null;
 
         this._clearPlaylistAdvanceListener(this.musicElement);
         this._clearPlaylistAdvanceListener(this._musicElementB);
