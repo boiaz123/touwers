@@ -33,7 +33,6 @@ export class EnemyIntelRegistry {
             stats: { health: 100, speed: 50, armour: 0, magicResistance: 0, damage: 3 },
             abilities: ['Basic movement']
         },
-        // INTERMEDIATE ENEMIES (Spy Report II)
         'knight': {
             name: 'Knight',
             description: 'A trained warrior clad in full armor. Disciplined and dangerous, the Knight is a stalwart presence on the battlefield.',
@@ -41,6 +40,7 @@ export class EnemyIntelRegistry {
             stats: { health: 1500, speed: 40, armour: 38, magicResistance: -0.2, damage: 15 },
             abilities: ['Heavy armour', 'Melee attack', 'Magic weakness']
         },
+        // INTERMEDIATE ENEMIES (Spy Report II)
         'shieldknight': {
             name: 'Shieldknight',
             description: 'A knight bearing an enchanted shield that deflects a portion of all incoming damage. A formidable defensive combatant.',
@@ -110,8 +110,8 @@ export class EnemyIntelRegistry {
 
     // Mapping of intel packs to the enemies they unlock
     static #intelMapping = {
-        'intel-pack-1': ['basic', 'archer', 'beefyenemy', 'villager'],
-        'intel-pack-2': ['knight', 'shieldknight', 'ramcart'],
+        'intel-pack-1': ['basic', 'archer', 'beefyenemy', 'villager', 'knight'],
+        'intel-pack-2': ['shieldknight', 'ramcart'],
         'intel-pack-3': ['mage', 'frog', 'walkingfrog'],
         'intel-pack-4': ['earthfrog', 'waterfrog', 'firefrog', 'airfrog']
     };

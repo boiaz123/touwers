@@ -658,23 +658,23 @@ export class MarketplaceRegistry {
         // INTEL PACKS
         'intel-pack-1': {
             name: 'Spy Report I',
-            description: 'Intelligence gathered by scouts reveals the weakness of common foes. Unlock detailed information about Basic Enemies, Archer Enemies, Beefy Enemies, and Villager Enemies in the Arcane Library. Know thy enemy, and you shall never fear them.',
+            description: 'Intelligence gathered by scouts reveals the weakness of common foes. Unlock detailed information about Basic Enemies, Archer Enemies, Beefy Enemies, Villager Enemies, and Knight Enemies in the Arcane Library. Know thy enemy, and you shall never fear them.',
             cost: 100,
             drawIcon: _drawIntelScroll,
             category: 'intel',
             type: 'consumable',
-            effect: 'Unlock intel on common enemies',
+            effect: 'Unlock intel on common enemies, including Knights',
             requirements: [],
             campaignRequirement: 'campaign-1'
         },
         'intel-pack-2': {
             name: 'Spy Report II',
-            description: 'Through careful espionage, you gain knowledge of intermediate threats. Unlock information about Knight Enemies, Shield Knight Enemies, and the Battering Ram. Fortify your defenses with understanding.',
+            description: 'Through careful espionage, you gain knowledge of intermediate threats. Unlock information about Shield Knight Enemies and the Battering Ram. Fortify your defenses with understanding.',
             cost: 200,
             drawIcon: _drawClipboard,
             category: 'intel',
             type: 'consumable',
-            effect: 'Unlock intel on knight enemies',
+            effect: 'Unlock intel on armored threats',
             requirements: [],
             campaignRequirement: 'campaign-2'
         },

@@ -144,8 +144,8 @@ export function drawFrogKingTokenIcon(ctx, cx, cy, size) {
 // ── Data ─────────────────────────────────────────────────────────────────────
 
 const ENEMY_TIERS = [
-    { ids: ['basic', 'archer', 'beefyenemy', 'villager'], requiredIntelPack: 'intel-pack-1', cost: 150 },
-    { ids: ['knight', 'shieldknight', 'ramcart'], requiredIntelPack: 'intel-pack-2', cost: 250 },
+    { ids: ['basic', 'archer', 'beefyenemy', 'villager', 'knight'], requiredIntelPack: 'intel-pack-1', cost: 150 },
+    { ids: ['shieldknight', 'ramcart'], requiredIntelPack: 'intel-pack-2', cost: 250 },
     { ids: ['mage', 'frog', 'walkingfrog'], requiredIntelPack: 'intel-pack-3', cost: 350 },
     { ids: ['earthfrog', 'waterfrog', 'firefrog', 'airfrog'], requiredIntelPack: 'intel-pack-4', cost: 450 }
 ];
