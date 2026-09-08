@@ -2502,6 +2502,15 @@ export class GameplayState {
             const enemies = this.enemyManager.enemies;
             for (let i = 0; i < enemies.length; i++) {
                 const enemy = enemies[i];
+                // Without this, a brand new enemy's first render(ctx) call draws its body
+                // to the Canvas2D canvas (skipCanvas2DBodyRender is only flipped by
+                // _syncEnemyPixi AFTER this call) - since that canvas paints above Pixi's,
+                // the enemy flashes in front of any tree/tower it should spawn behind for
+                // one frame. render(ctx) still caches _lastRenderSize unconditionally, so
+                // pre-empting the flag here loses nothing.
+                if (pixiActive && !enemy.skipCanvas2DBodyRender && typeof enemy.renderStaticBack === 'function') {
+                    enemy.skipCanvas2DBodyRender = true;
+                }
                 enemy.render(ctx);
                 if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
                     for (let j = 0; j < enemy.hitSplatters.length; j++) {

@@ -24,6 +24,15 @@ export class AudioManager {
         this._playlistAdvanceHandlers = new WeakMap(); // el -> { onTimeUpdate, onEnded }
         this._crossfadeLeadTime = 1.5; // seconds before a playlist track ends to start the next one
         this._crossfadeDuration = 1200; // ms
+
+        // Every playMusic() call stamps the current token and hands it down to its
+        // (possibly async, waiting on 'canplaythrough') playback callback. If a newer
+        // playMusic() call comes in before an older one's track finishes loading, the
+        // older callback's token goes stale and it no-ops instead of calling .play() -
+        // otherwise, on a cold cache, a superseded track (e.g. the main menu theme)
+        // can start playing *after* the track that replaced it, since loads can finish
+        // out of order.
+        this._playToken = 0;
         
         // Volume settings (0.0 - 1.0) – loaded from localStorage if available
         const _savedMusic = parseFloat(localStorage.getItem('touwers_musicVolume'));
@@ -42,8 +51,10 @@ export class AudioManager {
         this._sfxThrottles = new Map();
         this._sfxMinInterval = 80; // Min ms between same SFX name
         
-        // Fade interval tracking
+        // Fade interval tracking (separate ids so a duck/restore fade on the "front"
+        // element can never cancel an in-flight track crossfade, or vice versa)
         this._fadeIntervalId = null;
+        this._crossfadeIntervalId = null;
 
         // Achievement-banner music ducking: tracks whether music is currently
         // held down for one or more back-to-back achievement banners, so a
@@ -147,11 +158,12 @@ export class AudioManager {
         const wasPlaying = this.isMusicPlaying && this.currentMusicTrack;
         this.currentMusicTrack = trackName;
         this.isMusicPlaying = true;
+        const token = ++this._playToken;
 
         if (wasPlaying) {
-            this._crossfadeToTrack(trackData, trackName, this._crossfadeDuration);
+            this._crossfadeToTrack(trackData, trackName, this._crossfadeDuration, token);
         } else {
-            this._startTrackOnElement(this.musicElement, trackData, trackName, fadeIn);
+            this._startTrackOnElement(this.musicElement, trackData, trackName, fadeIn, token);
         }
 
         return true;
@@ -160,7 +172,7 @@ export class AudioManager {
     /**
      * Load and play a track on a given audio element from silence (no second track overlapping).
      */
-    _startTrackOnElement(el, trackData, trackName, fadeIn) {
+    _startTrackOnElement(el, trackData, trackName, fadeIn, token) {
         this._clearPlaylistAdvanceListener(el);
 
         el.pause();
@@ -176,6 +188,9 @@ export class AudioManager {
 
         const playAudio = () => {
             el.removeEventListener('canplaythrough', playAudio);
+            // A newer playMusic() call already superseded this one while it was
+            // still loading - don't let a late-arriving load start playback now.
+            if (token !== this._playToken) return;
             if (fadeIn) {
                 el.volume = 0;
                 el.play().catch(err => this._handlePlayError(err));
@@ -198,7 +213,7 @@ export class AudioManager {
      * Crossfade from the currently active music element to a new track on the backup
      * element, then swap which element is considered "active".
      */
-    _crossfadeToTrack(trackData, trackName, duration) {
+    _crossfadeToTrack(trackData, trackName, duration, token) {
         const oldEl = this.musicElement;
         const newEl = this._musicElementB;
 
@@ -218,6 +233,9 @@ export class AudioManager {
 
         const start = () => {
             newEl.removeEventListener('canplaythrough', start);
+            // A newer playMusic() call already superseded this one while it was
+            // still loading - don't crossfade into a track that's no longer wanted.
+            if (token !== this._playToken) return;
             newEl.play().catch(err => this._handlePlayError(err));
 
             this._crossfade(oldEl, newEl, duration, () => {
@@ -360,6 +378,10 @@ export class AudioManager {
     stopMusic(fadeOut = false) {
         if (!this.musicElement) return;
 
+        // Invalidate any track load still in flight so it can't start playing
+        // after we've just been told to stop.
+        this._playToken++;
+
         // Stop playlist mode
         this.musicPlaylistMode = false;
         this.currentMusicCategory = null;
@@ -371,6 +393,10 @@ export class AudioManager {
         if (this._fadeIntervalId) {
             clearInterval(this._fadeIntervalId);
             this._fadeIntervalId = null;
+        }
+        if (this._crossfadeIntervalId) {
+            clearInterval(this._crossfadeIntervalId);
+            this._crossfadeIntervalId = null;
         }
         if (this._musicElementB) {
             this._musicElementB.pause();
@@ -500,18 +526,24 @@ export class AudioManager {
     /**
      * Simultaneously fade oldEl out to silence and newEl in to the current music
      * volume, so the two tracks overlap instead of leaving a gap.
+     *
+     * Uses its own interval id (separate from _fade()'s _fadeIntervalId) so that an
+     * unrelated fade - e.g. achievement-banner ducking, which runs via _fade() on
+     * whichever element is currently "front" - can't cancel a crossfade that's mid-flight.
+     * Without that, canceling here left oldEl's onComplete (which pauses it) unreached,
+     * so the old track would keep playing underneath the new one indefinitely.
      */
     _crossfade(oldEl, newEl, duration, onComplete) {
-        if (this._fadeIntervalId) {
-            clearInterval(this._fadeIntervalId);
-            this._fadeIntervalId = null;
+        if (this._crossfadeIntervalId) {
+            clearInterval(this._crossfadeIntervalId);
+            this._crossfadeIntervalId = null;
         }
 
         const startTime = Date.now();
         const oldStartVolume = oldEl.volume;
         const targetVolume = this.musicVolume;
 
-        this._fadeIntervalId = setInterval(() => {
+        this._crossfadeIntervalId = setInterval(() => {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
 
@@ -519,8 +551,8 @@ export class AudioManager {
             newEl.volume = targetVolume * progress;
 
             if (progress >= 1) {
-                clearInterval(this._fadeIntervalId);
-                this._fadeIntervalId = null;
+                clearInterval(this._crossfadeIntervalId);
+                this._crossfadeIntervalId = null;
                 oldEl.volume = 0;
                 newEl.volume = targetVolume;
                 if (onComplete) onComplete();

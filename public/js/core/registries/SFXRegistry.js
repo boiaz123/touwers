@@ -166,7 +166,7 @@ export function initializeSFXRegistry() {
         'assets/audio/sfx/LevelSounds/Upgrade.mp3',
         {
             category: 'gameplay',
-            volume: 0.6
+            volume: 1.0
         }
     );
     
