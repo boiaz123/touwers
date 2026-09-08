@@ -1762,10 +1762,15 @@ export class GameplayState {
             // Track total enemies spawned across all waves
             this.totalEnemiesSpawned += waveConfig.enemyCount;
 
-            // Frog King boss fanfare - plays once when he spawns in the space campaign's final level
+            // Frog King boss fanfare - plays once when he spawns in the space campaign's final level.
+            // preservePlaylistMode=true keeps the campaign-4 playlist active underneath this one-off
+            // track (its category, 'boss-fanfare', doesn't match campaign-4, which would otherwise
+            // make AudioManager.playMusic() exit playlist mode - see its docs) so that once the
+            // fanfare finishes, playback hands back into a random campaign-4 track instead of going
+            // silent.
             if (this.currentCampaignId === 'campaign-4' && this.currentLevel === 'level8' &&
                 waveConfig.wavePattern && waveConfig.wavePattern.includes('frogking')) {
-                this.stateManager.audioManager.playMusic('frog-king-theme');
+                this.stateManager.audioManager.playMusic('frog-king-theme', false, true);
             }
 
             if (waveConfig.wavePattern) {
