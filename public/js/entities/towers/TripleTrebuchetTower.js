@@ -55,7 +55,7 @@ export class TripleTrebuchetTower extends CannonTower {
 
         const fireball = this._fireballPool.acquire();
         fireball.x = this.x;
-        fireball.y = this.y - 25;
+        fireball.y = this.y + this._getBaseYOffset() - 25;
         fireball.vx = distance > 0 ? (dx / distance) * initialSpeed * Math.cos(launchAngle) : 0;
         fireball.vy = -initialSpeed * Math.sin(launchAngle);
         fireball.gravity = gravity;
