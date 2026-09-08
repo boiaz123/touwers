@@ -1756,10 +1756,10 @@ export class UIManager {
                                     <span class="forge-benefit-label">Fortification:</span>
                                     <span class="forge-benefit-value">Max Level ${forge.forgeLevel >= 5 ? 3 : (forge.forgeLevel >= 3 ? 2 : (forge.forgeLevel >= 2 ? 1 : 0))}/3</span>
                                 </div>
-                                ${forge.forgeLevel >= 4 ? `<div class="forge-benefit-item">
+                                <div class="forge-benefit-item">
                                     <span class="forge-benefit-label">Magic Academy:</span>
-                                    <span class="forge-benefit-value">Unlocked</span>
-                                </div>` : ''}
+                                    <span class="forge-benefit-value">${forge.forgeLevel >= 4 ? 'Unlocked' : 'Locked'}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2395,10 +2395,10 @@ export class UIManager {
                                 <span class="forge-benefit-label">Tower Leveling:</span>
                                 <span class="forge-benefit-value">${academy.academyLevel >= 2 ? 'Unlocked (Max Lv 20)' : 'Locked'}</span>
                             </div>
-                            ${academy.academyLevel >= 3 ? `<div class="forge-benefit-item">
+                            <div class="forge-benefit-item">
                                 <span class="forge-benefit-label">Super Weapon Lab:</span>
-                                <span class="forge-benefit-value">Available</span>
-                            </div>` : ''}
+                                <span class="forge-benefit-value">${academy.academyLevel >= 3 ? 'Available' : 'Locked'}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3172,7 +3172,9 @@ export class UIManager {
         // Set active menu type to keep towers selected
         this.activeMenuType = 'tower-stats';
         this.activeMenuData = towerData;
-        
+        this.lastGoldValue = this.gameState.gold;
+        this.lastGemValues = { ...this.towerManager.getGemStocks() };
+
         const tower = towerData.tower;
         const towerInfo = tower.constructor.getInfo();
         const icon = towerInfo.icon || '';
@@ -3371,10 +3373,14 @@ export class UIManager {
             });
         }
 
-        // Add transform button handler
+        // Add transform button handler. The listener is attached unconditionally (even while
+        // the button starts out disabled for insufficient gold) because updateMenuButtonAffordability()
+        // flips the disabled attribute live as gold changes without recreating this button/listener -
+        // gating the listener on the initial disabled state left it dead once gold caught up.
         const transformBtn = document.getElementById(`transform-tower-btn-${tower.gridX}-${tower.gridY}`);
-        if (transformBtn && !transformBtn.disabled) {
+        if (transformBtn) {
             transformBtn.addEventListener('click', () => {
+                if (transformBtn.disabled) return;
                 const newTower = this.towerManager.transformTower(tower);
                 if (!newTower) return;
                 if (this.stateManager.audioManager) {
@@ -4298,14 +4304,14 @@ export class UIManager {
                                 <span class="forge-benefit-label">Max Defender Level:</span>
                                 <span class="forge-benefit-value">${trainingGrounds.defenderMaxLevel}</span>
                             </div>
-                            ${trainingGrounds.defenderUnlocked ? `<div class="forge-benefit-item">
+                            <div class="forge-benefit-item">
                                 <span class="forge-benefit-label">Castle Defender:</span>
-                                <span class="forge-benefit-value">Unlocked (Level ${trainingGrounds.defenderMaxLevel})</span>
-                            </div>` : ''}
-                            ${trainingGrounds.guardPostUnlocked ? `<div class="forge-benefit-item">
+                                <span class="forge-benefit-value">${trainingGrounds.defenderUnlocked ? `Unlocked (Level ${trainingGrounds.defenderMaxLevel})` : 'Locked'}</span>
+                            </div>
+                            <div class="forge-benefit-item">
                                 <span class="forge-benefit-label">Guard Post:</span>
-                                <span class="forge-benefit-value">Unlocked</span>
-                            </div>` : ''}
+                                <span class="forge-benefit-value">${trainingGrounds.guardPostUnlocked ? 'Unlocked' : 'Locked'}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
