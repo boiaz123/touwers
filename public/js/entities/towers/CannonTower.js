@@ -13,6 +13,14 @@ export class CannonTower extends Tower {
     // Height of the solid parapet rim the platform rests on - shared between
     // renderStaticBack (draws it) and renderDynamicParts (anchors to its top).
     static PARAPET_HEIGHT = 12;
+    // How far down (as a fraction of towerSize) to shift the whole rendered structure so
+    // its base sits near the bottom of its 2x2 grid cell instead of centered on it -
+    // same convention/ratio BasicTower and SlingerTower use for their own tower bodies
+    // (see BasicTower.renderStaticBack's "Shift tower body down" comment). Expressed as
+    // a proportion of towerSize (not a fixed pixel value) so it scales consistently for
+    // TripleTrebuchetTower's larger frame (see its SCALE) instead of leaving too little
+    // or too much headroom.
+    static BASE_Y_OFFSET_RATIO = 0.12;
 
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
@@ -149,6 +157,20 @@ export class CannonTower extends Tower {
         this.explosions.length = expWrite;
     }
     
+    /** Same downward shift renderStaticBack/renderDynamicParts apply to baseY, so
+     *  fireball spawn points (shoot(), TripleTrebuchetTower._launchFireballAt()) track
+     *  the sling's actual on-screen position instead of the old unshifted this.y. Scaled
+     *  by the subclass's SCALE (e.g. TripleTrebuchetTower) if it declares one, matching
+     *  the towerSize*SCALE those render methods pass to CannonTower's unmodified
+     *  renderStaticBack/renderDynamicParts. Falls back to a plausible towerSize (64,
+     *  matching the default cellSize=32 at scaleFactor 1 - see getCellSize()) for the
+     *  rare case a shot fires before this tower has ever been rendered once. */
+    _getBaseYOffset() {
+        const towerSize = this.towerSize || 64;
+        const scale = this.constructor.SCALE || 1;
+        return towerSize * scale * CannonTower.BASE_Y_OFFSET_RATIO;
+    }
+
     shoot() {
         if (this.target) {
             // Estimate initial speed to predict trajectory time
@@ -178,7 +200,7 @@ export class CannonTower extends Tower {
             
             const fireball = this._fireballPool.acquire();
             fireball.x = this.x;
-            fireball.y = this.y - 25;
+            fireball.y = this.y + this._getBaseYOffset() - 25;
             fireball.vx = distance > 0 ? (dx / distance) * initialSpeed * Math.cos(launchAngle) : 0;
             fireball.vy = -initialSpeed * Math.sin(launchAngle);
             fireball.gravity = gravity;
@@ -248,6 +270,7 @@ export class CannonTower extends Tower {
     render(ctx) {
         const cellSize = this.getCellSize(ctx);
         const towerSize = cellSize * 2;
+        this.towerSize = towerSize; // Store for shoot()'s fireball spawn offset, same pattern as BasicTower's this.gridSize
 
         if (!this.skipCanvas2DBodyRender) {
             this.renderStaticBack(ctx, towerSize);
@@ -266,20 +289,24 @@ export class CannonTower extends Tower {
 
     /** Strategy A (baked once per campaign, shared across instances): tower body/platform. */
     renderStaticBack(ctx, towerSize) {
+        // Shift the whole structure down so its base sits near the bottom of the 2x2
+        // grid cell instead of centered on it (this.y) - see BASE_Y_OFFSET_RATIO's doc.
+        const baseY = this.y + towerSize * CannonTower.BASE_Y_OFFSET_RATIO;
+
         // 3D square tower shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fillRect(this.x - towerSize * 0.4 + 5, this.y - towerSize * 0.35 + 5, towerSize * 0.8, towerSize * 0.7);
-        
+        ctx.fillRect(this.x - towerSize * 0.4 + 5, baseY - towerSize * 0.35 + 5, towerSize * 0.8, towerSize * 0.7);
+
         // Main square tower structure
         const towerWidth = towerSize * 0.8;
         const towerHeight = towerSize * 0.7;
-        
+
         // Stone tower (robust square design)
         ctx.fillStyle = '#808080';
         ctx.strokeStyle = '#1A1A1A';
         ctx.lineWidth = 3;
-        ctx.fillRect(this.x - towerWidth/2, this.y - towerHeight, towerWidth, towerHeight);
-        ctx.strokeRect(this.x - towerWidth/2, this.y - towerHeight, towerWidth, towerHeight);
+        ctx.fillRect(this.x - towerWidth/2, baseY - towerHeight, towerWidth, towerHeight);
+        ctx.strokeRect(this.x - towerWidth/2, baseY - towerHeight, towerWidth, towerHeight);
         
         // Stone block pattern
         ctx.strokeStyle = '#4A4A4A';
@@ -292,7 +319,7 @@ export class CannonTower extends Tower {
                 // Offset every other row for realistic stone pattern
                 const offsetX = (row % 2) * (towerWidth / blockCols / 2);
                 const blockX = this.x - towerWidth/2 + offsetX + (col * towerWidth / blockCols);
-                const blockY = this.y - towerHeight + (row * towerHeight / blockRows);
+                const blockY = baseY - towerHeight + (row * towerHeight / blockRows);
                 const blockWidth = towerWidth / blockCols;
                 const blockHeight = towerHeight / blockRows;
                 
@@ -312,7 +339,7 @@ export class CannonTower extends Tower {
         for (let x = -1; x <= 1; x += 2) {
             for (let y = 0; y <= 1; y++) {
                 const cornerX = this.x + x * (towerWidth/2 - cornerSize);
-                const cornerY = this.y - towerHeight + y * (towerHeight - cornerSize * 2);
+                const cornerY = baseY - towerHeight + y * (towerHeight - cornerSize * 2);
                 
                 ctx.fillRect(cornerX, cornerY, cornerSize, cornerSize * 2);
                 ctx.strokeRect(cornerX, cornerY, cornerSize, cornerSize * 2);
@@ -325,7 +352,7 @@ export class CannonTower extends Tower {
         // finished wall. A single rim spanning the full tower width sits flush
         // with the body below it and gives the platform one continuous seat.
         const parapetHeight = CannonTower.PARAPET_HEIGHT;
-        const parapetY = this.y - towerHeight - parapetHeight;
+        const parapetY = baseY - towerHeight - parapetHeight;
         ctx.fillStyle = '#969696';
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
@@ -372,12 +399,15 @@ export class CannonTower extends Tower {
         const towerHeight = towerSize * 0.7;
         const platformWidth = towerSize * 0.8 * 0.9;
         const platformThickness = 10;
+        // Same downward shift as renderStaticBack's baseY - must stay in sync so the
+        // mechanism sits flush on the platform instead of floating above/sinking below it.
+        const baseY = this.y + towerSize * CannonTower.BASE_Y_OFFSET_RATIO;
         // Anchor at the platform's top surface (not its underside) so the mechanism
         // sits ON it, flush with the same flat, front-facing plank drawn in
         // renderStaticBack - an ellipse "swivel base" here previously read as a
         // top-down disc, a different perspective than the rest of the tower. Must
         // match renderStaticBack's platformY (parapet top) plus its thickness.
-        const platformY = this.y - towerHeight - CannonTower.PARAPET_HEIGHT - platformThickness;
+        const platformY = baseY - towerHeight - CannonTower.PARAPET_HEIGHT - platformThickness;
 
         // Trebuchet mechanism - translate to base, rotate around pivot
         ctx.save();
