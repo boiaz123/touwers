@@ -798,7 +798,13 @@ export class GameplayState {
             }
             this.enemyRenderAdapter = null;
         }
-        // Shared sortable layer the three adapters above add their per-entity containers
+        if (this.defenderRenderAdapter) {
+            for (const defender of Array.from(this.defenderRenderAdapter._entries.keys())) {
+                this.defenderRenderAdapter.unregister(defender);
+            }
+            this.defenderRenderAdapter = null;
+        }
+        // Shared sortable layer the four adapters above add their per-entity containers
         // into (see _getPixiEntityLayer) - all entries are already unregistered by this
         // point, so this is just removing the now-empty wrapper, matching
         // BackgroundRenderAdapter's per-level destroy/recreate pattern.
@@ -809,13 +815,6 @@ export class GameplayState {
         if (this.spellEffectRenderAdapter) {
             this.spellEffectRenderAdapter.destroy();
             this.spellEffectRenderAdapter = null;
-        }
-        if (this.defenderRenderAdapter) {
-            for (const defender of Array.from(this.defenderRenderAdapter._entries.keys())) {
-                this.defenderRenderAdapter.unregister(defender);
-            }
-            this.defenderRenderAdapter.destroy();
-            this.defenderRenderAdapter = null;
         }
         if (this.terrainRenderAdapter) {
             for (const element of Array.from(this.terrainRenderAdapter._entries.keys())) {
@@ -2818,7 +2817,7 @@ export class GameplayState {
 
         if (!this.defenderRenderAdapter) {
             this.pixiTextureCache = this.pixiTextureCache || new PixiTextureCache();
-            this.defenderRenderAdapter = new DefenderRenderAdapter(this.stateManager.pixiApp.app.stage, this.pixiTextureCache);
+            this.defenderRenderAdapter = new DefenderRenderAdapter(this._getPixiEntityLayer(), this.pixiTextureCache);
         }
 
         const sizeHint = typeof defender._lastRenderSize === 'number' ? defender._lastRenderSize : 40;

@@ -2,12 +2,6 @@ import { Container, Sprite, Graphics } from 'pixi.js';
 import { CanvasGraphicsShim } from '../CanvasGraphicsShim.js';
 
 const BAKE_CANVAS_SCALE = 4;
-// Canvas2D always draws defenders (castle + guard-post) AFTER every Y-sorted entity,
-// regardless of position - never interleaved into the Y-sort itself. Sitting just below
-// SpellEffectRenderAdapter's 1000000 preserves that same "always on top of entities, but
-// under spell effects" order, rather than putting defenders in the shared sortable entity
-// layer (which would incorrectly Y-sort them against enemies/towers).
-const DEFENDERS_Z_INDEX = 999999;
 
 /**
  * Phase 7 of the Canvas2D -> Pixi migration: defender rendering (CastleDefender,
@@ -16,13 +10,20 @@ const DEFENDERS_Z_INDEX = 999999;
  * renderStaticFront, per-instance dynamic Graphics via CanvasGraphicsShim. Defenders are
  * sparse (at most ~1 + one per guard-post tower), so a dedicated small adapter is simpler
  * than threading a "don't Y-sort this one" flag through the shared entity adapter.
+ *
+ * Shares the same sortable entity layer as TowerRenderAdapter/BuildingRenderAdapter/
+ * EnemyRenderAdapter/TerrainRenderAdapter (see GameplayState.js's _getPixiEntityLayer) so
+ * a defender's per-instance zIndex=y sorts correctly against every OTHER entity type's,
+ * instead of always drawing in front of towers/buildings regardless of position.
  */
 export class DefenderRenderAdapter {
-    constructor(parentContainer, textureCache) {
-        this.container = new Container();
-        this.container.zIndex = DEFENDERS_Z_INDEX;
-        this.container.sortableChildren = true; // in case multiple defenders ever overlap on screen
-        parentContainer.addChild(this.container);
+    /**
+     * @param {Container} sharedEntityLayer - the single Container (sortableChildren=true)
+     * shared with Tower/Building/Enemy/TerrainRenderAdapter - see TowerRenderAdapter's
+     * constructor doc for the full rationale.
+     */
+    constructor(sharedEntityLayer, textureCache) {
+        this.container = sharedEntityLayer;
 
         this.textureCache = textureCache;
         this._entries = new Map();
@@ -61,7 +62,10 @@ export class DefenderRenderAdapter {
         this._entries.set(defender, { container: entryContainer, back, front, dynamic, shim });
         defender.skipCanvas2DBodyRender = true;
 
+        // Initial position + zIndex - sync() keeps zIndex current every frame after this
+        // since, unlike towers, defenders reposition (hired/repositioned along the path).
         this._positionStaticLayers(defender);
+        entryContainer.zIndex = defender.y;
     }
 
     _positionStaticLayers(defender) {
@@ -111,9 +115,5 @@ export class DefenderRenderAdapter {
                 defender.y = realY;
             }
         });
-    }
-
-    destroy() {
-        this.container.destroy({ children: true });
     }
 }
