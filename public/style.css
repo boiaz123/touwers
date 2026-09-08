@@ -1636,6 +1636,7 @@ body.orientation-portrait .side-panel {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
     flex-shrink: 0;
     padding: 0;
+    outline: none;
 }
 
 .speed-pause-btn:hover {
@@ -3067,6 +3068,7 @@ button[style*="#ff4444"]:hover:not(:disabled) {
     position: relative;
     overflow: hidden;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    outline: none;
 }
 
 .control-btn::before {

@@ -58,19 +58,21 @@ export class SpikeThrowerTower extends BarricadeTower {
         super.renderStaticBack(ctx, towerSize);
 
         const baseHeight = towerSize * 0.18;
-        const supportHeight = towerSize * 0.55;
+        // Kept in sync with BarricadeTower's own copy of this constant (renderTowerSupports/
+        // renderUpperPlatform/renderDefenders) - the platform sits a bit higher than before.
+        const supportHeight = towerSize * 0.62;
         const platformWidth = (towerSize * 0.5) * 0.9;
         const platformY = this.y - baseHeight - supportHeight;
 
-        const roofBaseY = platformY - 26; // clears the railing knobs (see renderUpperPlatform)
+        const roofBaseY = platformY - 33; // clears the railing's sharpened stake caps (see renderUpperPlatform)
         const roofHalfW = platformWidth / 2 + 5;
         const roofPeakY = roofBaseY - towerSize * 0.2;
 
         // Iron support pillars holding the roof up off the platform - drawn before the
         // roof so the roof's underside overlaps their tops. Without these the roof used
         // to just float: the platform's own railing (see renderUpperPlatform) tops out
-        // around platformY - 20, well short of roofBaseY, and nothing else filled that
-        // gap across most of the platform's width.
+        // around platformY - 29 (its sharpened stake caps), well short of roofBaseY, and
+        // nothing else filled that gap across most of the platform's width.
         const pillarWidth = 4;
         const pillarX = platformWidth / 2 - pillarWidth / 2; // near the platform's outer edge
         ctx.fillStyle = '#4a4a4e';

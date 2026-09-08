@@ -707,14 +707,15 @@ export class BarricadeTower extends Tower {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
         ctx.fillRect(this.x - towerSize * 0.3 + 2, this.y - towerSize * 0.2 + 2, towerSize * 0.6, towerSize * 0.4);
 
-        // Watch tower base platform - more defined structure
+        // Salvaged-plank base platform - weathered, grayed timber tones (not ArcherTower's
+        // clean warm-tan deck) so this reads as scrounged barricade material at a glance.
         const baseWidth = towerSize * 0.5;
         const baseHeight = towerSize * 0.18;
         const plankHeight = 5;
         const numPlanks = Math.floor(baseHeight / plankHeight);
 
         // Base platform outline for definition
-        ctx.strokeStyle = '#3D2F1F';
+        ctx.strokeStyle = '#241F1A';
         ctx.lineWidth = 2;
         ctx.strokeRect(this.x - baseWidth/2, this.y - baseHeight, baseWidth, baseHeight);
 
@@ -722,16 +723,48 @@ export class BarricadeTower extends Tower {
             const plankY = this.y - baseHeight + (i * plankHeight);
             const plankOffset = (i % 2) * 2;
 
-            ctx.fillStyle = '#9B6B35';
+            // Alternating weathered driftwood tones instead of one uniform warm brown -
+            // reads as mismatched salvaged boards rather than a fresh-cut deck.
+            ctx.fillStyle = (i % 2 === 0) ? '#5C544A' : '#4A4339';
             ctx.fillRect(this.x - baseWidth/2 + plankOffset, plankY, baseWidth - plankOffset, plankHeight);
 
-            ctx.strokeStyle = '#3D2F1F';
+            ctx.strokeStyle = '#241F1A';
             ctx.lineWidth = 0.5;
             ctx.strokeRect(this.x - baseWidth/2 + plankOffset, plankY, baseWidth - plankOffset, plankHeight);
         }
 
+        // Chunks of rubble stone wedged against the base's bottom corners, breaking the
+        // clean rectangular deck edge ArcherTower's foundation has into a rougher, more
+        // makeshift "reinforced with debris" silhouette.
+        this._renderBaseRubbleChunk(ctx, this.x - baseWidth/2 - 3, this.y, 1);
+        this._renderBaseRubbleChunk(ctx, this.x + baseWidth/2 + 3, this.y, -1);
+
         this.renderTowerSupports(ctx, baseWidth, baseHeight, towerSize);
         this.renderUpperPlatform(ctx, baseWidth, baseHeight, towerSize);
+    }
+
+    /** One irregular stone-rubble chunk propped against a bottom corner of the base
+     *  platform (see renderStaticBack()) - part of the shape change, not just a recolor.
+     *  dir flips the chunk's lean so the left/right corners mirror each other. */
+    _renderBaseRubbleChunk(ctx, x, groundY, dir) {
+        ctx.fillStyle = '#6B665C';
+        ctx.strokeStyle = '#241F1A';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, groundY);
+        ctx.lineTo(x + dir * 7, groundY - 3);
+        ctx.lineTo(x + dir * 5, groundY - 9);
+        ctx.lineTo(x - dir * 2, groundY - 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.beginPath();
+        ctx.moveTo(x + dir * 7, groundY - 3);
+        ctx.lineTo(x + dir * 5, groundY - 9);
+        ctx.lineTo(x + dir * 2, groundY - 5);
+        ctx.closePath();
+        ctx.fill();
     }
 
     /** Strategy B (per-instance Graphics, redrawn every frame): defenders - push-animation/barrel-carrying are continuous per-instance state, not bakeable. */
@@ -887,51 +920,91 @@ export class BarricadeTower extends Tower {
     }
 
     renderTowerSupports(ctx, baseWidth, baseHeight, towerSize) {
-        const supportWidth = 8;
-        const supportHeight = towerSize * 0.55;
+        const supportWidth = 10; // bulkier than a clean tower shaft - reads as reinforced, not slender
+        // Platform sits a bit higher than before (was towerSize * 0.55) - keep this in
+        // sync with the identical constant in renderUpperPlatform() and renderDefenders(),
+        // or the platform/rails/defenders/barrels will visibly misalign.
+        const supportHeight = towerSize * 0.62;
 
         for (let side = -1; side <= 1; side += 2) {
             const supportX = this.x + side * (baseWidth/2 - supportWidth/2);
+            const postTopY = this.y - baseHeight - supportHeight;
 
-            ctx.fillStyle = '#704226';
-            ctx.fillRect(supportX, this.y - baseHeight - supportHeight, supportWidth, supportHeight);
+            ctx.fillStyle = '#463E33';
+            ctx.fillRect(supportX, postTopY, supportWidth, supportHeight);
 
             // Strong outline for definition
-            ctx.strokeStyle = '#3D2F1F';
+            ctx.strokeStyle = '#221E19';
             ctx.lineWidth = 2;
-            ctx.strokeRect(supportX, this.y - baseHeight - supportHeight, supportWidth, supportHeight);
+            ctx.strokeRect(supportX, postTopY, supportWidth, supportHeight);
 
-            // Cross braces - more prominent
-            ctx.strokeStyle = '#5D4E37';
-            ctx.lineWidth = 4;
+            // Cross braces - staggered per side (each post favors the opposite diagonal,
+            // at offset heights) instead of a mirrored symmetric X, so the bracing reads
+            // as improvised reinforcement rather than a manufactured, uniform frame.
+            const leanRight = side > 0;
+            ctx.strokeStyle = '#59503F';
+            ctx.lineWidth = 5;
             ctx.beginPath();
-            ctx.moveTo(supportX, this.y - baseHeight - supportHeight * 0.7);
-            ctx.lineTo(supportX + supportWidth, this.y - baseHeight - supportHeight * 0.3);
-            ctx.moveTo(supportX + supportWidth, this.y - baseHeight - supportHeight * 0.7);
-            ctx.lineTo(supportX, this.y - baseHeight - supportHeight * 0.3);
+            ctx.moveTo(supportX + (leanRight ? 0 : supportWidth), this.y - baseHeight - supportHeight * 0.75);
+            ctx.lineTo(supportX + (leanRight ? supportWidth : 0), this.y - baseHeight - supportHeight * 0.35);
+            ctx.stroke();
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(supportX + (leanRight ? supportWidth : 0), this.y - baseHeight - supportHeight * 0.55);
+            ctx.lineTo(supportX + (leanRight ? 0 : supportWidth), this.y - baseHeight - supportHeight * 0.2);
             ctx.stroke();
 
+            // Splintered stake tip poking up past the post's own top, breaking the flat
+            // rectangular silhouette a clean tower shaft would have.
+            ctx.fillStyle = '#332D25';
+            ctx.beginPath();
+            ctx.moveTo(supportX - 1, postTopY);
+            ctx.lineTo(supportX + supportWidth * 0.5, postTopY - 6);
+            ctx.lineTo(supportX + supportWidth + 1, postTopY);
+            ctx.closePath();
+            ctx.fill();
+
             // Metal binding points
-            ctx.fillStyle = '#1F1F1F';
-            const bindY1 = this.y - baseHeight - supportHeight * 0.3;
+            ctx.fillStyle = '#17140F';
+            const bindY1 = this.y - baseHeight - supportHeight * 0.35;
             ctx.beginPath();
             ctx.arc(supportX + supportWidth/2, bindY1, 2.5, 0, Math.PI * 2);
             ctx.fill();
-            const bindY2 = this.y - baseHeight - supportHeight * 0.7;
+            const bindY2 = this.y - baseHeight - supportHeight * 0.75;
             ctx.beginPath();
             ctx.arc(supportX + supportWidth/2, bindY2, 2.5, 0, Math.PI * 2);
             ctx.fill();
         }
+
+        // One long diagonal beam spanning the full gap between both posts - the signature
+        // "braced barricade" cross-beam ArcherTower's narrow single shaft has no
+        // equivalent for, tying the two posts together as one reinforced structure.
+        const leftX = this.x - (baseWidth/2 - supportWidth/2);
+        const rightX = this.x + (baseWidth/2 - supportWidth/2) + supportWidth;
+        ctx.strokeStyle = '#4F473A';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(leftX, this.y - baseHeight - supportHeight * 0.25);
+        ctx.lineTo(rightX, this.y - baseHeight - supportHeight * 0.85);
+        ctx.stroke();
+        ctx.strokeStyle = '#221E19';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(leftX, this.y - baseHeight - supportHeight * 0.25);
+        ctx.lineTo(rightX, this.y - baseHeight - supportHeight * 0.85);
+        ctx.stroke();
     }
 
     renderUpperPlatform(ctx, baseWidth, baseHeight, towerSize) {
-        const supportHeight = towerSize * 0.55;
+        // Kept in sync with the identical constant in renderTowerSupports() and
+        // renderDefenders() - see the comment there for why.
+        const supportHeight = towerSize * 0.62;
         const platformWidth = baseWidth * 0.9;
         const platformHeight = 10;
         const platformY = this.y - baseHeight - supportHeight;
 
         // Platform outline
-        ctx.strokeStyle = '#3D2F1F';
+        ctx.strokeStyle = '#241F1A';
         ctx.lineWidth = 2;
         ctx.strokeRect(this.x - platformWidth/2, platformY, platformWidth, platformHeight);
 
@@ -941,35 +1014,48 @@ export class BarricadeTower extends Tower {
         for (let i = 0; i < platformPlanks; i++) {
             const plankX = this.x - platformWidth/2 + (i * plankWidth);
 
-            ctx.fillStyle = '#CD853F';
+            // Weathered gray-brown deck boards, not ArcherTower's warm tan '#CD853F' -
+            // the deliberate palette split from the watchtower's fresh-cut wood.
+            ctx.fillStyle = (i % 2 === 0) ? '#655C4E' : '#544C41';
             ctx.fillRect(plankX, platformY, plankWidth, platformHeight);
 
-            ctx.strokeStyle = '#8B4513';
+            ctx.strokeStyle = '#241F1A';
             ctx.lineWidth = 1;
             ctx.strokeRect(plankX, platformY, plankWidth, platformHeight);
         }
 
-        // Platform railings - more structural
-        ctx.strokeStyle = '#654321';
-        ctx.lineWidth = 4;
+        // Platform railings - crossed pike-and-brace barricade fencing instead of
+        // ArcherTower's plain horizontal rail slats, so the top reads as a defensive
+        // barrier rather than a lookout deck's fence.
         for (let side = -1; side <= 1; side += 2) {
             const railX = this.x + side * platformWidth/2;
+            const postTopY = platformY - 22;
 
+            ctx.strokeStyle = '#3B342A';
+            ctx.lineWidth = 3.5;
             ctx.beginPath();
             ctx.moveTo(railX, platformY);
-            ctx.lineTo(railX, platformY - 20);
+            ctx.lineTo(railX, postTopY);
             ctx.stroke();
 
-            ctx.lineWidth = 3;
+            // Crossed braces (X), in place of the old pair of plain horizontal slats.
+            ctx.lineWidth = 2.5;
             ctx.beginPath();
-            ctx.moveTo(railX, platformY - 15);
-            ctx.lineTo(railX - side * 15, platformY - 15);
-            ctx.moveTo(railX, platformY - 8);
-            ctx.lineTo(railX - side * 12, platformY - 8);
+            ctx.moveTo(railX, platformY - 2);
+            ctx.lineTo(railX - side * 16, postTopY);
+            ctx.moveTo(railX, postTopY);
+            ctx.lineTo(railX - side * 16, platformY - 2);
             ctx.stroke();
 
-            ctx.fillStyle = '#5D4E37';
-            ctx.fillRect(railX - 1.5, platformY - 22, 3, 4);
+            // Sharpened stake cap, not a plain knob - a jagged top edge rather than a
+            // smooth rail line.
+            ctx.fillStyle = '#241F1A';
+            ctx.beginPath();
+            ctx.moveTo(railX - 2, postTopY);
+            ctx.lineTo(railX, postTopY - 7);
+            ctx.lineTo(railX + 2, postTopY);
+            ctx.closePath();
+            ctx.fill();
         }
 
         // Ammunition storage on platform - factored into its own per-piece method (see
@@ -1004,7 +1090,9 @@ export class BarricadeTower extends Tower {
     }
 
     renderDefenders(ctx, baseWidth, baseHeight, towerSize) {
-        const supportHeight = towerSize * 0.55;
+        // Kept in sync with the identical constant in renderTowerSupports() and
+        // renderUpperPlatform() - see the comment there for why.
+        const supportHeight = towerSize * 0.62;
         const platformWidth = baseWidth * 0.9;
         const platformHeight = 10;
         const platformY = this.y - baseHeight - supportHeight;

@@ -780,6 +780,12 @@ export class AchievementSystem {
                 this._bannerTimer = 0;
                 this._bannerPhase = 'none';
                 this._banner = null;
+                // Only restore music once the whole queue has drained — if more
+                // banners are pending, the very next block below re-ducks (a
+                // no-op while already ducked) so the music never blips back up.
+                if (this.pendingBanners.length === 0 && this.audioManager) {
+                    this.audioManager.restoreMusicAfterAchievements();
+                }
             }
         }
 
@@ -789,6 +795,7 @@ export class AchievementSystem {
             this._bannerTimer = 0;
             this._bannerPhase = 'in';
             if (this.audioManager) {
+                this.audioManager.duckMusicForAchievement();
                 this.audioManager.playSFX('achievement');
             }
         }

@@ -45,6 +45,12 @@ export class AudioManager {
         // Fade interval tracking
         this._fadeIntervalId = null;
 
+        // Achievement-banner music ducking: tracks whether music is currently
+        // held down for one or more back-to-back achievement banners, so a
+        // fresh duck() while already ducked is a no-op and restore() only
+        // fades back up once the whole queue has drained.
+        this._achievementDuckActive = false;
+
         // Mobile autoplay-policy: set when a play() call is rejected with
         // NotAllowedError, consumed by the first user gesture to resume playback.
         this._pendingPlayRequest = false;
@@ -440,6 +446,29 @@ export class AudioManager {
             this.musicElement.volume = 0;
             if (callback) callback();
         });
+    }
+
+    /**
+     * Duck (lower) background music for an achievement banner. Safe to call
+     * repeatedly while banners are queued back-to-back: once ducked, further
+     * calls are a no-op so they don't restart/interrupt the fade-down or
+     * fight with a fade-back-up that hasn't happened yet.
+     */
+    duckMusicForAchievement(duration = 200) {
+        if (this._achievementDuckActive) return;
+        this._achievementDuckActive = true;
+        this._fade(this.musicElement, this.musicElement.volume, this.musicVolume * 0.1, duration, null);
+    }
+
+    /**
+     * Restore background music after the achievement banner queue has fully
+     * drained. Only fades back up (and clears the duck flag) when a duck is
+     * actually active, so calling it when nothing is ducked is a no-op.
+     */
+    restoreMusicAfterAchievements(duration = 400) {
+        if (!this._achievementDuckActive) return;
+        this._achievementDuckActive = false;
+        this._fade(this.musicElement, this.musicElement.volume, this.musicVolume, duration, null);
     }
 
     /**

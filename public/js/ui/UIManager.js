@@ -369,6 +369,7 @@ export class UIManager {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
                 this.togglePauseGame();
+                speedPauseBtn.blur();
             });
         }
 
@@ -378,6 +379,7 @@ export class UIManager {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
                 this.openPauseMenu();
+                menuBtn.blur();
             });
         }
 

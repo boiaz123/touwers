@@ -477,6 +477,7 @@ export class UpgradesMenu {
             },
             {
                 id: 'slinger-tower-unlock',
+                prerequisite: 'training-gear',
                 name: 'Slinger Tower Plans',
                 description: "Forge-tempered slings recovered from a travelling tinker's cart. Fit to a Watch Tower's defenders, they let each throw three times as fast.",
                 effect: 'Unlocks the Slinger Tower transform\nRequires Forge & Training Grounds Lv5',
@@ -503,6 +504,7 @@ export class UpgradesMenu {
             },
             {
                 id: 'sharpshooter-tower-unlock',
+                prerequisite: 'training-gear',
                 name: 'Sharpshooter Plans',
                 description: "A marksman's doctrine, hand-annotated in the margins: patience over volume. Unlimited range, one devastating shot at a time.",
                 effect: 'Unlocks the Sharpshooter transform\nRequires Forge & Training Grounds Lv5',
@@ -529,6 +531,7 @@ export class UpgradesMenu {
             },
             {
                 id: 'spike-thrower-tower-unlock',
+                prerequisite: 'training-gear',
                 name: 'Spike Thrower Plans',
                 description: "A crate of hardened iron spikes, the kind meant to be buried point-up in soft ground. Perfect for a rubble pile that's already slowing enemies down.",
                 effect: 'Unlocks the Spike Thrower transform\nRequires Forge & Training Grounds Lv5',
@@ -555,6 +558,7 @@ export class UpgradesMenu {
             },
             {
                 id: 'triple-trebuchet-unlock',
+                prerequisite: 'training-gear',
                 name: 'Triple Trebuchet Plans',
                 description: 'Engineering sketches for a reinforced throwing arm, strong enough to launch three fireballs in a single throw instead of one.',
                 effect: 'Unlocks the Triple Trebuchet transform\nRequires Forge & Training Grounds Lv5',
@@ -579,6 +583,7 @@ export class UpgradesMenu {
             },
             {
                 id: 'super-poison-tower-unlock',
+                prerequisite: 'training-gear',
                 name: 'Super Poison Plans',
                 description: "An alchemist's refined recipe, scrawled on oilcloth: the toxin now eats into an enemy's legs as surely as it eats into their health.",
                 effect: 'Unlocks the Super Poison transform\nRequires Forge & Training Grounds Lv5',

@@ -3,6 +3,7 @@ import { EnemyManager } from '../../entities/enemies/EnemyManager.js';
 import { EnemyRegistry } from '../../entities/enemies/EnemyRegistry.js';
 import { TowerRegistry } from '../../entities/towers/TowerRegistry.js';
 import { BuildingRegistry } from '../../entities/buildings/BuildingRegistry.js';
+import { MarketplaceRegistry } from '../registries/MarketplaceRegistry.js';
 import { CastleDefender } from '../../entities/defenders/CastleDefender.js';
 import { LevelRegistry } from '../../entities/levels/LevelRegistry.js';
 import { UIManager } from '../../ui/UIManager.js';
@@ -32,6 +33,32 @@ const ENEMY_CLICK_RADIUS = 28;
 // mode's actual wave format, which now comes from SandboxLevel.getWaveConfig() like any
 // other level.
 const SANDBOX_ENEMY_PATTERN = ['basic', 'villager', 'beefyenemy', 'archer', 'mage', 'knight', 'frog'];
+
+// Visual theme for the top-right "active boons" HUD cards (see renderActiveBoons /
+// _renderBoonBox below). Each entry supplies the worn-wood gradient stops, bronze/gold
+// accent colors and reminder subtitle for one marketplace boon; the item's real name and
+// hand-drawn icon come from MarketplaceRegistry itself so the HUD always matches the
+// marketplace listing. Module-level so it's built once, never re-allocated per frame.
+const ACTIVE_BOON_THEME = {
+    'frog-king-bane': {
+        accent: '#FF8C00', accentDark: '#7A3D00', textColor: '#FFD700',
+        bgTop: 'rgba(62, 40, 16, 0.95)', bgMid: 'rgba(38, 22, 8, 0.96)', bgBottom: 'rgba(16, 8, 2, 0.97)',
+        glowTop: 'rgba(255, 140, 0, 0.16)',
+        subtitle: 'The spirits of the woods protect you'
+    },
+    'strange-talisman': {
+        accent: '#9D4EDD', accentDark: '#4A1D75', textColor: '#E0AAFF',
+        bgTop: 'rgba(42, 22, 58, 0.95)', bgMid: 'rgba(26, 12, 38, 0.96)', bgBottom: 'rgba(12, 5, 20, 0.97)',
+        glowTop: 'rgba(157, 78, 221, 0.18)',
+        subtitle: 'Legendary loot fortune is doubled'
+    },
+    'rabbits-foot': {
+        accent: '#FFD700', accentDark: '#7A5F00', textColor: '#FFED4E',
+        bgTop: 'rgba(58, 46, 10, 0.95)', bgMid: 'rgba(36, 28, 4, 0.96)', bgBottom: 'rgba(16, 12, 0, 0.97)',
+        glowTop: 'rgba(255, 215, 0, 0.15)',
+        subtitle: 'Treasure fortune is doubled'
+    }
+};
 
 export class GameplayState {
     constructor(stateManager) {
@@ -1027,7 +1054,13 @@ export class GameplayState {
         
         const { spell } = result;
 
-        if (this.stateManager.gameStatistics) {
+        // Bonus levels (e.g. Frog King's Realm) auto-grant a free Super Weapon Lab with a
+        // trivial spell cooldown, so casts here shouldn't count toward the Arcane Library
+        // achievements ("Construct the Super Weapon Lab", frost-shatter, 100 casts) -
+        // those are meant to reflect progression actually earned in a normal campaign level.
+        const isBonusLevel = !!this.level?.levelFlags?.isBonusLevel;
+
+        if (!isBonusLevel && this.stateManager.gameStatistics) {
             this.stateManager.gameStatistics.addSuperWeaponSpellCast(1);
         }
 
@@ -1038,7 +1071,7 @@ export class GameplayState {
                 this.enemyManager.enemies.forEach(enemy => {
                     const dist = Math.hypot(enemy.x - x, enemy.y - y);
                     if (dist <= spell.radius) {
-                        if (enemy.freezeTimer > 0 && this.stateManager.gameStatistics) {
+                        if (!isBonusLevel && enemy.freezeTimer > 0 && this.stateManager.gameStatistics) {
                             this.stateManager.gameStatistics.markFrostShatter();
                         }
                         const damage = spell.damage * (1 - dist / spell.radius * 0.5);
@@ -1074,7 +1107,7 @@ export class GameplayState {
                             if (!enemy.isDead()) {
                                 const dist = Math.hypot(enemy.x - x, enemy.y - y);
                                 if (dist <= 80) {
-                                    if (enemy.freezeTimer > 0 && this.stateManager.gameStatistics) {
+                                    if (!isBonusLevel && enemy.freezeTimer > 0 && this.stateManager.gameStatistics) {
                                         this.stateManager.gameStatistics.markFrostShatter();
                                     }
                                     // Fire elemental damage - immune frogs (except AirFrog) take no damage but burn still applies via 'fire' ticks
@@ -1127,7 +1160,7 @@ export class GameplayState {
 
                 targets.forEach((enemy, index) => {
                     setTimeout(() => {
-                        if (enemy.freezeTimer > 0 && this.stateManager.gameStatistics) {
+                        if (!isBonusLevel && enemy.freezeTimer > 0 && this.stateManager.gameStatistics) {
                             this.stateManager.gameStatistics.markFrostShatter();
                         }
                         // Electricity damage - elemental frogs are immune (only magic + their element passes through)
@@ -1174,7 +1207,11 @@ export class GameplayState {
         if (bm._upgradesDirty !== undefined) bm._upgradesDirty = true;
         if (building.applyEffect) building.applyEffect(bm);
         this.superWeaponLab = building;
-        if (this.stateManager.gameStatistics) {
+        // This auto-place path only runs for levels with the autoPlaceSuperWeaponLab flag
+        // (bonus levels like Frog King's Realm), so the free lab shouldn't count toward the
+        // "Construct the Super Weapon Lab" Arcane Library achievement - guard explicitly
+        // rather than relying on that flag always implying isBonusLevel.
+        if (!this.level?.levelFlags?.isBonusLevel && this.stateManager.gameStatistics) {
             this.stateManager.gameStatistics.markSuperWeaponLabBuilt();
         }
         if (this.uiManager) this.uiManager.updateSpellUI();
@@ -1436,7 +1473,9 @@ export class GameplayState {
                         if (newBuilding) {
                             this.superWeaponLab = newBuilding;
                         }
-                        if (this.stateManager.gameStatistics) {
+                        // Bonus levels shouldn't feed the "Construct the Super Weapon Lab"
+                        // Arcane Library achievement, since one is already auto-placed for free.
+                        if (!this.level?.levelFlags?.isBonusLevel && this.stateManager.gameStatistics) {
                             this.stateManager.gameStatistics.markSuperWeaponLabBuilt();
                         }
                     }
@@ -2828,80 +2867,155 @@ export class GameplayState {
 
     renderActiveBoons(ctx) {
         if (!this.stateManager.marketplaceSystem) return;
-        
+
         const activeBoons = this.stateManager.marketplaceSystem.getActiveBoons();
         if (activeBoons.length === 0) return;
-        
-        // Render boon indicator in top-right area of screen
+
+        // Render boon indicators stacked in the top-right area of the screen
+        const boxWidth = 280;
+        const boxHeight = 60;
+        const boxGap = 10;
         const startX = ctx.canvas.width - 300;
         const startY = 20;
-        
+
         ctx.save();
-        ctx.globalAlpha = 0.95;
-        
+        ctx.globalAlpha = 0.97;
+
         let yPos = startY;
         for (const boonId of activeBoons) {
-            const boxWidth = 270;
-            const boxHeight = 45;
-            let glowColor, borderColor, bgColor, textColor, icon, text;
-            
-            if (boonId === 'frog-king-bane') {
-                glowColor = '#FF8C00';
-                borderColor = '#FF8C00';
-                bgColor = 'rgba(30, 15, 5, 0.95)';
-                textColor = '#FFD700';
-                icon = '';
-                text = 'The spirits of the woods protect you';
-            } else if (boonId === 'strange-talisman') {
-                glowColor = '#9D4EDD';
-                borderColor = '#9D4EDD';
-                bgColor = 'rgba(15, 5, 30, 0.95)';
-                textColor = '#E0AAFF';
-                icon = '';
-                text = 'Strange Talisman active';
-            } else if (boonId === 'rabbits-foot') {
-                glowColor = '#FFD700';
-                borderColor = '#FFD700';
-                bgColor = 'rgba(30, 25, 0, 0.95)';
-                textColor = '#FFED4E';
-                icon = '';
-                text = 'Rabbit\'s Foot active';
-            } else {
-                continue;
-            }
-            
-            // Border
-            ctx.strokeStyle = borderColor;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(startX, yPos, boxWidth, boxHeight);
-            
-            // Background
-            ctx.fillStyle = bgColor;
-            ctx.fillRect(startX, yPos, boxWidth, boxHeight);
-            
-            // Icon indicator (colored dot)
-            ctx.shadowBlur = 0;
-            ctx.fillStyle = borderColor;
-            ctx.beginPath();
-            ctx.arc(startX + 13, yPos + 22, 6, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-            
-            // Text
-            ctx.font = 'bold 11px Arial';
-            ctx.fillStyle = textColor;
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(text, startX + 35, yPos + 22);
-            
-            yPos += 55;
+            const theme = ACTIVE_BOON_THEME[boonId];
+            if (!theme) continue;
+            this._renderBoonBox(ctx, boonId, theme, startX, yPos, boxWidth, boxHeight);
+            yPos += boxHeight + boxGap;
         }
-        
+
         ctx.restore();
     }
-    
+
+    /**
+     * Draw one "active boon" HUD card: a worn-wood/gold-trim ornamented panel (matching
+     * the game's other HUD chrome - see .control-btn in style.css and the corner trim on
+     * AchievementPanel's canvas popups) with a real hand-drawn medallion icon reused from
+     * MarketplaceRegistry, instead of the old flat rect + colored dot. Called at most a
+     * few times per frame (one per active boon), so per-frame gradients/paths here are
+     * fine - the same pattern the marketplace icon drawers themselves already use.
+     */
+    _renderBoonBox(ctx, boonId, theme, x, y, w, h) {
+        const itemDef = MarketplaceRegistry.getItem(boonId);
+        const r = 8;
+
+        // Drop shadow + worn-wood gradient panel background
+        ctx.save();
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 3;
+        const bg = ctx.createLinearGradient(x, y, x, y + h);
+        bg.addColorStop(0, theme.bgTop);
+        bg.addColorStop(0.55, theme.bgMid);
+        bg.addColorStop(1, theme.bgBottom);
+        ctx.fillStyle = bg;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, r);
+        ctx.fill();
+        ctx.restore();
+
+        // Faint accent-colored sheen along the top edge, echoing control-btn's highlight
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, r);
+        ctx.clip();
+        const glow = ctx.createLinearGradient(x, y, x, y + h * 0.5);
+        glow.addColorStop(0, theme.glowTop);
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(x, y, w, h * 0.5);
+        ctx.restore();
+
+        // Bronze outer border + brighter accent hairline just inside it
+        ctx.beginPath();
+        ctx.roundRect(x + 0.5, y + 0.5, w - 1, h - 1, r);
+        ctx.strokeStyle = theme.accentDark;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(x + 2.5, y + 2.5, w - 5, h - 5, Math.max(r - 2, 2));
+        ctx.strokeStyle = theme.accent;
+        ctx.globalAlpha *= 0.6;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+
+        // Gold corner flourishes on the two top corners
+        this._drawBoonCornerTrim(ctx, x, y, 10, true, false);
+        this._drawBoonCornerTrim(ctx, x + w, y, 10, false, true);
+
+        // Icon medallion: a recessed socket ring holding the item's real vector icon
+        const cx = x + 27;
+        const cy = y + h / 2;
+        const ringR = 19;
+        const socket = ctx.createRadialGradient(cx, cy, 1, cx, cy, ringR);
+        socket.addColorStop(0, 'rgba(0, 0, 0, 0.05)');
+        socket.addColorStop(0.7, 'rgba(0, 0, 0, 0.35)');
+        socket.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+        ctx.fillStyle = socket;
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = theme.accentDark;
+        ctx.stroke();
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, ringR - 1.5, 0, Math.PI * 2);
+        ctx.strokeStyle = theme.accent;
+        ctx.globalAlpha *= 0.8;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.restore();
+
+        if (itemDef && typeof itemDef.drawIcon === 'function') {
+            itemDef.drawIcon(ctx, cx, cy, 30);
+        } else {
+            // Fallback dot, kept only in case a boon ever lacks a registry icon
+            ctx.beginPath();
+            ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+            ctx.fillStyle = theme.accent;
+            ctx.fill();
+        }
+
+        // Title (item name) + reminder subtitle
+        const textX = x + 54;
+        ctx.textAlign = 'left';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        ctx.shadowBlur = 3;
+        ctx.shadowOffsetY = 1;
+
+        ctx.font = 'bold 13px Georgia, serif';
+        ctx.fillStyle = theme.textColor;
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(itemDef ? itemDef.name : boonId, textX, y + 25);
+
+        ctx.font = '11px Georgia, serif';
+        ctx.fillStyle = 'rgba(230, 214, 186, 0.85)';
+        ctx.fillText(theme.subtitle, textX, y + 42);
+
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+    }
+
+    /** Small gold L-shaped corner flourish for a boon card, adapted from AchievementPanel's drawCornerTrim. */
+    _drawBoonCornerTrim(ctx, x, y, size, isLeft, isRight) {
+        ctx.fillStyle = 'rgba(212, 175, 55, 0.9)';
+        if (isLeft) {
+            ctx.fillRect(x + 4, y + 4, size, 2);
+            ctx.fillRect(x + 4, y + 4, 2, size);
+        } else if (isRight) {
+            ctx.fillRect(x - 4 - size, y + 4, size, 2);
+            ctx.fillRect(x - 6, y + 4, 2, size);
+        }
+    }
+
     renderSpellEffects(ctx) {
         if (!this.spellEffects) {
             return;
