@@ -118,7 +118,7 @@ export class UpgradeRegistry {
         },
         'super-poison-tower-unlock': {
             name: 'Super Poison Plans',
-            description: 'A refined toxin that permanently saps 20% of a poisoned enemy\'s speed. Requires Tower Forge and Training Grounds at level 5 to use.',
+            description: 'A refined toxin that permanently saps 30% of a poisoned enemy\'s speed. Requires Tower Forge and Training Grounds at level 5 to use.',
             cost: 700,
             icon: '◇',
             category: 'building',

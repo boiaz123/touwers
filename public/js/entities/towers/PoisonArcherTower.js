@@ -24,6 +24,9 @@ export class PoisonArcherTower extends Tower {
         
         // Poison state tracking - track which enemies are poisoned to avoid creating duplicate splatters
         this.poisonedEnemies = new Map(); // Map of enemy -> { duration, baseDamage, tickTimer }
+
+        // Base poison tick damage before any Tower Forge bonus - overridden by SuperPoisonTower.
+        this.basePoisonDamage = 13;
         
         // Create compact cover elements within 2x2 grid (64x64 area)
         this.coverElements = this.generateCoverElements(gridX, gridY);
@@ -242,8 +245,7 @@ export class PoisonArcherTower extends Tower {
             // Poison is permanent - tick damage every 2 seconds until death
             state.elapsedSinceTick += deltaTime;
             if (state.elapsedSinceTick >= 2.0) {
-                const poisonDamage = state.baseDamage + towerForgeBonus;
-                enemy.takeDamage(poisonDamage, 0, 'poison', true);
+                enemy.takeDamage(state.baseDamage, 0, 'poison', true);
                 state.elapsedSinceTick -= 2.0; // Reset for next tick
             }
         }
@@ -290,12 +292,14 @@ export class PoisonArcherTower extends Tower {
     }
 
     applyPoisonToEnemy(enemy, towerForgeBonus = 0) {
-        const basePoisonDamage = 13;
-        
-        // Apply poison if not already poisoned - poison lasts until enemy dies
+        // Apply poison if not already poisoned - poison lasts until enemy dies.
+        // The forge damage bonus is snapshotted into baseDamage right here, at the moment
+        // of application, rather than re-read live on every tick - so a Tower Forge poison
+        // upgrade bought mid-level only affects poison applied after the upgrade, and never
+        // retroactively buffs damage-over-time already ticking on an enemy.
         if (!this.poisonedEnemies.has(enemy)) {
             this.poisonedEnemies.set(enemy, {
-                baseDamage: basePoisonDamage,
+                baseDamage: this.basePoisonDamage + towerForgeBonus,
                 elapsedSinceTick: 0
             });
         }

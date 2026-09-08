@@ -10,23 +10,32 @@ import { PoisonArcherTower } from './PoisonArcherTower.js';
 export class SuperPoisonTower extends PoisonArcherTower {
     static TRANSFORM_COLOR = '#B22222';
 
+    constructor(x, y, gridX, gridY) {
+        super(x, y, gridX, gridY);
+
+        // Transformed toxin ticks harder than the base Poison Archer's 13: +7 flat, so a
+        // fully forge-upgraded Super Poison Tower deals 45/2s instead of the standard
+        // tower's 38/2s, while unupgraded/partial forge levels scale up by the same +7.
+        this.basePoisonDamage = 20;
+    }
+
     applyPoisonToEnemy(enemy, towerForgeBonus = 0) {
         super.applyPoisonToEnemy(enemy, towerForgeBonus);
 
-        // Permanent 20% speed reduction - applied once per enemy (guarded by the flag
+        // Permanent 30% speed reduction - applied once per enemy (guarded by the flag
         // below) no matter how many Super Poison Towers hit it, by lowering the shared
         // originalSpeed baseline every slow effect (BarricadeTower's zone,
         // MagicTower's water/freeze) reads from and which TowerManager's per-frame
         // restore-to-baseline loop pulls enemy.speed back toward once other slows end.
         // Lowering the baseline itself, instead of just enemy.speed, is what makes this
         // reduction survive after any other slow effect expires or restores - a plain
-        // enemy.speed *= 0.8 here would just get overwritten by that restore loop.
+        // enemy.speed *= 0.7 here would just get overwritten by that restore loop.
         if (!enemy._superPoisonSlowed) {
             enemy._superPoisonSlowed = true;
             if (!enemy.hasOwnProperty('originalSpeed')) {
                 enemy.originalSpeed = enemy.speed;
             }
-            enemy.originalSpeed *= 0.8;
+            enemy.originalSpeed *= 0.7;
             enemy.speed = Math.min(enemy.speed, enemy.originalSpeed);
         }
     }
@@ -107,7 +116,7 @@ export class SuperPoisonTower extends PoisonArcherTower {
     static getInfo() {
         return {
             name: 'Super Poison Tower',
-            description: "A refined toxin that permanently saps 20% of a poisoned enemy's speed, on top of the usual damage over time.",
+            description: "A refined toxin that permanently saps 30% of a poisoned enemy's speed, on top of the usual damage over time.",
             cost: 600,
             icon: ''
         };

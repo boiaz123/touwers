@@ -3281,11 +3281,11 @@ export class UIManager {
                     const fm = this.towerManager.cachedForges[0].getUpgradeMultipliers();
                     superPoisonForgeBonus = fm.poisonDamageBonus || 0;
                 }
-                const superPoisonTickDmg = 13 + superPoisonForgeBonus;
+                const superPoisonTickDmg = 20 + superPoisonForgeBonus;
                 statBadgesHTML = `
                     ${badge('POISON', superPoisonTickDmg + '/2s')}
                     ${badge('RANGE', Math.round(tower.range))}
-                    ${badge('SPEED', '-20%')}
+                    ${badge('SPEED', '-30%')}
                 `;
                 break;
             }
@@ -5300,11 +5300,18 @@ export class UIManager {
         
         // Unpause the game before quitting
         this.gameplayState.setPaused(false);
-        
+
+        // Bonus levels (e.g. Frog King's Realm) aren't reached via a campaign map - they're
+        // launched straight from the settlement, so quitting one should return there too,
+        // matching where finishing the stage sends the player (see GameplayState's
+        // level-completion handler / ResultsScreen's noNextLevel branch).
+        const isBonusLevel = !!this.gameplayState.level?.levelFlags?.isBonusLevel;
+        const destinationState = isBonusLevel ? 'settlementHub' : 'levelSelect';
+
         // Small delay to ensure menu closes visually before state change
         setTimeout(() => {
-            // Return to the campaign map (levelSelect) the player came from
-            this.stateManager.changeState('levelSelect');
+            // Return to the campaign map the player came from, or the settlement hub for a bonus level
+            this.stateManager.changeState(destinationState);
         }, 100);
     }
 

@@ -188,7 +188,7 @@ export class ForestLevel11 extends LevelBase {
         }
         // Wave 4
         , { 
-            enemyHealth_multiplier: 2.3, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 1, 
             spawnInterval: 3, 
             pattern: [{ type: 'beefyenemy', count: 4 }] 
