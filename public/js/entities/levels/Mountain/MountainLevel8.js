@@ -198,8 +198,8 @@ export class MountainLevel8 extends LevelBase {
         // Wave 2
         , { 
             enemyHealth_multiplier: 1.0, 
-            speedMultiplier: 1.00, 
-            spawnInterval: 0.8, 
+            speedMultiplier: 0.9, 
+            spawnInterval: 1, 
             pattern: [{ type: 'archer', count: 24 }] 
         }
         // Wave 3
@@ -211,10 +211,10 @@ export class MountainLevel8 extends LevelBase {
         }
         // Wave 4
         , { 
-            enemyHealth_multiplier: 1.5, 
+            enemyHealth_multiplier: 1, 
             speedMultiplier: 1.08, 
             spawnInterval: 0.8, 
-            pattern: [{ type: 'beefyenemy', count: 14 }, { type: 'frog', count: 3 }] 
+            pattern: [{ type: 'beefyenemy', count: 14, speedMultiplier: 0.6 }, { type: 'frog', count: 3, healthMultiplier: 2 }] 
         }
         // Wave 5
         , { 
@@ -270,7 +270,7 @@ export class MountainLevel8 extends LevelBase {
             enemyHealth_multiplier: 7, 
             speedMultiplier: 1.22, 
             spawnInterval: 0.5, 
-            pattern: [{ type: 'mage', count: 1 }, { type: 'frog', count: 34 }] 
+            pattern: [{ type: 'mage', count: 1, healthMultiplier: 10 }, { type: 'frog', count: 34 }] 
         }
         ];
 

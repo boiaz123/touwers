@@ -217,54 +217,54 @@ export class MountainLevel9 extends LevelBase {
             enemyHealth_multiplier: 1.1, 
             speedMultiplier: 0.75, 
             spawnInterval: 0.9, 
-            pattern: [{ type: 'archer', count: 4 }, { type: 'villager', count: 4 }, { type: 'basic', count: 4 }] 
+            pattern: [{ type: 'archer', count: 4, speedMultiplier: 1 }, { type: 'villager', count: 4 }, { type: 'basic', count: 4 }] 
         }
         // Wave 2
         , { 
-            enemyHealth_multiplier: 1.3, 
+            enemyHealth_multiplier: 1.6, 
             speedMultiplier: 0.75, 
             spawnInterval: 0.8, 
-            pattern: [{ type: 'archer', count: 6 }, { type: 'villager', count: 6 }, { type: 'basic', count: 5 }] 
+            pattern: [{ type: 'archer', count: 6, speedMultiplier: 1.1, healthMultiplier: 1.5 }, { type: 'villager', count: 6 }, { type: 'basic', count: 5 }] 
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 1.3, 
+            enemyHealth_multiplier: 1.8, 
             speedMultiplier: 0.67, 
             spawnInterval: 0.7, 
-            pattern: [{ type: 'archer', count: 8 }, { type: 'villager', count: 8 }, { type: 'basic', count: 7 }] 
+            pattern: [{ type: 'archer', count: 8, speedMultiplier: 1.2, healthMultiplier: 1.8 }, { type: 'villager', count: 8 }, { type: 'basic', count: 7 }] 
         }
         // Wave 4
         , { 
-            enemyHealth_multiplier: 1.3, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 0.67, 
             spawnInterval: 0.4, 
-            pattern: [{ type: 'archer', count: 9 }, { type: 'villager', count: 8 }, { type: 'basic', count: 8 }] 
+            pattern: [{ type: 'archer', count: 9, speedMultiplier: 1.3, healthMultiplier: 2 }, { type: 'villager', count: 8 }, { type: 'basic', count: 8 }] 
         }
         // Wave 5
         , { 
-            enemyHealth_multiplier: 1.2, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 1.42, 
             spawnInterval: 1, 
             pattern: [{ type: 'archer', count: 17 }] 
         }
         // Wave 6
         , { 
-            enemyHealth_multiplier: 1.2, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 0.75, 
             spawnInterval: 0.6, 
             pattern: [{ type: 'beefyenemy', count: 6 }] 
         }
         // Wave 7
         , { 
-            enemyHealth_multiplier: 1.5, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 0.78, 
             spawnInterval: 1, 
             pattern: [{ type: 'mage', count: 3 }] 
         }
         // Wave 8
         , { 
-            enemyHealth_multiplier: 1.5, 
-            speedMultiplier: 1.18, 
+            enemyHealth_multiplier: 1.8, 
+            speedMultiplier: 1.4, 
             spawnInterval: 0.7, 
             pattern: [{ type: 'frog', count: 25 }] 
         }
@@ -273,46 +273,46 @@ export class MountainLevel9 extends LevelBase {
             enemyHealth_multiplier: 1.3, 
             speedMultiplier: 0.67, 
             spawnInterval: 0.4, 
-            pattern: [{ type: 'archer', count: 12 }, { type: 'villager', count: 12 }, { type: 'basic', count: 12 }] 
+            pattern: [{ type: 'archer', count: 12, healthMultiplier: 4, speedMultiplier: 1.3 }, { type: 'villager', count: 12 }, { type: 'basic', count: 12 }] 
         }
         // Wave 10
         , { 
             enemyHealth_multiplier: 1.3, 
             speedMultiplier: 0.75, 
             spawnInterval: 0.5, 
-            pattern: [{ type: 'archer', count: 15 }, { type: 'villager', count: 15 }, { type: 'basic', count: 15 }] 
+            pattern: [{ type: 'archer', count: 15, healthMultiplier: 4.5, speedMultiplier: 1.5 }, { type: 'villager', count: 15 }, { type: 'basic', count: 15 }] 
         }
         // Wave 11
         , { 
             enemyHealth_multiplier: 1.5, 
-            speedMultiplier: 1.42, 
-            spawnInterval: 0.6, 
+            speedMultiplier: 1.6, 
+            spawnInterval: 0.4, 
             pattern: [{ type: 'archer', count: 35 }] 
         }
         // Wave 12
         , { 
-            enemyHealth_multiplier: 1.6, 
+            enemyHealth_multiplier: 3, 
             speedMultiplier: 0.75, 
             spawnInterval: 0.3, 
             pattern: [{ type: 'beefyenemy', count: 7 }] 
         }
         // Wave 13
         , { 
-            enemyHealth_multiplier: 2.7, 
+            enemyHealth_multiplier: 4, 
             speedMultiplier: 0.78, 
             spawnInterval: 0.3, 
             pattern: [{ type: 'mage', count: 1 }] 
         }
         // Wave 14
         , { 
-            enemyHealth_multiplier: 1.8, 
+            enemyHealth_multiplier: 3.5, 
             speedMultiplier: 0.75, 
             spawnInterval: 0.4, 
             pattern: [{ type: 'beefyenemy', count: 12 }] 
         }
         // Wave 15
         , { 
-            enemyHealth_multiplier: 2.4, 
+            enemyHealth_multiplier: 3.5, 
             speedMultiplier: 1.43, 
             spawnInterval: 0.7, 
             pattern: [{ type: 'shieldknight', count: 3 }] 
@@ -340,21 +340,21 @@ export class MountainLevel9 extends LevelBase {
         }
         // Wave 19
         , { 
-            enemyHealth_multiplier: 2, 
+            enemyHealth_multiplier: 11, 
             speedMultiplier: 1.00, 
             spawnInterval: 0.6, 
-            pattern: [{ type: 'mage', count: 2 }, { type: 'frog', count: 18 }] 
+            pattern: [{ type: 'mage', count: 2 }, { type: 'frog', count: 18, healthMultiplier: 5 }] 
         }
         // Wave 20
         , { 
-            enemyHealth_multiplier: 3.7, 
+            enemyHealth_multiplier: 10, 
             speedMultiplier: 1.13, 
             spawnInterval: 0.9, 
-            pattern: [{ type: 'knight', count: 1 }, { type: 'mage', count: 1 }, { type: 'shieldknight', count: 1 }] 
+            pattern: [{ type: 'knight', count: 1, healthMultiplier: 4, speedMultiplier: 0.8 }, { type: 'mage', count: 1 }, { type: 'shieldknight', count: 1 }] 
         }
         // Wave 21
         , { 
-            enemyHealth_multiplier: 15, 
+            enemyHealth_multiplier: 25, 
             speedMultiplier: 0.78, 
             spawnInterval: 1, 
             pattern: [{ type: 'mage', count: 1 }] 

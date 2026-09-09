@@ -19,7 +19,7 @@ export class SpikeThrowerTower extends BarricadeTower {
 
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
-        this.zoneDamage = 8;
+        this.zoneDamage = 14;
         this.zoneTickInterval = 1.5;
         this._zoneDamageTimers = new Map(); // enemy -> seconds elapsed since last tick
     }
