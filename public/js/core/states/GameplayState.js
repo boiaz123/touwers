@@ -228,8 +228,11 @@ export class GameplayState {
             this.stateManager.achievementSystem.setAudioManager(this.stateManager.audioManager);
         }
 
-        // Reset pause state when entering a new level
+        // Reset pause state when entering a new level (bypasses UIManager.setPaused's
+        // caller-side hooks, so also clear the CSS hook they'd normally clear - see
+        // UIManager.updatePanelPauseState)
         this.isPaused = false;
+        document.body.classList.remove('game-paused');
         
         // IMPORTANT: Save settlement gold before starting level (so it's not lost)
         const settlementGoldBeforeLevel = this.stateManager.playerGold || 0;
@@ -2376,7 +2379,12 @@ export class GameplayState {
 
     gameOver() {
         this.waveInProgress = false;
-        
+
+        // Close any open building/tower panels and clear placement selection so the
+        // defeat screen shows a clean battlefield instead of a stuck-open menu
+        // (mirrors completeLevel()'s victory-screen handling above).
+        this.cancelSelection();
+
         // Record defeat and playtime
         if (this.stateManager.gameStatistics) {
             this.stateManager.gameStatistics.recordDefeat();

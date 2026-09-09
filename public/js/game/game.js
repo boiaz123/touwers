@@ -440,18 +440,17 @@ export class Game {
 
                 const refs = getGameplayRefs();
                 if (refs && refs.uiManager) {
-                    // In gameplay: close panels / pause menu / cancel selection
-                    if (refs.uiManager.closeAllPanels) {
-                        refs.uiManager.closeAllPanels();
-                    }
-                    if (refs.uiManager.closePauseMenu) {
-                        const pauseMenuModal = document.getElementById('pause-menu-modal');
-                        if (pauseMenuModal && pauseMenuModal.classList.contains('show')) {
+                    // In gameplay: Escape opens the pause menu. Closing open building/
+                    // tower panels and cancelling placement selection is already covered
+                    // by right-click (see the canvas mousedown handler above), so Escape
+                    // no longer duplicates that - it toggles the pause menu instead.
+                    const pauseMenuModal = document.getElementById('pause-menu-modal');
+                    if (pauseMenuModal && pauseMenuModal.classList.contains('show')) {
+                        if (refs.uiManager.closePauseMenu) {
                             refs.uiManager.closePauseMenu();
                         }
-                    }
-                    if (this.stateManager.currentState.cancelSelection) {
-                        this.stateManager.currentState.cancelSelection();
+                    } else if (refs.uiManager.openPauseMenu) {
+                        refs.uiManager.openPauseMenu();
                     }
                     return true;
                 }

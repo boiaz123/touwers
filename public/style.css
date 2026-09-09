@@ -1868,6 +1868,25 @@ body.orientation-portrait .side-panel {
     animation: slideOutRight 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards;
 }
 
+/* While the game is paused, any building/tower panel left open stays visible but
+   becomes fully unclickable instead of letting the player keep spending gold /
+   mutating tower state while the simulation is frozen. Toggled by
+   UIManager.updatePanelPauseState() whenever isPaused changes.
+   pointer-events: none goes on the panel's CONTENTS, not the panel itself: the panel
+   is a fixed, opaque box sitting on top of the tower/building action bar at
+   right:0/top:0, so if the panel element itself stopped taking part in hit-testing,
+   the browser would resolve hover/click straight through to whatever sits underneath
+   it on screen (the tower-btn/building-btn tooltips would then fire on hover even
+   though the panel visually covers them). Keeping the panel itself hit-testable (so it
+   keeps swallowing the pointer) while disabling only its children gets "not
+   clickable" without that pass-through. */
+body.game-paused .side-panel {
+    filter: grayscale(0.4) brightness(0.75);
+}
+body.game-paused .side-panel > * {
+    pointer-events: none;
+}
+
 @keyframes slideOutRight {
     from {
         transform: translateX(0);

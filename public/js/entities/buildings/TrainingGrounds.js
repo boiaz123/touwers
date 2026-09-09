@@ -40,7 +40,7 @@ export class TrainingGrounds extends Building {
 
         // Tower-specific fire rate / effect-strength upgrades
         this.upgrades = {
-            barricadeSlowPower: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.05 }, // Slow strength: 65% → 90% at level 5
+            barricadeSlowPower: { level: 0, maxLevel: 5, baseCost: 150, effect: 0.05 }, // Slow strength: 50% → 75% at level 5
             poisonArcherTowerFireRate: { level: 0, maxLevel: 5, baseCost: 140, effect: 0.05 } // Fire rate: 0.25 → 0.50 at level 5
         };
 
@@ -1785,7 +1785,7 @@ export class TrainingGrounds extends Building {
             {
                 kind: 'slowPower', id: 'barricadeSlowPower', registryId: 'barricade',
                 name: 'Barricade Tower Slow Training',
-                description: `Increases Barricade Tower slow strength by 5% per level (65% → 90% at max level)`,
+                description: `Increases Barricade Tower slow strength by 5% per level (50% → 75% at max level)`,
                 icon: '<img src="assets/towers/barricade.png" class="upgrade-tower-icon">'
             },
             { kind: 'range', id: 'archerTower', registryId: 'archer', name: 'Archer Tower', icon: '<img src="assets/towers/archer.png" class="upgrade-tower-icon">' },

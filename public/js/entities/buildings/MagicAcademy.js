@@ -94,8 +94,8 @@ export class MagicAcademy extends Building {
         // at this ring used, both produce - trees that never actually cover any wall).
         // A gap is left directly ahead of the gate (roughly -30..30) so the bridge stays
         // visible. Together with this.trees above, this completes a full circle of trees
-        // around the building - see Building.getClearingRadius, which also clears real
-        // level terrain out of this ring's footprint on placement.
+        // around the building - see getSortDepthY below for how this ring is kept
+        // visually unambiguous against real terrain without deleting anything.
         this.frontTrees = [
             { x: -66, y: 12, size: 0.85 },
             { x: -46, y: 18, size: 0.75 },
@@ -117,11 +117,27 @@ export class MagicAcademy extends Building {
         return buildingSize * 0.12;
     }
 
-    /** The back+front tree ring reaches roughly 2 grid cells past the 4x4 footprint on
-     * every side (see this.trees/this.frontTrees above) - clear real terrain that far out
-     * so it doesn't visually compete with the ring. See Building.getClearingRadius. */
+    /** No clearing - real terrain (trees/rocks/vegetation) around the academy is never
+     * touched; see GoldMine.getClearingRadius's doc comment for why (this used to return 2
+     * and delete the conflicting real terrain, which is exactly the "trees disappear" bug
+     * that fix removed - the academy had the same bug via the same mechanism and gets the
+     * same fix here). See getSortDepthY below for how the ring's cross-entity sort is kept
+     * unambiguous without deleting anything. */
     getClearingRadius() {
-        return 2;
+        return 0;
+    }
+
+    /** Mirrors GoldMine.getSortDepthY: sorts by the academy's BACK edge instead of the
+     * default FRONT edge, since its own back+front tree ring (this.trees/this.frontTrees
+     * above) stands on every side of it, so a single scalar Y-sort key can't correctly
+     * interleave it against individual real terrain trees the way a normal, contained
+     * building silhouette can (see Building.getClearingRadius's doc comment). This makes
+     * the academy reliably lose the depth tie against real terrain immediately around it
+     * and render behind it, nestled into the existing forest rather than cutting a
+     * clearing out of it - the ring's own art is unaffected (still drawn via
+     * renderStaticBack/renderStaticFront's fixed back/dynamic/front order). */
+    getSortDepthY(buildingSize) {
+        return this.y - this.getVisualYOffset(buildingSize) - buildingSize / 2;
     }
 
     update(deltaTime) {

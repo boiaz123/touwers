@@ -67,8 +67,8 @@ export class BarricadeTower extends Tower {
         // something actually lands.
         this.impactPuffs = [];
 
-        this.effectRadius = 20; // Base slow-patch radius, upgraded at the Tower Forge (max 40px)
-        this.slowPercent = 0.65; // Fraction of speed removed while inside the patch, upgraded at Training Grounds
+        this.effectRadius = 35; // Base slow-patch radius, upgraded at the Tower Forge (max 70px)
+        this.slowPercent = 0.50; // Fraction of speed removed while inside the patch, upgraded at Training Grounds
 
         // Sporadic, randomized throw cadence - purely cosmetic (see throwRubble()/landRubble()):
         // the slow effect itself is always active, this only paces the visual "new rubble
@@ -235,9 +235,9 @@ export class BarricadeTower extends Tower {
      * see the constructor.
      */
     _rebuildDebris(effRadius) {
-        const baseCount = 6; // at base radius (20px)
-        const perPxDensity = 0.5; // reaches 16 pieces at max radius (40px)
-        const maxSlots = Math.max(5, Math.round(baseCount + Math.max(0, effRadius - 20) * perPxDensity));
+        const baseCount = 6; // at base radius (35px)
+        const perPxDensity = 0.5; // reaches 24 pieces at max radius (70px)
+        const maxSlots = Math.max(5, Math.round(baseCount + Math.max(0, effRadius - this.originalEffectRadius) * perPxDensity));
 
         const totalLen = this.coveragePoints ? this._polylineLength(this.coveragePoints) : effRadius * 2;
         const maxPerp = this.roadHalfWidth * 0.85;

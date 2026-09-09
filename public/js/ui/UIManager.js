@@ -1681,7 +1681,7 @@ export class UIManager {
         const baseTowerStats = {
             'basic': { damage: 20 },
             'archer': { damage: 35 },
-            'barricade_radius': { radius: 20 },
+            'barricade_radius': { radius: 35 },
             'poison': { damage: 13 },
             'cannon': { damage: 100, radius: 50 }
         };
@@ -3220,8 +3220,8 @@ export class UIManager {
                 break;
             }
             case 'BarricadeTower': {
-                const radius = tower.effectRadius || 40;
-                const slowPercent = Math.round((tower.slowPercent || 0.65) * 100);
+                const radius = tower.effectRadius || 35;
+                const slowPercent = Math.round((tower.slowPercent || 0.50) * 100);
                 statBadgesHTML = `
                     ${badge('RADIUS', Math.round(radius) + 'px')}
                     ${badge('SLOW', slowPercent + '%')}
@@ -3261,8 +3261,8 @@ export class UIManager {
                 break;
             }
             case 'SpikeThrowerTower': {
-                const radius = tower.effectRadius || 40;
-                const slowPercent = Math.round((tower.slowPercent || 0.65) * 100);
+                const radius = tower.effectRadius || 35;
+                const slowPercent = Math.round((tower.slowPercent || 0.50) * 100);
                 statBadgesHTML = `
                     ${badge('RADIUS', Math.round(radius) + 'px')}
                     ${badge('SLOW', slowPercent + '%')}
@@ -4356,8 +4356,8 @@ export class UIManager {
                     nextValue = `+${nextRange} range`;
                 } else if (upgrade.id === 'barricadeSlowPower') {
                     // Barricade slow strength
-                    const currentPct = Math.round((0.65 + upgrade.level * 0.05) * 100);
-                    const nextPct = Math.round((0.65 + (upgrade.level + 1) * 0.05) * 100);
+                    const currentPct = Math.round((0.50 + upgrade.level * 0.05) * 100);
+                    const nextPct = Math.round((0.50 + (upgrade.level + 1) * 0.05) * 100);
                     currentValue = `${currentPct}% slow`;
                     nextValue = `${nextPct}% slow`;
                 } else if (upgrade.id === 'poisonArcherTowerFireRate') {
@@ -4378,7 +4378,7 @@ export class UIManager {
                     const curRange = upgrade.level * upgrade.effect;
                     tooltipText += `<div>\uD83C\uDFAF Range Bonus: <span style="color: #FFD700;">+${curRange}px</span></div>`;
                 } else if (upgrade.id === 'barricadeSlowPower') {
-                    const curPct = Math.round((0.65 + upgrade.level * 0.05) * 100);
+                    const curPct = Math.round((0.50 + upgrade.level * 0.05) * 100);
                     tooltipText += `<div>\u2744 Slow Strength: <span style="color: #FFD700;">${curPct}%</span></div>`;
                 } else if (upgrade.id === 'poisonArcherTowerFireRate') {
                     const curRate = (0.25 + upgrade.level * 0.05).toFixed(2);
@@ -5078,10 +5078,21 @@ export class UIManager {
 
     // ============ PAUSE AND MENU MANAGEMENT ============
 
+    /**
+     * Reflects isPaused onto <body> as a CSS hook (see body.game-paused .side-panel in
+     * style.css) so any building/tower panel left open while paused is visually dimmed
+     * and made fully unclickable (pointer-events: none) - the panel itself stays open,
+     * only its interactivity changes. Must be called from every place that changes
+     * isPaused (currently: togglePauseGame, openPauseMenu, closePauseMenu below).
+     */
+    updatePanelPauseState() {
+        document.body.classList.toggle('game-paused', !!this.gameplayState.isPaused);
+    }
+
     togglePauseGame() {
         const wasPaused = this.gameplayState.togglePause();
         const speedPauseBtn = document.getElementById('speed-pause-btn');
-        
+
         if (speedPauseBtn) {
             const icon = speedPauseBtn.querySelector('.pause-play-icon');
             if (icon) {
@@ -5092,7 +5103,8 @@ export class UIManager {
                 }
             }
         }
-        
+
+        this.updatePanelPauseState();
     }
 
     openPauseMenu() {
@@ -5100,7 +5112,7 @@ export class UIManager {
         if (!this.gameplayState.isPaused) {
             this.gameplayState.setPaused(true);
         }
-        
+
         // Update pause button to show correct state (play icon since game is now paused)
         const speedPauseBtn = document.getElementById('speed-pause-btn');
         if (speedPauseBtn) {
@@ -5114,6 +5126,8 @@ export class UIManager {
         if (pauseMenuModal) {
             pauseMenuModal.classList.add('show');
         }
+
+        this.updatePanelPauseState();
     }
 
     closePauseMenu() {
@@ -5121,18 +5135,18 @@ export class UIManager {
         if (pauseMenuModal) {
             pauseMenuModal.classList.remove('show');
         }
-        
+
         // Close options menu if open
         const ingameOptionsModal = document.getElementById('ingame-options-modal');
         if (ingameOptionsModal) {
             ingameOptionsModal.classList.remove('show');
         }
-        
+
         // Resume the game at 1x speed
         this.gameplayState.setPaused(false);
         this.gameplayState.setGameSpeed(1.0);
         this.updateSpeedCircles(1);
-        
+
         // Update pause button to show pause icon (game is now playing)
         const speedPauseBtn = document.getElementById('speed-pause-btn');
         if (speedPauseBtn) {
@@ -5141,6 +5155,8 @@ export class UIManager {
                 icon.textContent = '⏸';
             }
         }
+
+        this.updatePanelPauseState();
     }
 
     restartLevel() {

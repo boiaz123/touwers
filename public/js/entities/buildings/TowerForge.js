@@ -14,7 +14,7 @@ export class TowerForge extends Building {
 
     // Base (unupgraded) effect radii these Forge upgrades grow, used to express their
     // per-level effect as a percentage in menu text instead of a bare pixel count.
-    static BARRICADE_BASE_RADIUS = 20; // BarricadeTower's slow-zone radius
+    static BARRICADE_BASE_RADIUS = 35; // BarricadeTower's slow-zone radius
     static CANNON_BASE_SPLASH_RADIUS = 50; // CannonTower's blast radius
 
     constructor(x, y, gridX, gridY) {
@@ -54,7 +54,7 @@ export class TowerForge extends Building {
         this.upgrades = {
             // Basic towers - always available at forge level 1
             'basic': { level: 0, baseCost: 80, effect: 8 },
-            'barricade_radius': { level: 0, baseCost: 125, effect: 4 }, // Radius: 20px → 40px at level 5
+            'barricade_radius': { level: 0, baseCost: 125, effect: 7 }, // Radius: 35px → 70px at level 5 (20%/level)
             'archer': { level: 0, baseCost: 100, damageEffect: 8, pierceEffect: 5 },
             
             // Poison upgrades - available at forge level 2+

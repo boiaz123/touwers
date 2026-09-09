@@ -997,7 +997,7 @@ export class TowerManager {
             'basic':       { damage: 20,  range: 120, fireRate: 1.0 },
             'archer':      { damage: 35,  range: 140, fireRate: 1.5 },
             'cannon':      { damage: 100, range: 155, fireRate: 0.4, splashRadius: 50 },
-            'barricade':   { damage: 0,   range: 120, fireRate: 0, radius: 20, slowPercent: 0.65 },
+            'barricade':   { damage: 0,   range: 120, fireRate: 0, radius: 35, slowPercent: 0.50 },
             'poison':      { damage: 10,  range: 130, fireRate: 0.25 },
             'magic':       { damage: 45,  range: 130, fireRate: 1.0 },
             'guard-post':  { damage: 0,   range: 0,   fireRate: 0 },
@@ -1197,6 +1197,17 @@ export class TowerManager {
         // BarricadeTower does.
         if (tower.type === 'barricade' && this.level && this.level.path) {
             newTower.setPath(this.level.path, this.level.cellSize);
+        }
+
+        // Spike Thrower's iron spikes bite harder into anything lingering in the patch -
+        // grant a permanent +5% slow on top of whatever slow strength the tower already
+        // had (base + any Training Grounds levels). Baked into originalSlowPercent (not
+        // just slowPercent) since recalculateAllTowerStats()/applyTrainingGroundsUpgrades()
+        // both reset slowPercent from originalSlowPercent every time Forge/Training Grounds
+        // upgrades are reapplied - only the original baseline survives that reset.
+        if (tower.type === 'barricade') {
+            newTower.originalSlowPercent += 0.05;
+            newTower.slowPercent += 0.05;
         }
 
         const idx = this.towers.indexOf(tower);
