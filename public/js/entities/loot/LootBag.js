@@ -60,6 +60,20 @@ export class LootBag {
         return this.isRare ? 'rare' : 'normal';
     }
 
+    /**
+     * EnemyRenderAdapter's Mode B throttles redraws to ANIM_FPS (20/s) by default - tuned
+     * for particle-heavy enemies where the throttle is imperceptible. A loot bag's whole
+     * visible motion (bob, rotation, sparkle orbit, glow pulse) is baked into that same
+     * throttled redraw with no interpolation in between, so at 20/s a slow ~2px bob and a
+     * subtle ±0.05rad rotation visibly step/stutter instead of gliding. The redraw itself is
+     * cheap (a handful of cached-gradient fills/strokes, 2-4 sparkles - see the gradient
+     * caching fix in LootBag's history), so matching the render loop's own rate here removes
+     * the stutter without meaningfully adding to per-frame cost.
+     */
+    getAnimFps() {
+        return 60;
+    }
+
     update(deltaTime, canvasHeight = 800, canvasWidth = 1200) {
         if (this.isCollecting) {
             this.collectAnimationTime += deltaTime;
@@ -496,6 +510,11 @@ export class RealmShardDrop {
 
     isCollected() {
         return this.isCollecting && this.collectAnimationTime > 0.6;
+    }
+
+    /** Same reasoning as LootBag.getAnimFps() - continuous bob/tilt/pulse looks stepped under Mode B's default 20/s throttle. */
+    getAnimFps() {
+        return 60;
     }
 
     getScreenBounds() {

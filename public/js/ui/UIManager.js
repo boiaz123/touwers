@@ -1758,7 +1758,7 @@ export class UIManager {
                                 </div>
                                 <div class="forge-benefit-item">
                                     <span class="forge-benefit-label">Magic Academy:</span>
-                                    <span class="forge-benefit-value">${forge.forgeLevel >= 4 ? 'Unlocked' : 'Locked'}</span>
+                                    <span class="forge-benefit-value">${unlockSystem.unlockedBuildings.has('academy') ? 'Unlocked' : 'Locked'}</span>
                                 </div>
                             </div>
                         </div>
@@ -2339,6 +2339,9 @@ export class UIManager {
             return;
         }
         
+        // Get unlock system for marketplace-gated requirement checks
+        const unlockSystem = this.towerManager.getUnlockSystem();
+
         let contentHTML = '';
         const academy = academyData.academy;
         const academyUpgrade = academy.getAcademyUpgradeOption();
@@ -2397,7 +2400,7 @@ export class UIManager {
                             </div>
                             <div class="forge-benefit-item">
                                 <span class="forge-benefit-label">Super Weapon Lab:</span>
-                                <span class="forge-benefit-value">${academy.academyLevel >= 3 ? 'Available' : 'Locked'}</span>
+                                <span class="forge-benefit-value">${unlockSystem.superweaponUnlocked ? 'Available' : 'Locked'}</span>
                             </div>
                         </div>
                     </div>
@@ -5294,29 +5297,29 @@ export class UIManager {
         }
     }
 
-    confirmQuitLevel() {
+    // destination: 'levelSelect' (campaign map) or 'settlementHub', chosen explicitly by
+    // which quit-warning button the player clicked. Falls back to the old auto-picked
+    // destination (settlement for bonus levels, otherwise the campaign map) when called
+    // without one - see GameplayState's level-completion handler / ResultsScreen's
+    // noNextLevel branch for the matching logic on the "finished the stage" path.
+    confirmQuitLevel(destination = null) {
         // Close warning modal
         const quitWarningModal = document.getElementById('quit-warning-modal');
         if (quitWarningModal) {
             quitWarningModal.classList.remove('show');
         }
-        
+
         // Close pause menu
         this.closePauseMenu();
-        
+
         // Unpause the game before quitting
         this.gameplayState.setPaused(false);
 
-        // Bonus levels (e.g. Frog King's Realm) aren't reached via a campaign map - they're
-        // launched straight from the settlement, so quitting one should return there too,
-        // matching where finishing the stage sends the player (see GameplayState's
-        // level-completion handler / ResultsScreen's noNextLevel branch).
         const isBonusLevel = !!this.gameplayState.level?.levelFlags?.isBonusLevel;
-        const destinationState = isBonusLevel ? 'settlementHub' : 'levelSelect';
+        const destinationState = destination || (isBonusLevel ? 'settlementHub' : 'levelSelect');
 
         // Small delay to ensure menu closes visually before state change
         setTimeout(() => {
-            // Return to the campaign map the player came from, or the settlement hub for a bonus level
             this.stateManager.changeState(destinationState);
         }, 100);
     }
@@ -5368,6 +5371,7 @@ export class UIManager {
         }
 
         const quitConfirmBtn = document.getElementById('quit-confirm-btn');
+        const quitConfirmSettlementBtn = document.getElementById('quit-confirm-settlement-btn');
         const quitCancelBtn = document.getElementById('quit-cancel-btn');
         const quitWarningOverlay = document.getElementById('quit-warning-overlay');
 
@@ -5376,7 +5380,16 @@ export class UIManager {
                 if (this.stateManager.audioManager) {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
-                this.confirmQuitLevel();
+                this.confirmQuitLevel('levelSelect');
+            });
+        }
+
+        if (quitConfirmSettlementBtn) {
+            this._addListener(quitConfirmSettlementBtn, 'click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.confirmQuitLevel('settlementHub');
             });
         }
 
