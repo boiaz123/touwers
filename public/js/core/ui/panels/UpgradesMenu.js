@@ -1,4 +1,3 @@
-import { SaveSystem } from '../../systems/SaveSystem.js';
 import { LootRegistry } from '../../../entities/loot/LootRegistry.js';
 import { MarketplaceSystem } from '../../systems/MarketplaceSystem.js';
 import { MarketplaceRegistry } from '../../registries/MarketplaceRegistry.js';
@@ -724,11 +723,17 @@ export class UpgradesMenu {
         this._persistLiveSettlementState();
     }
 
-    // Writes the live in-memory gold/inventory/upgrades/marketplace/workshop into the
-    // current save slot's working copy (localStorage), same fields completeLevel() persists
-    // on victory. Without this, buying/selling only updates stateManager's live properties -
-    // navigating to any screen other than 'game' and back (e.g. Level Select, Campaign Map)
-    // reloads playerGold/playerInventory from the stale save and silently reverts the change.
+    // Mirrors the live in-memory gold/inventory/upgrades/marketplace/workshop into
+    // stateManager.currentSaveData, the same fields completeLevel() persists on victory.
+    // This is an in-memory snapshot only - it deliberately does NOT write to
+    // SaveSystem/localStorage. Purchases must stay live-only until the player explicitly
+    // saves (SAVE SETTLEMENT / SAVE & QUIT) or reaches a real checkpoint (level
+    // completion); writing here too used to make "Quit without saving" a no-op for
+    // marketplace purchases, since they were already sitting in the save file the moment
+    // they were bought. SettlementHub.enter() now keeps the live stateManager objects
+    // (playerGold/playerInventory/marketplaceSystem) authoritative across navigation
+    // instead of reloading from the save, so this snapshot is just for anything that
+    // still reads currentSaveData directly (e.g. buildBuyItems' unlockedCampaigns check).
     _persistLiveSettlementState() {
         if (!this.stateManager.currentSaveSlot || !this.stateManager.currentSaveData) return;
         const saveData = this.stateManager.currentSaveData;
@@ -737,7 +742,6 @@ export class UpgradesMenu {
         if (this.stateManager.upgradeSystem) saveData.upgrades = this.stateManager.upgradeSystem.serialize();
         if (this.stateManager.marketplaceSystem) saveData.marketplace = this.stateManager.marketplaceSystem.serialize();
         if (this.stateManager.workshopSystem) saveData.workshop = this.stateManager.workshopSystem.serialize();
-        SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, saveData);
     }
 
     _openPortalPrompt() {

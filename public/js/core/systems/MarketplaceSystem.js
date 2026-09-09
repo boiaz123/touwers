@@ -75,6 +75,22 @@ export class MarketplaceSystem {
     }
 
     /**
+     * Clear leftover per-level-only state (active boon indicators etc.) after returning
+     * to the settlement from a level, WITHOUT touching the persistent consumable
+     * inventory/unlockedEnemyIntel. GameplayState.exit() already commits consumed
+     * consumables into this same live object before the settlement is re-entered, so
+     * this only needs to tidy up what commitUsedConsumables() doesn't already clear.
+     * Deliberately does not reload from the save file - see SettlementHub.enter()'s
+     * marketplace initialization comment for why: doing so would discard any settlement
+     * purchase that hasn't been explicitly saved yet.
+     */
+    clearPerLevelState() {
+        this.freePlacementsAvailable.clear();
+        this.consumablesToCommit.clear();
+        this.activeBoons.clear();
+    }
+
+    /**
      * Add consumable item to inventory
      * @param {string} itemId - The item ID
      * @param {number} quantity - How many to add (default 1)

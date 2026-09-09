@@ -117,18 +117,26 @@ export class SettlementHub {
         const comingFromLoad = this.stateManager.previousState === 'loadGame';
         
         if (currentSaveData) {
-            // Initialize player gold from save data, but not if we're returning from a level
-            // (in that case, the level exit() already restored the correct gold amount)
-            if (!returningFromLevel) {
+            // Only load gold/inventory from the persisted save on a genuine fresh load
+            // (switching save slots or an explicit Load Game) - NOT on every re-entry to
+            // the settlement. Any other re-entry (returning from a level, or just backing
+            // out of Level Select/Campaign Map without playing) must keep the live
+            // in-memory values: reloading from the persisted save here would silently
+            // revert settlement purchases/gold spend that haven't been explicitly saved
+            // yet (see UpgradesMenu._persistLiveSettlementState's history - this was
+            // previously worked around by eagerly writing every purchase straight to the
+            // save file, which is exactly what made "Quit without saving" not discard
+            // marketplace purchases).
+            const needsFreshLoad = saveSlotChanged || comingFromLoad;
+
+            if (needsFreshLoad) {
                 this.stateManager.playerGold = currentSaveData.playerGold || 0;
             }
-            
-            // Load inventory from save, but only if not returning from a level
-            // When returning from level, keep the inventory we already have in memory
-            if (!returningFromLevel) {
+
+            if (needsFreshLoad) {
                 this.stateManager.playerInventory = currentSaveData.playerInventory || [];
             }
-            
+
             // Initialize upgrade system - always reinitialize if save slot changed or explicit reload
             if (saveSlotChanged || !this.stateManager.upgradeSystem || comingFromLoad) {
                 this.stateManager.upgradeSystem = new UpgradeSystem();
@@ -136,14 +144,20 @@ export class SettlementHub {
                     this.stateManager.upgradeSystem.restoreFromSave(currentSaveData.upgrades);
                 }
             }
-            
-            // Initialize marketplace system
-            // ALWAYS reinitialize if save slot changed, returning from a level, or explicit reload
-            if (saveSlotChanged || !this.stateManager.marketplaceSystem || returningFromLevel || comingFromLoad) {
+
+            // Initialize marketplace system from the persisted save only on a genuine
+            // fresh load (see needsFreshLoad above) - not merely on returningFromLevel.
+            // GameplayState.exit() already keeps this live object in sync (commits used
+            // consumables) before we get here, so reloading from save would only discard
+            // not-yet-saved purchases. Still clear the per-level-only bits (boon
+            // indicators etc.) when actually returning from a level.
+            if (needsFreshLoad || !this.stateManager.marketplaceSystem) {
                 this.stateManager.marketplaceSystem = new MarketplaceSystem();
                 if (currentSaveData.marketplace) {
                     this.stateManager.marketplaceSystem.restoreFromSave(currentSaveData.marketplace);
                 }
+            } else if (returningFromLevel) {
+                this.stateManager.marketplaceSystem.clearPerLevelState();
             }
 
             // Initialize Workshop system (unlocked enemy types/campaign themes + tokens)

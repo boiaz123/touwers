@@ -697,25 +697,28 @@ export class GameplayState {
             this.stateManager.playerGold = this.settlementGoldBackup;
         }
         
-        // Commit consumables if they haven't been consumed yet
-        // (completeLevel() already consumes them before saving, so check if there's anything to consume)
+        // Commit consumables if they haven't been consumed yet (a mid-level quit - if the
+        // level actually ended, completeLevel()/gameOver() already consumed them before
+        // this runs, so there's nothing left to commit here).
         if (this.stateManager.marketplaceSystem) {
-            const hasConsumablesToCommit = this.stateManager.marketplaceSystem.consumablesToCommit && 
+            const hasConsumablesToCommit = this.stateManager.marketplaceSystem.consumablesToCommit &&
                                           this.stateManager.marketplaceSystem.consumablesToCommit.size > 0;
-            
+
             if (hasConsumablesToCommit) {
                 this.stateManager.marketplaceSystem.commitUsedConsumables();
-                
-                // Save the updated marketplace state (with consumed items) and statistics to the current save slot
+
+                // Mirror the updated marketplace/statistics state into the in-memory
+                // currentSaveData snapshot only - deliberately NOT written to
+                // SaveSystem/localStorage here. Quitting mid-level (as opposed to
+                // finishing it, which does checkpoint-save via completeLevel()/gameOver())
+                // must stay live-only until the player explicitly saves, otherwise
+                // "Quit without saving" silently persists the consumed item anyway.
                 if (this.stateManager.currentSaveData && this.stateManager.currentSaveSlot) {
                     this.stateManager.currentSaveData.marketplace = this.stateManager.marketplaceSystem.serialize();
-                    
-                    // Also save statistics
+
                     if (this.stateManager.gameStatistics) {
                         this.stateManager.currentSaveData.statistics = this.stateManager.gameStatistics.serialize();
                     }
-                    
-                    SaveSystem.updateAndSaveSettlementData(this.stateManager.currentSaveSlot, this.stateManager.currentSaveData);
                 }
             }
         } else {

@@ -364,6 +364,20 @@ export class TrainingGrounds extends Building {
         }
     }
 
+    /**
+     * Building.getSortDepthY's default sorts by the full placement-square edge
+     * (buildingSize/2), assuming the rendered art fills the whole square. This building's
+     * actual footprint - the fence perimeter (see fencePerimeter/renderFencePerimeter
+     * above) - stops at design-y +48 out of the 128-unit design box, well short of the
+     * full +64 edge. That gap let a real terrain tree standing just past the fence (but
+     * still inside the nominal placement square) lose the depth sort against the building
+     * and draw underneath it, even though it's visually in front of the fence line -
+     * first noticed with mountain-theme trees rendering behind the Training Grounds.
+     */
+    getSortDepthY(buildingSize) {
+        return this.y + 48 * (buildingSize / 128);
+    }
+
     render(ctx, size) {
         if (!this.skipCanvas2DBodyRender) {
             this.renderStaticBack(ctx, size);
