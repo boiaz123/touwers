@@ -15,12 +15,14 @@ export class CannonTower extends Tower {
     static PARAPET_HEIGHT = 12;
     // How far down (as a fraction of towerSize) to shift the whole rendered structure so
     // its base sits near the bottom of its 2x2 grid cell instead of centered on it -
-    // same convention/ratio BasicTower and SlingerTower use for their own tower bodies
-    // (see BasicTower.renderStaticBack's "Shift tower body down" comment). Expressed as
-    // a proportion of towerSize (not a fixed pixel value) so it scales consistently for
-    // TripleTrebuchetTower's larger frame (see its SCALE) instead of leaving too little
-    // or too much headroom.
-    static BASE_Y_OFFSET_RATIO = 0.12;
+    // same convention BasicTower and SlingerTower use for their own tower bodies (see
+    // BasicTower.renderStaticBack's "Shift tower body down" comment), just a larger
+    // ratio since this tower's square stone base reads as noticeably "floating" above
+    // the bottom of its footprint at the smaller ratio those slimmer towers use.
+    // Expressed as a proportion of towerSize (not a fixed pixel value) so it scales
+    // consistently for TripleTrebuchetTower's larger frame (see its SCALE) instead of
+    // leaving too little or too much headroom.
+    static BASE_Y_OFFSET_RATIO = 0.28;
 
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);

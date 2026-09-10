@@ -1111,42 +1111,72 @@ export class GoldMine extends Building {
         ctx.fillRect(this.x - size * 0.8, this.y - size * 0.8, size * 1.6, size * 1.6);
     }
     
+    // Base font size the floating-text bitmaps below are rasterized at - render-time
+    // growth (see renderFloatingTexts) is done by scaling that fixed bitmap up, not by
+    // re-rendering text at a new size.
+    static FLOAT_TEXT_BASE_SIZE = 18;
+
+    // Vivid, distinct opaque color per gem type - alpha is applied at draw time via
+    // ctx.globalAlpha (see renderFloatingTexts), not baked into these.
+    static FLOAT_TEXT_COLOR_MAP = {
+        fire: 'rgb(255, 50, 0)',
+        water: 'rgb(30, 180, 255)',
+        air: 'rgb(255, 255, 100)',
+        earth: 'rgb(180, 100, 20)',
+        diamond: 'rgb(100, 255, 255)',
+        gold: 'rgb(255, 215, 0)'
+    };
+
+    // Cache of pre-rendered "collection text" bitmaps, keyed by "<text>:<color>" - same
+    // technique as HitSplatter's damage-number cache (see its _getCachedText doc).
+    // renderFloatingTexts() used to reassign ctx.font to a slightly bigger size (the text
+    // grows as it fades) and re-run fillText every frame for every active text, forcing
+    // the browser to reshape/rasterize the string from scratch each time - by far the
+    // most expensive part of a text draw, and with several mines/gem types collecting at
+    // once it was enough per-frame Canvas2D cost to visibly choke this specific
+    // animation. Rasterizing each distinct (text, color) pair once and just
+    // drawImage-ing + scaling it turns every subsequent frame into a cheap blit.
+    static _floatTextCache = new Map();
+    static _floatTextCacheOrder = [];
+    static _FLOAT_TEXT_CACHE_MAX = 80;
+
+    static _getCachedFloatText(text, color) {
+        const key = text + ':' + color;
+        const cached = GoldMine._floatTextCache.get(key);
+        if (cached) return cached;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 220;
+        canvas.height = 36;
+        const bctx = canvas.getContext('2d');
+        bctx.font = `bold ${GoldMine.FLOAT_TEXT_BASE_SIZE}px Arial`;
+        bctx.textAlign = 'center';
+        bctx.textBaseline = 'middle';
+        bctx.fillStyle = color;
+        bctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+        GoldMine._floatTextCache.set(key, canvas);
+        GoldMine._floatTextCacheOrder.push(key);
+        if (GoldMine._floatTextCacheOrder.length > GoldMine._FLOAT_TEXT_CACHE_MAX) {
+            GoldMine._floatTextCache.delete(GoldMine._floatTextCacheOrder.shift());
+        }
+        return canvas;
+    }
+
     renderFloatingTexts(ctx) {
         this.floatingTexts.forEach(text => {
             const alpha = text.life / text.maxLife;
-            const textSize = 18 + (1 - alpha) * 8;
-            
-            ctx.font = `bold ${textSize}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.lineWidth = 0; // No border/stroke
-            
-            // Set color based on gem type - vivid, distinct colors
-            let fillColor = 'rgba(255, 215, 0, ' + alpha + ')'; // Default gold
-            
-            switch (text.gemType) {
-                case 'fire':
-                    fillColor = `rgba(255, 50, 0, ${alpha})`; // Bright red-orange
-                    break;
-                case 'water':
-                    fillColor = `rgba(30, 180, 255, ${alpha})`; // Bright cyan-blue
-                    break;
-                case 'air':
-                    fillColor = `rgba(255, 255, 100, ${alpha})`; // Bright yellow
-                    break;
-                case 'earth':
-                    fillColor = `rgba(180, 100, 20, ${alpha})`; // Warm brown
-                    break;
-                case 'diamond':
-                    fillColor = `rgba(100, 255, 255, ${alpha})`; // Bright cyan
-                    break;
-                case 'gold':
-                    fillColor = `rgba(255, 215, 0, ${alpha})`; // Vivid gold
-                    break;
-            }
-            
-            ctx.fillStyle = fillColor;
-            ctx.fillText(text.text, this.x, text.y);
+            const textSize = GoldMine.FLOAT_TEXT_BASE_SIZE + (1 - alpha) * 8;
+            const color = GoldMine.FLOAT_TEXT_COLOR_MAP[text.gemType] || GoldMine.FLOAT_TEXT_COLOR_MAP.gold;
+            const cached = GoldMine._getCachedFloatText(text.text, color);
+
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.translate(this.x, text.y);
+            const scale = textSize / GoldMine.FLOAT_TEXT_BASE_SIZE;
+            ctx.scale(scale, scale);
+            ctx.drawImage(cached, -cached.width / 2, -cached.height / 2);
+            ctx.restore();
         });
     }
     

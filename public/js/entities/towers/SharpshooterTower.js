@@ -51,7 +51,7 @@ export class SharpshooterTower extends ArcherTower {
 
         const towerWidth = towerSize * 0.6 * 0.8;
         const towerHeight = towerSize * 0.7;
-        const platformY = this.y - towerHeight;
+        const platformY = this._getBaseY(towerSize) - towerHeight;
 
         // Iron bands reinforcing the shaft, at the same heights as ArcherTower's plain
         // wooden support beams (already drawn by renderFoundationAndShaft) - a "reinforced"
@@ -59,7 +59,7 @@ export class SharpshooterTower extends ArcherTower {
         ctx.strokeStyle = '#3a3a3a';
         ctx.lineWidth = 3;
         for (let i = 1; i <= 3; i++) {
-            const beamY = this.y - towerHeight + (towerHeight * i / 4);
+            const beamY = platformY + (towerHeight * i / 4);
             ctx.beginPath();
             ctx.moveTo(this.x - towerWidth / 2 - 1, beamY);
             ctx.lineTo(this.x + towerWidth / 2 + 1, beamY);
@@ -67,7 +67,7 @@ export class SharpshooterTower extends ArcherTower {
         }
         ctx.fillStyle = '#1c1c1e';
         for (let i = 1; i <= 3; i++) {
-            const beamY = this.y - towerHeight + (towerHeight * i / 4);
+            const beamY = platformY + (towerHeight * i / 4);
             for (const side of [-1, 1]) {
                 ctx.beginPath();
                 ctx.arc(this.x + side * towerWidth * 0.35, beamY, 1.1, 0, Math.PI * 2);

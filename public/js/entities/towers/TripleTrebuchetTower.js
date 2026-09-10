@@ -20,6 +20,20 @@ export class TripleTrebuchetTower extends CannonTower {
     // CannonTower's unmodified renderStaticBack/renderDynamicParts (see below), so every
     // dimension in those methods scales together instead of needing its own override.
     static SCALE = 1.25;
+    // Firing three fireballs per shot instead of one already covers far more ground
+    // than a base CannonTower - spreading damage across a whole cluster of enemies is
+    // this transform's whole identity (see shoot()'s SPREAD_ANGLES). Left at full
+    // per-shot damage though, a single target caught in all three splash radii took
+    // roughly triple a CannonTower's damage on top of that spread, which is what made
+    // this transform feel overpowered rather than just wide. Scaling each fireball's
+    // damage down keeps the "hits a lot of enemies" perk intact while a lone target no
+    // longer melts under three full-price explosions.
+    static DAMAGE_RATIO = 0.45;
+
+    constructor(x, y, gridX, gridY) {
+        super(x, y, gridX, gridY);
+        this.damage = this.damage * TripleTrebuchetTower.DAMAGE_RATIO;
+    }
 
     shoot() {
         if (!this.target) return;

@@ -2217,6 +2217,14 @@ body.game-paused .side-panel > * {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
+    /* Reserves room for up to two wrapped lines of badges up front, since this row only
+       ever grows over the course of a run (each badge appears once its matching upgrade
+       path is first leveled - see UIManager's effectsList.push() calls - and nothing
+       ever removes one). Without a stable min-height here, every first purchase into a
+       new upgrade path grows this row and shoves the whole upgrade button list below it
+       down the panel. Sized off .effect-badge's own box (font-size + vertical padding +
+       border) rather than a guessed pixel value, so it stays in sync if that changes. */
+    min-height: calc(2 * (0.7rem * 1.3 + 0.4rem + 2px) + 0.4rem);
 }
 
 .effect-badge {

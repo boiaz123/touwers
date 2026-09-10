@@ -2,6 +2,13 @@ import { Tower } from './Tower.js';
 import { ObjectPool } from '../../core/utils/ObjectPool.js';
 
 export class ArcherTower extends Tower {
+    // How far down (as a fraction of towerSize) to shift the whole watchtower structure
+    // so its base sits nearer the bottom of its 2x2 grid cell instead of centered on it -
+    // same convention CannonTower uses for its own base (see CannonTower.BASE_Y_OFFSET_RATIO's
+    // doc). Applied on top of the foundation's own built-in half-height so the total drop
+    // from center to the foundation's bottom edge lands in the same range as other towers.
+    static BASE_Y_OFFSET_RATIO = 0.13;
+
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
         this.range = 140;
@@ -135,7 +142,7 @@ export class ArcherTower extends Tower {
             const towerSize = cellSize * 2;
             const towerHeight = towerSize * 0.7;
             const platformWidth = towerSize * 0.6 * 1.25;
-            const platformY = this.y - towerHeight;
+            const platformY = this._getBaseY(towerSize) - towerHeight;
             const platformThickness = towerSize * 0.08;
 
             // Evenly spread across the wider deck, all standing at the same floor
@@ -202,13 +209,23 @@ export class ArcherTower extends Tower {
         // intentionally empty
     }
 
+    /** Center of the foundation, shifted down from this.y per BASE_Y_OFFSET_RATIO - see
+     *  its doc. Shared by every method below (and by SharpshooterTower's own
+     *  renderStaticBack) so the foundation/shaft and whatever's stacked on top of them
+     *  always shift by the same amount and stay flush against each other. */
+    _getBaseY(towerSize) {
+        return this.y + towerSize * ArcherTower.BASE_Y_OFFSET_RATIO;
+    }
+
     /** Stone foundation + wooden shaft only, no platform/roof - factored out of
      *  renderStaticBack() so SharpshooterTower can reuse this unmodified and only
      *  replace the platform/roof above it (see that class's renderStaticBack). */
     renderFoundationAndShaft(ctx, towerSize) {
+        const baseY = this._getBaseY(towerSize);
+
         // 3D shadow for entire structure
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fillRect(this.x - towerSize * 0.3 + 4, this.y - towerSize * 0.1 + 4, towerSize * 0.6, towerSize * 0.8);
+        ctx.fillRect(this.x - towerSize * 0.3 + 4, baseY - towerSize * 0.1 + 4, towerSize * 0.6, towerSize * 0.8);
 
         // Wooden watchtower base (square foundation)
         const baseWidth = towerSize * 0.6;
@@ -218,16 +235,16 @@ export class ArcherTower extends Tower {
         ctx.fillStyle = '#A9A9A9';
         ctx.strokeStyle = '#2F2F2F';
         ctx.lineWidth = 2;
-        ctx.fillRect(this.x - baseWidth/2, this.y - baseHeight, baseWidth, baseHeight * 2);
-        ctx.strokeRect(this.x - baseWidth/2, this.y - baseHeight, baseWidth, baseHeight * 2);
+        ctx.fillRect(this.x - baseWidth/2, baseY - baseHeight, baseWidth, baseHeight * 2);
+        ctx.strokeRect(this.x - baseWidth/2, baseY - baseHeight, baseWidth, baseHeight * 2);
         // Top highlight
         ctx.fillStyle = '#E8E8E8';
-        ctx.fillRect(this.x - baseWidth/2, this.y - baseHeight, baseWidth, 2);
+        ctx.fillRect(this.x - baseWidth/2, baseY - baseHeight, baseWidth, 2);
         // Stone texture
         ctx.strokeStyle = '#696969';
         ctx.lineWidth = 1;
         for (let i = 1; i < 3; i++) {
-            const sy = this.y - baseHeight + (baseHeight * 2 * i / 3);
+            const sy = baseY - baseHeight + (baseHeight * 2 * i / 3);
             ctx.beginPath();
             ctx.moveTo(this.x - baseWidth/2, sy);
             ctx.lineTo(this.x + baseWidth/2, sy);
@@ -242,8 +259,8 @@ export class ArcherTower extends Tower {
         ctx.fillStyle = '#CD853F';
         ctx.strokeStyle = '#654321';
         ctx.lineWidth = 2;
-        ctx.fillRect(this.x - towerWidth/2, this.y - towerHeight, towerWidth, towerHeight);
-        ctx.strokeRect(this.x - towerWidth/2, this.y - towerHeight, towerWidth, towerHeight);
+        ctx.fillRect(this.x - towerWidth/2, baseY - towerHeight, towerWidth, towerHeight);
+        ctx.strokeRect(this.x - towerWidth/2, baseY - towerHeight, towerWidth, towerHeight);
 
         // Vertical wood planks
         ctx.strokeStyle = '#8B7355';
@@ -251,14 +268,14 @@ export class ArcherTower extends Tower {
         for (let i = 1; i < 4; i++) {
             const plankX = this.x - towerWidth/2 + (towerWidth * i / 4);
             ctx.beginPath();
-            ctx.moveTo(plankX, this.y - towerHeight);
-            ctx.lineTo(plankX, this.y);
+            ctx.moveTo(plankX, baseY - towerHeight);
+            ctx.lineTo(plankX, baseY);
             ctx.stroke();
         }
 
         // Horizontal support beams
         for (let i = 1; i <= 3; i++) {
-            const beamY = this.y - towerHeight + (towerHeight * i / 4);
+            const beamY = baseY - towerHeight + (towerHeight * i / 4);
             ctx.strokeStyle = '#654321';
             ctx.lineWidth = 2;
             ctx.beginPath();
@@ -283,8 +300,8 @@ export class ArcherTower extends Tower {
         // over the narrow shaft below.
         const platformWidth = towerWidth * 1.25;
         const platformThickness = towerSize * 0.08;
-        const platformY = this.y - towerHeight;
-        
+        const platformY = this._getBaseY(towerSize) - towerHeight;
+
         // Platform shadow
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.fillRect(this.x - platformWidth/2 + 2, platformY - platformThickness + 2, platformWidth, platformThickness);
@@ -465,7 +482,7 @@ export class ArcherTower extends Tower {
         const towerHeight = towerSize * 0.7;
         const platformWidth = towerWidth * 1.25;
         const platformThickness = towerSize * 0.08;
-        const platformY = this.y - towerHeight;
+        const platformY = this._getBaseY(towerSize) - towerHeight;
         const floorY = platformY - platformThickness;
 
         // Render archers on platform — each visually distinct

@@ -45,6 +45,19 @@ export class MageEnemy extends BaseEnemy {
         this.blockadeProjectile = null;
         this._towersRef = null;
 
+        // Arcane Shield - periodically wraps itself in a barrier that fully blocks
+        // physical damage (see takeDamage() below) for a few seconds. Magic damage types
+        // (fire/water/air/earth/magic/electricity - see BaseEnemy's MAGICAL_DAMAGE_TYPES)
+        // still get through at this mage's usual magicResistance, so the counter is
+        // switching to a Magic/Combination Tower while the shield is up rather than
+        // just piling on more physical DPS.
+        this.shieldSpellTimer = 6 + Math.random() * 8;
+        this.shieldActive = false;
+        this.shieldTimeRemaining = 0;
+        this.shieldDuration = 4;
+        // Brief bright pulse on the shield rim when it absorbs a hit, decayed in update().
+        this.shieldFlash = 0;
+
         // Set by EnemyRenderAdapter once it has synced this enemy via Pixi (hit splatters
         // still draw here regardless - not yet migrated). No static structure - the whole
         // figure animates continuously, so everything lives in renderDynamicParts.
@@ -178,6 +191,25 @@ export class MageEnemy extends BaseEnemy {
             }
         }
 
+        // === ARCANE SHIELD: periodic physical damage immunity ===
+        if (this.shieldActive) {
+            this.shieldTimeRemaining -= deltaTime;
+            if (this.shieldTimeRemaining <= 0) {
+                this.shieldActive = false;
+                this.shieldSpellTimer = 10 + Math.random() * 10;
+            }
+        } else {
+            this.shieldSpellTimer -= deltaTime;
+            if (this.shieldSpellTimer <= 0) {
+                this.shieldActive = true;
+                this.shieldTimeRemaining = this.shieldDuration;
+                if (this.audioManager) {
+                    this.audioManager.playSFX('spell-attack');
+                }
+            }
+        }
+        this.shieldFlash = Math.max(0, this.shieldFlash - deltaTime * 3);
+
         if (this.reachedEnd || !this.path || this.path.length === 0) return;
         
         if (this.currentPathIndex >= this.path.length - 1) {
@@ -212,6 +244,13 @@ export class MageEnemy extends BaseEnemy {
     }
 
     takeDamage(amount, armorPiercingPercent = 0, damageType = 'physical', followTarget = false) {
+        // Arcane Shield fully absorbs physical hits while active - see the shield block
+        // in update() and its doc comment. Everything else (magic types, poison, ...)
+        // passes straight through to the normal armour/magicResistance handling.
+        if (this.shieldActive && damageType === 'physical') {
+            this.shieldFlash = 1;
+            return;
+        }
         super.takeDamage(amount, armorPiercingPercent, damageType, followTarget);
     }
     
@@ -1024,6 +1063,48 @@ export class MageEnemy extends BaseEnemy {
             ctx.beginPath();
             ctx.arc(particle.localX, particle.localY, particle.size, 0, Math.PI * 2);
             ctx.fill();
+        }
+
+        // === ARCANE SHIELD bubble - encases the whole figure while active, plus a quick
+        // bright flash on the rim when it absorbs a hit (see takeDamage()) even in the
+        // instant after it expires, so the last blocked hit still reads clearly. ===
+        if (this.shieldActive || this.shieldFlash > 0) {
+            const shieldPulse = 0.6 + 0.4 * Math.sin(this.animationTime * 5);
+            const flashBoost = this.shieldFlash * 0.6;
+            const shieldCenterY = -baseSize * 0.85;
+            const shieldRX = baseSize * (1.15 + flashBoost * 0.15);
+            const shieldRY = baseSize * (2.25 + flashBoost * 0.15);
+
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, (this.shieldActive ? 0.22 + 0.12 * shieldPulse : 0) + flashBoost);
+            ctx.fillStyle = 'rgba(140, 90, 255, 1)';
+            ctx.beginPath();
+            ctx.ellipse(0, shieldCenterY, shieldRX, shieldRY, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            if (this.shieldActive) {
+                ctx.save();
+                ctx.globalAlpha = Math.min(1, 0.55 + 0.35 * shieldPulse + flashBoost);
+                ctx.strokeStyle = 'rgba(200, 160, 255, 1)';
+                ctx.lineWidth = 1.4 + this.shieldFlash * 2;
+                ctx.beginPath();
+                ctx.ellipse(0, shieldCenterY, shieldRX, shieldRY, 0, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Faceted ward lines - reads as a crystalline barrier rather than a plain bubble.
+                ctx.strokeStyle = `rgba(220, 190, 255, ${0.25 + 0.2 * shieldPulse})`;
+                ctx.lineWidth = 0.8;
+                const facetCount = 6;
+                for (let i = 0; i < facetCount; i++) {
+                    const a = (i / facetCount) * Math.PI * 2 + this.animationTime * 0.3;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(a) * shieldRX * 0.3, shieldCenterY + Math.sin(a) * shieldRY * 0.3);
+                    ctx.lineTo(Math.cos(a) * shieldRX, shieldCenterY + Math.sin(a) * shieldRY);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
         }
 
         ctx.restore();

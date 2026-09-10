@@ -134,7 +134,12 @@ export class WorkshopMenu {
                 .map(id => WorkshopRegistry.getEnemyItem(id))
                 .filter(item => this._getItemState(item).requirementMet);
         }
-        return WorkshopRegistry.getAllThemeIds().map(id => WorkshopRegistry.getThemeItem(id));
+        // Same convention as the enemies tab above - only campaign themes whose unlock
+        // precondition (the required campaign being completed) is already met are shown,
+        // so the grid doesn't advertise themes the player can't purchase yet.
+        return WorkshopRegistry.getAllThemeIds()
+            .map(id => WorkshopRegistry.getThemeItem(id))
+            .filter(item => this._getItemState(item).requirementMet);
     }
 
     _getItemState(item) {
@@ -412,14 +417,16 @@ export class WorkshopMenu {
     }
 
     _renderTiles(ctx) {
-        if (this.activeTab === 'enemies' && this._getItems().length === 0) {
+        if (this._getItems().length === 0 && (this.activeTab === 'enemies' || this.activeTab === 'themes')) {
             const { contentX, contentY, contentWidth, contentHeight } = this._forEachTile(() => {});
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.font = 'italic 13px Trebuchet MS, sans-serif';
             ctx.fillStyle = '#7a6a5a';
             ctx.fillText(
-                'No enemy types unlocked yet - buy Spy Reports at the Arcane Library first.',
+                this.activeTab === 'enemies'
+                    ? 'No enemy types unlocked yet - buy Spy Reports at the Arcane Library first.'
+                    : 'No campaign themes unlocked yet - complete a campaign to unlock its theme.',
                 contentX + contentWidth / 2, contentY + contentHeight / 2
             );
             return;
