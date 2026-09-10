@@ -1515,7 +1515,14 @@ export class GameplayState {
         // Check if player clicked on a loot bag FIRST (highest priority UI interaction)
         const clickedLoot = this.lootManager.getLootAtPosition(x, y);
         if (clickedLoot) {
-            this.lootManager.collectLoot(clickedLoot);
+            if (clickedLoot.isWorkshopToken) {
+                this.lootManager.collectToken(clickedLoot);
+                if (this.stateManager.workshopSystem) {
+                    this.stateManager.workshopSystem.addToken(clickedLoot.enemyType, 1);
+                }
+            } else {
+                this.lootManager.collectLoot(clickedLoot);
+            }
             if (this.stateManager.gameStatistics) {
                 this.stateManager.gameStatistics.addLootCollected(1);
             }
@@ -2058,10 +2065,12 @@ export class GameplayState {
         const lootDrops = deathResult.lootDrops || [];
         const tokenDrops = deathResult.tokenDrops || [];
 
-        // Workshop tokens are granted instantly (no world pickup), same as gold-per-kill
+        // Workshop tokens are now a world pickup like loot bags/realm shards - spawn the
+        // coin drop here, but only grant it (see the loot-click handling below) once the
+        // player actually clicks it to collect it.
         if (tokenDrops.length > 0 && this.stateManager.workshopSystem) {
             for (const drop of tokenDrops) {
-                this.stateManager.workshopSystem.addToken(drop.enemyType, 1);
+                this.lootManager.spawnToken(drop.x, drop.y, drop.enemyType);
             }
         }
 

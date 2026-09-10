@@ -641,7 +641,15 @@ export class Game {
                     }
                 }
                 if (nearestBag) {
-                    lootManager.collectLoot(nearestBag);
+                    if (nearestBag.isWorkshopToken) {
+                        lootManager.collectToken(nearestBag);
+                        const workshopSystem = refs.gameplayState.stateManager && refs.gameplayState.stateManager.workshopSystem;
+                        if (workshopSystem) {
+                            workshopSystem.addToken(nearestBag.enemyType, 1);
+                        }
+                    } else {
+                        lootManager.collectLoot(nearestBag);
+                    }
                 }
             });
 

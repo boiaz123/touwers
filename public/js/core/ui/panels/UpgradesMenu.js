@@ -994,6 +994,12 @@ export class UpgradesMenu {
     }
 
     updateHoverState(x, y) {
+        // Cache the latest known cursor position so click-driven mutations (selling/buying an
+        // item rebuilds the item array with fresh objects that default to hovered: false) can
+        // re-run this hit-test afterwards without waiting for the next mousemove event.
+        this._lastMouseX = x;
+        this._lastMouseY = y;
+
         // Handle portal confirm modal hover state first
         if (this.showingPortalConfirm && this._portalConfirmBounds) {
             const b = this._portalConfirmBounds;
@@ -1099,10 +1105,12 @@ export class UpgradesMenu {
                 this.showingPortalConfirm = false;
                 this._portalConfirmBounds = null;
                 this.sellItems = this.buildSellItems(); // Refresh inventory view
+                this.updateHoverState(x, y);
                 return;
             }
             this.showingPortalConfirm = false;
             this._portalConfirmBounds = null;
+            this.updateHoverState(x, y);
             return;
         }
         
@@ -1184,9 +1192,10 @@ export class UpgradesMenu {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
             }
+            this.updateHoverState(x, y);
             return;
         }
-        
+
         if (x >= rightArrowX && x <= rightArrowX + arrowSize && y >= arrowY && y <= arrowY + arrowSize) {
             if (this.currentPage < maxPages - 1 && (now - this.lastPaginationClickTime) > debounceTime) {
                 this.currentPage++;
@@ -1195,6 +1204,7 @@ export class UpgradesMenu {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
             }
+            this.updateHoverState(x, y);
             return;
         }
         
@@ -1235,6 +1245,12 @@ export class UpgradesMenu {
                 this.handleItemAction(item, itemX + itemWidth / 2, itemY + itemHeight / 2);
             }
         });
+
+        // Any of the branches above may have rebuilt buyItems/sellItems (tab switch, category
+        // filter, buy/sell) with fresh item objects that default to hovered: false. Re-run the
+        // hit-test against the click's own (still-current) cursor position so the correct
+        // hover border/visual shows immediately, without waiting on the next mousemove.
+        this.updateHoverState(x, y);
     }
 
     handleItemAction(item, itemCenterX, itemCenterY) {

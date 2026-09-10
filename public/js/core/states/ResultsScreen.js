@@ -1,5 +1,6 @@
 import { LootRegistry } from '../../entities/loot/LootRegistry.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
+import { WorkshopRegistry } from '../registries/WorkshopRegistry.js';
 
 /**
  * ResultsScreen - In-game modal for displaying level completion with animations
@@ -11,8 +12,10 @@ export class ResultsScreen {
         this.isShowing = false;
         this.resultType = null; // 'levelComplete' or 'gameOver'
         this.resultData = null;
-        this.acquiredLoot = []; // Array of loot IDs acquired
-        
+        this.acquiredLoot = []; // Array of loot IDs acquired (feeds transferLootToInventory - sellable)
+        this.acquiredTokens = []; // Array of enemy-type IDs whose Workshop token was collected (display-only, not sellable)
+        this.lootDisplayIds = []; // acquiredLoot + acquiredTokens (as 'token:<enemyType>' entries), what the SPOILS grid actually reveals/renders
+
         // Delay before showing the screen (5 seconds to let animations/loot finish)
         this.showDelay = 0;
         this.showDelayTime = 0;
@@ -85,7 +88,9 @@ export class ResultsScreen {
         this.resultType = type;
         this.resultData = data;
         this.acquiredLoot = acquiredLoot;
+        this.acquiredTokens = lootManager ? lootManager.getCollectedTokens() : [];
         this.lootManager = lootManager; // Store reference to get latest loot
+        this._rebuildLootDisplayIds();
         this.isShowing = false; // Don't show yet - wait for delay
         this.phaseTime = 0;
         this.lootAnimationTime = 0; // Reset cumulative loot animation time
@@ -134,7 +139,7 @@ export class ResultsScreen {
         // Calculate loot phase duration based on number of items (1 item per second)
         // No minimum - duration matches exactly the number of items
         const itemsPerSecond = 1.0;
-        this.phaseDuration.loot = acquiredLoot.length / itemsPerSecond;
+        this.phaseDuration.loot = this.lootDisplayIds.length / itemsPerSecond;
 
         // Setup buttons
         if (type === 'levelComplete') {
@@ -256,11 +261,13 @@ export class ResultsScreen {
             const elapsedRealTime = currentRealTimestamp - this.showDelayTimestamp;
             if (elapsedRealTime >= this.showDelay) {
                 // Delay complete - show the screen now
-                // Update acquired loot to include any collected during the delay
+                // Update acquired loot/tokens to include anything collected during the delay
                 if (this.lootManager) {
                     this.acquiredLoot = this.lootManager.getCollectedLoot();
+                    this.acquiredTokens = this.lootManager.getCollectedTokens();
+                    this._rebuildLootDisplayIds();
                 }
-                
+
                 this.isShowing = true;
                 this.showDelay = 0;
                 
@@ -325,9 +332,9 @@ export class ResultsScreen {
             const itemsPerSecond = 1.0;
             const expectedIndex = Math.floor(this.lootAnimationTime * itemsPerSecond);
 
-            while (this.lootAnimationIndex <= expectedIndex && this.lootAnimationIndex < this.acquiredLoot.length) {
-                const lootId = this.acquiredLoot[this.lootAnimationIndex];
-                const lootInfo = LootRegistry.getLootType(lootId);
+            while (this.lootAnimationIndex <= expectedIndex && this.lootAnimationIndex < this.lootDisplayIds.length) {
+                const lootId = this.lootDisplayIds[this.lootAnimationIndex];
+                const lootInfo = this._getLootDisplayInfo(lootId);
                 this.spawnLootAnimation(this.lootAnimationIndex, lootInfo?.rarity === 'legendary');
                 this.lootAnimationIndex++;
             }
@@ -351,7 +358,7 @@ export class ResultsScreen {
      * Spawn loot reveal animation with splash particles
      */
     spawnLootAnimation(index, isLegendary = false) {
-        const lootId = this.acquiredLoot[index];
+        const lootId = this.lootDisplayIds[index];
         if (!lootId) return;
 
         // Play collect sound
@@ -377,7 +384,7 @@ export class ResultsScreen {
         const cy = startY + row * (itemHeight + itemGap) + itemHeight / 2;
 
         // Spawn radial splash particles in rarity color
-        const lootInfo = LootRegistry.getLootType(lootId);
+        const lootInfo = this._getLootDisplayInfo(lootId);
         const rarityColor = this.getRarityColor(lootId);
         const count = isLegendary ? 22 : (lootInfo?.rarity === 'epic' || lootInfo?.rarity === 'rare' ? 15 : 10);
 
@@ -415,6 +422,41 @@ export class ResultsScreen {
             'legendary': '#FFD700'
         };
         return colors[rarity] || '#FFD700';
+    }
+
+    /**
+     * Rebuilds lootDisplayIds from acquiredLoot + acquiredTokens - the flat id list the SPOILS
+     * grid (renderLoot/spawnLootAnimation/the reveal loop in update()) actually iterates over.
+     * Token entries are prefixed 'token:<enemyType>' so they can share that exact same reveal/
+     * render pipeline as real loot while staying out of acquiredLoot itself, which is the only
+     * list transferLootToInventory() reads - tokens aren't sellable inventory, they're tracked
+     * separately via WorkshopSystem (already granted at collection time, see GameplayState).
+     */
+    _rebuildLootDisplayIds() {
+        this.lootDisplayIds = [
+            ...this.acquiredLoot,
+            ...this.acquiredTokens.map(enemyType => 'token:' + enemyType)
+        ];
+    }
+
+    /**
+     * Same {name, drawIcon, rarity, sellValue} shape LootRegistry.getLootType() returns, but
+     * for 'token:<enemyType>' display ids - synthesized from WorkshopRegistry so the icon is
+     * pixel-identical to the one shown in the Workshop screen itself.
+     */
+    _getLootDisplayInfo(id) {
+        if (typeof id === 'string' && id.startsWith('token:')) {
+            const enemyType = id.slice('token:'.length);
+            const item = WorkshopRegistry.getEnemyItem(enemyType);
+            return {
+                name: (item ? item.name : enemyType) + ' Token',
+                drawIcon: item ? item.drawIcon : null,
+                rarity: null,
+                sellValue: null,
+                isToken: true
+            };
+        }
+        return LootRegistry.getLootType(id);
     }
 
     /**
@@ -1774,12 +1816,12 @@ export class ResultsScreen {
         // Determine current page based on how many items have been revealed
         const itemsRevealed = Math.floor(lootTime * itemsPerSecond);
         // Cap the page at the actual number of pages that have content
-        const maxPages = Math.ceil(this.acquiredLoot.length / itemsPerPage);
+        const maxPages = Math.ceil(this.lootDisplayIds.length / itemsPerPage);
         const currentPage = Math.min(Math.floor(itemsRevealed / itemsPerPage), maxPages - 1);
-        
-        for (let i = 0; i < this.acquiredLoot.length; i++) {
-            const lootId = this.acquiredLoot[i];
-            const lootInfo = LootRegistry.getLootType(lootId);
+
+        for (let i = 0; i < this.lootDisplayIds.length; i++) {
+            const lootId = this.lootDisplayIds[i];
+            const lootInfo = this._getLootDisplayInfo(lootId);
             if (!lootInfo) { globalCount++; continue; }
 
             // Calculate which page this item belongs to
@@ -1913,10 +1955,10 @@ export class ResultsScreen {
                 ctx.fillText(nameWords[j], itemWidth / 2, nameStartY + j * 12);
             }
 
-            // === VALUE ===
+            // === VALUE (tokens aren't sellable - label them instead of showing a gold value) ===
             ctx.fillStyle = '#FFD700';
             ctx.font = 'bold 11px Georgia, serif';
-            ctx.fillText(`${lootInfo.sellValue}g`, itemWidth / 2, itemHeight - 8);
+            ctx.fillText(lootInfo.isToken ? 'TOKEN' : `${lootInfo.sellValue}g`, itemWidth / 2, itemHeight - 8);
 
             // Thin bottom separator
             ctx.strokeStyle = 'rgba(212, 175, 55, 0.25)';

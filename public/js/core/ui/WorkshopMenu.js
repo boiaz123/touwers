@@ -35,6 +35,7 @@ export class WorkshopMenu {
         // (campaign-5: level slots + Level Designer).
         this.strategyButtonHovered = false;
         this.hoveredItemId = null;
+        this.hoveredButtonItemId = null;
         this.itemErrorEffects = []; // { text, x, y, life }
         this.glowEffects = []; // { text, x, y, life }
 
@@ -170,6 +171,13 @@ export class WorkshopMenu {
         return 'Locked';
     }
 
+    /** Bounds of the BUY button pinned to the bottom of a (non-owned) item tile - this is the
+     * only clickable region for the purchase action; the rest of the tile is just informational. */
+    _getButtonBounds(tx, ty, tw, th) {
+        const height = 22;
+        return { x: tx + 5, y: ty + th - height - 6, width: tw - 10, height };
+    }
+
     _forEachTile(callback) {
         const { menuX, menuY, menuWidth, menuHeight } = this._menuDimensions();
         const { contentX, contentY, contentWidth, contentHeight } = this._getTabLayout(menuX, menuY, menuWidth, menuHeight);
@@ -208,14 +216,22 @@ export class WorkshopMenu {
             y >= strategyBtn.y && y <= strategyBtn.y + strategyBtn.height;
 
         this.hoveredItemId = null;
+        this.hoveredButtonItemId = null;
         this._forEachTile((item, tx, ty, tw, th) => {
             if (x >= tx && x <= tx + tw && y >= ty && y <= ty + th) {
                 this.hoveredItemId = item.id;
             }
+            // Owned items render no button (see _renderTiles), so they have nothing to hover.
+            if (!this._getItemState(item).owned) {
+                const btn = this._getButtonBounds(tx, ty, tw, th);
+                if (x >= btn.x && x <= btn.x + btn.width && y >= btn.y && y <= btn.y + btn.height) {
+                    this.hoveredButtonItemId = item.id;
+                }
+            }
         });
 
         this.stateManager.canvas.style.cursor =
-            (this.tabs.some(t => t.hovered) || this.closeButtonHovered || this.hoveredItemId || this.strategyButtonHovered)
+            (this.tabs.some(t => t.hovered) || this.closeButtonHovered || this.hoveredButtonItemId || this.strategyButtonHovered)
                 ? 'pointer' : 'default';
     }
 
@@ -250,18 +266,21 @@ export class WorkshopMenu {
             }
         }
 
+        // Only the BUY button (not the whole tile) is clickable for the purchase action.
         let clicked = null;
         let clickedBounds = null;
         this._forEachTile((item, tx, ty, tw, th) => {
             if (clicked) return;
-            if (x >= tx && x <= tx + tw && y >= ty && y <= ty + th) {
+            if (this._getItemState(item).owned) return; // owned tiles render no button
+            const btn = this._getButtonBounds(tx, ty, tw, th);
+            if (x >= btn.x && x <= btn.x + btn.width && y >= btn.y && y <= btn.y + btn.height) {
                 clicked = item;
-                clickedBounds = { x: tx, y: ty, w: tw, h: th };
+                clickedBounds = btn;
             }
         });
 
         if (clicked) {
-            this._handleItemAction(clicked, clickedBounds.x + clickedBounds.w / 2, clickedBounds.y + clickedBounds.h / 2);
+            this._handleItemAction(clicked, clickedBounds.x + clickedBounds.width / 2, clickedBounds.y + clickedBounds.height / 2);
         }
     }
 
@@ -448,20 +467,51 @@ export class WorkshopMenu {
                 ctx.font = 'bold 11px Trebuchet MS, sans-serif';
                 ctx.fillStyle = '#4caf50';
                 ctx.fillText('OWNED', cx, y + h * 0.82);
-            } else if (isLocked) {
-                ctx.font = '10px Trebuchet MS, sans-serif';
-                ctx.fillStyle = '#5a4a3a';
-                ctx.fillText(this._getLockMessage(item), cx, y + h * 0.80);
             } else {
-                ctx.font = 'bold 11px Trebuchet MS, sans-serif';
-                ctx.fillStyle = this.playerGold >= item.cost ? '#ffd700' : '#a05a5a';
-                let costLine = `${item.cost}g`;
-                if (this.activeTab === 'enemies') {
-                    costLine += `  •  Token: ${state.tokenCount}/1`;
+                const btn = this._getButtonBounds(x, y, w, h);
+                if (isLocked) {
+                    ctx.font = '9px Trebuchet MS, sans-serif';
+                    ctx.fillStyle = '#5a4a3a';
+                    ctx.fillText(this._getLockMessage(item), cx, btn.y - 10);
                 }
-                ctx.fillText(costLine, cx, y + h * 0.82);
+                this._renderBuyButton(ctx, item, state, isLocked, x, y, w, h);
             }
         });
+    }
+
+    /** Draws the dedicated BUY button - the only clickable region of a tile for purchasing.
+     * Mirrors the Marketplace's (UpgradesMenu) hover-driven button styling: gold border/fill
+     * highlight only while the cursor is over the button itself, not the whole card. */
+    _renderBuyButton(ctx, item, state, isLocked, x, y, w, h) {
+        const btn = this._getButtonBounds(x, y, w, h);
+        const isHoveredBtn = this.hoveredButtonItemId === item.id;
+        const canAfford = this.playerGold >= item.cost;
+        const hasToken = this.activeTab !== 'enemies' || state.tokenCount >= 1;
+        const isActive = !isLocked && canAfford && hasToken;
+
+        ctx.fillStyle = isActive ? (isHoveredBtn ? '#8b6f47' : '#5a4a3a') : '#3a2a1a';
+        ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
+        ctx.fillStyle = isActive ? (isHoveredBtn ? '#9b7f57' : '#6a5a4a') : '#4a3a2a';
+        ctx.fillRect(btn.x, btn.y, btn.width, 1);
+        ctx.strokeStyle = isLocked ? '#5a4a4a' : (isHoveredBtn ? '#ffd700' : (isActive ? '#8b7355' : '#5a4a4a'));
+        ctx.lineWidth = isHoveredBtn && isActive ? 2 : 1;
+        ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
+
+        const labelColor = isLocked ? '#7a6a5a' : (isActive ? (isHoveredBtn ? '#ffd700' : '#d4af37') : '#a05a5a');
+        ctx.font = 'bold 10px Trebuchet MS, sans-serif';
+        ctx.fillStyle = labelColor;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(isLocked ? 'LOCKED' : 'BUY', btn.x + 7, btn.y + btn.height / 2);
+
+        if (!isLocked) {
+            let priceText = `${item.cost}g`;
+            if (this.activeTab === 'enemies') priceText += `  ${state.tokenCount}/1`;
+            ctx.font = 'bold 10px Trebuchet MS, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillStyle = labelColor;
+            ctx.fillText(priceText, btn.x + btn.width - 7, btn.y + btn.height / 2);
+        }
     }
 
     _renderStrategyButton(ctx, menuX, menuY, menuWidth, menuHeight) {

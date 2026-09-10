@@ -1,4 +1,4 @@
-import { LootBag, RealmShardDrop } from './LootBag.js';
+import { LootBag, RealmShardDrop, TokenDrop } from './LootBag.js';
 import { LootRegistry } from './LootRegistry.js';
 import { ObjectPool } from '../../core/utils/ObjectPool.js';
 
@@ -10,6 +10,7 @@ export class LootManager {
     constructor() {
         this.lootBags = [];
         this.collectedLoot = []; // Array of loot IDs collected during this level
+        this.collectedTokens = []; // Array of enemy type IDs whose Workshop token was collected this level
         this.audioManager = null; // Will be set by GameplayState
 
         // Pooled the same way tower projectiles already are (ObjectPool.js) - bags/shards
@@ -17,6 +18,7 @@ export class LootManager {
         // separate pools since LootBag and RealmShardDrop are different shapes.
         this._lootBagPool = new ObjectPool(() => new LootBag(0, 0, null, false));
         this._realmShardPool = new ObjectPool(() => new RealmShardDrop(0, 0, null));
+        this._tokenDropPool = new ObjectPool(() => new TokenDrop(0, 0, null));
     }
 
     /**
@@ -51,6 +53,21 @@ export class LootManager {
             this.audioManager.playSFX('shard-drop');
         }
         return shard;
+    }
+
+    /**
+     * Spawn a Workshop token drop - a world pickup like any other loot, the token itself is
+     * only granted once the player clicks it (see collectToken() below). Reuses the
+     * shard-drop sound effect per design for the drop moment.
+     */
+    spawnToken(x, y, enemyType) {
+        const token = this._tokenDropPool.acquire();
+        token.reset(x, y, enemyType);
+        this.lootBags.push(token);
+        if (this.audioManager) {
+            this.audioManager.playSFX('shard-drop');
+        }
+        return token;
     }
 
     /**
@@ -101,6 +118,28 @@ export class LootManager {
     }
 
     /**
+     * Collect a Workshop token drop. Unlike collectLoot(), the enemy type isn't a real
+     * LootRegistry id - it's tracked separately (collectedTokens) so it never leaks into
+     * the player's sellable inventory via ResultsScreen.transferLootToInventory(), which
+     * only reads getCollectedLoot(). Actual granting (WorkshopSystem.addToken) is done by
+     * the caller (GameplayState), which is the one with a workshopSystem reference.
+     */
+    collectToken(tokenDrop) {
+        tokenDrop.collect();
+        this.collectedTokens.push(tokenDrop.enemyType);
+        // Same unbounded-sandbox-session guard as collectLoot() above.
+        if (this.collectedTokens.length > 1000) {
+            this.collectedTokens.length = 0;
+        }
+
+        if (this.audioManager) {
+            this.audioManager.playSFX('loot-collect');
+        }
+
+        return tokenDrop.enemyType;
+    }
+
+    /**
      * Get total count of collected loot during this level
      */
     getCollectedLootCount() {
@@ -115,10 +154,18 @@ export class LootManager {
     }
 
     /**
+     * Get all collected Workshop tokens (enemy type IDs) this level
+     */
+    getCollectedTokens() {
+        return [...this.collectedTokens];
+    }
+
+    /**
      * Reset collected loot (for new level)
      */
     resetCollectedLoot() {
         this.collectedLoot = [];
+        this.collectedTokens = [];
     }
 
     /**
@@ -142,6 +189,8 @@ export class LootManager {
                 // Return to its pool now that it's fully removed from play.
                 if (bag instanceof RealmShardDrop) {
                     this._realmShardPool.release(bag);
+                } else if (bag instanceof TokenDrop) {
+                    this._tokenDropPool.release(bag);
                 } else {
                     this._lootBagPool.release(bag);
                 }

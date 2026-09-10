@@ -320,7 +320,7 @@ export class EnemyManager {
                 
                 // Check for Workshop token drop (independent of loot rolls, specific to this enemy's own type)
                 if (enemy.shouldDropWorkshopToken && enemy.shouldDropWorkshopToken()) {
-                    tokenDrops.push({ enemyType: enemy.type });
+                    tokenDrops.push({ x: enemy.x, y: enemy.y, enemyType: enemy.type });
                 }
 
                 // Preserve splatters from dead enemies so they continue to animate and fade

@@ -1,6 +1,12 @@
 import { HitSplatter } from '../effects/HitSplatter.js';
 import { darkenColor, lightenColor } from '../../utils/colorUtils.js';
 
+// Damage types that represent "magic" for the purpose of magicResistance - every elemental
+// spell the Magic Tower / Combination Tower / Super Weapon Lab can cast, plus plain 'magic'
+// arcane damage. Deliberately excludes 'physical' (governed by armour) and other non-magic
+// types like 'poison', which bypass both mitigation stats.
+const MAGICAL_DAMAGE_TYPES = new Set(['magic', 'fire', 'water', 'air', 'earth', 'electricity']);
+
 export class BaseEnemy {
     constructor(path, health, speed, armour, magicResistance) {
         this.path = path;
@@ -314,8 +320,12 @@ export class BaseEnemy {
             finalDamage = amount * (1 - armorReductionPercent);
         }
         
-        // Apply magic resistance for magic damage types
-        if (damageType === 'magic') {
+        // Apply magic resistance for all magical damage types: arcane blasts as well as every
+        // elemental spell cast by the Magic Tower / Combination Tower / Super Weapon Lab
+        // (fire, water, air, earth, electricity). Kept as an explicit whitelist rather than
+        // "anything non-physical" so unrelated types (e.g. poison) keep bypassing both stats
+        // exactly as before.
+        if (MAGICAL_DAMAGE_TYPES.has(damageType)) {
             // Magic resistance can be positive (reduces damage) or negative (increases damage)
             // Positive resistance = damage reduced by that percentage
             // Negative resistance = damage increased (e.g., -0.2 = 20% more damage)
