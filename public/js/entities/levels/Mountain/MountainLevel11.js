@@ -300,10 +300,10 @@ export class MountainLevel11 extends LevelBase {
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 2, 
+            enemyHealth_multiplier: 1.2, 
             speedMultiplier: 1, 
-            spawnInterval: 0.6, 
-            pattern: [{ type: 'beefyenemy', count: 17 }] 
+            spawnInterval: 0.8, 
+            pattern: [{ type: 'beefyenemy', count: 5 }, { type: 'beefyenemy', count: 5, healthMultiplier: 1.5, speedMultiplier: 0.8 }, { type: 'beefyenemy', count: 5, healthMultiplier: 1.7, speedMultiplier: 0.6 }] 
         }
         // Wave 4
         , { 
@@ -364,8 +364,8 @@ export class MountainLevel11 extends LevelBase {
         // Wave 12
         , { 
             enemyHealth_multiplier: 8, 
-            speedMultiplier: 1, 
-            spawnInterval: 1.2, 
+            speedMultiplier: 0.7, 
+            spawnInterval: 1.3, 
             pattern: [{ type: 'mage', count: 3 }] 
         }
         ];
