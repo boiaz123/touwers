@@ -315,10 +315,10 @@ export class MountainLevel10 extends LevelBase {
         }
         // Wave 5
         , { 
-            enemyHealth_multiplier: 1.2, 
+            enemyHealth_multiplier: 1, 
             speedMultiplier: 1.2, 
             spawnInterval: 1, 
-            pattern: [{ type: 'archer', count: 17 }] 
+            pattern: [{ type: 'ramcart', count: 1 }] 
         }
         // Wave 6
         , { 

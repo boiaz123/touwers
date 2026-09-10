@@ -2,6 +2,9 @@ import { Tower } from './Tower.js';
 import { ObjectPool } from '../../core/utils/ObjectPool.js';
 
 const BASE_SLOW_EFFECT = 0.7;
+// Tripled from the original 3s so fire's burn keeps ticking well after a target leaves
+// range or the tower retargets, instead of fading almost as soon as the hits stop.
+const FIRE_BURN_DURATION = 9;
 
 export class MagicTower extends Tower {
     constructor(x, y, gridX, gridY) {
@@ -138,9 +141,9 @@ export class MagicTower extends Tower {
                     this.target.takeDamage(finalDamage, 0, 'fire');
                     // Apply burn effect
                     if (this.target.burnTimer) {
-                        this.target.burnTimer = Math.max(this.target.burnTimer, 3);
+                        this.target.burnTimer = Math.max(this.target.burnTimer, FIRE_BURN_DURATION);
                     } else {
-                        this.target.burnTimer = 3;
+                        this.target.burnTimer = FIRE_BURN_DURATION;
                         this.target.burnDamage = 5;
                     }
                     break;
@@ -298,12 +301,15 @@ export class MagicTower extends Tower {
         if (['fire', 'water', 'air', 'earth'].includes(element)) {
             this.selectedElement = element;
 
-            // Set per-element base damage and fire rate
+            // Set per-element base damage and fire rate. Earth is the hard hitter: its
+            // damage is high enough that even at its slow fire rate it leads every other
+            // element in sustained damage output (90 * 0.7 = 63 dps vs. fire's 45, water's
+            // 36, air's 25), on top of already having by far the biggest single hit.
             const elementStats = {
                 fire:  { damage: 45, fireRate: 1.0 },
                 water: { damage: 30, fireRate: 1.2 },
                 air:   { damage: 25, fireRate: 1.0 },
-                earth: { damage: 60, fireRate: 0.7 }
+                earth: { damage: 90, fireRate: 0.7 }
             };
             const stats = elementStats[element];
             this.damage = stats.damage;

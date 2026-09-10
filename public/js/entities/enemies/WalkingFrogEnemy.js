@@ -46,9 +46,13 @@ export class WalkingFrogEnemy extends BaseEnemy {
         this.cachedDarken2Color = null;
 
         // Killing her bursts the egg sac open - consumed by EnemyManager._spawnDeathChildren,
-        // which spawns these at her death position/path progress.
+        // which spawns these at her death position/path progress. healthMultiplier is
+        // 1.5x the brood's own base health at a plain (1.0-multiplier) matriarch, then
+        // scales further with how tanky she herself was (health_multiplier) - so e.g. a
+        // frog (110 base health) spawns at 165 health from a 1.0x matriarch. speedMultiplier
+        // is a flat 1.2x on the brood's own base speed, independent of her health_multiplier.
         this.spawnOnDeath = [
-            { type: 'frog', count: 20 }
+            { type: 'frog', count: 20, healthMultiplier: 1.5 * health_multiplier, speedMultiplier: 1.2 }
         ];
 
         // Set by EnemyRenderAdapter once it has synced this enemy via Pixi.

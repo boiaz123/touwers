@@ -211,15 +211,23 @@ export class EnemyManager {
      * Children appear scattered around the parent's death position and pick up its
      * path progress, so they continue toward the castle instead of restarting at the
      * path's beginning.
+     *
+     * `healthMultiplier` (set by the parent to 1.5x its own health_multiplier - see
+     * RamCartEnemy/WalkingFrogEnemy) scales just the spawned child's health, so a
+     * raiding party/brood released by a tankier parent (higher wave health_multiplier)
+     * comes out tankier too instead of always spawning at the child type's plain base
+     * health. `speedMultiplier` is a flat multiplier on the type's base speed, kept
+     * separate since it isn't meant to compound with how tanky the parent was. Armour
+     * and magic resistance are left at the child type's own base stats.
      */
     _spawnDeathChildren(parent, outBuffer) {
         const spawns = parent.spawnOnDeath;
         for (let s = 0; s < spawns.length; s++) {
-            const { type, count, healthMultiplier = 1 } = spawns[s];
+            const { type, count, healthMultiplier = 1, speedMultiplier = 1 } = spawns[s];
             const baseSpeed = EnemyRegistry.getDefaultSpeed(type) || 50;
 
             for (let i = 0; i < count; i++) {
-                const child = EnemyRegistry.createEnemy(type, this.path, healthMultiplier, baseSpeed);
+                const child = EnemyRegistry.createEnemy(type, this.path, healthMultiplier, baseSpeed * speedMultiplier);
                 if (!child) continue;
 
                 const scatterAngle = Math.random() * Math.PI * 2;

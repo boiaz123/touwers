@@ -393,6 +393,10 @@ export class Game {
                 const gameplayState = currentState.gameplayState || currentState;
                 const isGameplay = gameplayState && gameplayState.gameState && gameplayState.towerManager;
                 if (!isGameplay) return null;
+                // While the victory/defeat screen is showing, every hotkey wired through
+                // this helper (pause, menu, tower/building/spell selection, sell, etc.)
+                // should be a no-op instead of reaching behind the results screen.
+                if (gameplayState.resultsScreen && gameplayState.resultsScreen.isShowing) return null;
                 const uiManager = currentState.uiManager || gameplayState.uiManager;
                 return { gameplayState, uiManager, currentState };
             };
@@ -437,6 +441,16 @@ export class Game {
             // exit the app instead.
             const handleCancelAction = () => {
                 if (!this.stateManager || !this.stateManager.currentState) return false;
+
+                // While the victory/defeat screen is showing, treat Escape/back as consumed
+                // rather than falling through to the non-gameplay "go back a screen" branch
+                // below (getGameplayRefs() returns null for this case) - that branch doesn't
+                // know about the results screen and would otherwise report "nothing to do",
+                // which the Android back button reads as "exit the app".
+                const rawGameplayState = this.stateManager.currentState.gameplayState || this.stateManager.currentState;
+                if (rawGameplayState && rawGameplayState.resultsScreen && rawGameplayState.resultsScreen.isShowing) {
+                    return true;
+                }
 
                 const refs = getGameplayRefs();
                 if (refs && refs.uiManager) {

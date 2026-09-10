@@ -165,7 +165,7 @@ export class ResultsScreen {
         // Trim action string in case there's extra whitespace
         action = String(action).trim();
         this.isShowing = false;
-        
+
         // Stop music
         if (this.stateManager.audioManager) {
             this.stateManager.audioManager.stopSFXTune();

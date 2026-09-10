@@ -16,10 +16,13 @@ export class BaseEnemy {
         this.realmShardDropChance = 0; // Chance to drop a Frog King's Realm Shard
         this.workshopTokenChance = 0; // Chance to drop this enemy's own Workshop token (0 until the Commander's Workshop is purchased - see EnemyManager._applyEnemyDefaults)
 
-        // Optional death-triggered spawn: array of { type, count, healthMultiplier? }
-        // entries. When this enemy dies, EnemyManager.removeDeadEnemies() spawns these
-        // additional enemies at its death position/path progress instead of the path's
-        // start (see RamCartEnemy, WalkingFrogEnemy). Null means no spawn-on-death.
+        // Optional death-triggered spawn: array of { type, count, healthMultiplier?,
+        // speedMultiplier? } entries. When this enemy dies, EnemyManager.removeDeadEnemies()
+        // spawns these additional enemies at its death position/path progress instead of
+        // the path's start (see RamCartEnemy, WalkingFrogEnemy). healthMultiplier scales
+        // the spawned enemy's health; speedMultiplier scales its speed separately so it
+        // doesn't compound with the parent's own health_multiplier (both default to 1 =
+        // plain base stats). Null means no spawn-on-death.
         this.spawnOnDeath = null;
         this.currentPathIndex = 0;
         this.x = path && path.length > 0 ? path[0].x : 0;

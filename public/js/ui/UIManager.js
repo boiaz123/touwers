@@ -490,11 +490,11 @@ export class UIManager {
     // ============ TOWER/BUILDING SELECTION ============
 
     selectTower(btn) {
-        // Prevent selection when game is paused
-        if (this.gameplayState.isPaused) {
+        // Prevent selection when game is paused or the victory/defeat screen is showing
+        if (this.gameplayState.isPaused || (this.gameplayState.resultsScreen && this.gameplayState.resultsScreen.isShowing)) {
             return;
         }
-        
+
         // Prevent selection of disabled buttons
         if (btn.disabled || btn.classList.contains('disabled')) {
             return;
@@ -530,11 +530,11 @@ export class UIManager {
     }
 
     selectBuilding(btn) {
-        // Prevent selection when game is paused
-        if (this.gameplayState.isPaused) {
+        // Prevent selection when game is paused or the victory/defeat screen is showing
+        if (this.gameplayState.isPaused || (this.gameplayState.resultsScreen && this.gameplayState.resultsScreen.isShowing)) {
             return;
         }
-        
+
         // Prevent selection of disabled buttons
         if (btn.disabled || btn.classList.contains('disabled')) {
             return;
@@ -570,6 +570,10 @@ export class UIManager {
     }
 
     showTowerInfo(towerType) {
+        // No hover tooltips over the victory/defeat screen
+        if (this.gameplayState.resultsScreen && this.gameplayState.resultsScreen.isShowing) {
+            return;
+        }
         const info = this.towerManager.getTowerInfo(towerType);
         if (!info) return;
         
@@ -739,6 +743,10 @@ export class UIManager {
     }
 
     showBuildingInfo(buildingType) {
+        // No hover tooltips over the victory/defeat screen
+        if (this.gameplayState.resultsScreen && this.gameplayState.resultsScreen.isShowing) {
+            return;
+        }
         const info = this.towerManager.getBuildingInfo(buildingType);
         if (!info) return;
         
@@ -2398,10 +2406,11 @@ export class UIManager {
                                 <span class="forge-benefit-label">Tower Leveling:</span>
                                 <span class="forge-benefit-value">${academy.academyLevel >= 2 ? 'Unlocked (Max Lv 20)' : 'Locked'}</span>
                             </div>
+                            ${unlockSystem.superweaponUnlocked ? `
                             <div class="forge-benefit-item">
                                 <span class="forge-benefit-label">Super Weapon Lab:</span>
-                                <span class="forge-benefit-value">${unlockSystem.superweaponUnlocked ? 'Available' : 'Locked'}</span>
-                            </div>
+                                <span class="forge-benefit-value">Available</span>
+                            </div>` : ''}
                         </div>
                     </div>
                 </div>

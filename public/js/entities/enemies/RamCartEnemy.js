@@ -40,10 +40,16 @@ export class RamCartEnemy extends BaseEnemy {
 
         // Breaking the cart open unleashes the raiding party it was smuggling toward
         // the castle - consumed by EnemyManager._spawnDeathChildren on death, which
-        // spawns these at the cart's death position/path progress.
+        // spawns these at the cart's death position/path progress. healthMultiplier is
+        // 1.5x the raiders' own base health at a plain (1.0-multiplier) cart, then
+        // scales further with how tanky this cart itself was (health_multiplier) - so
+        // e.g. a basic enemy (100 base health) spawns at 150 health from a 1.0x cart,
+        // 330 from a 2.2x cart. speedMultiplier is a flat 1.2x on the raiders' own base
+        // speed, independent of the cart's health_multiplier.
+        const childHealthMultiplier = 1.5 * health_multiplier;
         this.spawnOnDeath = [
-            { type: 'basic', count: 19 },
-            { type: 'beefyenemy', count: 1 }
+            { type: 'basic', count: 19, healthMultiplier: childHealthMultiplier, speedMultiplier: 1.2 },
+            { type: 'beefyenemy', count: 1, healthMultiplier: childHealthMultiplier, speedMultiplier: 1.2 }
         ];
 
         // Set by EnemyRenderAdapter once it has synced this enemy via Pixi.
