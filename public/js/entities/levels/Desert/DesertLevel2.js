@@ -208,7 +208,7 @@ export class DesertLevel2 extends LevelBase {
             enemyHealth_multiplier: 1.3, 
             speedMultiplier: 0.85, 
             spawnInterval: 0.9, 
-            pattern: [{ type: 'villager', count: 6 }, { type: 'basic', count: 8 }, { type: 'ramcart', count: 1 }] 
+            pattern: [{ type: 'villager', count: 6 }, { type: 'basic', count: 8 }, { type: 'ramcart', count: 1, healthMultiplier: 0.5 }] 
         }
         // Wave 3
         , { 
@@ -236,7 +236,7 @@ export class DesertLevel2 extends LevelBase {
             enemyHealth_multiplier: 2, 
             speedMultiplier: 1.1, 
             spawnInterval: 0.9, 
-            pattern: [{ type: 'mage', count: 1 }, { type: 'frog', count: 12 }] 
+            pattern: [{ type: 'mage', count: 2 }, { type: 'frog', count: 12 }] 
         }
         // Wave 7
         , { 
@@ -278,7 +278,7 @@ export class DesertLevel2 extends LevelBase {
             enemyHealth_multiplier: 2, 
             speedMultiplier: 1, 
             spawnInterval: 0.5, 
-            pattern: [{ type: 'mage', count: 1 }, { type: 'frog', count: 20, healthMultiplier: 4, speedMultiplier: 1.3 }] 
+            pattern: [{ type: 'mage', count: 1, healthMultiplier: 5 }, { type: 'frog', count: 20, healthMultiplier: 4, speedMultiplier: 1.3 }] 
         }
         // Wave 13
         , { 
@@ -299,7 +299,7 @@ export class DesertLevel2 extends LevelBase {
             enemyHealth_multiplier: 3, 
             speedMultiplier: 0.8, 
             spawnInterval: 1, 
-            pattern: [{ type: 'knight', count: 3, healthMultiplier: 2 }, { type: 'frog', count: 12 }, { type: 'mage', count: 2 }] 
+            pattern: [{ type: 'knight', count: 3, healthMultiplier: 2 }, { type: 'frog', count: 12 }, { type: 'mage', count: 2, healthMultiplier: 6 }] 
         }
         // Wave 16
         , { 
@@ -341,7 +341,7 @@ export class DesertLevel2 extends LevelBase {
             enemyHealth_multiplier: 5, 
             speedMultiplier: 1, 
             spawnInterval: 1, 
-            pattern: [{ type: 'mage', count: 1, speedMultiplier: 0.8 }, { type: 'villager', count: 12 }, { type: 'basic', count: 8 }, { type: 'archer', count: 6 }, { type: 'beefyenemy', count: 6 }] 
+            pattern: [{ type: 'mage', count: 3, speedMultiplier: 0.8 }, { type: 'villager', count: 12 }, { type: 'basic', count: 8 }, { type: 'archer', count: 6 }, { type: 'beefyenemy', count: 6 }] 
         }
         // Wave 22
         , { 

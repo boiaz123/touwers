@@ -179,7 +179,7 @@ export class DesertLevel4 extends LevelBase {
             enemyHealth_multiplier: 4, 
             speedMultiplier: 1, 
             spawnInterval: 0.8, 
-            pattern: [{ type: 'mage', count: 1, healthMultiplier: 1 }, { type: 'frog', count: 10, healthMultiplier: 2 }, { type: 'mage', count: 1, speedMultiplier: 0.8 }, { type: 'frog', count: 12, speedMultiplier: 1.1 }] 
+            pattern: [{ type: 'mage', count: 1, healthMultiplier: 3 }, { type: 'frog', count: 10, healthMultiplier: 2 }, { type: 'mage', count: 1, speedMultiplier: 0.8 }, { type: 'frog', count: 12, speedMultiplier: 1.1 }] 
         }
         // Wave 7
         , { 
@@ -200,7 +200,7 @@ export class DesertLevel4 extends LevelBase {
             enemyHealth_multiplier: 4, 
             speedMultiplier: 1, 
             spawnInterval: 0.7, 
-            pattern: [{ type: 'mage', count: 2, healthMultiplier: 2, speedMultiplier: 1.4 }, { type: 'beefyenemy', count: 8 }, { type: 'frog', count: 13 }, { type: 'mage', count: 1, healthMultiplier: 4, speedMultiplier: 0.5 }, { type: 'frog', count: 4, healthMultiplier: 2, speedMultiplier: 1.2 }] 
+            pattern: [{ type: 'mage', count: 2, healthMultiplier: 4, speedMultiplier: 1.4 }, { type: 'beefyenemy', count: 8 }, { type: 'frog', count: 13 }, { type: 'mage', count: 1, healthMultiplier: 4, speedMultiplier: 0.5 }, { type: 'frog', count: 4, healthMultiplier: 2, speedMultiplier: 1.2 }] 
         }
         // Wave 10
         , { 
@@ -221,7 +221,7 @@ export class DesertLevel4 extends LevelBase {
             enemyHealth_multiplier: 2, 
             speedMultiplier: 1, 
             spawnInterval: 0.7, 
-            pattern: [{ type: 'mage', count: 1, healthMultiplier: 4 }, { type: 'frog', count: 16, speedMultiplier: 1.2 }, { type: 'mage', count: 1, healthMultiplier: 6, speedMultiplier: 0.8 }, { type: 'frog', count: 12, healthMultiplier: 5, speedMultiplier: 1.4 }] 
+            pattern: [{ type: 'mage', count: 1, healthMultiplier: 6 }, { type: 'frog', count: 16, speedMultiplier: 1.2 }, { type: 'mage', count: 1, healthMultiplier: 6, speedMultiplier: 0.8 }, { type: 'frog', count: 12, healthMultiplier: 5, speedMultiplier: 1.4 }] 
         }
         // Wave 13
         , { 
@@ -235,7 +235,7 @@ export class DesertLevel4 extends LevelBase {
             enemyHealth_multiplier: 3, 
             speedMultiplier: 1, 
             spawnInterval: 0.9, 
-            pattern: [{ type: 'mage', count: 1, healthMultiplier: 4, speedMultiplier: 1.2 }, { type: 'villager', count: 8 }, { type: 'basic', count: 5 }, { type: 'archer', count: 7 }, { type: 'beefyenemy', count: 5, healthMultiplier: 4 }, { type: 'shieldknight', count: 2 }, { type: 'archer', count: 8, healthMultiplier: 4, speedMultiplier: 1.3 }, { type: 'beefyenemy', count: 5, healthMultiplier: 4, speedMultiplier: 0.8 }, { type: 'basic', count: 8, healthMultiplier: 2, speedMultiplier: 1.5 }, { type: 'shieldknight', count: 2, healthMultiplier: 2 }] 
+            pattern: [{ type: 'mage', count: 2, healthMultiplier: 7, speedMultiplier: 1.2 }, { type: 'villager', count: 8 }, { type: 'basic', count: 5 }, { type: 'archer', count: 7 }, { type: 'beefyenemy', count: 5, healthMultiplier: 4 }, { type: 'shieldknight', count: 2 }, { type: 'archer', count: 8, healthMultiplier: 4, speedMultiplier: 1.3 }, { type: 'beefyenemy', count: 5, healthMultiplier: 4, speedMultiplier: 0.8 }, { type: 'basic', count: 8, healthMultiplier: 2, speedMultiplier: 1.5 }, { type: 'shieldknight', count: 2, healthMultiplier: 2 }] 
         }
         // Wave 15
         , { 

@@ -340,7 +340,7 @@ export class MountainLevel12 extends LevelBase {
         }
         // Wave 7
         , { 
-            enemyHealth_multiplier: 0.6, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 0.8, 
             spawnInterval: 1, 
             pattern: [{ type: 'mage', count: 2 }] 
@@ -413,7 +413,7 @@ export class MountainLevel12 extends LevelBase {
             enemyHealth_multiplier: 1.5, 
             speedMultiplier: 1.27, 
             spawnInterval: 0.5, 
-            pattern: [{ type: 'mage', count: 3 }, { type: 'shieldknight', count: 2 }, { type: 'beefyenemy', count: 5 }] 
+            pattern: [{ type: 'mage', count: 3, healthMultiplier: 4 }, { type: 'shieldknight', count: 2 }, { type: 'beefyenemy', count: 5 }] 
         }
         // Wave 18
         , { 
@@ -434,11 +434,11 @@ export class MountainLevel12 extends LevelBase {
             enemyHealth_multiplier: 2.2, 
             speedMultiplier: 1.13, 
             spawnInterval: 0.3, 
-            pattern: [{ type: 'knight', count: 1 }, { type: 'mage', count: 1 }, { type: 'shieldknight', count: 1 }] 
+            pattern: [{ type: 'knight', count: 1 }, { type: 'mage', count: 1, healthMultiplier: 5 }, { type: 'shieldknight', count: 1 }] 
         }
         // Wave 21
         , { 
-            enemyHealth_multiplier: 5, 
+            enemyHealth_multiplier: 6, 
             speedMultiplier: 0.78, 
             spawnInterval: 1, 
             pattern: [{ type: 'mage', count: 1 }] 
@@ -455,7 +455,7 @@ export class MountainLevel12 extends LevelBase {
             enemyHealth_multiplier: 2, 
             speedMultiplier: 1.2, 
             spawnInterval: 0.5, 
-            pattern: [{ type: 'mage', count: 1 }, { type: 'frog', count: 32 }] 
+            pattern: [{ type: 'mage', count: 1, healthMultiplier: 4 }, { type: 'frog', count: 32 }] 
         }
         // Wave 24
         , { 
@@ -480,7 +480,7 @@ export class MountainLevel12 extends LevelBase {
         }
         // Wave 27
         , { 
-            enemyHealth_multiplier: 15.5, 
+            enemyHealth_multiplier: 20, 
             speedMultiplier: 0.8, 
             spawnInterval: 0.3, 
             pattern: [{ type: 'knight', count: 1 }] 
