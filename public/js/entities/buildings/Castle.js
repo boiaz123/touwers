@@ -983,7 +983,7 @@ export class Castle {
     static getInfo() {
         return {
             name: 'Castle',
-            description: 'Fortress with connecting bridge, main wall, and corner towers.',
+            description: 'This is your fortress, do not let it fall in the hands of your enemy.',
             size: '3x3',
             cost: 0
         };
