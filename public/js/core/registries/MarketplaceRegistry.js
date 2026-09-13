@@ -298,7 +298,7 @@ export class MarketplaceRegistry {
         },
         'rabbits-foot': {
             name: 'Rabbit\'s Foot',
-            description: 'The forest runs deep with magic old and true. Those who traverse its hidden groves sometimes catch glimpses of white rabbits—swift as starlight, blessed by nature itself. To claim their favor is to unlock prosperity beyond measure. This talisman, blessed by woodland spirits of abundance, doubles the wealth and treasure you discover in the next battle. Fallen enemies will yield twice the gold, gems, and relics, filling your coffers with untold riches.',
+            description: 'The forest runs deep with magic old and true. Those who traverse its hidden groves sometimes catch glimpses of white rabbits—swift as starlight, blessed by nature itself. To claim their favor is to unlock prosperity beyond measure. This talisman, blessed by woodland spirits of abundance, doubles the wealth and treasure you discover in the next battle. Fallen enemies will yield twice the loot, filling your coffers with untold riches.',
             cost: 100,
             drawIcon: _drawRabbitPaw,
             category: 'loot',

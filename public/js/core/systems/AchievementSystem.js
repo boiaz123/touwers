@@ -118,7 +118,7 @@ const ACHIEVEMENT_DEFS = [
     },
     {
         id: 'seasoned-veteran',
-        name: 'Seasoned Veteran',
+        name: 'Veteran',
         description: 'Win 25 battles',
         icon: '♛︎',
         category: 'victory',
@@ -280,7 +280,7 @@ const ACHIEVEMENT_DEFS = [
     },
     {
         id: 'gold-hoarder',
-        name: 'Gold Hoarder',
+        name: 'Big Spender',
         description: 'Spend 10,000 gold at the market',
         icon: '✦︎',
         category: 'spending',
@@ -319,13 +319,13 @@ const ACHIEVEMENT_DEFS = [
     {
         id: 'profiteer',
         name: 'Profiteer',
-        description: 'Earn 1,000 gold from selling items',
+        description: 'Earn 10,000 gold from selling items',
         icon: '⚖︎',
         category: 'trading',
         tier: 1,
         tierMax: 3,
         points: 8,
-        check: (s) => s.totalMoneyEarnedInMarketplace >= 1000,
+        check: (s) => s.totalMoneyEarnedInMarketplace >= 10000,
         getProgress: (s) => ({ current: Math.min(s.totalMoneyEarnedInMarketplace, 1000), max: 1000 })
     },
     {
@@ -509,7 +509,7 @@ const ACHIEVEMENT_DEFS = [
     },
     {
         id: 'frog-slayer',
-        name: 'Frog Slayer',
+        name: 'Frog King Slayer',
         description: "Survive the Frog King's Realm",
         icon: '⚑︎',
         category: 'campaign',
@@ -524,7 +524,7 @@ const ACHIEVEMENT_DEFS = [
     // ── Playtime ──────────────────────────────────────────────────────────────
     {
         id: 'dedicated-defender',
-        name: 'Dedicated Defender',
+        name: 'Getting Started',
         description: 'Play for 1 hour',
         icon: '⌛︎',
         category: 'playtime',
@@ -536,7 +536,7 @@ const ACHIEVEMENT_DEFS = [
     },
     {
         id: 'arcane-scholar',
-        name: 'Arcane Scholar',
+        name: 'Dedicated Defender',
         description: 'Play for 5 hours',
         icon: '⌛︎',
         category: 'playtime',

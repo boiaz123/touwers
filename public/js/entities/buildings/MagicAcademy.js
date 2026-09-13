@@ -1607,7 +1607,7 @@ export class MagicAcademy extends Building {
         return {
             name: 'Magic Academy',
             description: 'Magical fortress that unlocks Magic Towers and provides elemental upgrades.',
-            effect: 'Unlocks Magic Tower + Elemental Upgrades',
+            effect: 'Unlocks Magic Tower and Elemental Upgrades',
             size: '4x4',
             cost: 250
         };

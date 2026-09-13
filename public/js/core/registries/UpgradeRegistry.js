@@ -14,7 +14,7 @@ export class UpgradeRegistry {
         },
         'musical-equipment': {
             name: 'Musical Equipment',
-            description: 'Places Paseyan the Bard on the settlement square. Click him to open your Musical Scores collection.',
+            description: 'Places Paseyan the Bard on the settlement square. Interact with him to open your Musical Scores collection.',
             cost: 300,
             icon: '▹',
             category: 'ui',
@@ -51,7 +51,7 @@ export class UpgradeRegistry {
         },
         'diamond-pickaxe': {
             name: 'Diamond Pickaxe',
-            description: 'Increase gem mining chance in gold mines. Requires a Magic Academy to be unlocked first.',
+            description: 'Increase chance of receiving diamonds in the mines.',
             cost: 800,
             icon: '◆',
             category: 'mining',
@@ -69,7 +69,7 @@ export class UpgradeRegistry {
         'magic-academy-unlock': {
             name: 'Academy Blueprints',
             description: 'Ancient schematics reveal the art of constructing a Magic Academy — a tower of arcane scholarship that unlocks elemental magic towers and gem research. Available after completing The Verdant Woodlands.',
-            cost: 1500,
+            cost: 2000,
             icon: '▹',
             category: 'building',
             effect: 'Permanently unlocks the Magic Academy building',
@@ -78,7 +78,7 @@ export class UpgradeRegistry {
         'superweapon-lab-unlock': {
             name: 'Super Weapon Lab Plans',
             description: 'Schematics for a formidable weapons laboratory capable of producing devastating combination spells and experimental ordnance. Available after conquering The Ironstone Mountains.',
-            cost: 2500,
+            cost: 10000,
             icon: '◈',
             category: 'building',
             effect: 'Permanently unlocks the Super Weapon Lab building',

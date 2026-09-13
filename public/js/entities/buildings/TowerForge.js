@@ -1813,16 +1813,16 @@ export class TowerForge extends Building {
         } else {
             switch(nextLevel) {
                 case 2:
-                    nextUnlock = "Unlocks: Poison Archer Tower, doubles Mine income\nCastle Fortification Level 1 available (500g)";
+                    nextUnlock = "Unlocks: Poison Archer Tower, doubles Mine income\nCastle Fortification Level 1";
                     break;
                 case 3:
-                    nextUnlock = "Unlocks: Trebuchet Tower, an additional Gold Mine and 2.5x Mine Income\nCastle Fortification Level 2 available (1000g)";
+                    nextUnlock = "Unlocks: Trebuchet Tower, an additional Gold Mine and 2.5x Mine Income\nCastle Fortification Level 2";
                     break;
                 case 4:
                     nextUnlock = "Unlocks: Magic Academy Building and 3x Mine Income";
                     break;
                 case 5:
-                    nextUnlock = "Unlocks: 3rd Gold Mine and 3.5x Mine Income\nCastle Fortification Level 3 available (1750g) (Maximum Level)";
+                    nextUnlock = "Unlocks: 3rd Gold Mine and 3.5x Mine Income\nCastle Fortification Level 3";
                     break;
                 default:
                     nextUnlock = "Max Level Reached";
@@ -1966,7 +1966,7 @@ export class TowerForge extends Building {
         return {
             name: 'Tower Forge',
             description: 'Upgrades all towers and provides specialized tower enhancements.',
-            effect: 'Global tower boost + upgrade menu',
+            effect: 'Global tower boosts and unlocks',
             size: '4x4',
             cost: 300
         };

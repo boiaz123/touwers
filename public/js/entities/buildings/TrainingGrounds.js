@@ -2016,7 +2016,7 @@ export class TrainingGrounds extends Building {
             option = {
                 id: 'defender_upgrade_2',
                 name: 'Defender Level 2 Unlock',
-                description: 'Unlock the Level 2 Defender - medium-armored knight with a two-handed sword (100 HP, 20 DMG)',
+                description: 'Unlock the Level 2 Defender - medium-armored knight with a two-handed sword',
                 type: 'defender_upgrade',
                 level: 2,
                 cost: 800,
@@ -2028,7 +2028,7 @@ export class TrainingGrounds extends Building {
             option = {
                 id: 'defender_upgrade_3',
                 name: 'Defender Level 3 Unlock',
-                description: 'Unlock the Level 3 Defender - heavy-armored tank with a massive sword (140 HP, 30 DMG)',
+                description: 'Unlock the Level 3 Defender - heavy-armored paladin with a massive sword',
                 type: 'defender_upgrade',
                 level: 3,
                 cost: 1200,
@@ -2073,7 +2073,7 @@ export class TrainingGrounds extends Building {
         return {
             id: 'guard_post_unlock',
             name: 'Guard Post Tower',
-            description: 'Build a Guard Post on the path - a fortified outpost that hires Level 1 Defenders (100g each, 10s cooldown after defeat) to block and fight enemies.',
+            description: 'Build a Guard Post on the path - a fortified outpost that hires Defenders to block and fight enemies.',
             type: 'guard_post',
             cost: 150,
             icon: '▹',
@@ -2098,8 +2098,8 @@ export class TrainingGrounds extends Building {
         // Return static information about the building
         return {
             name: 'Training Grounds',
-            description: 'Medieval training yard with archer lanes and sword-fighting duels. Trains your towers and strengthens the Castle\'s Defender system.',
-            effect: 'Tower training + Castle Defenders',
+            description: 'Training yard with archer lanes and sword-fighting duels. Trains your towers and strengthens the Castle\'s Defender system.',
+            effect: 'Tower training and Defenders',
             size: '4x4',
             cost: 200
         };
