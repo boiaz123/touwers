@@ -235,10 +235,10 @@ export class DesertLevel3 extends LevelBase {
         }
         // Wave 11
         , { 
-            enemyHealth_multiplier: 8, 
+            enemyHealth_multiplier: 3, 
             speedMultiplier: 1, 
             spawnInterval: 13, 
-            pattern: [{ type: 'knight', count: 5 }] 
+            pattern: [{ type: 'walkingfrog', count: 4 }] 
         }
         // Wave 12
         , { 

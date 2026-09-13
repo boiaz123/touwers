@@ -158,7 +158,7 @@ export class SpaceLevel6 extends LevelBase {
             enemyHealth_multiplier: 3.7, 
             speedMultiplier: 1, 
             spawnInterval: 0.88, 
-            pattern: [{ type: 'mage', count: 3, healthMultiplier: 2 }, { type: 'frog', count: 13 }] 
+            pattern: [{ type: 'mage', count: 3 }, { type: 'frog', count: 13 }] 
         }
         // Wave 8
         , { 
@@ -186,7 +186,7 @@ export class SpaceLevel6 extends LevelBase {
             enemyHealth_multiplier: 4.97, 
             speedMultiplier: 0.8, 
             spawnInterval: 1, 
-            pattern: [{ type: 'beefyenemy', count: 10, healthMultiplier: 3 }, { type: 'frog', count: 15 }, { type: 'mage', count: 4, healthMultiplier: 2 }, { type: 'villager', count: 12 }, { type: 'basic', count: 11 }, { type: 'shieldknight', count: 7 }, { type: 'archer', count: 10, healthMultiplier: 3, speedMultiplier: 2 }] 
+            pattern: [{ type: 'beefyenemy', count: 10, healthMultiplier: 3 }, { type: 'frog', count: 15 }, { type: 'mage', count: 4 }, { type: 'villager', count: 12 }, { type: 'basic', count: 11 }, { type: 'shieldknight', count: 7 }, { type: 'archer', count: 10, healthMultiplier: 3, speedMultiplier: 2 }] 
         }
         // Wave 12
         , { 
@@ -466,7 +466,7 @@ export class SpaceLevel6 extends LevelBase {
             enemyHealth_multiplier: 17.82, 
             speedMultiplier: 0.8, 
             spawnInterval: 1, 
-            pattern: [{ type: 'beefyenemy', count: 15, healthMultiplier: 3 }, { type: 'frog', count: 44 }, { type: 'mage', count: 9, healthMultiplier: 2 }, { type: 'basic', count: 17 }, { type: 'villager', count: 16 }, { type: 'shieldknight', count: 12 }, { type: 'archer', count: 15, healthMultiplier: 3, speedMultiplier: 2 }] 
+            pattern: [{ type: 'beefyenemy', count: 15, healthMultiplier: 3 }, { type: 'frog', count: 44 }, { type: 'mage', count: 9 }, { type: 'basic', count: 17 }, { type: 'villager', count: 16 }, { type: 'shieldknight', count: 12 }, { type: 'archer', count: 15, healthMultiplier: 3, speedMultiplier: 2 }] 
         }
         // Wave 52
         , { 

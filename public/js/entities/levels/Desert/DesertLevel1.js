@@ -136,10 +136,10 @@ export class DesertLevel1 extends LevelBase {
         }
         // Wave 5
         , { 
-            enemyHealth_multiplier: 2, 
+            enemyHealth_multiplier: 1, 
             speedMultiplier: 1.3, 
             spawnInterval: 0.6, 
-            pattern: [{ type: 'frog', count: 21 }] 
+            pattern: [{ type: 'walkingfrog', count: 1 }] 
         }
         // Wave 6
         , { 

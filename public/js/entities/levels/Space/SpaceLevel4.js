@@ -226,7 +226,7 @@ export class SpaceLevel4 extends LevelBase {
             enemyHealth_multiplier: 4.71, 
             speedMultiplier: 1, 
             spawnInterval: 1, 
-            pattern: [{ type: 'knight', count: 3, healthMultiplier: 3 }, { type: 'mage', count: 4, healthMultiplier: 2 }, { type: 'shieldknight', count: 3, healthMultiplier: 2 }, { type: 'mage', count: 3, healthMultiplier: 4 }, { type: 'frog', count: 4 }] 
+            pattern: [{ type: 'knight', count: 3, healthMultiplier: 3 }, { type: 'mage', count: 4, healthMultiplier: 8 }, { type: 'shieldknight', count: 3, healthMultiplier: 2 }, { type: 'mage', count: 3, healthMultiplier: 4 }, { type: 'frog', count: 4 }] 
         }
         // Wave 19
         , { 

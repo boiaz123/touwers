@@ -193,7 +193,7 @@ export class DesertLevel4 extends LevelBase {
             enemyHealth_multiplier: 3, 
             speedMultiplier: 1, 
             spawnInterval: 0.8, 
-            pattern: [{ type: 'villager', count: 14 }, { type: 'basic', count: 13 }, { type: 'frog', count: 6 }, { type: 'archer', count: 10 }, { type: 'frog', count: 4, healthMultiplier: 4, speedMultiplier: 1.5 }] 
+            pattern: [{ type: 'villager', count: 14 }, { type: 'basic', count: 13 }, { type: 'walkingfrog', count: 1 }, { type: 'archer', count: 10 }, { type: 'frog', count: 4, healthMultiplier: 4, speedMultiplier: 1.5 }] 
         }
         // Wave 9
         , { 

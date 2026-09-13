@@ -139,7 +139,7 @@ export class DesertLevel8 extends LevelBase {
             enemyHealth_multiplier: 1.6, 
             speedMultiplier: 1, 
             spawnInterval: 1.3, 
-            pattern: [{ type: 'mage', count: 1, healthMultiplier: 0.4, speedMultiplier: 2 }, { type: 'frog', count: 4, healthMultiplier: 5 }, { type: 'mage', count: 1, healthMultiplier: 1, speedMultiplier: 1.5 }, { type: 'frog', count: 7, healthMultiplier: 8, speedMultiplier: 1.2 }, { type: 'mage', count: 1, healthMultiplier: 4, speedMultiplier: 0.8 }, { type: 'frog', count: 12, healthMultiplier: 4, speedMultiplier: 1.4 }] 
+            pattern: [{ type: 'mage', count: 1, healthMultiplier: 4, speedMultiplier: 2 }, { type: 'frog', count: 4, healthMultiplier: 5 }, { type: 'mage', count: 1, healthMultiplier: 1, speedMultiplier: 1.5 }, { type: 'frog', count: 7, healthMultiplier: 8, speedMultiplier: 1.2 }, { type: 'mage', count: 1, healthMultiplier: 4, speedMultiplier: 0.8 }, { type: 'frog', count: 12, healthMultiplier: 4, speedMultiplier: 1.4 }] 
         }
         // Wave 8
         , { 

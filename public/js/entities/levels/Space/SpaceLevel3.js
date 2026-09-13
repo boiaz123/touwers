@@ -200,7 +200,7 @@ export class SpaceLevel3 extends LevelBase {
             enemyHealth_multiplier: 3.56, 
             speedMultiplier: 0.9, 
             spawnInterval: 0.9, 
-            pattern: [{ type: 'knight', count: 4, healthMultiplier: 2.5 }, { type: 'mage', count: 7, healthMultiplier: 2 }, { type: 'frog', count: 12, speedMultiplier: 1.3 }, { type: 'archer', count: 11, speedMultiplier: 1.4 }, { type: 'beefyenemy', count: 8 }, { type: 'villager', count: 8 }] 
+            pattern: [{ type: 'knight', count: 4, healthMultiplier: 2.5 }, { type: 'mage', count: 7, healthMultiplier: 5 }, { type: 'frog', count: 12, speedMultiplier: 1.3 }, { type: 'archer', count: 11, speedMultiplier: 1.4 }, { type: 'beefyenemy', count: 8 }, { type: 'villager', count: 8 }] 
         }
         // Wave 15
         , { 
@@ -249,7 +249,7 @@ export class SpaceLevel3 extends LevelBase {
             enemyHealth_multiplier: 4.32, 
             speedMultiplier: 1.1, 
             spawnInterval: 0.9, 
-            pattern: [{ type: 'mage', count: 6, healthMultiplier: 3 }, { type: 'shieldknight', count: 4 }, { type: 'villager', count: 15 }, { type: 'mage', count: 5, healthMultiplier: 4 }, { type: 'beefyenemy', count: 13, healthMultiplier: 2 }, { type: 'shieldknight', count: 4 }, { type: 'frog', count: 22 }, { type: 'archer', count: 14, healthMultiplier: 5, speedMultiplier: 1.5 }, { type: 'mage', count: 4, healthMultiplier: 6 }] 
+            pattern: [{ type: 'mage', count: 6 }, { type: 'shieldknight', count: 4 }, { type: 'villager', count: 15 }, { type: 'mage', count: 5, healthMultiplier: 4 }, { type: 'beefyenemy', count: 13, healthMultiplier: 2 }, { type: 'shieldknight', count: 4 }, { type: 'frog', count: 22 }, { type: 'archer', count: 14, healthMultiplier: 5, speedMultiplier: 1.5 }, { type: 'mage', count: 4, healthMultiplier: 6 }] 
         }
         // Wave 22
         , { 
@@ -298,7 +298,7 @@ export class SpaceLevel3 extends LevelBase {
             enemyHealth_multiplier: 5.08, 
             speedMultiplier: 0.9, 
             spawnInterval: 0.9, 
-            pattern: [{ type: 'knight', count: 5, healthMultiplier: 2.5 }, { type: 'mage', count: 8, healthMultiplier: 2 }, { type: 'frog', count: 20, speedMultiplier: 1.3 }, { type: 'archer', count: 12, speedMultiplier: 1.4 }, { type: 'beefyenemy', count: 9 }, { type: 'villager', count: 9 }] 
+            pattern: [{ type: 'knight', count: 5, healthMultiplier: 2.5 }, { type: 'mage', count: 8 }, { type: 'frog', count: 20, speedMultiplier: 1.3 }, { type: 'archer', count: 12, speedMultiplier: 1.4 }, { type: 'beefyenemy', count: 9 }, { type: 'villager', count: 9 }] 
         }
         // Wave 29
         , { 
@@ -347,7 +347,7 @@ export class SpaceLevel3 extends LevelBase {
             enemyHealth_multiplier: 5.85, 
             speedMultiplier: 1.1, 
             spawnInterval: 0.9, 
-            pattern: [{ type: 'mage', count: 7, healthMultiplier: 3 }, { type: 'shieldknight', count: 5 }, { type: 'villager', count: 16 }, { type: 'mage', count: 6, healthMultiplier: 4 }, { type: 'beefyenemy', count: 14, healthMultiplier: 2 }, { type: 'shieldknight', count: 5 }, { type: 'frog', count: 33 }, { type: 'archer', count: 15, healthMultiplier: 5, speedMultiplier: 1.5 }, { type: 'mage', count: 5, healthMultiplier: 6 }] 
+            pattern: [{ type: 'mage', count: 7, healthMultiplier: 8 }, { type: 'shieldknight', count: 5 }, { type: 'villager', count: 16 }, { type: 'mage', count: 6, healthMultiplier: 4 }, { type: 'beefyenemy', count: 14, healthMultiplier: 2 }, { type: 'shieldknight', count: 5 }, { type: 'frog', count: 33 }, { type: 'archer', count: 15, healthMultiplier: 5, speedMultiplier: 1.5 }, { type: 'mage', count: 5, healthMultiplier: 6 }] 
         }
         // Wave 36
         , { 
@@ -414,10 +414,10 @@ export class SpaceLevel3 extends LevelBase {
         }
         // Wave 45
         , { 
-            enemyHealth_multiplier: 3.74, 
-            speedMultiplier: 1, 
+            enemyHealth_multiplier: 50, 
+            speedMultiplier: 0.5, 
             spawnInterval: 0.7, 
-            pattern: [{ type: 'archer', count: 12, healthMultiplier: 2.5, speedMultiplier: 1.1 }, { type: 'frog', count: 32, healthMultiplier: 1.8 }, { type: 'shieldknight', count: 7, healthMultiplier: 2 }, { type: 'archer', count: 8, healthMultiplier: 3, speedMultiplier: 1.5 }, { type: 'airfrog', count: 1, healthMultiplier: 25 }] 
+            pattern: [{ type: 'knight', count: 1}] 
         }
         ];
 
