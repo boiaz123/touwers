@@ -1514,7 +1514,6 @@ export class BarricadeTower extends Tower {
             description: 'Defenders keep a permanent patch of rubble piled on the road ahead, continuously slowing every enemy standing in it. Patch size grows at the Tower Forge; slow strength grows at Training Grounds.',
             damage: 'None',
             range: '120',
-            fireRate: 'Sporadic',
             cost: 90,
             icon: ''
         };

@@ -492,10 +492,7 @@ export class GuardPost extends Tower {
     static getInfo() {
         return {
             name: 'Guard Post',
-            description: 'Small fortified outpost that hires Level 1 defenders to guard the path. Defenders spawn at 100g with a 10-second cooldown after defeat.',
-            damage: 'N/A',
-            range: 'N/A',
-            fireRate: 'N/A',
+            description: 'Small fortified outpost that hires defenders to guard the path. Defenders spawn at a cost with a 10-second cooldown after defeat.',
             cost: 250,
             icon: ''
         };

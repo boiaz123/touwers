@@ -1280,8 +1280,8 @@ export class MagicTower extends Tower {
     static getInfo() {
         return {
             name: 'Magic Tower',
-            description: 'Elemental tower with selectable damage types. Requires Magic Academy.',
-            damage: '40 + elemental bonuses',
+            description: 'Elemental tower with selectable damage types. Invest gems to power up the spells.',
+            damage: 'Varies for each element',
             range: '130',
             fireRate: '1.0/sec',
             cost: 450,

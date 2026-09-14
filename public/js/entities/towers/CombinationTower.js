@@ -1450,7 +1450,7 @@ export class CombinationTower extends Tower {
     static getInfo() {
         return {
             name: 'Combination Tower',
-            description: 'Advanced tower that casts devastating combination spells. Requires Academy Level 1 and gem investments to unlock spells.',
+            description: 'Advanced tower that casts devastating combination spells. Invest gems to power up spells.',
             damage: '55 + combination effects',
             range: '140',
             fireRate: '0.9/sec',
