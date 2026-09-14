@@ -134,7 +134,11 @@ export class SaveSystem {
             unlockSystem: settlementData.unlockSystem || SaveSystem.DEFAULT_UNLOCK_STATE,
             playerLevels: settlementData.playerLevels || [],
             // Best battle score per level, keyed by scopedLevelId(campaignId, levelId)
-            levelHighScores: settlementData.levelHighScores || {}
+            levelHighScores: settlementData.levelHighScores || {},
+            // Time (seconds) of the run that set each level's high score, same keys as levelHighScores
+            levelHighScoreTimes: settlementData.levelHighScoreTimes || {},
+            // Best sandbox/endless run: { wave, enemiesSlain, time } or null if never attempted
+            sandboxHighScore: settlementData.sandboxHighScore || null
         };
 
         try {
@@ -211,7 +215,9 @@ export class SaveSystem {
             unlockedCampaigns: updateData.unlockedCampaigns !== undefined ? updateData.unlockedCampaigns : (existingSave?.unlockedCampaigns || ['campaign-1']),
             unlockSystem: updateData.unlockSystem || existingSave?.unlockSystem || SaveSystem.DEFAULT_UNLOCK_STATE,
             playerLevels: updateData.playerLevels !== undefined ? updateData.playerLevels : (existingSave?.playerLevels || []),
-            levelHighScores: updateData.levelHighScores !== undefined ? updateData.levelHighScores : (existingSave?.levelHighScores || {})
+            levelHighScores: updateData.levelHighScores !== undefined ? updateData.levelHighScores : (existingSave?.levelHighScores || {}),
+            levelHighScoreTimes: updateData.levelHighScoreTimes !== undefined ? updateData.levelHighScoreTimes : (existingSave?.levelHighScoreTimes || {}),
+            sandboxHighScore: updateData.sandboxHighScore !== undefined ? updateData.sandboxHighScore : (existingSave?.sandboxHighScore || null)
         };
 
         const key = this.getSaveSlotKey(slotNumber);
@@ -236,7 +242,7 @@ export class SaveSystem {
             'level3': 'Crazy Frogs',
             'level4': 'Dave\'s Cave',
             'level5': 'Placeholder Level',
-            'sandbox': 'Sandbox Mode'
+            'sandbox': 'Eternal Mode'
         };
         return levelNames[levelId] || levelId;
     }
@@ -323,7 +329,9 @@ export class SaveSystem {
             unlockedCampaigns: ['campaign-1'],
             unlockSystem: SaveSystem.DEFAULT_UNLOCK_STATE,
             playerLevels: [],
-            levelHighScores: {}
+            levelHighScores: {},
+            levelHighScoreTimes: {},
+            sandboxHighScore: null
         };
     }
 
@@ -412,17 +420,25 @@ export class SaveSystem {
     }
 
     /**
-     * Record a level's battle score, keeping only the best (highest) result.
+     * Record a level's battle score, keeping only the best (highest) result. Optionally
+     * records the completion time of that same best run into a parallel map, so the two
+     * always describe one single run (see getLevelHighScoreTime) instead of an independent
+     * "fastest ever" time that might come from a different, lower-scoring attempt.
      * @param {string} levelId - Level just completed
      * @param {string} campaignId - Campaign the level belongs to
      * @param {number} score - Battle score achieved this run
      * @param {Object} levelHighScores - Current { scopedLevelId: score } map
+     * @param {number} [time] - Time (seconds) taken this run
+     * @param {Object} [levelHighScoreTimes] - Current { scopedLevelId: time } map
      * @returns {Object} - Updated levelHighScores map
      */
-    static recordLevelHighScore(levelId, campaignId, score, levelHighScores) {
+    static recordLevelHighScore(levelId, campaignId, score, levelHighScores, time, levelHighScoreTimes) {
         const scopedId = campaignId ? this.scopedLevelId(campaignId, levelId) : levelId;
         if (!levelHighScores[scopedId] || score > levelHighScores[scopedId]) {
             levelHighScores[scopedId] = score;
+            if (levelHighScoreTimes && time !== undefined) {
+                levelHighScoreTimes[scopedId] = time;
+            }
         }
         return levelHighScores;
     }
@@ -438,6 +454,43 @@ export class SaveSystem {
         if (!levelHighScores) return 0;
         const scopedId = campaignId ? this.scopedLevelId(campaignId, levelId) : levelId;
         return levelHighScores[scopedId] || 0;
+    }
+
+    /**
+     * Get the completion time (seconds) of the run that set a level's high score.
+     * @param {string} levelId - Level ID to check
+     * @param {string} campaignId - Campaign the level belongs to
+     * @param {Object} levelHighScoreTimes - { scopedLevelId: time } map
+     * @returns {number} - Time in seconds, or 0 if not recorded
+     */
+    static getLevelHighScoreTime(levelId, campaignId, levelHighScoreTimes) {
+        if (!levelHighScoreTimes) return 0;
+        const scopedId = campaignId ? this.scopedLevelId(campaignId, levelId) : levelId;
+        return levelHighScoreTimes[scopedId] || 0;
+    }
+
+    /**
+     * Record a sandbox/endless run's result, keeping only the best (highest wave reached).
+     * @param {number} wave - Wave the player was on when the run ended
+     * @param {number} enemiesSlain - Enemies defeated during the run
+     * @param {number} time - Time survived, in seconds
+     * @param {Object|null} sandboxHighScore - Current best { wave, enemiesSlain, time }, or null
+     * @returns {Object} - The best of the two runs
+     */
+    static recordSandboxHighScore(wave, enemiesSlain, time, sandboxHighScore) {
+        if (!sandboxHighScore || wave > sandboxHighScore.wave) {
+            return { wave, enemiesSlain, time };
+        }
+        return sandboxHighScore;
+    }
+
+    /**
+     * Get the player's best recorded sandbox/endless run.
+     * @param {Object|null} sandboxHighScore - { wave, enemiesSlain, time } map from save data
+     * @returns {Object|null} - The best run, or null if sandbox has never been completed
+     */
+    static getSandboxHighScore(sandboxHighScore) {
+        return sandboxHighScore || null;
     }
 
     /**

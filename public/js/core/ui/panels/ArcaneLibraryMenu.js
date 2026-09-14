@@ -1,6 +1,18 @@
 import { GameStatistics } from '../../systems/GameStatistics.js';
+import { SaveSystem } from '../../systems/SaveSystem.js';
 import { AchievementsContentView } from '../AchievementPanel.js';
 import { EnemyIntelRegistry } from '../../registries/EnemyIntelRegistry.js';
+import { LevelRegistry } from '../../../entities/levels/LevelRegistry.js';
+import { CampaignRegistry } from '../../../game/CampaignRegistry.js';
+
+// Short, player-facing tab labels for the Hiscores tab's campaign sub-tabs - the full
+// CampaignRegistry names ("The Verdant Woodlands" etc.) are too long to fit four across.
+const HISCORE_CAMPAIGN_LABELS = {
+    'campaign-1': 'Forest',
+    'campaign-2': 'Mountain',
+    'campaign-3': 'Desert',
+    'campaign-4': 'Frog Realm'
+};
 
 /**
  * Arcane Knowledge Menu
@@ -23,9 +35,17 @@ export class ArcaneLibraryMenu {
         this.tabs = [
             { label: 'STATISTICS', id: 'statistics', hovered: false },
             { label: 'ACHIEVEMENTS', id: 'achievements', hovered: false },
-            { label: 'ENEMY INTEL', id: 'enemy-intel', hovered: false }
+            { label: 'ENEMY INTEL', id: 'enemy-intel', hovered: false },
+            { label: 'HISCORES', id: 'hiscores', hovered: false }
         ];
         this.activeTab = 'statistics';
+
+        // Hiscores tab: per-campaign sub-tabs (only campaigns the player has set a score
+        // in are included - see _buildHiscoreData), plus the sandbox/endless best run.
+        this.hiscoreTabs = [];
+        this.hiscoreActiveCampaign = null;
+        this.sandboxHighScoreEntry = null;
+        this.sandboxUnlocked = false;
 
         // Achievements tab content — embedded inline so the Library's own tab bar
         // stays visible and usable while browsing achievements (rather than handing
@@ -61,6 +81,85 @@ export class ArcaneLibraryMenu {
         this.selectedEnemyId = null;
         this.hoveredEnemyId = null;
         this.achievementsView.reset(options.achievementId || null);
+        this._buildHiscoreData();
+    }
+
+    /**
+     * Builds the Hiscores tab's data: one sub-tab per campaign the player has beaten at
+     * least one level in (per-level score + the time of that scoring run), plus the
+     * sandbox/endless best run once campaign-4 is complete. Rebuilt each time the library
+     * is opened - save data never changes while it's on screen, so this only needs to run
+     * once per open rather than every render.
+     */
+    _buildHiscoreData() {
+        const saveData = this.stateManager.currentSaveData;
+        const campaignIds = ['campaign-1', 'campaign-2', 'campaign-3', 'campaign-4'];
+        // Same "available" test CampaignMenu uses to decide which campaign cards to show
+        // (campaign-1 is unlocked from the very start of any save).
+        const unlockedCampaigns = saveData?.unlockedCampaigns || ['campaign-1'];
+
+        this.sandboxUnlocked = !!(saveData?.completedCampaigns || []).includes('campaign-4');
+        this.sandboxHighScoreEntry = this.sandboxUnlocked
+            ? SaveSystem.getSandboxHighScore(saveData?.sandboxHighScore)
+            : null;
+
+        const tabs = [];
+        for (const campaignId of campaignIds) {
+            if (!unlockedCampaigns.includes(campaignId)) continue;
+            const campaignInfo = CampaignRegistry.getCampaign(campaignId);
+            if (!campaignInfo) continue;
+
+            const levels = [];
+            let totalScore = 0;
+            for (const lvl of LevelRegistry.getLevelsByCampaign(campaignId)) {
+                const score = SaveSystem.getLevelHighScore(lvl.id, campaignId, saveData?.levelHighScores);
+                if (score > 0) {
+                    const time = SaveSystem.getLevelHighScoreTime(lvl.id, campaignId, saveData?.levelHighScoreTimes);
+                    levels.push({ id: lvl.id, name: lvl.name, order: lvl.order, score, time });
+                    totalScore += score;
+                }
+            }
+            levels.sort((a, b) => a.order - b.order);
+
+            tabs.push({
+                campaignId,
+                label: HISCORE_CAMPAIGN_LABELS[campaignId] || campaignInfo.name,
+                drawIcon: typeof campaignInfo.drawIcon === 'function' ? campaignInfo.drawIcon : null,
+                levels,
+                totalScore,
+                hovered: false
+            });
+        }
+
+        this.hiscoreTabs = tabs;
+        if (!tabs.some(t => t.campaignId === this.hiscoreActiveCampaign)) {
+            this.hiscoreActiveCampaign = tabs.length > 0 ? tabs[0].campaignId : null;
+        }
+    }
+
+    _formatHiscoreTime(seconds) {
+        if (!seconds || seconds <= 0) return '--:--';
+        const total = Math.round(seconds);
+        const m = Math.floor(total / 60);
+        const s = total % 60;
+        return `${m}:${String(s).padStart(2, '0')}`;
+    }
+
+    // Shared geometry for the Hiscores tab's campaign sub-tab strip - used by render(),
+    // updateHoverState() and handleClick() so hitboxes always match what's drawn.
+    _getHiscoreSubTabLayout(contentX, contentY, contentWidth, uiSf) {
+        const subTabH = Math.round(34 * uiSf);
+        const subTabGap = Math.round(6 * uiSf);
+        const n = this.hiscoreTabs.length;
+        const subTabW = n > 0 ? (contentWidth - subTabGap * (n - 1)) / n : 0;
+        return this.hiscoreTabs.map((tab, i) => ({
+            tab,
+            x: contentX + i * (subTabW + subTabGap),
+            y: contentY,
+            w: subTabW,
+            h: subTabH,
+            listY: contentY + subTabH + Math.round(10 * uiSf)
+        }));
     }
 
     close() {
@@ -95,7 +194,7 @@ export class ArcaneLibraryMenu {
         const uiSf = menuWidth / 800; // internal scale factor relative to base 800px popup
         const tabHeight = Math.round(40 * uiSf);
         const tabStartY = menuY + Math.round(52 * uiSf);
-        const tabButtonWidth = menuWidth / 3;
+        const tabButtonWidth = menuWidth / this.tabs.length;
         const pad = Math.round(20 * uiSf);
         const contentX = menuX + pad;
         const contentY = tabStartY + tabHeight + pad;
@@ -193,6 +292,20 @@ export class ArcaneLibraryMenu {
             return;
         }
 
+        // Hiscores tab hover detection (campaign sub-tab strip only - the score list
+        // itself isn't interactive)
+        if (this.activeTab === 'hiscores') {
+            const rects = this._getHiscoreSubTabLayout(contentX, contentY, contentWidth, uiSf);
+            let pointerNeeded = false;
+            rects.forEach(r => {
+                r.tab.hovered = x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+                if (r.tab.hovered) pointerNeeded = true;
+            });
+            this.stateManager.canvas.style.cursor =
+                (this.tabs.some(t => t.hovered) || this.closeButtonHovered || pointerNeeded) ? 'pointer' : 'default';
+            return;
+        }
+
         // Achievements tab hover detection (embedded content view)
         if (this.activeTab === 'achievements') {
             const pointerNeeded = this.achievementsView.updateHover(
@@ -237,6 +350,20 @@ export class ArcaneLibraryMenu {
                 this.activeTab = tab.id;
                 return;
             }
+        }
+
+        // Handle hiscores tab clicks (campaign sub-tab strip)
+        if (this.activeTab === 'hiscores') {
+            const { contentX, contentY, contentWidth, uiSf } =
+                this._getTabLayout(menuX, menuY, menuWidth, menuHeight);
+            const rects = this._getHiscoreSubTabLayout(contentX, contentY, contentWidth, uiSf);
+            for (const r of rects) {
+                if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
+                    this.hiscoreActiveCampaign = r.tab.campaignId;
+                    return;
+                }
+            }
+            return;
         }
 
         // Handle achievements tab clicks (embedded content view)
@@ -419,6 +546,8 @@ export class ArcaneLibraryMenu {
             this.achievementsView.render(ctx, contentX, contentY, contentWidth, contentHeight, uiSf);
         } else if (this.activeTab === 'enemy-intel') {
             this.renderEnemyIntelTab(ctx, contentX, contentY, contentWidth, contentHeight);
+        } else if (this.activeTab === 'hiscores') {
+            this.renderHiscoresTab(ctx, contentX, contentY, contentWidth, contentHeight, uiSf);
         }
 
         // Close button
@@ -799,6 +928,153 @@ export class ArcaneLibraryMenu {
                 if (cy > y + height - pad) break;
                 ctx.fillText('· ' + ability, detailX + pad + 4, cy);
                 cy += 12;
+            }
+        }
+    }
+
+    renderHiscoresTab(ctx, x, y, width, height, uiSf) {
+        if (this.hiscoreTabs.length === 0) {
+            ctx.font = 'bold 14px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#8b7355';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('No hiscores recorded yet', x + width / 2, y + height / 2 - 12);
+            ctx.font = '12px Trebuchet MS, sans-serif';
+            ctx.fillText('Complete a level to set your first score', x + width / 2, y + height / 2 + 16);
+            return;
+        }
+
+        // ── Campaign sub-tab strip ───────────────────────────────────────────
+        const rects = this._getHiscoreSubTabLayout(x, y, width, uiSf);
+        let listY = y;
+        rects.forEach(r => {
+            const isActive = this.hiscoreActiveCampaign === r.tab.campaignId;
+            ctx.fillStyle = isActive ? '#3d2817' : 'rgba(30, 18, 8, 0.7)';
+            ctx.fillRect(r.x, r.y, r.w, r.h);
+            ctx.strokeStyle = isActive ? '#ffd700' : (r.tab.hovered ? '#c8a84b' : 'rgba(140, 110, 50, 0.5)');
+            ctx.lineWidth = isActive ? 2 : 1;
+            ctx.strokeRect(r.x, r.y, r.w, r.h);
+
+            if (r.tab.drawIcon) {
+                const iconSize = r.h * 0.75;
+                r.tab.drawIcon(ctx, r.x + r.h * 0.55, r.y + r.h / 2, iconSize);
+            }
+
+            ctx.font = isActive
+                ? `bold ${Math.round(12 * uiSf)}px Trebuchet MS, sans-serif`
+                : `${Math.round(12 * uiSf)}px Trebuchet MS, sans-serif`;
+            ctx.fillStyle = isActive ? '#ffd700' : '#c9a876';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(r.tab.label, r.x + r.w / 2 + r.h * 0.3, r.y + r.h / 2);
+            listY = r.listY;
+        });
+
+        const activeTab = this.hiscoreTabs.find(t => t.campaignId === this.hiscoreActiveCampaign);
+        if (!activeTab) return;
+
+        const showEndlessRow = activeTab.campaignId === 'campaign-4' && this.sandboxUnlocked;
+        const endlessRowH = Math.round(46 * uiSf);
+        const listBottom = y + height - (showEndlessRow ? endlessRowH : 0);
+        const padding = Math.round(10 * uiSf);
+
+        // ── Campaign total ───────────────────────────────────────────────────
+        const totalH = Math.round(24 * uiSf);
+        const totalBg = ctx.createLinearGradient(x + padding, listY, x + width - padding, listY);
+        totalBg.addColorStop(0, 'rgba(212, 175, 55, 0.14)');
+        totalBg.addColorStop(1, 'rgba(212, 175, 55, 0.03)');
+        ctx.fillStyle = totalBg;
+        ctx.fillRect(x + padding, listY + Math.round(2 * uiSf), width - padding * 2, totalH - Math.round(4 * uiSf));
+        ctx.font = `bold ${Math.round(12 * uiSf)}px Trebuchet MS, sans-serif`;
+        ctx.fillStyle = '#e8d4a0';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('CAMPAIGN TOTAL', x + padding + Math.round(8 * uiSf), listY + totalH / 2);
+        ctx.fillStyle = '#ffd700';
+        ctx.textAlign = 'right';
+        ctx.fillText(activeTab.totalScore.toLocaleString(), x + width - padding - Math.round(8 * uiSf), listY + totalH / 2);
+        listY += totalH;
+
+        // ── Column header ─────────────────────────────────────────────────────
+        const headerH = Math.round(20 * uiSf);
+        ctx.font = `bold ${Math.round(11 * uiSf)}px Trebuchet MS, sans-serif`;
+        ctx.fillStyle = '#8b7355';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('LEVEL', x + padding, listY + headerH / 2);
+        ctx.textAlign = 'right';
+        ctx.fillText('TIME', x + width - padding, listY + headerH / 2);
+        ctx.fillText('SCORE', x + width - padding - Math.round(90 * uiSf), listY + headerH / 2);
+        listY += headerH;
+        ctx.strokeStyle = 'rgba(140, 110, 50, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x + padding, listY); ctx.lineTo(x + width - padding, listY); ctx.stroke();
+
+        // ── Level rows ────────────────────────────────────────────────────────
+        if (activeTab.levels.length === 0) {
+            ctx.font = '12px Trebuchet MS, sans-serif';
+            ctx.fillStyle = '#5a4a3a';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('No levels beaten in this campaign yet', x + width / 2, listY + Math.round(24 * uiSf));
+        } else {
+            const availableH = Math.max(0, listBottom - listY);
+            const rowH = Math.min(Math.round(26 * uiSf), Math.floor(availableH / activeTab.levels.length));
+            activeTab.levels.forEach((lvl, idx) => {
+                const rowY = listY + idx * rowH;
+                if (rowY + rowH > listBottom) return;
+
+                if (idx % 2 === 1) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+                    ctx.fillRect(x + padding, rowY, width - padding * 2, rowH);
+                }
+
+                ctx.font = `${Math.round(12 * uiSf)}px Trebuchet MS, sans-serif`;
+                ctx.fillStyle = '#e8d4a0';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(lvl.name, x + padding, rowY + rowH / 2);
+
+                ctx.fillStyle = '#ffd700';
+                ctx.textAlign = 'right';
+                ctx.fillText(String(lvl.score), x + width - padding - Math.round(90 * uiSf), rowY + rowH / 2);
+
+                ctx.fillStyle = '#a8977a';
+                ctx.fillText(this._formatHiscoreTime(lvl.time), x + width - padding, rowY + rowH / 2);
+            });
+        }
+
+        // ── Endless mode line (campaign-4 only, once sandbox is unlocked) ──────
+        if (showEndlessRow) {
+            const rowY = y + height - endlessRowH;
+            ctx.strokeStyle = 'rgba(212, 175, 55, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(x + padding, rowY); ctx.lineTo(x + width - padding, rowY); ctx.stroke();
+
+            const bg = ctx.createLinearGradient(x + padding, rowY, x + width - padding, rowY);
+            bg.addColorStop(0, 'rgba(95, 30, 130, 0.22)');
+            bg.addColorStop(1, 'rgba(30, 10, 45, 0.10)');
+            ctx.fillStyle = bg;
+            ctx.fillRect(x + padding, rowY + Math.round(6 * uiSf), width - padding * 2, endlessRowH - Math.round(10 * uiSf));
+
+            ctx.font = `bold ${Math.round(12 * uiSf)}px Trebuchet MS, sans-serif`;
+            ctx.fillStyle = '#c99bf0';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('ETERNAL MODE', x + padding + Math.round(8 * uiSf), rowY + endlessRowH / 2);
+
+            ctx.font = `${Math.round(11 * uiSf)}px Trebuchet MS, sans-serif`;
+            ctx.textAlign = 'right';
+            if (this.sandboxHighScoreEntry) {
+                const entry = this.sandboxHighScoreEntry;
+                ctx.fillStyle = '#e8d4a0';
+                ctx.fillText(
+                    `Wave ${entry.wave}   Slain ${entry.enemiesSlain}   Survived ${this._formatHiscoreTime(entry.time)}`,
+                    x + width - padding - Math.round(8 * uiSf), rowY + endlessRowH / 2
+                );
+            } else {
+                ctx.fillStyle = '#5a4a3a';
+                ctx.fillText('Not yet attempted', x + width - padding - Math.round(8 * uiSf), rowY + endlessRowH / 2);
             }
         }
     }

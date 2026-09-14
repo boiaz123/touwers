@@ -2230,6 +2230,12 @@ body.game-paused .side-panel > * {
 .forge-effects-row {
     display: flex;
     flex-wrap: wrap;
+    /* Lines pack against the top instead of the default `stretch`, and items keep their
+       own content height instead of stretching to fill the line - without these, a single
+       badge filled the whole two-line reserved height below (see min-height) as one tall
+       empty-looking box instead of a small pill with blank space under it. */
+    align-content: flex-start;
+    align-items: flex-start;
     gap: 0.4rem;
     /* Reserves room for up to two wrapped lines of badges up front, since this row only
        ever grows over the course of a run (each badge appears once its matching upgrade

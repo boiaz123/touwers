@@ -7,58 +7,58 @@ const CAMPAIGN_BIOME = {
     'campaign-2': { from: '#1c1810', to: '#130f09', accent: '#5c84b8' },  // Mountain slate accent
     'campaign-3': { from: '#1c1810', to: '#130f09', accent: '#c47c30' },  // Desert amber accent
     'campaign-4': { from: '#1c1810', to: '#130f09', accent: '#8840c0' },  // Frog King violet accent
-    'sandbox': { from: '#1c1810', to: '#130f09', accent: '#d4af37' },     // Freeplay gold accent
+    'sandbox': { from: '#1c1810', to: '#130f09', accent: '#d4af37' },     // Eternal Mode gold accent
 };
 
-/** Draws an overflowing treasure chest - Sandbox mode's "unlimited gold" icon. */
-function _drawSandboxIcon(ctx, cx, cy, size) {
-    const w = size * 0.62, h = size * 0.46;
-    const bx = cx - w / 2, by = cy - h * 0.28;
+/** Draws a glowing infinity loop over a starfield - Eternal Mode's "waves without end" icon. */
+function _drawEternalIcon(ctx, cx, cy, size) {
+    const s = size * 0.5;
 
-    // Glow behind the pile, hinting at "unlimited"
-    const glow = ctx.createRadialGradient(cx, by - h * 0.1, 0, cx, by - h * 0.1, size * 0.55);
-    glow.addColorStop(0, 'rgba(255, 215, 100, 0.35)');
+    // Deep starfield backdrop, hinting at endless time rather than endless gold
+    const sky = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 1.35);
+    sky.addColorStop(0, 'rgba(70, 35, 100, 0.45)');
+    sky.addColorStop(1, 'rgba(20, 10, 30, 0)');
+    ctx.fillStyle = sky;
+    ctx.beginPath(); ctx.arc(cx, cy, s * 1.35, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = 'rgba(255, 240, 200, 0.85)';
+    const stars = [
+        [-0.72, -0.52, 0.028], [0.62, -0.6, 0.024], [-0.58, 0.56, 0.02],
+        [0.7, 0.44, 0.026], [0.02, -0.8, 0.02], [0.18, 0.72, 0.022]
+    ];
+    stars.forEach(([dx, dy, r]) => {
+        ctx.beginPath(); ctx.arc(cx + dx * s, cy + dy * s, r * s, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // Glow behind the loop
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.95);
+    glow.addColorStop(0, 'rgba(255, 215, 100, 0.4)');
     glow.addColorStop(1, 'rgba(255, 215, 100, 0)');
     ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(cx, by - h * 0.1, size * 0.55, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, s * 0.95, 0, Math.PI * 2); ctx.fill();
 
-    // Body
-    const bodyGrad = ctx.createLinearGradient(cx, by + h * 0.3, cx, by + h);
-    bodyGrad.addColorStop(0, '#9a6a30'); bodyGrad.addColorStop(1, '#5c3a18');
-    ctx.fillStyle = bodyGrad;
-    ctx.fillRect(bx, by + h * 0.3, w, h * 0.7);
-    ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 1.5;
-    ctx.strokeRect(bx, by + h * 0.3, w, h * 0.7);
+    // Infinity loop - a true lemniscate-of-Bernoulli path (not two side-by-side arcs),
+    // so it actually crosses itself at the center like a real "∞" instead of reading as
+    // two separate or interlocking rings.
+    const a = s * 0.62;
+    const points = [];
+    const steps = 96;
+    for (let i = 0; i <= steps; i++) {
+        const t = (i / steps) * Math.PI * 2;
+        const denom = 1 + Math.sin(t) * Math.sin(t);
+        points.push([cx + (a * Math.cos(t)) / denom, cy + (a * Math.sin(t) * Math.cos(t)) / denom]);
+    }
+    const grad = ctx.createLinearGradient(cx - a, cy, cx + a, cy);
+    grad.addColorStop(0, '#fff3c4'); grad.addColorStop(0.5, '#ffd700'); grad.addColorStop(1, '#fff3c4');
 
-    // Open lid (angled back)
-    ctx.save();
-    ctx.translate(bx, by + h * 0.3);
-    ctx.rotate(-0.55);
-    const lidGrad = ctx.createLinearGradient(0, -h * 0.5, 0, 0);
-    lidGrad.addColorStop(0, '#c89850'); lidGrad.addColorStop(1, '#8a5a28');
-    ctx.fillStyle = lidGrad;
-    ctx.fillRect(0, -h * 0.42, w, h * 0.42);
-    ctx.strokeStyle = '#3a2410'; ctx.lineWidth = 1.2;
-    ctx.strokeRect(0, -h * 0.42, w, h * 0.42);
-    ctx.restore();
-
-    // Metal bands
-    ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(bx + w * 0.25, by + h * 0.3); ctx.lineTo(bx + w * 0.25, by + h); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(bx + w * 0.75, by + h * 0.3); ctx.lineTo(bx + w * 0.75, by + h); ctx.stroke();
-
-    // Overflowing gold coins
-    ctx.fillStyle = '#ffd700';
-    const coins = [
-        [-0.28, -0.12, 0.11], [-0.08, -0.22, 0.1], [0.14, -0.14, 0.12],
-        [0.30, -0.04, 0.09], [0.0, -0.30, 0.08], [-0.20, -0.02, 0.09]
-    ];
-    coins.forEach(([dx, dy, r]) => {
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    [{ style: '#8a6410', width: s * 0.26 }, { style: grad, width: s * 0.16 }].forEach(pass => {
+        ctx.strokeStyle = pass.style;
+        ctx.lineWidth = pass.width;
         ctx.beginPath();
-        ctx.ellipse(cx + dx * w, by + h * 0.3 + dy * h, r * w, r * w * 0.65, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#a87c1a'; ctx.lineWidth = 1; ctx.stroke();
-        ctx.fillStyle = '#ffd700';
+        points.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+        ctx.stroke();
     });
 }
 
@@ -122,7 +122,7 @@ export class CampaignMenu {
         // Only show campaigns the player has unlocked (filter out locked ones).
         // Commander's Workshop (campaign-5) is no longer selectable from here - it's reached
         // via the Workshop building's "Strategy Table" button in the Settlement Hub instead
-        // (see WorkshopMenu.js). Its old slot in this list is now Sandbox Mode, which moved
+        // (see WorkshopMenu.js). Its old slot in this list is now Eternal Mode, which moved
         // here from inside the Workshop and unlocks on defeating the Frog King (campaign-4).
         this.campaigns = CampaignRegistry.getCampaignsOrdered().filter(c => !c.locked && c.id !== 'campaign-5');
         const completedCampaigns = saveData?.completedCampaigns || [];
@@ -154,21 +154,22 @@ export class CampaignMenu {
         this.removeMouseListeners();
     }
 
-    /** Synthetic campaign-shaped entry for Sandbox Mode - not a real CampaignRegistry
+    /** Synthetic campaign-shaped entry for Eternal Mode (internally still the 'sandbox'
+     *  level/id - only the player-facing name changed) - not a real CampaignRegistry
      *  campaign (no levels, no class to instantiate), so START CAMPAIGN is special-cased
-     *  for it in handleClick()/activateFocusedButton() to launch the sandbox level directly
+     *  for it in handleClick()/activateFocusedButton() to launch the level directly
      *  instead of instantiating campaign.class. */
     _buildSandboxEntry() {
         return {
             id: 'sandbox',
-            name: 'Sandbox Mode',
-            description: 'Build freely with unlimited gold and no waves.',
+            name: 'Eternal Mode',
+            description: 'Endless, escalating waves - see how long you can hold the line.',
             icon: '∞',
-            drawIcon: _drawSandboxIcon,
-            difficulty: 'Freeplay',
+            drawIcon: _drawEternalIcon,
+            difficulty: 'Endless',
             class: null,
             rewards: null,
-            story: 'No waves, no pressure - just you, unlimited gold, and a blank battlefield. Perfect for testing tower placements and combinations without consequence.',
+            story: 'The waves never stop, and they never stop growing. New enemy types join the fight the longer you survive, until every foe you\'ve ever faced can appear at once - and, eventually, the Frog King himself returns. Starts just like any other level: no shortcuts, no head start. How many waves can you hold the line?',
             completionStory: '',
             progress: 0,
             levelCount: null,
@@ -177,18 +178,18 @@ export class CampaignMenu {
     }
 
     /** Looks up the selected entry from this.campaigns (real campaigns + the synthetic
-     *  Sandbox entry) rather than CampaignRegistry, which has no 'sandbox' id. */
+     *  Eternal Mode entry) rather than CampaignRegistry, which has no 'sandbox' id. */
     _getSelectedEntry() {
         return this.campaigns.find(c => c.id === this.selectedCampaignId) || null;
     }
 
-    /** Launches Sandbox Mode directly, mirroring the launch code that used to live in
+    /** Launches Eternal Mode directly, mirroring the launch code that used to live in
      *  PlayerWorkshop's Sandbox Mode button (now removed - see PlayerWorkshop.js). */
     _launchSandbox() {
         if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('open-campaign');
         this.stateManager.selectedLevelInfo = {
             id: 'sandbox-workshop',
-            name: 'Sandbox Mode',
+            name: 'Eternal Mode',
             type: 'sandbox',
             campaignId: 'campaign-5'
         };
@@ -936,7 +937,7 @@ export class CampaignMenu {
             ctx.lineWidth = isHovered ? 2.5 : 1.5;
             ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
 
-            const label = campaign.id === 'sandbox' ? 'ENTER SANDBOX  \u25B6' : 'START CAMPAIGN  \u25B6';
+            const label = campaign.id === 'sandbox' ? 'ENTER ETERNAL MODE  \u25B6' : 'START CAMPAIGN  \u25B6';
             ctx.font = 'bold 22px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';

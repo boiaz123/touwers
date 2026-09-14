@@ -283,9 +283,12 @@ export class GameplayState {
         
         // Configure level-specific settings
         this.isSandbox = (this.levelType === 'sandbox');
-        
+
         if (this.isSandbox) {
-            this.gameState.gold = 100000;
+            // Eternal Mode starts exactly like any other level - same starting gold (see
+            // `gold: 200` default above, plus the same upgrade bonus applied above), no
+            // resources pre-unlocked. The only structural difference is that it never
+            // completes (maxWavesForLevel stays Infinity).
             this.maxWavesForLevel = Infinity;
         } else {
             // Don't set maxWavesForLevel yet - wait until level is fully initialized
@@ -339,11 +342,6 @@ export class GameplayState {
         // Recreate tower manager to ensure it has the updated level reference
         this.towerManager = new TowerManager(this.gameState, this.level);
         this.towerManager.setStateManager(this.stateManager);
-        
-        // SANDBOX: Force gem initialization IMMEDIATELY after tower manager creation
-        if (this.isSandbox) {
-            this.initializeSandboxGems();
-        }
         
         // Reserve castle space in the building manager to prevent placement on top
         if (this.level.castle && this.towerManager.buildingManager) {
@@ -633,53 +631,6 @@ export class GameplayState {
         return processedDrops;
     }
     
-    initializeSandboxGems() {
-        // Called ONLY in sandbox mode to force gem initialization
-        
-        // Access building manager directly
-        if (!this.towerManager || !this.towerManager.buildingManager) {
-            console.error('GameplayState: Tower manager or building manager not available!');
-            return;
-        }
-        
-        const buildingManager = this.towerManager.buildingManager;
-        
-        // Find academy
-        let academy = buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
-        
-        if (academy) {
-            
-            // Force initialize all gem values
-            if (!academy.gems) {
-                academy.gems = {};
-            }
-            
-            academy.gems.fire = 100;
-            academy.gems.water = 100;
-            academy.gems.air = 100;
-            academy.gems.earth = 100;
-            academy.gems.diamond = 100;
-            
-            // Unlock diamond mining
-            academy.diamondMiningUnlocked = true;
-            
-            // Do NOT set gemMiningResearched - keep it as an available research
-            academy.gemMiningResearched = false;
-            
-            
-            // Enable gem toggle on all existing mines
-            buildingManager.buildings.forEach(building => {
-                if (building.constructor.name === 'GoldMine') {
-                    building.setAcademy(academy);
-                    building.gemMiningUnlocked = true; // Force enable toggle
-                }
-            });
-            
-        } else {
-            console.error('GameplayState: Academy NOT FOUND in building manager!');
-        }
-    }
-
     exit(levelCompleted = false) {
 
         // render(ctx) sets ctx.level = this.level on the single shared canvas context
@@ -1485,11 +1436,6 @@ export class GameplayState {
                         }
                     }
                     
-                    // SANDBOX: If academy was just built, initialize gems immediately
-                    if (this.isSandbox && this.selectedBuildingType === 'academy') {
-                        setTimeout(() => this.initializeSandboxGems(), 50); // Small delay to ensure building is registered
-                    }
-                    
                     this.uiManager.updateUI();
                     this.uiManager.updateButtonStates();
                     this.uiManager.updateUIAvailability();
@@ -1905,14 +1851,16 @@ export class GameplayState {
             // results screen animates - see ResultsScreen.calculateBattleScore). completeLevel()
             // already returned early above for sandbox runs, so every path reaching here is a
             // real campaign level.
+            const runTimeTaken = Math.round((Date.now() / 1000) - this.levelStartTime);
             const runScore = ResultsScreen.calculateBattleScore({
                 enemiesSlain: this.totalEnemiesSpawned,
-                timeTaken: Math.round((Date.now() / 1000) - this.levelStartTime),
+                timeTaken: runTimeTaken,
                 goldRemaining: this.gameState.gold,
                 goldEarned: this.goldEarnedThisLevel
             });
             saveData.levelHighScores = SaveSystem.recordLevelHighScore(
-                this.currentLevel, this.currentCampaignId, runScore, saveData.levelHighScores || {}
+                this.currentLevel, this.currentCampaignId, runScore, saveData.levelHighScores || {},
+                runTimeTaken, saveData.levelHighScoreTimes || (saveData.levelHighScoreTimes = {})
             );
 
             // Unlock next level
@@ -2420,7 +2368,18 @@ export class GameplayState {
             // Update settlement state in save data
             this.stateManager.currentSaveData.playerGold = this.stateManager.playerGold || 0;
             this.stateManager.currentSaveData.playerInventory = this.stateManager.playerInventory || [];
-            
+
+            // Sandbox never "completes" (see completeLevel()'s early return above), so
+            // gameOver (castle destroyed) is the only run-ending event it ever reaches -
+            // record the run's result here, keeping only the best (highest wave) attempt.
+            if (this.isSandbox) {
+                const runTimeTaken = Math.round((Date.now() / 1000) - this.levelStartTime);
+                this.stateManager.currentSaveData.sandboxHighScore = SaveSystem.recordSandboxHighScore(
+                    this.gameState.wave, this.enemiesDefeated, runTimeTaken,
+                    this.stateManager.currentSaveData.sandboxHighScore
+                );
+            }
+
             // Save upgrades and marketplace with consumed items
             if (this.stateManager.upgradeSystem) {
                 this.stateManager.currentSaveData.upgrades = this.stateManager.upgradeSystem.serialize();

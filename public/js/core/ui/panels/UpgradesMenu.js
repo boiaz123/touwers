@@ -489,14 +489,26 @@ export class UpgradesMenu {
                     ctx.fillStyle = bg;
                     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
                     ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 1.2; ctx.stroke();
-                    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, r * 0.16); ctx.lineCap = 'round';
-                    for (let i = 0; i < 3; i++) {
-                        const a = -Math.PI / 2 + (i - 1) * 0.55;
-                        ctx.beginPath();
-                        ctx.moveTo(cx, cy);
-                        ctx.lineTo(cx + Math.cos(a) * r * 0.75, cy + Math.sin(a) * r * 0.75);
-                        ctx.stroke();
-                    }
+
+                    // Motion swoosh trailing the throw
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, r * 0.07); ctx.lineCap = 'round';
+                    ctx.globalAlpha = 0.6;
+                    ctx.beginPath(); ctx.arc(cx, cy, r * 0.62, Math.PI * 0.7, Math.PI * 1.05); ctx.stroke();
+                    ctx.globalAlpha = 1;
+
+                    // Three stones on a single throw line, growing toward the front -
+                    // reads as one throw caught three times in rapid succession.
+                    const ux = Math.cos(-Math.PI / 4), uy = Math.sin(-Math.PI / 4);
+                    [{ t: -0.55, rr: 0.13, a: 0.35 }, { t: -0.28, rr: 0.17, a: 0.65 }, { t: 0, rr: 0.23, a: 1 }].forEach(s => {
+                        const sx = cx + ux * r * s.t, sy = cy + uy * r * s.t;
+                        ctx.globalAlpha = s.a;
+                        ctx.fillStyle = '#5a5a5a';
+                        ctx.beginPath(); ctx.arc(sx, sy, r * s.rr, 0, Math.PI * 2); ctx.fill();
+                        ctx.strokeStyle = '#2F2F2F'; ctx.lineWidth = 1; ctx.stroke();
+                        ctx.fillStyle = '#e8e8e8';
+                        ctx.beginPath(); ctx.arc(sx - r * s.rr * 0.3, sy - r * s.rr * 0.3, r * s.rr * 0.35, 0, Math.PI * 2); ctx.fill();
+                    });
+                    ctx.globalAlpha = 1;
                     ctx.restore();
                 },
                 category: 'upgrade'
@@ -516,14 +528,28 @@ export class UpgradesMenu {
                     ctx.fillStyle = bg;
                     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
                     ctx.strokeStyle = '#3A0A0A'; ctx.lineWidth = 1.2; ctx.stroke();
-                    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, r * 0.14);
-                    ctx.beginPath(); ctx.arc(cx, cy, r * 0.55, 0, Math.PI * 2); ctx.stroke();
-                    [[-0.85, 0, -0.55, 0], [0.55, 0, 0.85, 0], [0, -0.85, 0, -0.55], [0, 0.55, 0, 0.85]].forEach(([x1, y1, x2, y2]) => {
-                        ctx.beginPath();
-                        ctx.moveTo(cx + x1 * r, cy + y1 * r);
-                        ctx.lineTo(cx + x2 * r, cy + y2 * r);
-                        ctx.stroke();
-                    });
+
+                    // Target rings - one true aim point, not volume of fire
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, r * 0.09);
+                    ctx.beginPath(); ctx.arc(cx, cy, r * 0.62, 0, Math.PI * 2); ctx.stroke();
+                    ctx.lineWidth = Math.max(1, r * 0.07);
+                    ctx.beginPath(); ctx.arc(cx, cy, r * 0.32, 0, Math.PI * 2); ctx.stroke();
+
+                    // An arrow shot in from outside, buried dead-center in the bullseye -
+                    // spans edge-to-center rather than edge-to-edge, so it reads as a hit
+                    // instead of a diagonal "prohibited" slash through the rings.
+                    ctx.save();
+                    ctx.translate(cx, cy);
+                    ctx.rotate(-Math.PI / 3.2);
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, r * 0.1); ctx.lineCap = 'round';
+                    ctx.beginPath(); ctx.moveTo(r * 0.95, 0); ctx.lineTo(r * 0.12, 0); ctx.stroke();
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.moveTo(-r * 0.08, 0); ctx.lineTo(r * 0.2, -r * 0.15); ctx.lineTo(r * 0.2, r * 0.15); ctx.closePath(); ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(r * 0.95, 0); ctx.lineTo(r * 0.76, -r * 0.15); ctx.lineTo(r * 0.83, 0); ctx.lineTo(r * 0.76, r * 0.15); ctx.closePath(); ctx.fill();
+                    ctx.restore();
+
                     ctx.restore();
                 },
                 category: 'upgrade'
@@ -543,14 +569,25 @@ export class UpgradesMenu {
                     ctx.fillStyle = bg;
                     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
                     ctx.strokeStyle = '#4A1E00'; ctx.lineWidth = 1.2; ctx.stroke();
-                    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, r * 0.16); ctx.lineCap = 'round';
-                    for (let i = 0; i < 3; i++) {
-                        const a = -Math.PI / 2 + (i - 1) * 0.8;
+
+                    // Rubble mound the spikes are buried point-up in
+                    ctx.fillStyle = '#5a3a1a';
+                    ctx.beginPath(); ctx.ellipse(cx, cy + r * 0.42, r * 0.62, r * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#2e1a0a'; ctx.lineWidth = 1; ctx.stroke();
+
+                    // Three hardened iron spikes fanned like a caltrop
+                    [{ a: -0.34, len: 0.9 }, { a: 0, len: 1 }, { a: 0.34, len: 0.85 }].forEach(s => {
+                        const baseX = cx + Math.sin(s.a) * r * 0.38, baseY = cy + r * 0.3;
+                        const tipX = cx + Math.sin(s.a) * r * 0.5, tipY = cy - r * 0.5 * s.len;
+                        const w = r * 0.13;
+                        ctx.fillStyle = '#dcdcdc';
                         ctx.beginPath();
-                        ctx.moveTo(cx + Math.cos(a) * r * 0.2, cy + Math.sin(a) * r * 0.2);
-                        ctx.lineTo(cx + Math.cos(a) * r * 0.85, cy + Math.sin(a) * r * 0.85);
-                        ctx.stroke();
-                    }
+                        ctx.moveTo(tipX, tipY); ctx.lineTo(baseX - w, baseY); ctx.lineTo(baseX + w, baseY);
+                        ctx.closePath(); ctx.fill();
+                        ctx.strokeStyle = '#2F2F2F'; ctx.lineWidth = 1; ctx.stroke();
+                        ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, r * 0.035); ctx.lineCap = 'round';
+                        ctx.beginPath(); ctx.moveTo(tipX, tipY); ctx.lineTo(baseX - w * 0.2, baseY - r * 0.1); ctx.stroke();
+                    });
                     ctx.restore();
                 },
                 category: 'upgrade'
@@ -570,11 +607,28 @@ export class UpgradesMenu {
                     ctx.fillStyle = bg;
                     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
                     ctx.strokeStyle = '#2E0F49'; ctx.lineWidth = 1.2; ctx.stroke();
-                    ctx.fillStyle = '#fff';
-                    [[-0.55, 0.35], [0.55, 0.35], [0, -0.5]].forEach(([dx, dy]) => {
-                        ctx.beginPath();
-                        ctx.arc(cx + dx * r, cy + dy * r, r * 0.22, 0, Math.PI * 2);
-                        ctx.fill();
+
+                    // Throwing arm, pivoted low, flinging its payload up and to the right
+                    ctx.strokeStyle = '#3d2b1f'; ctx.lineWidth = Math.max(1, r * 0.12); ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(cx - r * 0.5, cy + r * 0.42);
+                    ctx.lineTo(cx + r * 0.22, cy - r * 0.4);
+                    ctx.stroke();
+                    ctx.fillStyle = '#241408';
+                    ctx.beginPath();
+                    ctx.moveTo(cx - r * 0.14, cy + r * 0.05);
+                    ctx.lineTo(cx + r * 0.05, cy + r * 0.42);
+                    ctx.lineTo(cx - r * 0.32, cy + r * 0.42);
+                    ctx.closePath(); ctx.fill();
+
+                    // Three fireballs flung from the tip, fanned along their flight arc
+                    const tipX = cx + r * 0.22, tipY = cy - r * 0.4;
+                    [{ ox: 0.16, oy: -0.1, fr: 0.2 }, { ox: 0.36, oy: 0.02, fr: 0.16 }, { ox: 0.3, oy: -0.32, fr: 0.14 }].forEach(f => {
+                        const fx = tipX + f.ox * r, fy = tipY + f.oy * r, rad = f.fr * r;
+                        const g = ctx.createRadialGradient(fx - rad * 0.3, fy - rad * 0.3, rad * 0.1, fx, fy, rad);
+                        g.addColorStop(0, '#fff176'); g.addColorStop(0.55, '#ff9800'); g.addColorStop(1, '#b71c1c');
+                        ctx.fillStyle = g;
+                        ctx.beginPath(); ctx.arc(fx, fy, rad, 0, Math.PI * 2); ctx.fill();
                     });
                     ctx.restore();
                 },
@@ -595,12 +649,33 @@ export class UpgradesMenu {
                     ctx.fillStyle = bg;
                     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
                     ctx.strokeStyle = '#2E0A49'; ctx.lineWidth = 1.2; ctx.stroke();
+
+                    // Alchemist's flask, brimming with refined toxin
+                    ctx.fillStyle = '#3fae4a';
+                    ctx.beginPath(); ctx.arc(cx, cy + r * 0.12, r * 0.42, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillRect(cx - r * 0.1, cy - r * 0.5, r * 0.2, r * 0.28);
+                    ctx.strokeStyle = '#1a5c22'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.arc(cx, cy + r * 0.12, r * 0.42, 0, Math.PI * 2); ctx.stroke();
+                    ctx.strokeRect(cx - r * 0.1, cy - r * 0.5, r * 0.2, r * 0.28);
+
+                    // Cork stopper
+                    ctx.fillStyle = '#8a5a2a';
+                    ctx.fillRect(cx - r * 0.14, cy - r * 0.62, r * 0.28, r * 0.14);
+                    ctx.strokeStyle = '#5a3a1a'; ctx.lineWidth = 1;
+                    ctx.strokeRect(cx - r * 0.14, cy - r * 0.62, r * 0.28, r * 0.14);
+
+                    // Bubbling toxin
+                    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+                    ctx.beginPath(); ctx.arc(cx - r * 0.14, cy + r * 0.24, r * 0.055, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + r * 0.13, cy + r * 0.05, r * 0.04, 0, Math.PI * 2); ctx.fill();
+
+                    // Skull label
                     ctx.fillStyle = '#fff';
-                    ctx.beginPath(); ctx.arc(cx, cy - r * 0.05, r * 0.5, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillRect(cx - r * 0.32, cy + r * 0.1, r * 0.64, r * 0.3);
-                    ctx.fillStyle = '#9B30FF';
-                    ctx.beginPath(); ctx.arc(cx - r * 0.2, cy - r * 0.05, r * 0.12, 0, Math.PI * 2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(cx + r * 0.2, cy - r * 0.05, r * 0.12, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx, cy + r * 0.06, r * 0.16, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillRect(cx - r * 0.12, cy + r * 0.08, r * 0.24, r * 0.12);
+                    ctx.fillStyle = '#2E0A49';
+                    ctx.beginPath(); ctx.arc(cx - r * 0.06, cy + r * 0.03, r * 0.045, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + r * 0.06, cy + r * 0.03, r * 0.045, 0, Math.PI * 2); ctx.fill();
                     ctx.restore();
                 },
                 category: 'upgrade'
