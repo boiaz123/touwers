@@ -48,16 +48,30 @@
     box-sizing: border-box;
 }
 
-/* The game shows its own sword cursor as a page-rendered element (see
-   CursorOverlay.js) for every screen, button, and menu - including disabled/
-   "not-allowed" states - so the native arrow cursor must never show, full stop.
-   Unconditional (no cursor-hidden/gamepad-active exception here): unlike the
-   `cursor: url()` rule this used to make room for, CursorOverlay's element
-   handles hiding itself (see its render()), so this rule doesn't need to yield
-   to anything - !important overrides the many per-element cursor rules below
-   as well as inline canvas.style.cursor assignments in JS. */
+/* The game shows its own sword cursor for every screen, button, and menu -
+   including disabled/"not-allowed" states - so the native OS arrow must never
+   show, full stop. Default: hide the native cursor entirely (CursorOverlay.js's
+   page-rendered <img> element draws the sword instead) - !important overrides
+   the many per-element cursor rules below as well as inline canvas.style.cursor
+   assignments in JS. */
 *, *::before, *::after {
     cursor: none !important;
+}
+
+/* CursorOverlay.js switches to this - native `cursor: url()`, zero added input
+   latency versus the page-rendered element above - everywhere except a thin
+   strip near screen edges (where a custom cursor's hotspot can't fit on screen,
+   so the browser would silently fall back to the OS arrow instead; see that
+   file's class doc comment for the full reasoning). Higher specificity
+   (html.sword-cursor-native *) than the bare `*` rule above, so it wins while
+   the class is present despite both being !important. --sword-cursor-native-value
+   is set once by CursorOverlay.js from the same rasterized sprite the
+   page-rendered element uses. */
+html.sword-cursor-native,
+html.sword-cursor-native *,
+html.sword-cursor-native *::before,
+html.sword-cursor-native *::after {
+    cursor: var(--sword-cursor-native-value) !important;
 }
 
 html {
