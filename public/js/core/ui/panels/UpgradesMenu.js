@@ -801,9 +801,10 @@ export class UpgradesMenu {
                 continue;
             }
 
-            // If already purchased, set requirement message to "Purchased"
+            // If already purchased, set requirement message to "Already Owned" (matches
+            // the wording consumables/music/intel already use for the same state)
             if (isPurchased) {
-                requirementMsg = 'Purchased';
+                requirementMsg = 'Already Owned';
             }
 
             items.push({

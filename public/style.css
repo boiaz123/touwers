@@ -931,6 +931,24 @@ body {
     top: -1px;
 }
 
+/* Generic gem icon badge for price boxes/inline UI cost labels - marks a cost that also
+   requires elemental gems (see the .gem-sm + per-element classes for the specific amounts
+   shown in the hover info panel) without implying any one element in particular. */
+.gem-icon-xs {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-left: 3px;
+    background: linear-gradient(135deg, #E8B8FF 0%, #B84DFF 45%, #7A1FCC 100%);
+    clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+    flex-shrink: 0;
+    box-shadow: inset -1px -1px 2px rgba(0,0,0,0.35), inset 1px 1px 1px rgba(255,255,255,0.3);
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+}
+
 /* ============ INFO PANEL ============ */
 #tower-info-box {
     display: none;

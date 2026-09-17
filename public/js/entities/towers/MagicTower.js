@@ -150,13 +150,19 @@ export class MagicTower extends Tower {
                     
                 case 'water':
                     this.target.takeDamage(finalDamage, 0, 'water');
-                    // Apply enhanced slow effect
+                    // Apply enhanced slow effect - tracked as a standing multiplier against
+                    // the enemy's true baseline speed (originalSpeed, left untouched here),
+                    // with its own decaying timer (_waterSlowTimer) separate from
+                    // freezeTimer (reserved for the Frost Nova spell's full stop), so this
+                    // competes on equal footing with BarricadeTower's zone slow and Super
+                    // Poison's permanent slow instead of multiplying on top of them - see
+                    // TowerManager.resolveSlowMultiplier()/updateSlowedEnemySpeeds().
                     const baseSlowEffect = BASE_SLOW_EFFECT;
                     const enhancedSlowEffect = Math.max(0.3, baseSlowEffect - this.elementalBonuses.water.slowBonus);
                     if (this.target.speed > 20) {
                         this.target.originalSpeed = this.target.originalSpeed || this.target.speed;
-                        this.target.speed *= enhancedSlowEffect;
-                        this.target.freezeTimer = Math.max(this.target.freezeTimer || 0, 1.0);
+                        this.target._waterSlowMult = enhancedSlowEffect;
+                        this.target._waterSlowTimer = Math.max(this.target._waterSlowTimer || 0, 1.0);
                     }
                     break;
                     

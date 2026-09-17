@@ -525,39 +525,61 @@ export class TowerManager {
             tower.update(deltaTime, enemies, poisonBonus);
         }
 
-        // Restore speed for enemies no longer inside ANY BarricadeTower's slow zone.
-        // Must run once here, after every barricade tower's zone-loop above has already
-        // marked this frame's _slowedSet, rather than inside each tower's own update():
-        // per-tower restore independently fought every OTHER barricade tower's active slow
-        // on enemies outside its own zones (cancelling each other out as more towers were
-        // built), and also fought Frost Nova / MagicTower water slows on enemies nowhere
-        // near a barricade at all, since both write the same enemy.originalSpeed/speed.
-        if (this._barricadeTowers && this._barricadeTowers.length > 0) {
-            if (!this._restoreSlowedSetBuf) this._restoreSlowedSetBuf = new Set();
-            const slowedByBarricade = this._restoreSlowedSetBuf;
-            slowedByBarricade.clear();
-            for (let i = 0; i < this._barricadeTowers.length; i++) {
-                const bt = this._barricadeTowers[i];
-                if (bt._slowedSet) {
-                    for (const enemy of bt._slowedSet) slowedByBarricade.add(enemy);
-                }
+        // Resolve every enemy's speed from whichever of BarricadeTower's zone slow, Super
+        // Poison's permanent slow, and Magic Tower's water slow is currently strongest for
+        // them (see getResolvedSlowMultiplier) - the three no longer multiply together.
+        // Must run once here, after every tower's update() above has had a chance to mark
+        // this frame's barricade zone membership / poison / water state, rather than inside
+        // each tower's own update(): a per-tower pass would fight every OTHER slow source
+        // on enemies outside its own effect, cancelling itself out.
+        const slowInRate = 1 - Math.pow(0.05, deltaTime);
+        const slowOutRate = 1 - Math.pow(0.3, deltaTime);
+        for (let i = 0; i < enemies.length; i++) {
+            const enemy = enemies[i];
+            if (!enemy.hasOwnProperty('originalSpeed')) continue;
+            // Frost Nova owns this enemy's speed while its own timer is active (full stop,
+            // restored on expiry in GameplayState via this same resolver) - don't fight it.
+            if (enemy.freezeTimer > 0) continue;
+
+            if (enemy._waterSlowTimer > 0) {
+                enemy._waterSlowTimer -= deltaTime;
             }
-            const restoreRate = 1 - Math.pow(0.3, deltaTime);
-            for (let i = 0; i < enemies.length; i++) {
-                const enemy = enemies[i];
-                // freezeTimer > 0 means Frost Nova / MagicTower water currently owns this
-                // enemy's speed (restored on timer expiry in GameplayState) - don't fight it.
-                if (enemy.hasOwnProperty('originalSpeed') && !slowedByBarricade.has(enemy) &&
-                    !(enemy.freezeTimer > 0) && enemy.speed < enemy.originalSpeed) {
-                    enemy.speed = enemy.speed + (enemy.originalSpeed - enemy.speed) * restoreRate;
-                }
-            }
+
+            const targetSpeed = enemy.originalSpeed * this.getResolvedSlowMultiplier(enemy);
+            const rate = targetSpeed < enemy.speed ? slowInRate : slowOutRate;
+            enemy.speed = enemy.speed + (targetSpeed - enemy.speed) * rate;
         }
 
         // Update building manager
         this.buildingManager.update(deltaTime);
     }
     
+    /**
+     * The strongest currently-active slow multiplier (lowest value wins) among Super
+     * Poison's permanent slow (_poisonSlowMult), Magic Tower's water slow
+     * (_waterSlowMult, while _waterSlowTimer hasn't decayed), and this enemy's current
+     * BarricadeTower zone membership - 1 (no slow) if none apply. Used both by
+     * update()'s per-frame speed resolver and by GameplayState's Frost Nova expiry
+     * handler, so the three sources compete instead of multiplying together.
+     */
+    getResolvedSlowMultiplier(enemy) {
+        const poisonMult = enemy._poisonSlowMult ?? 1;
+        const waterMult = (enemy._waterSlowTimer > 0) ? (enemy._waterSlowMult ?? 1) : 1;
+        let barricadeMult = 1;
+        if (this._barricadeTowers) {
+            for (let i = 0; i < this._barricadeTowers.length; i++) {
+                const bt = this._barricadeTowers[i];
+                if (bt._slowedSet && bt._slowedSet.has(enemy)) {
+                    // Clamp so a fully-upgraded patch still lets enemies crawl rather than
+                    // literally stopping them (which could break anything downstream that
+                    // assumes forward progress).
+                    barricadeMult = Math.min(barricadeMult, Math.max(0.05, 1 - bt.slowPercent));
+                }
+            }
+        }
+        return Math.min(poisonMult, waterMult, barricadeMult);
+    }
+
     applyAcademyUpgrades(tower) {
         if (tower.type === 'magic') {
             // Use cached academies

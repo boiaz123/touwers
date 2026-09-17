@@ -23,20 +23,18 @@ export class SuperPoisonTower extends PoisonArcherTower {
         super.applyPoisonToEnemy(enemy, towerForgeBonus);
 
         // Permanent 30% speed reduction - applied once per enemy (guarded by the flag
-        // below) no matter how many Super Poison Towers hit it, by lowering the shared
-        // originalSpeed baseline every slow effect (BarricadeTower's zone,
-        // MagicTower's water/freeze) reads from and which TowerManager's per-frame
-        // restore-to-baseline loop pulls enemy.speed back toward once other slows end.
-        // Lowering the baseline itself, instead of just enemy.speed, is what makes this
-        // reduction survive after any other slow effect expires or restores - a plain
-        // enemy.speed *= 0.7 here would just get overwritten by that restore loop.
+        // below) no matter how many Super Poison Towers hit it. Recorded as a standing
+        // multiplier against the enemy's true baseline speed (originalSpeed, left
+        // untouched here) rather than baked into that baseline itself, so it competes on
+        // equal footing with BarricadeTower's zone slow and MagicTower's water slow -
+        // TowerManager.resolveSlowMultiplier() takes whichever of the three is strongest
+        // instead of letting them multiply together.
         if (!enemy._superPoisonSlowed) {
             enemy._superPoisonSlowed = true;
             if (!enemy.hasOwnProperty('originalSpeed')) {
                 enemy.originalSpeed = enemy.speed;
             }
-            enemy.originalSpeed *= 0.7;
-            enemy.speed = Math.min(enemy.speed, enemy.originalSpeed);
+            enemy._poisonSlowMult = 0.7;
         }
     }
 

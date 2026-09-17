@@ -526,41 +526,35 @@ export class BarricadeTower extends Tower {
             // only be >= straight-line distance - so this is always a safe superset, refined
             // below by the precise _isInZone() check.
             const queryRadius = effRadius + this.roadHalfWidth;
-            const slowRate = 1 - Math.pow(0.05, deltaTime);
-            // Clamp the target multiplier so a fully-upgraded patch still lets enemies crawl
-            // rather than literally stopping them (which could break anything downstream
-            // that assumes forward progress).
-            const targetMultiplier = Math.max(0.05, 1 - this.slowPercent);
 
             if (this._spatialGrid) {
                 const grid = this._spatialGrid;
                 const count = grid.query(this.rubbleX, this.rubbleY, queryRadius);
                 const buf = grid._queryBuf;
                 for (let i = 0; i < count; i++) {
-                    this._applySlow(buf[i], effRadius, targetMultiplier, slowRate);
+                    this._applySlow(buf[i], effRadius);
                 }
             } else {
                 for (let i = 0; i < enemies.length; i++) {
-                    this._applySlow(enemies[i], effRadius, targetMultiplier, slowRate);
+                    this._applySlow(enemies[i], effRadius);
                 }
             }
         }
-        // Speed restoration for enemies that left this tower's patch now happens once,
-        // globally, in TowerManager.update() after ALL barricade towers have updated - see
-        // TowerManager.js for the full reason (it already reads tower._slowedSet generically).
+        // Actually easing enemy.speed toward this zone's target (and restoring it for
+        // enemies that left) now happens once, globally, in
+        // TowerManager.updateSlowedEnemySpeeds() after ALL barricade towers have updated -
+        // see TowerManager.js. This tower only marks zone membership in _slowedSet; the
+        // centralized resolver there is what picks the strongest of this zone's slow,
+        // Super Poison's permanent slow, and Magic Tower water's slow instead of
+        // multiplying them together.
     }
 
-    _applySlow(enemy, effRadius, targetMultiplier, slowRate) {
+    _applySlow(enemy, effRadius) {
         if (!this._isInZone(enemy.x, enemy.y, effRadius)) return;
 
         if (!enemy.hasOwnProperty('originalSpeed')) {
             enemy.originalSpeed = enemy.speed;
         }
-        // Clamp to the enemy's CURRENT speed, never above it - an enemy already slower
-        // than this patch's target (frozen by Frost Nova, water-slowed by a Magic Tower)
-        // must stay there instead of easing back up toward this patch's weaker slow.
-        const targetSpeed = Math.min(enemy.speed, enemy.originalSpeed * targetMultiplier);
-        enemy.speed = enemy.speed + (targetSpeed - enemy.speed) * slowRate;
         this._slowedSet.add(enemy);
     }
 

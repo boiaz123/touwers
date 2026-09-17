@@ -356,9 +356,12 @@ export class GameplayState {
         this.enemyManager.audioManager = this.stateManager.audioManager;
         // Set marketplace system reference for consumable checks on enemy spawn
         this.enemyManager.marketplaceSystem = this.stateManager.marketplaceSystem;
-        // Workshop tokens only drop once the Commander's Workshop upgrade has been purchased
+        // Workshop tokens only drop once the Commander's Workshop upgrade has been purchased,
+        // and never for an enemy type the player has already unlocked in the Workshop (see
+        // EnemyManager._applyEnemyDefaults)
         this.enemyManager.workshopUnlocked = !!(this.stateManager.upgradeSystem &&
             this.stateManager.upgradeSystem.hasUpgrade('commanders-workshop'));
+        this.enemyManager.workshopSystem = this.stateManager.workshopSystem;
         this.towerManager.audioManager = this.stateManager.audioManager;
         this.lootManager.audioManager = this.stateManager.audioManager;
         // Ensure all existing towers have audio manager (for loaded games)
@@ -2061,11 +2064,16 @@ export class GameplayState {
         if (goldFromEnemies > 0) {
             this.gameState.gold += goldFromEnemies;
             this.uiManager.updateUI();
-            this.uiManager.updateButtonStates();
         }
 
         if (this._checkWaveCompletion()) return;
 
+        // Run every frame, unconditionally, rather than only after the specific actions
+        // that spend/earn gold or gems (tower placement, mine/gem collection, purchases,
+        // etc.) - those call sites are easy to miss (e.g. gem collection used to update
+        // gold/gem text but not button state), which left tower/building buttons out of
+        // sync with the player's actual gold/gem balance until their next unrelated click.
+        this.uiManager.updateButtonStates();
         this.uiManager.updateSpellUI();
         this.uiManager.updateWaveCooldownDisplay();
         this.uiManager.updateActiveMenuIfNeeded(adjustedDeltaTime);
@@ -2224,11 +2232,19 @@ export class GameplayState {
                 }
             }
 
-            // Update freeze timers
+            // Update freeze timers (Frost Nova's full stop - see TowerManager's per-frame
+            // slow resolver for Super Poison/BarricadeTower/Magic Tower water, which all
+            // leave freezeTimer alone and defer to it while it's active)
             if (enemy.freezeTimer > 0) {
                 enemy.freezeTimer -= deltaTime;
                 if (enemy.freezeTimer <= 0 && enemy.originalSpeed) {
-                    enemy.speed = enemy.originalSpeed;
+                    // Snap back to whatever other slow (if any) is still active instead of
+                    // straight to full speed, so ending the freeze doesn't momentarily wipe
+                    // out an ongoing Super Poison/BarricadeTower/water slow.
+                    const resolvedMult = this.towerManager
+                        ? this.towerManager.getResolvedSlowMultiplier(enemy)
+                        : 1;
+                    enemy.speed = enemy.originalSpeed * resolvedMult;
                 }
             }
 

@@ -94,15 +94,15 @@ export class UIManager {
                 // Magic Towers past the free-with-gold cap also need a full set of
                 // elemental gems on top of gold (see TowerManager.getMagicTowerGemCost) -
                 // treat a gem shortfall the same as a gold shortfall for the button's
-                // affordability styling.
+                // affordability styling, and show the gem icon badge next to the gold cost
+                // (the specific per-element amounts are in the hover info panel - see
+                // showTowerInfo's 'magic' case - rather than a native title tooltip).
                 if (towerType === 'magic' && !isFreeFromMarketplace) {
                     const gemCost = this.towerManager.getMagicTowerGemCost();
                     if (gemCost) {
                         canAfford = canAfford && this.towerManager.hasEnoughGems(gemCost);
-                        btn.title = `Requires ${gemCost.fire} of each elemental gem (Fire, Water, Air, Earth) in addition to gold`;
-                    } else {
-                        btn.removeAttribute('title');
                     }
+                    if (this._magicTowerGemIcon) this._magicTowerGemIcon.style.display = gemCost ? 'inline-block' : 'none';
                 }
 
                 // Only disable for build-limit/unlock reasons - affordability no longer
@@ -448,6 +448,7 @@ export class UIManager {
         // Cache button elements to avoid per-call DOM queries in updateButtonStates
         this._towerBtns = [...document.querySelectorAll('.tower-btn')];
         this._buildingBtns = [...document.querySelectorAll('.building-btn')];
+        this._magicTowerGemIcon = document.getElementById('magic-tower-gem-icon');
 
         // Initial button state update
         this.updateButtonStates();
@@ -676,15 +677,29 @@ export class UIManager {
                 specialHTML = "Ranger shoots poison arrows that apply a permanent toxin, dealing heavy damage over time until the enemy dies. Poison tick damage upgradeable at the Tower Forge; fire rate upgradeable at Training Grounds.";
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 2</div>';
                 break;
-            case 'magic':
+            case 'magic': {
+                // Past the free-with-gold cap, an additional Magic Tower also costs a full
+                // set of elemental gems (see TowerManager.getMagicTowerGemCost) - shown here
+                // in the same hover panel as the rest of the tower's info, rather than a
+                // separate native tooltip, so the player sees it alongside everything else.
+                const gemCost = this.towerManager.getMagicTowerGemCost();
                 statsHTML = `
                     <div><span>Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
                     <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
                     <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    ${gemCost ? `
+                    <div><span>Gem Cost:</span>
+                        <span class="gem-sm fire-gem"></span>${gemCost.fire}
+                        <span class="gem-sm water-gem"></span>${gemCost.water}
+                        <span class="gem-sm air-gem"></span>${gemCost.air}
+                        <span class="gem-sm earth-gem"></span>${gemCost.earth}
+                    </div>` : ''}
                 `;
                 specialHTML = 'Elemental tower with a selectable damage type — Fire, Water, Air, or Earth. Requires the Magic Academy; each element gains its own bonuses from Magic Academy elemental research.';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Magic Academy</div>';
+                else if (gemCost) unlockHTML = '<div style="color: #ffd700;">Also requires a full set of elemental gems</div>';
                 break;
+            }
             case 'guard-post':
                 statsHTML = `
                     <div><span>Type:</span> <span style="color: #FFD700;">Path Defender</span></div>
@@ -1792,7 +1807,7 @@ export class UIManager {
                             ${isMaxed ? 'disabled' : ''}>
                         <div class="forge-upgrade-btn-content">
                             ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">FORGE UPGRADE</span>'}
-                            <span class="btn-cost">${isMaxed ? 'LV ' + forge.forgeLevel : (forgeUpgrade && forgeUpgrade.cost ? '<span class="coin-xs"></span> ' + forgeUpgrade.cost : '—')}</span>
+                            ${isMaxed ? '' : `<span class="btn-cost">${forgeUpgrade && forgeUpgrade.cost ? '<span class="coin-xs"></span> ' + forgeUpgrade.cost : '—'}</span>`}
                         </div>
                     </button>
                 </div>
@@ -2435,7 +2450,7 @@ export class UIManager {
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
                         ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">ACADEMY UPGRADE</span>'}
-                        <span class="btn-cost">${isMaxed ? 'LV ' + academy.academyLevel : (academyUpgrade && academyUpgrade.cost ? '<span class="coin-xs"></span> ' + academyUpgrade.cost + ' + ◆' + (academyUpgrade.diamondCost || 0) : '—')}</span>
+                        ${isMaxed ? '' : `<span class="btn-cost">${academyUpgrade && academyUpgrade.cost ? '<span class="coin-xs"></span> ' + academyUpgrade.cost + ' + ◆' + (academyUpgrade.diamondCost || 0) : '—'}</span>`}
                     </div>
                 </button>
             </div>
@@ -3507,7 +3522,7 @@ export class UIManager {
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
                         ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">LAB UPGRADE</span>'}
-                        <span class="btn-cost">${isMaxed ? 'LV ' + superWeaponLab.labLevel : (labUpgrade && labUpgrade.cost ? '<span class="coin-xs"></span> ' + labUpgrade.cost + ' + ◆' + (labUpgrade.diamondCost || 0) : '—')}</span>
+                        ${isMaxed ? '' : `<span class="btn-cost">${labUpgrade && labUpgrade.cost ? '<span class="coin-xs"></span> ' + labUpgrade.cost + ' + ◆' + (labUpgrade.diamondCost || 0) : '—'}</span>`}
                     </div>
                 </button>
             </div>
@@ -4359,7 +4374,7 @@ export class UIManager {
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
                         ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">TRAINING UPGRADE</span>'}
-                        <span class="btn-cost">${isMaxed ? 'LV ' + trainingGrounds.trainingLevel : (trainingUpgrade && trainingUpgrade.cost ? '<span class="coin-xs"></span> ' + trainingUpgrade.cost : '—')}</span>
+                        ${isMaxed ? '' : `<span class="btn-cost">${trainingUpgrade && trainingUpgrade.cost ? '<span class="coin-xs"></span> ' + trainingUpgrade.cost : '—'}</span>`}
                     </div>
                 </button>
             </div>

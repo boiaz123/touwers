@@ -200,8 +200,11 @@ export class EnemyManager {
         }
 
         // Workshop tokens only start dropping once the Commander's Workshop has been
-        // purchased (see GameplayState, which sets this.workshopUnlocked on this manager).
-        enemy.workshopTokenChance = this.workshopUnlocked ? TOKEN_DROP_CHANCE : 0;
+        // purchased (see GameplayState, which sets this.workshopUnlocked on this manager),
+        // and stop dropping for a given enemy type once the player has already unlocked it
+        // in the Workshop - no point handing out more tokens for something already bought.
+        const alreadyUnlockedInWorkshop = this.workshopSystem && this.workshopSystem.hasEnemyType(enemy.type);
+        enemy.workshopTokenChance = (this.workshopUnlocked && !alreadyUnlockedInWorkshop) ? TOKEN_DROP_CHANCE : 0;
     }
 
     /**
