@@ -29,7 +29,7 @@ export class MageEnemy extends BaseEnemy {
         this.sizeMultiplier = 1.1;
         
         this.attackDamage = 20;
-        this.attackSpeed = 2.0;
+        this.attackSpeed = 4.0;
         
         // Optimized particle system - reduced particle generation
         this.magicParticles = [];
@@ -54,7 +54,7 @@ export class MageEnemy extends BaseEnemy {
         this.shieldSpellTimer = 6 + Math.random() * 8;
         this.shieldActive = false;
         this.shieldTimeRemaining = 0;
-        this.shieldDuration = 4;
+        this.shieldDuration = 2;
         // Brief bright pulse on the shield rim when it absorbs a hit, decayed in update().
         this.shieldFlash = 0;
 
