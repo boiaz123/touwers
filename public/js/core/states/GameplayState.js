@@ -555,7 +555,16 @@ export class GameplayState {
         if (this.selectedTowerType) {
             if (this.hasFreePlacement(this.selectedTowerType, true)) return true;
             const towerType = TowerRegistry.getTowerType(this.selectedTowerType);
-            return towerType ? this.gameState.canAfford(towerType.cost) : true;
+            if (!towerType) return true;
+            if (!this.gameState.canAfford(towerType.cost)) return false;
+            // Magic Towers past the free-with-gold cap also need a full set of elemental
+            // gems (see TowerManager.getMagicTowerGemCost) - factor that in too so the
+            // preview doesn't show green while gems are still short.
+            if (this.selectedTowerType === 'magic' && this.towerManager) {
+                const gemCost = this.towerManager.getMagicTowerGemCost();
+                if (gemCost && !this.towerManager.hasEnoughGems(gemCost)) return false;
+            }
+            return true;
         }
         if (this.selectedBuildingType) {
             if (this.hasFreePlacement(this.selectedBuildingType, false)) return true;

@@ -9,7 +9,7 @@ import { SuperPoisonTower } from './SuperPoisonTower.js';
  * into which advanced class, mirroring TowerRegistry's pattern.
  *
  * - unlockId: the settlement UpgradeSystem id that must be purchased before this
- *   transform can ever be used (see UpgradeRegistry.js / SettlementHub.js's upgradeData).
+ *   transform can ever be used (see UpgradeRegistry.js / UpgradesMenu.js's upgradeData).
  * - transformCost: in-level gold cost paid when actually transforming a placed tower.
  */
 export class TowerTransformRegistry {

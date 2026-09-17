@@ -1,6 +1,7 @@
 import { LootRegistry } from '../../../entities/loot/LootRegistry.js';
 import { MarketplaceSystem } from '../../systems/MarketplaceSystem.js';
 import { MarketplaceRegistry } from '../../registries/MarketplaceRegistry.js';
+import { UpgradeRegistry } from '../../registries/UpgradeRegistry.js';
 import { CampaignRegistry } from '../../../game/CampaignRegistry.js';
 import { WorkshopSystem } from '../../systems/WorkshopSystem.js';
 
@@ -679,27 +680,124 @@ export class UpgradesMenu {
                     ctx.restore();
                 },
                 category: 'upgrade'
+            },
+            {
+                id: 'transform-workshop-expansion',
+                name: 'Workshop Expansion',
+                description: "A second workbench, hastily bolted into the corner of the forge. Your artificers grumble about the mess, but they can keep one more finished tower of a single type running at once.",
+                effect: 'Raises the Transformation Tower limit from 3 to 4 per tower type',
+                cost: 5000,
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    const r = size * 0.34;
+                    const bg = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+                    bg.addColorStop(0, '#fff'); bg.addColorStop(0.35, '#4A90D9'); bg.addColorStop(1, '#0E2E4A');
+                    ctx.fillStyle = bg;
+                    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#0E2E4A'; ctx.lineWidth = 1.2; ctx.stroke();
+
+                    // Gear
+                    const gearR = r * 0.4;
+                    ctx.fillStyle = '#dcdcdc';
+                    ctx.beginPath();
+                    for (let i = 0; i < 8; i++) {
+                        const a1 = (i / 8) * Math.PI * 2;
+                        const a2 = a1 + Math.PI / 8;
+                        const outer = gearR * 1.3;
+                        ctx.lineTo(cx + Math.cos(a1) * outer, cy + Math.sin(a1) * outer);
+                        ctx.lineTo(cx + Math.cos(a2) * gearR, cy + Math.sin(a2) * gearR);
+                    }
+                    ctx.closePath(); ctx.fill();
+                    ctx.strokeStyle = '#2F2F2F'; ctx.lineWidth = 1; ctx.stroke();
+                    ctx.beginPath(); ctx.arc(cx, cy, gearR * 0.48, 0, Math.PI * 2);
+                    ctx.fillStyle = '#8B8B8B'; ctx.fill(); ctx.stroke();
+
+                    // Wrench crossing the gear
+                    ctx.save();
+                    ctx.translate(cx, cy); ctx.rotate(Math.PI / 4);
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1, r * 0.14); ctx.lineCap = 'round';
+                    ctx.beginPath(); ctx.moveTo(-r * 0.55, 0); ctx.lineTo(r * 0.55, 0); ctx.stroke();
+                    ctx.lineWidth = Math.max(1, r * 0.2); ctx.lineCap = 'butt';
+                    ctx.beginPath(); ctx.moveTo(-r * 0.55, 0); ctx.lineTo(-r * 0.4, 0); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(r * 0.55, 0); ctx.lineTo(r * 0.4, 0); ctx.stroke();
+                    ctx.restore();
+                    ctx.restore();
+                },
+                category: 'upgrade',
+                completedCampaignRequirement: 'campaign-1'
+            },
+            {
+                id: 'transform-workshop-annex',
+                name: 'Workshop Annex',
+                description: "A proper annex this time - walls, a roof, and a third workbench your artificers actually asked for. One more transformed tower of a single type can now be kept running at once.",
+                effect: 'Raises the Transformation Tower limit from 4 to 5 per tower type',
+                cost: 10000,
+                drawIcon(ctx, cx, cy, size) {
+                    ctx.save();
+                    const r = size * 0.34;
+                    const bg = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
+                    bg.addColorStop(0, '#fff'); bg.addColorStop(0.35, '#D9A54A'); bg.addColorStop(1, '#4A2E0E');
+                    ctx.fillStyle = bg;
+                    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#4A2E0E'; ctx.lineWidth = 1.2; ctx.stroke();
+
+                    // Two overlapping gears - the annex sitting alongside the original workshop
+                    const drawGear = (gx, gy, gearR, teeth) => {
+                        ctx.beginPath();
+                        for (let i = 0; i < teeth; i++) {
+                            const a1 = (i / teeth) * Math.PI * 2;
+                            const a2 = a1 + Math.PI / teeth;
+                            const outer = gearR * 1.3;
+                            ctx.lineTo(gx + Math.cos(a1) * outer, gy + Math.sin(a1) * outer);
+                            ctx.lineTo(gx + Math.cos(a2) * gearR, gy + Math.sin(a2) * gearR);
+                        }
+                        ctx.closePath(); ctx.fill();
+                        ctx.strokeStyle = '#2F2F2F'; ctx.lineWidth = 0.8; ctx.stroke();
+                        ctx.beginPath(); ctx.arc(gx, gy, gearR * 0.45, 0, Math.PI * 2);
+                        ctx.fillStyle = '#8B8B8B'; ctx.fill(); ctx.stroke();
+                    };
+                    ctx.fillStyle = '#dcdcdc';
+                    drawGear(cx - r * 0.22, cy + r * 0.14, r * 0.3, 7);
+                    ctx.fillStyle = '#eee';
+                    drawGear(cx + r * 0.26, cy - r * 0.18, r * 0.24, 6);
+                    ctx.restore();
+                },
+                category: 'upgrade',
+                prerequisite: 'transform-workshop-expansion',
+                completedCampaignRequirement: 'campaign-3'
             }
         ];
 
         for (const upgrade of upgradeData) {
+            // UpgradeRegistry.js is the single source of truth for price and unlock
+            // gating - this local upgradeData array only supplies presentation (name
+            // flavor text, description, effect bullets, icon). Pulling cost/prerequisite/
+            // campaign gates from the registry here (falling back to the local value if
+            // an id isn't registered) is what makes a registry price edit actually show
+            // up in this menu instead of silently diverging from it.
+            const registryData = UpgradeRegistry.getUpgrade(upgrade.id);
+            const cost = registryData?.cost ?? upgrade.cost;
+            const prerequisite = registryData?.prerequisite ?? upgrade.prerequisite;
+            const campaignRequirement = registryData?.campaignRequirement ?? upgrade.campaignRequirement;
+            const completedCampaignRequirement = registryData?.completedCampaignRequirement ?? upgrade.completedCampaignRequirement;
+
             const isPurchased = upgradeSystem.hasUpgrade(upgrade.id);
             let canPurchase = !isPurchased;
             let requirementMsg = null;
 
             // Check prerequisites — hide upgrade entirely if prerequisite not yet met
-            if (!isPurchased && upgrade.prerequisite && !upgradeSystem.hasUpgrade(upgrade.prerequisite)) {
+            if (!isPurchased && prerequisite && !upgradeSystem.hasUpgrade(prerequisite)) {
                 continue;
             }
 
             // Check campaign requirement — hide the upgrade entirely if not yet unlocked
-            if (!isPurchased && upgrade.campaignRequirement && !unlockedCampaigns.includes(upgrade.campaignRequirement)) {
+            if (!isPurchased && campaignRequirement && !unlockedCampaigns.includes(campaignRequirement)) {
                 continue;
             }
 
             // Check completed-campaign requirement — hide the upgrade entirely until that
             // campaign has actually been beaten (not just unlocked)
-            if (!isPurchased && upgrade.completedCampaignRequirement && !completedCampaigns.includes(upgrade.completedCampaignRequirement)) {
+            if (!isPurchased && completedCampaignRequirement && !completedCampaigns.includes(completedCampaignRequirement)) {
                 continue;
             }
 
@@ -707,12 +805,12 @@ export class UpgradesMenu {
             if (isPurchased) {
                 requirementMsg = 'Purchased';
             }
-            
+
             items.push({
                 id: upgrade.id,
                 name: upgrade.name,
                 description: upgrade.description,
-                cost: upgrade.cost,
+                cost: cost,
                 drawIcon: upgrade.drawIcon,
                 category: upgrade.category,
                 type: 'upgrade',
@@ -723,7 +821,7 @@ export class UpgradesMenu {
                 requirementMsg: requirementMsg
             });
         }
-        
+
         return items;
     }
 

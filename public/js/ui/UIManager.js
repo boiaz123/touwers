@@ -89,7 +89,21 @@ export class UIManager {
             } else {
                 btn.style.display = 'flex';
                 // Check if affordable (or free from marketplace)
-                const canAfford = this.gameState.canAfford(cost) || isFreeFromMarketplace;
+                let canAfford = this.gameState.canAfford(cost) || isFreeFromMarketplace;
+
+                // Magic Towers past the free-with-gold cap also need a full set of
+                // elemental gems on top of gold (see TowerManager.getMagicTowerGemCost) -
+                // treat a gem shortfall the same as a gold shortfall for the button's
+                // affordability styling.
+                if (towerType === 'magic' && !isFreeFromMarketplace) {
+                    const gemCost = this.towerManager.getMagicTowerGemCost();
+                    if (gemCost) {
+                        canAfford = canAfford && this.towerManager.hasEnoughGems(gemCost);
+                        btn.title = `Requires ${gemCost.fire} of each elemental gem (Fire, Water, Air, Earth) in addition to gold`;
+                    } else {
+                        btn.removeAttribute('title');
+                    }
+                }
 
                 // Only disable for build-limit/unlock reasons - affordability no longer
                 // blocks entering placement mode. The placement preview shows red/green
@@ -800,7 +814,7 @@ export class UIManager {
                     <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
                     <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
-                specialHTML = 'Magical fortress that unlocks Magic Towers and provides elemental upgrades. Level 1 (on build) unlocks Magic Towers and Gem Mining. Level 2 unlocks Magic Tower Leveling (Fire/Water/Air/Earth, up to Level 20 each) using elemental gems. Level 3 unlocks the Super Weapon Lab.';
+                specialHTML = 'Magical fortress that unlocks Magic Towers and provides elemental upgrades. Level 1 (on build) unlocks Magic Towers and Gem Mining. Level 2 unlocks Magic Tower Leveling (Fire/Water/Air/Earth, up to Level 20 each) using elemental gems. Level 3 unlocks the Super Weapon Lab. The first 5 Magic Towers cost gold alone; every Magic Tower after that also costs a full set of elemental gems.';
                 if (!unlockSystem.unlockedBuildings.has('academy')) {
                     unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 4</div>';
                 } else if (unlockSystem.academyCount >= 1) {
@@ -3334,14 +3348,25 @@ export class UIManager {
             const transformUnlocked = upgradeSystem && upgradeSystem.hasUpgrade(transformDef.unlockId);
             const towerTypeReady = transformUnlocked && this.towerManager.canTransformTowerType(tower.type);
             if (towerTypeReady) {
-                const canAfford = this.gameState.gold >= transformDef.transformCost;
+                // Per-type Transformation Tower cap (starts at 3, raised to 4/5 by the
+                // Workshop Expansion/Annex marketplace upgrades - see
+                // TowerManager.getTransformSlotLimit) - a maxed-out slot count blocks the
+                // transform even though the tower itself is otherwise ready.
+                const slotLimit = this.towerManager.getTransformSlotLimit();
+                const slotsUsed = this.towerManager.getTransformedCount(tower.type);
+                const slotsFull = slotsUsed >= slotLimit;
+                const canAfford = !slotsFull && this.gameState.gold >= transformDef.transformCost;
                 const targetName = transformDef.class.getInfo().name;
-                const reason = canAfford ? `Upgrade to ${targetName}` : 'Not enough gold';
+                const reason = slotsFull
+                    ? (slotLimit < 5
+                        ? `Transform slots full (${slotsUsed}/${slotLimit}) - buy a Workshop upgrade in the marketplace to raise the limit`
+                        : `Transform slots full (${slotsUsed}/${slotLimit}) - maximum reached`)
+                    : (canAfford ? `Upgrade to ${targetName}` : 'Not enough gold');
                 transformButtonHTML = `
                     <button id="transform-tower-btn-${tower.gridX}-${tower.gridY}" class="forge-upgrade-btn forge-level-upgrade-btn" ${canAfford ? '' : 'disabled'} title="${reason}">
                         <div class="forge-upgrade-btn-content">
-                            <span class="btn-label">Upgrade to ${targetName}</span>
-                            <span class="btn-cost"><span class="coin-xs"></span> ${transformDef.transformCost}</span>
+                            <span class="btn-label">${slotsFull ? `Slots Full (${slotsUsed}/${slotLimit})` : `Upgrade to ${targetName}`}</span>
+                            <span class="btn-cost">${slotsFull ? '' : `<span class="coin-xs"></span> ${transformDef.transformCost}`}</span>
                         </div>
                     </button>
                 `;

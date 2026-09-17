@@ -104,7 +104,23 @@ export class TowerManager {
         
         // Check if this is a free placement from marketplace
         const isFree = this.stateManager?.gameplayState?.checkFreePlacement(type, true) || false;
+
+        // Magic Towers past the free-with-gold cap also cost a full set of elemental gems
+        // (see getMagicTowerGemCost) - checked up front, alongside gold, so a shortfall
+        // blocks placement the same way insufficient gold already does.
+        let magicGemCost = null;
+        if (!isFree && type === 'magic') {
+            magicGemCost = this.getMagicTowerGemCost();
+            if (magicGemCost && !this.hasEnoughGems(magicGemCost)) {
+                return false;
+            }
+        }
+
         if (isFree || this.gameState.spend(towerType.cost)) {
+            if (magicGemCost) {
+                this.spendGems(magicGemCost);
+            }
+
             const tower = TowerRegistry.createTower(type, x, y, gridX, gridY);
 
             // Assign audio manager to tower for sound effects
@@ -660,10 +676,51 @@ export class TowerManager {
         if (academies.length > 0) {
             return academies[0].gems;
         }
-        
+
         return { fire: 0, water: 0, air: 0, earth: 0, diamond: 0 };
     }
-    
+
+    // Magic Tower elemental gem economy: once the Academy is built, the first
+    // MAGIC_TOWER_FREE_LIMIT Magic Towers cost gold alone. Every Magic Tower after that
+    // additionally costs a full set of each elemental gem (fire/water/air/earth) - a flat
+    // MAGIC_TOWER_BASE_GEM_COST of each for the first few gem-gated towers, then +1 more
+    // per gem type for every tower after that.
+    static MAGIC_TOWER_FREE_LIMIT = 5;
+    static MAGIC_TOWER_BASE_GEM_COST = 3;
+
+    /**
+     * Gem cost (per element) for the NEXT Magic Tower placement, or null if the free-with-
+     * gold limit hasn't been reached yet (i.e. no gems required for this placement).
+     */
+    getMagicTowerGemCost() {
+        const magicTowerCount = this.towers.filter(t => t.type === 'magic').length;
+        if (magicTowerCount < TowerManager.MAGIC_TOWER_FREE_LIMIT) return null;
+
+        // 1-based index among gem-gated towers: the 6th Magic Tower overall is the 1st
+        // gem-gated one, the 7th is the 2nd, etc.
+        const gemGatedIndex = magicTowerCount - TowerManager.MAGIC_TOWER_FREE_LIMIT + 1;
+        const perGem = gemGatedIndex <= TowerManager.MAGIC_TOWER_BASE_GEM_COST
+            ? TowerManager.MAGIC_TOWER_BASE_GEM_COST
+            : gemGatedIndex;
+        return { fire: perGem, water: perGem, air: perGem, earth: perGem };
+    }
+
+    /** Whether the academy's current gem stocks cover the given {fire, water, air, earth} cost. */
+    hasEnoughGems(cost) {
+        if (!cost) return true;
+        const gems = this.getGemStocks();
+        return Object.keys(cost).every(key => (gems[key] || 0) >= cost[key]);
+    }
+
+    /** Deducts the given {fire, water, air, earth} cost from the academy's gem stocks. */
+    spendGems(cost) {
+        if (!cost) return;
+        const gems = this.getGemStocks();
+        Object.keys(cost).forEach(key => {
+            gems[key] = (gems[key] || 0) - cost[key];
+        });
+    }
+
     recalculateAllTowerStats() {
         // Force recalculation of all tower stats when forge upgrades change
         for (let i = 0; i < this.towers.length; i++) {
@@ -1158,6 +1215,35 @@ export class TowerManager {
     }
 
     /**
+     * Per-tower-type cap on how many transformed towers of a single base type (e.g. how
+     * many Slinger Towers) can exist at once. Starts at 3 and is raised by the
+     * 'transform-workshop-expansion' (→4) and 'transform-workshop-annex' (→5) settlement
+     * upgrades, purchased in the marketplace once Forest/Desert are beaten respectively
+     * (see UpgradeRegistry.js). Applies uniformly to every transformable base type.
+     */
+    getTransformSlotLimit() {
+        const upgradeSystem = this.stateManager && this.stateManager.upgradeSystem;
+        let limit = 3;
+        if (upgradeSystem && upgradeSystem.hasUpgrade('transform-workshop-expansion')) limit = 4;
+        if (upgradeSystem && upgradeSystem.hasUpgrade('transform-workshop-annex')) limit = 5;
+        return limit;
+    }
+
+    /**
+     * How many currently-placed towers of the given base type have already been
+     * transformed - counted live off this.towers rather than an incrementing counter, so
+     * selling/losing a transformed tower immediately frees its slot back up.
+     */
+    getTransformedCount(baseType) {
+        let count = 0;
+        for (let i = 0; i < this.towers.length; i++) {
+            const t = this.towers[i];
+            if (t.type === baseType && t.transformedType) count++;
+        }
+        return count;
+    }
+
+    /**
      * Look up the transform definition available for a given placed tower, or null if
      * this tower type has no transform or the tower has already been transformed.
      */
@@ -1169,8 +1255,8 @@ export class TowerManager {
     /**
      * Transform a placed tower into its advanced variant in place (same tile). Requires
      * the settlement unlock for this transform to have been purchased, this tower type's
-     * own Tower Forge and Training Grounds upgrades both maxed this level, and enough
-     * in-level gold.
+     * own Tower Forge and Training Grounds upgrades both maxed this level, the per-type
+     * transform slot limit not yet reached, and enough in-level gold.
      * @returns {Object|false} - the new tower instance on success, false otherwise
      */
     transformTower(tower) {
@@ -1180,6 +1266,7 @@ export class TowerManager {
         const upgradeSystem = this.stateManager && this.stateManager.upgradeSystem;
         if (!upgradeSystem || !upgradeSystem.hasUpgrade(transform.unlockId)) return false;
         if (!this.canTransformTowerType(tower.type)) return false;
+        if (this.getTransformedCount(tower.type) >= this.getTransformSlotLimit()) return false;
         if (this.gameState.gold < transform.transformCost) return false;
 
         this.gameState.gold -= transform.transformCost;

@@ -123,6 +123,34 @@ export class UpgradeRegistry {
             icon: '◇',
             category: 'building',
             effect: 'Unlocks the Poison Archer → Super Poison Tower transform'
+        },
+        'commanders-workshop': {
+            name: "Commander's Workshop",
+            description: 'Blueprints for a private workshop where you can design and test your own battle maps.',
+            cost: 2000,
+            icon: '◈',
+            category: 'building',
+            effect: "Unlocks the Commander's Workshop level designer",
+            completedCampaignRequirement: 'campaign-1'
+        },
+        'transform-workshop-expansion': {
+            name: 'Workshop Expansion',
+            description: 'Additional workspace lets your artificers maintain a fourth transformed tower of any single type at once. Available after beating The Verdant Woodlands.',
+            cost: 5000,
+            icon: '◇',
+            category: 'building',
+            effect: 'Raises the per-type Transformation Tower limit from 3 to 4',
+            completedCampaignRequirement: 'campaign-1'
+        },
+        'transform-workshop-annex': {
+            name: 'Workshop Annex',
+            description: 'A dedicated annex pushes your artificers\' capacity to a fifth transformed tower of any single type at once. Available after beating The Scorching Sands.',
+            cost: 10000,
+            icon: '◇',
+            category: 'building',
+            effect: 'Raises the per-type Transformation Tower limit from 4 to 5',
+            prerequisite: 'transform-workshop-expansion',
+            completedCampaignRequirement: 'campaign-3'
         }
     };
 
