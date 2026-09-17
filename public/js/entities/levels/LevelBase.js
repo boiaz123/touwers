@@ -837,6 +837,32 @@ export class LevelBase {
     }
 
     /**
+     * gridX/gridY to feed into renderSingleTerrainElement (via a temporary substitution -
+     * see TerrainRenderAdapter.register() and GameplayState's Canvas2D fallback) so the
+     * element's actual visual ground-contact point - not its raw pre-shift draw anchor -
+     * lands exactly on the center of the one cell markTerrainCells() reserves for it
+     * (Math.floor(gridX/gridY)). Levels are authored with gridX/gridY sitting exactly on
+     * a grid *line*, shared by up to 4 cells; drawing there at face value straddles a
+     * boundary instead of sitting inside the single cell that's actually blocked.
+     *
+     * Simply centering isn't enough on its own: getTerrainElementDepthY() documents that
+     * several types/campaigns (desert & space 'vegetation' most visibly - no trunk draw to
+     * cancel the canopy-headroom pre-shift) end up with their true ground contact up to
+     * size*0.45px away from whatever raw screenY they're drawn at. This backs that same
+     * per-type shift out of the cell center first, so when renderSingleTerrainElement's
+     * switch re-applies it, the two cancel and the visual result lands on the cell center.
+     */
+    getTerrainElementRenderGrid(element) {
+        const cellSize = this.cellSize;
+        const rawScreenY = element.gridY * cellSize;
+        const groundContactShift = this.getTerrainElementDepthY(element) - rawScreenY;
+        return {
+            gridX: Math.floor(element.gridX) + 0.5,
+            gridY: Math.floor(element.gridY) + 0.5 - groundContactShift / cellSize
+        };
+    }
+
+    /**
      * terrainElements sorted by depth-Y for correct painter's-algorithm draw order.
      * Only used by the brief Canvas2D fallback render path (before Pixi's async init
      * finishes and zIndex-based sorting takes over) - cached since terrainElements never

@@ -488,8 +488,15 @@ export class LevelDesigner {
         if (!el) return;
         const cellWidthPixels = this.canvas.width / this.gridWidth;
         const cellHeightPixels = this.canvas.height / this.gridHeight;
-        const x = el.gridX * cellWidthPixels;
-        const y = el.gridY * cellHeightPixels;
+        const campaign = this.currentCampaign || 'forest';
+        // Match drawTerrainElements()'s compensated anchor (cell center, minus this
+        // type's own ground-contact pre-shift) so this ring lands on the element it's
+        // actually highlighting instead of the grid corner. el is always vegetation/rock
+        // here (see the hover search above), never water, so no water special-case needed.
+        const rawScreenY = el.gridY * cellHeightPixels;
+        const groundContactShift = this._terrainElementDepthY(el, cellWidthPixels, cellHeightPixels, campaign) - rawScreenY;
+        const x = (Math.floor(el.gridX) + 0.5) * cellWidthPixels;
+        const y = (Math.floor(el.gridY) + 0.5) * cellHeightPixels - groundContactShift;
         const avgCell = (cellWidthPixels + cellHeightPixels) / 2;
         const r = el.size * avgCell * 0.55;
 
@@ -2360,8 +2367,22 @@ export class LevelDesigner {
             this._terrainElementDepthY(b, cellWidthPixels, cellHeightPixels, campaign)
         );
         sorted.forEach(element => {
-            const x = element.gridX * cellWidthPixels;
-            const y = element.gridY * cellHeightPixels;
+            // Water (lakes/rivers) is placed freely and can span several cells by
+            // radius - only vegetation/rock/etc (always exactly 1 cell, see
+            // LevelBase.markTerrainCells) get snapped to a cell anchor below.
+            let x = element.gridX * cellWidthPixels;
+            let y = element.gridY * cellHeightPixels;
+            if (element.type !== 'water') {
+                // Center on the single cell the game actually blocks (Math.floor(gridX/gridY))
+                // rather than the raw grid-corner intersection, and back out this type's
+                // own ground-contact pre-shift (applied again just below) so the *visual*
+                // ground contact - not the raw draw anchor - lands on that cell's center.
+                // Mirrors LevelBase.getTerrainElementRenderGrid's reasoning exactly.
+                const rawScreenY = element.gridY * cellHeightPixels;
+                const groundContactShift = this._terrainElementDepthY(element, cellWidthPixels, cellHeightPixels, campaign) - rawScreenY;
+                x = (Math.floor(element.gridX) + 0.5) * cellWidthPixels;
+                y = (Math.floor(element.gridY) + 0.5) * cellHeightPixels - groundContactShift;
+            }
             const baseSize = element.size * Math.min(cellWidthPixels, cellHeightPixels);
             // Mirrors LevelBase.renderSingleTerrainElement()'s sizeScale exactly, so
             // mountain/space/forest trees & rocks (which render 2x larger in-game than

@@ -2568,7 +2568,24 @@ export class GameplayState {
                     this._syncTerrainPixi(el);
                     this.performanceMonitor.endSlot('renderSync');
                 } else {
-                    this.level.renderSingleTerrainElement(ctx, el);
+                    // Draw so the element's actual visual ground-contact point lands on
+                    // the center of the single cell markTerrainCells() actually blocks,
+                    // not the raw gridX*cellSize grid-line corner - see
+                    // LevelBase.getTerrainElementRenderGrid's doc comment (matches
+                    // TerrainRenderAdapter.register()'s use of the same helper).
+                    // Substitute-and-restore mirrors the trick TerrainRenderAdapter's
+                    // bake step already uses to reposition this shared renderer without
+                    // touching its internal per-type shift formula.
+                    const realGridX = el.gridX, realGridY = el.gridY;
+                    const renderGrid = this.level.getTerrainElementRenderGrid(el);
+                    el.gridX = renderGrid.gridX;
+                    el.gridY = renderGrid.gridY;
+                    try {
+                        this.level.renderSingleTerrainElement(ctx, el);
+                    } finally {
+                        el.gridX = realGridX;
+                        el.gridY = realGridY;
+                    }
                 }
             }
         }

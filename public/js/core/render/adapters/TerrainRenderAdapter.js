@@ -70,7 +70,17 @@ export class TerrainRenderAdapter {
 
         const sprite = new Sprite(texture);
         sprite.anchor.set(0.5, 0.5);
-        sprite.position.set(element.gridX * cellSize, element.gridY * cellSize);
+        // Sprite center == the texture's un-shifted bake anchor (see _getOrBakeLayer:
+        // the bake fakes gridX/gridY to land that anchor at the bake canvas's exact
+        // center), which plays the same role sprite.position plays here relative to
+        // the per-type pre-shift baked into the texture's pixels. getTerrainElementRenderGrid()
+        // gives the gridX/gridY whose raw screenX/screenY - fed through that same
+        // pre-shift - lands the element's real visual ground-contact point on the
+        // center of the one cell markTerrainCells() actually reserves for it, instead
+        // of on the raw gridX*cellSize grid-line corner (shared by up to 4 cells) that
+        // levels are authored on. See LevelBase.getTerrainElementRenderGrid's doc comment.
+        const renderGrid = level.getTerrainElementRenderGrid(element);
+        sprite.position.set(renderGrid.gridX * cellSize, renderGrid.gridY * cellSize);
         // Sort key uses the element's actual painted ground-contact Y (see
         // LevelBase.getTerrainElementDepthY), not the raw gridY - trees are drawn shifted
         // up from their grid row so the canopy has headroom, so their zIndex needs the
