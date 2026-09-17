@@ -567,12 +567,27 @@ export class GameplayState {
                 const gemCost = this.towerManager.getMagicTowerGemCost();
                 if (gemCost && !this.towerManager.hasEnoughGems(gemCost)) return false;
             }
+            // Combination Towers past the free-with-gold cap also need a diamond (see
+            // TowerManager.getCombinationTowerDiamondCost) - same treatment as Magic Tower gems.
+            if (this.selectedTowerType === 'combination' && this.towerManager) {
+                const diamondCost = this.towerManager.getCombinationTowerDiamondCost();
+                if (diamondCost && !this.towerManager.hasEnoughGems(diamondCost)) return false;
+            }
             return true;
         }
         if (this.selectedBuildingType) {
             if (this.hasFreePlacement(this.selectedBuildingType, false)) return true;
             const buildingType = BuildingRegistry.getBuildingType(this.selectedBuildingType);
-            return buildingType ? this.gameState.canAfford(buildingType.cost) : true;
+            if (!buildingType) return true;
+            if (!this.gameState.canAfford(buildingType.cost)) return false;
+            // Super Weapon Lab also requires 5 diamonds up front (see
+            // BuildingManager.placeBuilding) - factor that in too so the preview doesn't
+            // show green while diamonds are still short.
+            if (this.selectedBuildingType === 'superweapon' && this.towerManager) {
+                const diamondCount = this.towerManager.getGemStocks().diamond || 0;
+                if (diamondCount < 5) return false;
+            }
+            return true;
         }
         return true;
     }

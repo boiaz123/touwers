@@ -254,24 +254,6 @@ function _drawMagnifier(ctx, cx, cy, size) {
     ctx.restore();
 }
 
-function _drawLightning(ctx, cx, cy, size) {
-    ctx.save();
-    ctx.shadowColor = '#FFD700'; ctx.shadowBlur = size * 0.35;
-    ctx.beginPath();
-    ctx.moveTo(cx + size * 0.12, cy - size * 0.46);
-    ctx.lineTo(cx - size * 0.08, cy - size * 0.02);
-    ctx.lineTo(cx + size * 0.06, cy - size * 0.02);
-    ctx.lineTo(cx - size * 0.14, cy + size * 0.46);
-    ctx.lineTo(cx + size * 0.12, cy + size * 0.04);
-    ctx.lineTo(cx - size * 0.02, cy + size * 0.04);
-    ctx.closePath();
-    const g = ctx.createLinearGradient(cx, cy - size * 0.46, cx, cy + size * 0.46);
-    g.addColorStop(0, '#FFFFFF'); g.addColorStop(0.3, '#FFE060'); g.addColorStop(1, '#FF8000');
-    ctx.fillStyle = g; ctx.fill();
-    ctx.strokeStyle = '#CC6000'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.restore();
-}
 // ──────────────────────────────────────────────────────────────────────────────
 
 export class MarketplaceRegistry {
@@ -680,25 +662,14 @@ export class MarketplaceRegistry {
         },
         'intel-pack-3': {
             name: 'Spy Report III',
-            description: 'Arcane scholars decipher cryptic runes revealing secrets of magical foes. Unlock intel on Mage Enemies, Frog Enemies, and the Goliath Frog. Master the arcane, and you master the battlefield.',
+            description: 'Arcane scholars decipher cryptic runes revealing secrets of magical foes. Unlock intel on Mage Enemies, Frog Enemies, the Goliath Frog, and the Elemental Frogs (Earth, Water, Fire, and Air). Master the arcane, and you master the battlefield.',
             cost: 300,
             drawIcon: _drawMagnifier,
             category: 'intel',
             type: 'consumable',
-            effect: 'Unlock intel on magical enemies',
+            effect: 'Unlock intel on magical and elemental enemies',
             requirements: [],
             campaignRequirement: 'campaign-3'
-        },
-        'intel-pack-4': {
-            name: 'Spy Report IV',
-            description: 'The most dangerous intelligence—knowledge of the realm\'s rarest and most powerful foes. Unlock intel on Elemental Frog Enemies. Understanding these ancient forces may be the key to your survival.',
-            cost: 400,
-            drawIcon: _drawLightning,
-            category: 'intel',
-            type: 'consumable',
-            effect: 'Unlock intel on elemental enemies',
-            requirements: [],
-            campaignRequirement: 'campaign-4'
         }
     };
 

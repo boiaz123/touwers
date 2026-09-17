@@ -77,7 +77,7 @@ export class EnemyIntelRegistry {
             stats: { health: 2000, speed: 30, armour: 12, magicResistance: 0.4, damage: 9 },
             abilities: ['High HP', 'Magic resistant', 'Bursts open on death', 'Releases a brood of frogs']
         },
-        // ELEMENTAL ENEMIES (Spy Report IV)
+        // ELEMENTAL FROGS (Spy Report III)
         'earthfrog': {
             name: 'Frog of Earth',
             description: 'A frog infused with ancient earth magic. It shakes the ground with powerful stomps and boasts exceptional durability.',
@@ -112,8 +112,7 @@ export class EnemyIntelRegistry {
     static #intelMapping = {
         'intel-pack-1': ['basic', 'archer', 'beefyenemy', 'villager', 'knight'],
         'intel-pack-2': ['shieldknight', 'ramcart'],
-        'intel-pack-3': ['mage', 'frog', 'walkingfrog'],
-        'intel-pack-4': ['earthfrog', 'waterfrog', 'firefrog', 'airfrog']
+        'intel-pack-3': ['mage', 'frog', 'walkingfrog', 'earthfrog', 'waterfrog', 'firefrog', 'airfrog']
     };
 
     /**

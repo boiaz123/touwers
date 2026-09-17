@@ -481,9 +481,9 @@ export class DiamondPress extends Building {
         return {
             name: 'Diamond Press',
             description: 'Exchanges elemental gems for diamonds',
-            effect: '3 of each gem gives 1 diamond',
+            effect: '3 of each gem + 1000 gold gives 1 diamond',
             size: '2x2',
-            cost: 500,
+            cost: 2000,
             unlocker: 'SuperWeapon Lab (Level 2)'
         };
     }

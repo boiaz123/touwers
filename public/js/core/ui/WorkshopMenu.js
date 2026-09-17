@@ -11,8 +11,7 @@ import { CampaignRegistry } from '../../game/CampaignRegistry.js';
 const INTEL_PACK_NAMES = {
     'intel-pack-1': 'Spy Report I',
     'intel-pack-2': 'Spy Report II',
-    'intel-pack-3': 'Spy Report III',
-    'intel-pack-4': 'Spy Report IV'
+    'intel-pack-3': 'Spy Report III'
 };
 
 export class WorkshopMenu {

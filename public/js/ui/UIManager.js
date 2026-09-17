@@ -105,6 +105,17 @@ export class UIManager {
                     if (this._magicTowerGemIcon) this._magicTowerGemIcon.style.display = gemCost ? 'inline-block' : 'none';
                 }
 
+                // Combination Towers past the free-with-gold cap also need a diamond on top
+                // of gold (see TowerManager.getCombinationTowerDiamondCost), mirroring the
+                // Magic Tower's elemental gem gating above.
+                if (towerType === 'combination' && !isFreeFromMarketplace) {
+                    const diamondCost = this.towerManager.getCombinationTowerDiamondCost();
+                    if (diamondCost) {
+                        canAfford = canAfford && this.towerManager.hasEnoughGems(diamondCost);
+                    }
+                    if (this._combinationTowerDiamondIcon) this._combinationTowerDiamondIcon.style.display = diamondCost ? 'inline-block' : 'none';
+                }
+
                 // Only disable for build-limit/unlock reasons - affordability no longer
                 // blocks entering placement mode. The placement preview shows red/green
                 // based on gold and turns green once enough coins are available.
@@ -146,8 +157,23 @@ export class UIManager {
             } else {
                 btn.style.display = 'flex';
                 // Check if it can be built (not at limit) and affordable (or free from marketplace)
-                const canBuild = this.towerManager.unlockSystem.canBuildBuilding(buildingType);
+                let canBuild = this.towerManager.unlockSystem.canBuildBuilding(buildingType);
                 const canAfford = this.gameState.canAfford(cost) || isFreeFromMarketplace;
+
+                // Super Weapon Lab also requires 5 diamonds up front (see
+                // BuildingManager.placeBuilding) - unlike the Magic/Combination Tower gem
+                // gating, gate the button itself here rather than just the "unaffordable"
+                // styling, so the placement preview can't go green on gold alone while
+                // diamonds are still short and then silently fail to place.
+                if (buildingType === 'superweapon' && !isFreeFromMarketplace) {
+                    const diamondCount = this.towerManager.getGemStocks().diamond || 0;
+                    const requiredDiamonds = 5;
+                    if (this._superweaponDiamondIcon) {
+                        this._superweaponDiamondIcon.style.display = 'inline-block';
+                        this._superweaponDiamondIcon.style.opacity = diamondCount >= requiredDiamonds ? '1' : '0.4';
+                    }
+                    if (diamondCount < requiredDiamonds) canBuild = false;
+                }
 
                 // Only disable for build-limit/unlock reasons - affordability no longer
                 // blocks entering placement mode. The placement preview shows red/green
@@ -449,6 +475,8 @@ export class UIManager {
         this._towerBtns = [...document.querySelectorAll('.tower-btn')];
         this._buildingBtns = [...document.querySelectorAll('.building-btn')];
         this._magicTowerGemIcon = document.getElementById('magic-tower-gem-icon');
+        this._combinationTowerDiamondIcon = document.getElementById('combination-tower-diamond-icon');
+        this._superweaponDiamondIcon = document.getElementById('superweapon-diamond-icon');
 
         // Initial button state update
         this.updateButtonStates();
@@ -603,7 +631,8 @@ export class UIManager {
         let statsHTML = '';
         let specialHTML = '';
         let unlockHTML = '';
-        
+        let costString = `<span class="coin-xs"></span>${info.cost}`;
+
         // Get unlock system for requirement info
         const unlockSystem = this.towerManager.getUnlockSystem();
         const isUnlocked = unlockSystem.canBuildTower(towerType);
@@ -687,14 +716,10 @@ export class UIManager {
                     <div><span>Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
                     <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
                     <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
-                    ${gemCost ? `
-                    <div><span>Gem Cost:</span>
-                        <span class="gem-sm fire-gem"></span>${gemCost.fire}
-                        <span class="gem-sm water-gem"></span>${gemCost.water}
-                        <span class="gem-sm air-gem"></span>${gemCost.air}
-                        <span class="gem-sm earth-gem"></span>${gemCost.earth}
-                    </div>` : ''}
                 `;
+                if (gemCost) {
+                    costString += ` + <span class="gem-sm fire-gem"></span>${gemCost.fire}<span class="gem-sm water-gem"></span>${gemCost.water}<span class="gem-sm air-gem"></span>${gemCost.air}<span class="gem-sm earth-gem"></span>${gemCost.earth}`;
+                }
                 specialHTML = 'Elemental tower with a selectable damage type — Fire, Water, Air, or Earth. Requires the Magic Academy; each element gains its own bonuses from Magic Academy elemental research.';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Magic Academy</div>';
                 else if (gemCost) unlockHTML = '<div style="color: #ffd700;">Also requires a full set of elemental gems</div>';
@@ -709,15 +734,21 @@ export class UIManager {
                 specialHTML = 'Small fortified outpost placed on the path that hires a Level 1 defender to block and fight enemies. Defenders spawn for 100g with a 10-second cooldown after defeat; defender levels upgrade at Training Grounds.';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Training Grounds</div>';
                 break;
-            case 'combination':
+            case 'combination': {
+                const combinationDiamondCost = this.towerManager.getCombinationTowerDiamondCost();
                 statsHTML = `
                     <div><span>Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
                     <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
                     <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
                 `;
+                if (combinationDiamondCost) {
+                    costString += ` + <span class="gem-sm diamond-gem"></span>${combinationDiamondCost.diamond}`;
+                }
                 specialHTML = 'Advanced tower that casts devastating combination spells. Requires Magic Academy Level 1; unlock individual spells by investing elemental gems at the Magic Academy.';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Super Weapon Lab</div>';
+                else if (combinationDiamondCost) unlockHTML = '<div style="color: #ffd700;">Also requires a diamond</div>';
                 break;
+            }
         }
         
         // Create hover menu
@@ -729,7 +760,7 @@ export class UIManager {
             <div class="info-stats">
                 ${statsHTML}
                 <div style="border-top: 1px solid rgba(255, 215, 0, 0.2); padding-top: 0.3rem; margin-top: 0.2rem;">
-                    <span>Cost:</span> <span style="color: #FFD700;"><span class="coin-xs"></span>${info.cost}</span>
+                    <span>Cost:</span> <span style="color: #FFD700;">${costString}</span>
                 </div>
             </div>
             <div class="info-description">${specialHTML || info.description}</div>
@@ -872,11 +903,11 @@ export class UIManager {
                 break;
             case 'diamond-press':
                 statsHTML = `
-                    <div><span>Exchange:</span> <span style="color: #FFD700;">3 of each gem → 1 ◆</span></div>
+                    <div><span>Exchange:</span> <span style="color: #FFD700;">3 of each gem + 1000g → 1 ◆</span></div>
                     <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
                     <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
-                specialHTML = 'Exchanges elemental gems (Fire/Water/Air/Earth) for diamonds, 3 of each gem per diamond, used for Super Weapon Lab upgrades and spell enhancements.';
+                specialHTML = 'Exchanges elemental gems (Fire/Water/Air/Earth) plus 1000 gold for diamonds, 3 of each gem per diamond, used for Super Weapon Lab upgrades and spell enhancements.';
                 if (!unlockSystem.unlockedBuildings.has('diamond-press')) {
                     unlockHTML = '<div style="color: #ff6b6b;">Requires: Super Weapon Lab Level 2</div>';
                 } else if (unlockSystem.diamondPressCount >= 1) {
@@ -4849,7 +4880,10 @@ export class UIManager {
         const diamond = academy ? (academy.gems.diamond || 0) : 0;
 
         // Check if exchange is possible
-        const canExchange = fire >= 3 && water >= 3 && air >= 3 && earth >= 3;
+        const pressGoldCost = 1000;
+        const hasGems = fire >= 3 && water >= 3 && air >= 3 && earth >= 3;
+        const hasGold = this.gameState.canAfford(pressGoldCost);
+        const canExchange = hasGems && hasGold;
 
         // Build the menu HTML
         let contentHTML = `
@@ -4893,12 +4927,12 @@ export class UIManager {
                     </div>
 
                     <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.4rem; margin-bottom: 0.5rem; background: rgba(100, 200, 255, 0.1); border: 1px solid rgba(100, 200, 255, 0.25); border-radius: 4px;">
-                        <span style="font-size: 0.8rem; color: #bbb;">3 each →</span>
+                        <span style="font-size: 0.8rem; color: #bbb;">3 each + <span style="color: ${hasGold ? '#FFD700' : '#ff6464'};">${pressGoldCost}g</span> →</span>
                         <span style="font-size: 1.2rem; font-weight: bold; color: #64dfff;">◆ 1</span>
                     </div>
 
                     <button id="exchange-gems-btn" class="upgrade-button panel-upgrade-btn" style="width: 100%; padding: 0.55rem; font-size: 0.85rem; font-weight: 600; margin: 0; ${!canExchange ? 'opacity: 0.5; cursor: not-allowed;' : ''};" ${!canExchange ? 'disabled' : ''}>
-                        ${canExchange ? 'Press Diamond' : 'Need 3 of each gem'}
+                        ${canExchange ? 'Press Diamond' : (!hasGems ? 'Need 3 of each gem' : `Need ${pressGoldCost} gold`)}
                     </button>
                 </div>
             </div>
@@ -4917,7 +4951,7 @@ export class UIManager {
         const exchangeBtn = panel.querySelector('#exchange-gems-btn');
         if (exchangeBtn && canExchange) {
             exchangeBtn.addEventListener('click', () => {
-                if (academy && fire >= 3 && water >= 3 && air >= 3 && earth >= 3) {
+                if (academy && fire >= 3 && water >= 3 && air >= 3 && earth >= 3 && this.gameState.spend(pressGoldCost)) {
                     // Deduct gems from academy
                     academy.gems.fire -= 3;
                     academy.gems.water -= 3;

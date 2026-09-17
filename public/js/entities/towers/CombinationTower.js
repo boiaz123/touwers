@@ -1454,7 +1454,7 @@ export class CombinationTower extends Tower {
             damage: '55 + combination effects',
             range: '140',
             fireRate: '0.9/sec',
-            cost: 750,
+            cost: 1200,
             icon: ''
         };
     }

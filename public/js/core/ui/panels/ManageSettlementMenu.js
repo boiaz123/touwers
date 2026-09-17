@@ -251,7 +251,8 @@ export class ManageSettlementMenu {
             if (this.stateManager.audioManager) {
                 this.stateManager.audioManager.playSFX('button-click');
             }
-            this.close();
+            // Dismiss the warning only - return to this menu, not all the way out of it.
+            this.activeWarningDialog = null;
             return;
         }
 

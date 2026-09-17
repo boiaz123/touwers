@@ -1605,10 +1605,10 @@ export class SuperWeaponLab extends Building {
     static getInfo() {
         return {
             name: 'Super Weapon Lab',
-            description: 'Mystical spire that channels powerful spells against enemies. Costs 1000 gold + 5 diamonds.',
+            description: 'Mystical spire that channels powerful spells against enemies. Costs 15000 gold + 5 diamonds.',
             effect: 'Unlocks devastating area spells + Arcane Blast spell at level 1',
             size: '4x4',
-            cost: 1000, // Base gold cost; also requires 5 diamonds
+            cost: 15000, // Base gold cost; also requires 5 diamonds
             diamondCost: 5
         };
     }

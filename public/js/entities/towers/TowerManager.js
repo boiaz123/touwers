@@ -116,9 +116,22 @@ export class TowerManager {
             }
         }
 
+        // Combination Towers past the free-with-gold cap also cost a diamond (see
+        // getCombinationTowerDiamondCost) - same gating as Magic Tower gems above.
+        let combinationDiamondCost = null;
+        if (!isFree && type === 'combination') {
+            combinationDiamondCost = this.getCombinationTowerDiamondCost();
+            if (combinationDiamondCost && !this.hasEnoughGems(combinationDiamondCost)) {
+                return false;
+            }
+        }
+
         if (isFree || this.gameState.spend(towerType.cost)) {
             if (magicGemCost) {
                 this.spendGems(magicGemCost);
+            }
+            if (combinationDiamondCost) {
+                this.spendGems(combinationDiamondCost);
             }
 
             const tower = TowerRegistry.createTower(type, x, y, gridX, gridY);
@@ -725,6 +738,21 @@ export class TowerManager {
             ? TowerManager.MAGIC_TOWER_BASE_GEM_COST
             : gemGatedIndex;
         return { fire: perGem, water: perGem, air: perGem, earth: perGem };
+    }
+
+    // Combination Tower economy: same free-then-gated structure as the Magic Tower above,
+    // but the extra resource beyond the free cap is a single diamond instead of a full set
+    // of elemental gems.
+    static COMBINATION_TOWER_FREE_LIMIT = 5;
+
+    /**
+     * Diamond cost for the NEXT Combination Tower placement, or null if the free-with-gold
+     * limit hasn't been reached yet (i.e. no diamond required for this placement).
+     */
+    getCombinationTowerDiamondCost() {
+        const combinationTowerCount = this.towers.filter(t => t.type === 'combination').length;
+        if (combinationTowerCount < TowerManager.COMBINATION_TOWER_FREE_LIMIT) return null;
+        return { diamond: 1 };
     }
 
     /** Whether the academy's current gem stocks cover the given {fire, water, air, earth} cost. */

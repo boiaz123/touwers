@@ -146,8 +146,7 @@ export function drawFrogKingTokenIcon(ctx, cx, cy, size) {
 const ENEMY_TIERS = [
     { ids: ['basic', 'archer', 'beefyenemy', 'villager', 'knight'], requiredIntelPack: 'intel-pack-1', cost: 150 },
     { ids: ['shieldknight', 'ramcart'], requiredIntelPack: 'intel-pack-2', cost: 250 },
-    { ids: ['mage', 'frog', 'walkingfrog'], requiredIntelPack: 'intel-pack-3', cost: 350 },
-    { ids: ['earthfrog', 'waterfrog', 'firefrog', 'airfrog'], requiredIntelPack: 'intel-pack-4', cost: 450 }
+    { ids: ['mage', 'frog', 'walkingfrog', 'earthfrog', 'waterfrog', 'firefrog', 'airfrog'], requiredIntelPack: 'intel-pack-3', cost: 350 }
 ];
 
 // Campaign themes reuse the matching campaign's own emblem art wholesale - the exact
