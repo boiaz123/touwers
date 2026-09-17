@@ -678,6 +678,28 @@ export class SettlementHub {
         this.activePopup = null;
     }
 
+    /**
+     * Closes whichever settlement popup is currently open, the same way its own close
+     * button would - called by game.js's global Escape/cancel handler. Returns true if
+     * a popup was actually closed, so the caller knows Escape was "handled".
+     */
+    handleEscapeKey() {
+        const popup = {
+            upgrades: this.upgradesPopup,
+            options: this.optionsPopup,
+            arcaneLibrary: this.arcaneLibraryPopup,
+            musicalScores: this.musicalScoresPopup,
+            achievementPanel: this.achievementPanelPopup,
+            workshop: this.workshopPopup
+        }[this.activePopup];
+
+        if (popup && popup.close) {
+            popup.close();
+            return true;
+        }
+        return false;
+    }
+
     /** Opens the standalone Achievement Panel, optionally jumping straight to a
      *  specific achievement's detail view (e.g. when its unlock banner is clicked). */
     openAchievementPanel(focusAchievementId = null) {

@@ -18,16 +18,18 @@ export class AudioManager {
         this.currentMusicCategory = null; // For random track selection from category
         this.musicPlaylistMode = false; // If true, plays random tracks from category
 
-        // Crossfade support: a second music element lets us overlap the outgoing
-        // and incoming tracks instead of hard-cutting between them.
+        // Track transition support: a second music element lets us preload the incoming
+        // track while the outgoing one fades out, so it's ready to go the instant the
+        // pause between songs ends (see _transitionToTrack).
         this._musicElementB = null;
         this._playlistAdvanceHandlers = new WeakMap(); // el -> { onTimeUpdate, onEnded }
-        this._crossfadeLeadTime = 1.5; // seconds before a playlist track ends to start the next one
-        this._crossfadeDuration = 1200; // ms
+        this._transitionLeadTime = 1.2; // seconds before a playlist track ends to start fading it out
+        this._transitionFadeOutDuration = 1200; // ms - how long the outgoing track takes to fade to silence
+        this._transitionPauseDuration = 700; // ms - silent beat held between songs
 
         // Gapless playlist advance: as soon as a playlist track starts, we pick the track
         // that will follow it and start loading that track's audio on the idle element right
-        // away (see _preloadNextPlaylistTrack), instead of waiting until the crossfade lead
+        // away (see _preloadNextPlaylistTrack), instead of waiting until the transition lead
         // time to even start the load. { name, el } - the track name and which element it's
         // being preloaded onto, so a later load onto that same element can tell whether it'd
         // be reusing this in-flight/completed load or starting an unrelated one from scratch.
@@ -60,9 +62,10 @@ export class AudioManager {
         this._sfxMinInterval = 80; // Min ms between same SFX name
         
         // Fade interval tracking (separate ids so a duck/restore fade on the "front"
-        // element can never cancel an in-flight track crossfade, or vice versa)
+        // element can never cancel an in-flight track transition, or vice versa)
         this._fadeIntervalId = null;
-        this._crossfadeIntervalId = null;
+        this._transitionIntervalId = null;
+        this._transitionPauseTimeoutId = null;
 
         // Achievement-banner music ducking: tracks whether music is currently
         // held down for one or more back-to-back achievement banners, so a
@@ -82,9 +85,10 @@ export class AudioManager {
      * Initialize the audio system
      */
     initialize() {
-        // Create music elements. Two elements let us crossfade: `musicElement` is always
-        // the currently-audible "front" track; `_musicElementB` is the silent "back" element
-        // used to preload/fade in the next track before swapping roles.
+        // Create music elements. Two elements let us transition between tracks without a
+        // load-latency gap: `musicElement` is always the currently-audible "front" track;
+        // `_musicElementB` is the silent "back" element used to preload the next track
+        // while the front one fades out, before swapping roles.
         this.musicElement = new Audio();
         this.musicElement.volume = this.musicVolume;
         this._musicElementB = new Audio();
@@ -146,7 +150,8 @@ export class AudioManager {
     
     /**
      * Play a background music track. If another track is already playing, this
-     * crossfades smoothly (both tracks overlap briefly) instead of hard-cutting.
+     * transitions smoothly: the outgoing track fades out, silence holds for a short
+     * beat, then the new track starts - instead of hard-cutting or overlapping them.
      * @param {string} trackName - Name of the track to play
      * @param {boolean} fadeIn - Whether to fade in from silence (only applies when nothing is currently playing)
      * @param {boolean} preservePlaylistMode - Internal use: keep playlist mode/category active
@@ -172,7 +177,7 @@ export class AudioManager {
         // category (e.g. menu-theme, played while settlement/campaign playlist mode is still
         // set because whatever path got us here never explicitly stopped it - see
         // SettlementHub's "back to main menu" flow) must not silently leave playlist mode on.
-        // If it did, _startTrackOnElement/_crossfadeToTrack would force the new track to not
+        // If it did, _startTrackOnElement/_transitionToTrack would force the new track to not
         // loop (playlist tracks never loop, they advance instead), and once it ended,
         // _attachPlaylistAdvanceListener would hand playback off to a random track from the
         // *stale* category instead of just looping menu-theme forever as intended.
@@ -188,7 +193,7 @@ export class AudioManager {
         const token = ++this._playToken;
 
         if (wasPlaying) {
-            this._crossfadeToTrack(trackData, trackName, this._crossfadeDuration, token);
+            this._transitionToTrack(trackData, trackName, token);
         } else {
             this._startTrackOnElement(this.musicElement, trackData, trackName, fadeIn, token);
         }
@@ -224,7 +229,7 @@ export class AudioManager {
                 el.play().catch(err => this._handlePlayError(err));
             }
             this._attachPlaylistAdvanceListener(el, trackName);
-            // No crossfade involved on this path, so the backup element is genuinely idle
+            // No transition involved on this path, so the backup element is genuinely idle
             // right now - safe to start preloading the next playlist track onto it immediately.
             this._preloadNextPlaylistTrack(trackName);
         };
@@ -237,13 +242,18 @@ export class AudioManager {
     }
 
     /**
-     * Crossfade from the currently active music element to a new track on the backup
-     * element, then swap which element is considered "active".
+     * Transition from the currently active track to a new one: fade the outgoing track
+     * down to silence, hold a short beat of silence, then start the new track on the
+     * backup element and swap which element is considered "active". The new track is
+     * loaded onto the backup element right away (while the old one is still fading out)
+     * so it's ready to go the instant the pause ends instead of adding load latency on
+     * top of it.
      */
-    _crossfadeToTrack(trackData, trackName, duration, token) {
+    _transitionToTrack(trackData, trackName, token) {
         const oldEl = this.musicElement;
         const newEl = this._musicElementB;
 
+        this._clearPlaylistAdvanceListener(oldEl);
         this._clearPlaylistAdvanceListener(newEl);
 
         this._loadTrackOnElement(newEl, trackData, trackName);
@@ -255,34 +265,44 @@ export class AudioManager {
         }
         newEl.loop = shouldLoop;
 
-        const start = () => {
-            newEl.removeEventListener('canplaythrough', start);
-            // A newer playMusic() call already superseded this one while it was
-            // still loading - don't crossfade into a track that's no longer wanted.
-            if (token !== this._playToken) return;
-            newEl.play().catch(err => this._handlePlayError(err));
+        const fadeOutStartVolume = oldEl.volume;
+        this._fadeTransition(oldEl, fadeOutStartVolume, 0, this._transitionFadeOutDuration, () => {
+            oldEl.pause();
+            oldEl.currentTime = 0;
+            oldEl.volume = this.musicVolume;
 
-            this._crossfade(oldEl, newEl, duration, () => {
-                oldEl.pause();
-                oldEl.currentTime = 0;
-                // Only NOW is oldEl (== this._musicElementB, post role-swap below) truly idle -
-                // it's been actively fading out via _crossfade() up until this callback fires,
-                // so preloading onto it any earlier would yank it out from under that fade-out.
-                this._preloadNextPlaylistTrack(trackName);
-            });
+            if (this._transitionPauseTimeoutId) {
+                clearTimeout(this._transitionPauseTimeoutId);
+            }
+            this._transitionPauseTimeoutId = setTimeout(() => {
+                this._transitionPauseTimeoutId = null;
+                // A newer playMusic() call already superseded this one while we were
+                // fading out / paused - let that one own starting playback instead.
+                if (token !== this._playToken) return;
 
-            // Swap roles: the newly-playing element becomes the active one
-            this.musicElement = newEl;
-            this._musicElementB = oldEl;
+                const start = () => {
+                    newEl.removeEventListener('canplaythrough', start);
+                    if (token !== this._playToken) return;
+                    newEl.volume = this.musicVolume;
+                    newEl.play().catch(err => this._handlePlayError(err));
 
-            this._attachPlaylistAdvanceListener(newEl, trackName);
-        };
+                    // Swap roles: the newly-playing element becomes the active one
+                    this.musicElement = newEl;
+                    this._musicElementB = oldEl;
 
-        if (newEl.readyState >= 2) {
-            start();
-        } else {
-            newEl.addEventListener('canplaythrough', start, { once: true });
-        }
+                    this._attachPlaylistAdvanceListener(newEl, trackName);
+                    // oldEl is genuinely idle now - safe to start preloading the next
+                    // playlist track onto it.
+                    this._preloadNextPlaylistTrack(trackName);
+                };
+
+                if (newEl.readyState >= 2) {
+                    start();
+                } else {
+                    newEl.addEventListener('canplaythrough', start, { once: true });
+                }
+            }, this._transitionPauseDuration);
+        });
     }
 
     _handlePlayError(err) {
@@ -311,8 +331,9 @@ export class AudioManager {
     }
 
     /**
-     * In playlist mode, schedule the next random track to start crossfading shortly
-     * before the current one ends, so there's no silent gap between songs.
+     * In playlist mode, schedule the next random track to start its fade-out-then-pause
+     * transition shortly before the current one ends, so the fade finishes right around
+     * when the track would naturally end instead of getting cut off mid-fade.
      */
     _attachPlaylistAdvanceListener(el, trackName) {
         this._clearPlaylistAdvanceListener(el);
@@ -329,7 +350,7 @@ export class AudioManager {
             if (triggered) return;
             const dur = el.duration;
             if (!dur || !isFinite(dur)) return;
-            if (dur - el.currentTime <= this._crossfadeLeadTime) {
+            if (dur - el.currentTime <= this._transitionLeadTime) {
                 advance();
             }
         };
@@ -340,8 +361,8 @@ export class AudioManager {
         this._playlistAdvanceHandlers.set(el, { onTimeUpdate, onEnded });
 
         // Note: preloading the next track onto the idle element is triggered by the two
-        // callers of this method (_startTrackOnElement/_crossfadeToTrack), not from here -
-        // right after a crossfade, the "idle" element is still actively fading out and isn't
+        // callers of this method (_startTrackOnElement/_transitionToTrack), not from here -
+        // right after a transition, the "idle" element is still actively fading out and isn't
         // safe to touch until that finishes. See _preloadNextPlaylistTrack's call sites.
     }
 
@@ -356,18 +377,14 @@ export class AudioManager {
 
     /**
      * Pick the track that will follow `currentTrackName` in the active playlist and start
-     * loading it on the idle music element right away, well before the crossfade lead-time
-     * trigger fires. Playlist tracks don't loop (see _startTrackOnElement/_crossfadeToTrack -
-     * they advance instead), so without this, a track whose 'canplaythrough' takes longer
-     * than _crossfadeLeadTime to arrive (cold cache, slow disk/network) leaves the outgoing
-     * track with nothing ready to crossfade into once it runs out - an audible silent gap.
-     * Preloading from the moment the current track starts gives it the track's *entire*
-     * duration (minus the lead time) to finish loading instead of just _crossfadeLeadTime
-     * seconds, making that gap very unlikely in practice.
+     * loading it on the idle music element right away, well before the transition lead-time
+     * trigger fires. Preloading from the moment the current track starts gives it the
+     * track's *entire* duration (minus the lead time and the fade-out) to finish loading,
+     * so it's virtually always ready the moment the pause between songs ends.
      *
      * Must only be called once `this._musicElementB` is genuinely idle - see the two call
-     * sites (_startTrackOnElement's playAudio, and _crossfadeToTrack's crossfade-complete
-     * callback) for why each is safe.
+     * sites (_startTrackOnElement's playAudio, and _transitionToTrack's post-pause start)
+     * for why each is safe.
      */
     _preloadNextPlaylistTrack(currentTrackName) {
         if (!(this.musicPlaylistMode && this.currentMusicCategory)) return;
@@ -397,9 +414,10 @@ export class AudioManager {
 
     /**
      * Start playing music from a specific category with random track selection.
-     * When a track is about to end, a new random track from the category will crossfade in.
-     * If this category is already playing, the current track is left alone so it can
-     * continue uninterrupted (e.g. campaign map music continuing into the level).
+     * When a track is about to end, it fades out, pauses briefly, then a new random
+     * track from the category starts. If this category is already playing, the current
+     * track is left alone so it can continue uninterrupted (e.g. campaign map music
+     * continuing into the level).
      * @param {string} category - The music category to play from (e.g., 'campaign-1')
      */
     playMusicCategory(category) {
@@ -441,9 +459,9 @@ export class AudioManager {
 
         // Prefer the track _preloadNextPlaylistTrack already started loading on the idle
         // element back when the current track began - its 'canplaythrough' has very likely
-        // already fired by now, so the crossfade can start immediately instead of waiting on
-        // a fresh load. Picking a *different* random track here instead would abandon that
-        // head start and reintroduce the gap preloading exists to avoid.
+        // already fired by now, so the transition can start immediately instead of waiting
+        // on a fresh load. Picking a *different* random track here instead would abandon
+        // that head start and reintroduce the gap preloading exists to avoid.
         if (this._preloadedTrack && this._preloadedTrack.el === this._musicElementB) {
             const preloadedData = this.musicRegistry[this._preloadedTrack.name];
             if (preloadedData && preloadedData.category === this.currentMusicCategory) {
@@ -497,14 +515,18 @@ export class AudioManager {
         this._clearPlaylistAdvanceListener(this.musicElement);
         this._clearPlaylistAdvanceListener(this._musicElementB);
 
-        // In case a crossfade was mid-flight, silence and stop the backup element too
+        // In case a transition was mid-flight, silence and stop the backup element too
         if (this._fadeIntervalId) {
             clearInterval(this._fadeIntervalId);
             this._fadeIntervalId = null;
         }
-        if (this._crossfadeIntervalId) {
-            clearInterval(this._crossfadeIntervalId);
-            this._crossfadeIntervalId = null;
+        if (this._transitionIntervalId) {
+            clearInterval(this._transitionIntervalId);
+            this._transitionIntervalId = null;
+        }
+        if (this._transitionPauseTimeoutId) {
+            clearTimeout(this._transitionPauseTimeoutId);
+            this._transitionPauseTimeoutId = null;
         }
         if (this._musicElementB) {
             this._musicElementB.pause();
@@ -632,37 +654,33 @@ export class AudioManager {
     }
 
     /**
-     * Simultaneously fade oldEl out to silence and newEl in to the current music
-     * volume, so the two tracks overlap instead of leaving a gap.
+     * Ramp a single element's volume from startVolume to targetVolume over duration ms,
+     * as part of a track transition (fade-out before the pause, or fade-in after it).
      *
      * Uses its own interval id (separate from _fade()'s _fadeIntervalId) so that an
      * unrelated fade - e.g. achievement-banner ducking, which runs via _fade() on
-     * whichever element is currently "front" - can't cancel a crossfade that's mid-flight.
-     * Without that, canceling here left oldEl's onComplete (which pauses it) unreached,
-     * so the old track would keep playing underneath the new one indefinitely.
+     * whichever element is currently "front" - can't cancel a transition that's
+     * mid-flight. Without that, canceling here left the fade's onComplete (which pauses
+     * the element and schedules the next track) unreached, stalling the transition.
      */
-    _crossfade(oldEl, newEl, duration, onComplete) {
-        if (this._crossfadeIntervalId) {
-            clearInterval(this._crossfadeIntervalId);
-            this._crossfadeIntervalId = null;
+    _fadeTransition(el, startVolume, targetVolume, duration, onComplete) {
+        if (this._transitionIntervalId) {
+            clearInterval(this._transitionIntervalId);
+            this._transitionIntervalId = null;
         }
 
         const startTime = Date.now();
-        const oldStartVolume = oldEl.volume;
-        const targetVolume = this.musicVolume;
 
-        this._crossfadeIntervalId = setInterval(() => {
+        this._transitionIntervalId = setInterval(() => {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / duration, 1);
 
-            oldEl.volume = oldStartVolume * (1 - progress);
-            newEl.volume = targetVolume * progress;
+            el.volume = startVolume + (targetVolume - startVolume) * progress;
 
             if (progress >= 1) {
-                clearInterval(this._crossfadeIntervalId);
-                this._crossfadeIntervalId = null;
-                oldEl.volume = 0;
-                newEl.volume = targetVolume;
+                clearInterval(this._transitionIntervalId);
+                this._transitionIntervalId = null;
+                el.volume = targetVolume;
                 if (onComplete) onComplete();
             }
         }, 16);
@@ -878,7 +896,8 @@ export class AudioManager {
             this.musicElement.volume = this.musicVolume;
         }
         // Don't touch _musicElementB's volume here - it's either silent (idle) or
-        // mid-crossfade, and _crossfade() drives its volume toward this.musicVolume already.
+        // mid-transition, and _fadeTransition() drives its volume toward this.musicVolume
+        // (or to 0) already.
         try { localStorage.setItem('touwers_musicVolume', String(this.musicVolume)); } catch(e) {}
     }
     

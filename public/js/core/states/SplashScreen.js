@@ -1,7 +1,9 @@
 // Generic skippable brand/credit splash screen, shown before the main menu.
-// Any click, key press, or touch advances immediately; otherwise it advances
-// on its own after autoAdvanceSeconds - or, if musicTrack is set, after that
-// track's own length so the screen stays up for exactly as long as it plays.
+// A click, touch, or the Escape key advances immediately (no other key does,
+// so an idle hand resting on the keyboard can't accidentally skip it);
+// otherwise it advances on its own after autoAdvanceSeconds - or, if
+// musicTrack is set, after that track's own length so the screen stays up
+// for exactly as long as it plays.
 export class SplashScreen {
     constructor(stateManager, { lines, nextState, autoAdvanceSeconds = 3.5, musicTrack = null }) {
         this.stateManager = stateManager;
@@ -62,13 +64,20 @@ export class SplashScreen {
         // Touch and keyboard aren't routed generically, so those are bound directly.
         this.advanceHandler = () => this.advance();
         this.stateManager.canvas.addEventListener('touchstart', this.advanceHandler);
-        window.addEventListener('keydown', this.advanceHandler);
+        // Only Escape skips via keyboard - any other key used to advance too, which
+        // meant e.g. a stray spacebar/enter press skipped straight past the credits.
+        this.keydownHandler = (e) => {
+            if (e.key === 'Escape') this.advance();
+        };
+        window.addEventListener('keydown', this.keydownHandler);
     }
 
     removeInputListeners() {
         if (this.advanceHandler) {
             this.stateManager.canvas.removeEventListener('touchstart', this.advanceHandler);
-            window.removeEventListener('keydown', this.advanceHandler);
+        }
+        if (this.keydownHandler) {
+            window.removeEventListener('keydown', this.keydownHandler);
         }
     }
 

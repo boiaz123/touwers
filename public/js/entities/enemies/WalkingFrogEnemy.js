@@ -49,10 +49,18 @@ export class WalkingFrogEnemy extends BaseEnemy {
         // which spawns these at her death position/path progress. healthMultiplier is
         // 1.5x the brood's own base health at a plain (1.0-multiplier) matriarch, then
         // scales further with how tanky she herself was (health_multiplier) - so e.g. a
-        // frog (110 base health) spawns at 165 health from a 1.0x matriarch. speedMultiplier
-        // is a flat 1.2x on the brood's own base speed, independent of her health_multiplier.
+        // frog (110 base health) spawns at 165 health from a 1.0x matriarch.
+        //
+        // baseSpeed pins the brood to their own 45 base speed instead of the regular
+        // FrogEnemy's 55 (they were spawning noticeably faster than a normal frog, which
+        // read as a bug - it was: speedMultiplier used to apply on top of FrogEnemy's own
+        // base speed instead of this one). speedMultiplier is derived from actualSpeed/
+        // baseStats.speed - i.e. how much faster/slower than her own base speed *this*
+        // matriarch was spawned (wave speed scaling) - so the brood inherits that same
+        // scaling instead of always using a flat factor regardless of her actual speed.
+        const speedMultiplier = actualSpeed / baseStats.speed;
         this.spawnOnDeath = [
-            { type: 'frog', count: 20, healthMultiplier: 1.5 * health_multiplier, speedMultiplier: 1.2 }
+            { type: 'frog', count: 20, healthMultiplier: 1.5 * health_multiplier, speedMultiplier, baseSpeed: 45 }
         ];
 
         // Set by EnemyRenderAdapter once it has synced this enemy via Pixi.

@@ -216,15 +216,18 @@ export class EnemyManager {
      * RamCartEnemy/WalkingFrogEnemy) scales just the spawned child's health, so a
      * raiding party/brood released by a tankier parent (higher wave health_multiplier)
      * comes out tankier too instead of always spawning at the child type's plain base
-     * health. `speedMultiplier` is a flat multiplier on the type's base speed, kept
-     * separate since it isn't meant to compound with how tanky the parent was. Armour
-     * and magic resistance are left at the child type's own base stats.
+     * health. `speedMultiplier` is a multiplier on the child's base speed, kept separate
+     * since it isn't meant to compound with how tanky the parent was - it defaults to the
+     * child type's own registry speed, but a spawn entry can override that base with its
+     * own `baseSpeed` (see WalkingFrogEnemy's brood, which spawns slower than a normal
+     * standalone frog). Armour and magic resistance are left at the child type's own base
+     * stats.
      */
     _spawnDeathChildren(parent, outBuffer) {
         const spawns = parent.spawnOnDeath;
         for (let s = 0; s < spawns.length; s++) {
-            const { type, count, healthMultiplier = 1, speedMultiplier = 1 } = spawns[s];
-            const baseSpeed = EnemyRegistry.getDefaultSpeed(type) || 50;
+            const { type, count, healthMultiplier = 1, speedMultiplier = 1, baseSpeed: speedOverride } = spawns[s];
+            const baseSpeed = speedOverride !== undefined ? speedOverride : (EnemyRegistry.getDefaultSpeed(type) || 50);
 
             for (let i = 0; i < count; i++) {
                 const child = EnemyRegistry.createEnemy(type, this.path, healthMultiplier, baseSpeed * speedMultiplier);

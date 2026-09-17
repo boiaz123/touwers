@@ -481,6 +481,9 @@ export class Game {
                 } else if (stateName === 'levelSelect' || stateName === 'campaigns') {
                     this.stateManager.changeState('settlementHub');
                     return true;
+                } else if (stateName === 'settlementHub') {
+                    const hub = this.stateManager.currentState;
+                    return !!(hub && hub.handleEscapeKey && hub.handleEscapeKey());
                 }
                 return false;
             };

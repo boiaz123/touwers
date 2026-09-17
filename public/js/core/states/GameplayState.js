@@ -463,23 +463,32 @@ export class GameplayState {
     }
 
     applyConsumableEffects() {
-        // Initialize marketplace system for this level
-        if (this.stateManager.marketplaceSystem) {
-            this.stateManager.marketplaceSystem.resetForNewLevel();
-        }
-        
+        // Track free placements available this level
+        this.freeBuildingPlacements = {};
+        this.freeTowerPlacements = {};
+        this.applyRabbitsFoot = false;
+        this.applyTalisman = false;
+
         if (!this.stateManager.marketplaceSystem) {
             console.warn('GameplayState: No marketplace system available');
             return;
         }
-        
+
         const marketplace = this.stateManager.marketplaceSystem;
-        
-        // Track free placements available this level
-        // These are marked available in resetForNewLevel()
-        this.freeBuildingPlacements = {};
-        this.freeTowerPlacements = {};
-        
+
+        // Eternal Mode is meant to test a build on its own merits, so purchased
+        // consumables/boons never apply here - and since we never call resetForNewLevel(),
+        // nothing gets marked as used either, so nothing is silently wasted on a run
+        // that was never going to consume it.
+        if (this.isSandbox) {
+            marketplace.clearPerLevelState();
+            marketplace.rabbitFootActive = false;
+            return;
+        }
+
+        // Initialize marketplace system for this level
+        marketplace.resetForNewLevel();
+
         // Check if forge materials are available for free placement
         if (marketplace.hasFreePlacement('forge-materials')) {
             this.freeBuildingPlacements['forge'] = true;
