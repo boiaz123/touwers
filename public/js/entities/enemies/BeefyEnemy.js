@@ -20,8 +20,8 @@ export class BeefyEnemy extends BaseEnemy {
         this.tunicColor = this.getRandomTunicColor();
         this.sizeMultiplier = 1.2;
 
-        this.attackDamage = 9;
-        this.attackSpeed = 0.8;
+        this.attackDamage = 12;
+        this.attackSpeed = 0.5;
 
         // Rendering optimization: Cache pre-calculated color variants
         this.cachedColorVariants = this.getColorVariants();

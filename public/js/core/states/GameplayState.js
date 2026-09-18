@@ -391,7 +391,7 @@ export class GameplayState {
         
         // Initialize UI Manager
         this.uiManager = new UIManager(this);
-        
+
         this.setupEventListeners();
 
         this.uiManager.setupSpellUI(); // Setup spell UI through UIManager

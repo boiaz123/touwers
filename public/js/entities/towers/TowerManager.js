@@ -945,9 +945,13 @@ export class TowerManager {
                     if (tower.constructor.name === 'MagicTower') {
                         tower.isSelected = true;
                         this.playTowerSelectSound(tower);
+                        // Academy passed through so the UI can build a "current stats" hover
+                        // panel for each element button (see UIManager.showMagicTowerElementMenu)
+                        const academy = this.cachedAcademies && this.cachedAcademies[0];
                         return {
                             type: 'magic_tower_menu',
                             tower: tower,
+                            academy: academy,
                             elements: [
                                 { id: 'fire', name: 'Fire', icon: '▲', description: 'Burn damage over time' },
                                 { id: 'water', name: 'Water', icon: '▽', description: 'Slows and freezes enemies' },
@@ -967,7 +971,11 @@ export class TowerManager {
                                 id: spell.id,
                                 name: spell.name,
                                 icon: spell.icon,
-                                description: spell.description
+                                description: spell.description,
+                                // Passed through so the UI can build a "current stats" hover
+                                // panel for each spell button (see UIManager.showCombinationTowerMenu)
+                                upgradeLevel: spell.upgradeLevel,
+                                maxUpgradeLevel: spell.maxUpgradeLevel
                             })),
                             currentSpell: tower.selectedSpell
                         };

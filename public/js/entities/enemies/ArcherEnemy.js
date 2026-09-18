@@ -19,7 +19,7 @@ export class ArcherEnemy extends BaseEnemy {
         this.tunicColor = '#2D5016'; // Dark green ranger tunic
 
         this.attackDamage = 3;
-        this.attackSpeed = 0.5;
+        this.attackSpeed = 1;
 
         this._tunicLightColorStr = this.lightenColor(this.tunicColor, 0.3);
         this._tunicDarkColorStr = this.darkenColor(this.tunicColor, 0.25);

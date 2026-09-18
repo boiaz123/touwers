@@ -2044,6 +2044,114 @@ export class UIManager {
         }
     }
 
+    /**
+     * Cumulative current stats for a combination spell at its current upgrade level - same
+     * per-level rates as getComboSpellEffectPreview above, multiplied out. Used by the
+     * combination tower's own spell-select hover panel (see showCombinationTowerMenu) to
+     * show a condensed "current stats" summary, the same way the Magic Academy's elemental
+     * upgrade buttons show a current-bonus line.
+     */
+    getComboSpellCurrentStats(spellId, level) {
+        const slowStr = (5.7 * level).toFixed(1);
+        switch (spellId) {
+            case 'steam':
+                return `<div>Fire Damage: +${10 * level}</div><div>Slow Strength: +${slowStr}%</div>`;
+            case 'magma':
+                return `<div>Fire Damage: +${12 * level}</div><div>Armor Piercing: +${3 * level}</div>`;
+            case 'tempest':
+                return `<div>Chain Range: +${20 * level}%</div><div>Slow Strength: +${slowStr}%</div>`;
+            case 'meteor':
+                return `<div>Chain Range: +${20 * level}%</div><div>Armor Piercing: +${3 * level}</div>`;
+            default:
+                return '';
+        }
+    }
+
+    /**
+     * Cumulative current bonus for a Magic Tower element at the Magic Academy's current
+     * research level for that element - mirrors the per-level rates in
+     * MagicAcademy's elementalUpgrades (see its constructor) multiplied out. Used by the
+     * magic tower's own element-select hover panel (see showMagicTowerElementMenu).
+     */
+    getMagicElementCurrentStats(elementId, academy) {
+        const upg = academy && academy.elementalUpgrades && academy.elementalUpgrades[elementId];
+        if (!upg) return '';
+        switch (elementId) {
+            case 'fire':
+                return `<div>Damage Bonus: +${upg.level * upg.damageBonus}</div>`;
+            case 'water':
+                return `<div>Slow Bonus: +${(upg.level * upg.slowBonus * 100).toFixed(0)}%</div>`;
+            case 'air':
+                return `<div>Chain Range: +${upg.level * upg.chainRange}px</div>`;
+            case 'earth':
+                return `<div>Armor Piercing: +${upg.level * upg.armorPiercing}</div>`;
+            default:
+                return '';
+        }
+    }
+
+    /**
+     * Shared hover-tooltip wiring for a panel's "compact-upgrade-item"-style cards - same
+     * dark/gold styling and positioning (left of the panel, falling back to the right) as
+     * Tower Forge's setupForgePanelListeners, so every in-game panel's hover info reads as
+     * one consistent system. `items` is a NodeList/array of elements carrying a
+     * `data-tooltip` attribute; `panelEl` is the panel to position relative to.
+     */
+    _setupTooltipHovers(items, panelEl) {
+        items.forEach(item => {
+            item.addEventListener('mouseenter', () => {
+                const existingTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                existingTooltips.forEach(tooltip => tooltip.remove());
+
+                const tooltipHTML = item.dataset.tooltip;
+                if (!tooltipHTML) return;
+
+                const tooltip = document.createElement('div');
+                tooltip.setAttribute('data-panel-tooltip', 'true');
+                tooltip.innerHTML = tooltipHTML;
+                tooltip.style.cssText = `
+                    position: fixed;
+                    background: rgba(10, 10, 20, 0.95);
+                    border: 2px solid #FFD700;
+                    border-radius: 6px;
+                    padding: 0.8rem;
+                    font-size: 0.75rem;
+                    color: #ddd;
+                    max-width: 250px;
+                    z-index: 10001;
+                    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
+                    pointer-events: none;
+                `;
+
+                document.body.appendChild(tooltip);
+
+                const panelRect = panelEl.getBoundingClientRect();
+                const rect = item.getBoundingClientRect();
+
+                let leftPos = panelRect.left - tooltip.offsetWidth - 10;
+                if (leftPos < 10) {
+                    leftPos = rect.right + 10;
+                }
+
+                tooltip.style.left = leftPos + 'px';
+                tooltip.style.top = (rect.top - tooltip.offsetHeight / 2 + rect.height / 2) + 'px';
+
+                const tooltipRect = tooltip.getBoundingClientRect();
+                if (tooltipRect.bottom > window.innerHeight) {
+                    tooltip.style.top = (window.innerHeight - tooltip.offsetHeight - 10) + 'px';
+                }
+                if (tooltipRect.top < 0) {
+                    tooltip.style.top = '10px';
+                }
+            });
+
+            item.addEventListener('mouseleave', () => {
+                const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
+                activeTooltips.forEach(tooltip => tooltip.remove());
+            });
+        });
+    }
+
     setupForgePanelListeners(forgeData, unlockSystem) {
         const panel = document.getElementById('forge-panel');
         if (!panel) return;
@@ -2857,9 +2965,22 @@ export class UIManager {
         
         towerData.elements.forEach(element => {
             const isCurrent = element.id === towerData.currentElement;
+
+            // Condensed current-stats hover panel, in line with the Magic Academy's own
+            // elemental-upgrade hover tooltips (see getMagicElementCurrentStats).
+            const academy = towerData.academy;
+            const level = academy && academy.elementalUpgrades && academy.elementalUpgrades[element.id]
+                ? academy.elementalUpgrades[element.id].level : 0;
+            let elTooltip = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${element.name} Element</div>`;
+            elTooltip += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.3rem;">${element.description}</div>`;
+            elTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
+            elTooltip += `<div>Academy Level: <span style="color: #FFD700;">${level}/20</span></div>`;
+            elTooltip += this.getMagicElementCurrentStats(element.id, academy);
+            elTooltip += `</div>`;
+
             contentHTML += `
                 <div class="upgrade-category">
-                    <div class="panel-upgrade-item ${isCurrent ? 'selected-element' : ''}">
+                    <div class="panel-upgrade-item ${isCurrent ? 'selected-element' : ''}" data-tooltip="${elTooltip.replace(/"/g, '&quot;')}">
                         <div class="upgrade-header-row">
                             <div class="upgrade-icon-section" style="display:flex;align-items:center;justify-content:center;">${this.getElementGemHTML(element.id, '22px')}</div>
                             <div class="upgrade-info-section">
@@ -2909,13 +3030,18 @@ export class UIManager {
                     this.showMagicTowerElementMenu({
                         type: 'magic_tower_menu',
                         tower: towerData.tower,
+                        academy: towerData.academy,
                         elements: towerData.elements,
                         currentElement: elementId
                     });
                 }
             }, { once: true });
         });
-        
+
+        // Element hover tooltips, in line with the other panels' upgrade-button hover info
+        // (see _setupTooltipHovers).
+        this._setupTooltipHovers(panel.querySelectorAll('.panel-upgrade-item[data-tooltip]'), panel);
+
         // Add sell button listener
         const sellBtn = panel.querySelector('.sell-tower-btn');
         if (sellBtn) {
@@ -2989,9 +3115,20 @@ export class UIManager {
         
         towerData.spells.forEach(spell => {
             const isCurrent = spell.id === towerData.currentSpell;
+
+            // Condensed current-stats hover panel, in line with the Super Weapon Lab's own
+            // combination-spell upgrade hover tooltips (see getComboSpellCurrentStats).
+            const level = spell.upgradeLevel || 0;
+            let spellTooltip = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${spell.name} Spell</div>`;
+            spellTooltip += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.3rem;">${spell.description}</div>`;
+            spellTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
+            spellTooltip += `<div>Upgrade Level: <span style="color: #FFD700;">${level}/${spell.maxUpgradeLevel || 7}</span></div>`;
+            spellTooltip += level > 0 ? this.getComboSpellCurrentStats(spell.id, level) : '<div style="color: #aaa;">No upgrades invested yet</div>';
+            spellTooltip += `</div>`;
+
             contentHTML += `
                 <div class="upgrade-category">
-                    <div class="panel-upgrade-item ${isCurrent ? 'selected-element' : ''}">
+                    <div class="panel-upgrade-item ${isCurrent ? 'selected-element' : ''}" data-tooltip="${spellTooltip.replace(/"/g, '&quot;')}">
                         <div class="upgrade-header-row">
                             <div class="upgrade-icon-section">${spell.icon}</div>
                             <div class="upgrade-info-section">
@@ -3046,7 +3183,11 @@ export class UIManager {
                 }
             }, { once: true });
         });
-        
+
+        // Spell hover tooltips, in line with the other panels' upgrade-button hover info
+        // (see _setupTooltipHovers).
+        this._setupTooltipHovers(panel.querySelectorAll('.panel-upgrade-item[data-tooltip]'), panel);
+
         // Add sell button listener
         const sellBtn = panel.querySelector('.sell-tower-btn');
         if (sellBtn) {
@@ -3633,7 +3774,7 @@ export class UIManager {
 
                     if (!spellPowerUnlocked) {
                         tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #ff9999;">`;
-                        tooltipText += `<div style="font-weight: bold;">🔒 Locked</div>`;
+                        tooltipText += `<div style="font-weight: bold;">Locked</div>`;
                         tooltipText += `<div>Upgrade the Lab to Level 5 to unlock Spell Power</div>`;
                         tooltipText += `</div>`;
                     }
@@ -3661,7 +3802,7 @@ export class UIManager {
                                 data-main-spell="${spell.id}"
                                 data-tooltip="${tooltipText.replace(/"/g, '&quot;')}"
                                 ${isMaxed || !canUpgrade ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : (!spellPowerUnlocked ? '🔒' : '+')}
+                            ${isMaxed ? 'MAX' : '+'}
                         </button>` : `<button class="compact-spell-upgrade-btn panel-upgrade-btn" disabled>MAX</button>`}
                     </div>
                 `;
@@ -3757,7 +3898,7 @@ export class UIManager {
 
                     if (isLocked) {
                         comboTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #ff9999;">`;
-                        comboTooltip += `<div style="font-weight: bold;">🔒 Locked</div>`;
+                        comboTooltip += `<div style="font-weight: bold;">Locked</div>`;
                         comboTooltip += `<div>Requires ${elementNames} Mastery Level ${upgrade.requiredElementLevel}+ in the Magic Academy</div>`;
                         comboTooltip += `</div>`;
                     }
@@ -3785,16 +3926,16 @@ export class UIManager {
                                 <div style="height: 10px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden; border: 1px solid #666; position: relative; margin: 0.3rem 0;">
                                     <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FF6BA6, #FF1493); transition: width 0.3s ease;"></div>
                                 </div>
-                                <div style="font-size: 0.65rem; color: #aaa;">${upgrade.upgradeLevel}/${upgrade.maxUpgradeLevel}${isLocked ? ` &middot; <span style="color:#ff9999;">🔒 needs Lv ${upgrade.requiredElementLevel}</span>` : ''}</div>
+                                <div style="font-size: 0.65rem; color: #aaa;">${upgrade.upgradeLevel}/${upgrade.maxUpgradeLevel}${isLocked ? ` &middot; <span style="color:#ff9999;">needs Lv ${upgrade.requiredElementLevel}</span>` : ''}</div>
                             </div>
                         </div>
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 0.2rem;">
-                            ${isMaxed ? '<span style="font-size: 0.7rem; color: #FFD700;">MAX</span>' : (isLocked ? `<span style="font-size: 0.65rem; color: #ff9999;">🔒 Lv ${upgrade.requiredElementLevel}</span>` : gemCostDisplay)}
+                            ${isMaxed ? '<span style="font-size: 0.7rem; color: #FFD700;">MAX</span>' : (isLocked ? `<span style="font-size: 0.65rem; color: #ff9999;">Lv ${upgrade.requiredElementLevel}</span>` : gemCostDisplay)}
                         </div>
                         <button class="compact-upgrade-btn panel-upgrade-btn combo-upgrade-btn"
                                 data-combo-spell="${upgrade.id}"
                                 ${isMaxed || isLocked || !canAfford ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : (isLocked ? '🔒' : 'Upgrade')}
+                            ${isMaxed ? 'MAX' : (isLocked ? 'Locked' : 'Upgrade')}
                         </button>
                     </div>
                 `;

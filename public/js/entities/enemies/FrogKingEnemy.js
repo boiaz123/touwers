@@ -347,13 +347,31 @@ export class FrogKingEnemy extends BaseEnemy {
         
         // Check if reached end
         if (this.reachedEnd || !this.path || this.path.length === 0) return;
-        
+
+        // PATH DEFENDER LOGIC: stop and engage a guard post defender standing ahead on
+        // the path, same check BaseEnemy.update() does - needed here too since this
+        // class skips super.update() entirely for its own jump-based movement.
+        if (this.guardPostCache && this.guardPostCache.length > 0) {
+            for (let i = 0; i < this.guardPostCache.length; i++) {
+                const cache = this.guardPostCache[i];
+                if (!cache.defender.isDead() && cache.waypoint) {
+                    const dx = cache.waypoint.x - this.x;
+                    const dy = cache.waypoint.y - this.y;
+                    if (dx * dx + dy * dy < 3600) {
+                        this.reachedEnd = true;
+                        this.isAttackingCastle = false;
+                        return;
+                    }
+                }
+            }
+        }
+
         if (this.currentPathIndex >= this.path.length - 1) {
             this.reachedEnd = true;
             this.isAttackingCastle = true;
             return;
         }
-        
+
         const target = this.getOffsetWaypointAt(this.currentPathIndex + 1) || this.path[this.currentPathIndex + 1];
         if (!target) {
             this.reachedEnd = true;

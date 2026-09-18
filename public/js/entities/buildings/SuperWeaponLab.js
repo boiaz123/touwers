@@ -93,7 +93,7 @@ export class SuperWeaponLab extends Building {
                 id: 'steam',
                 name: 'Steam',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" stroke-width="1.8" stroke-linecap="round"><path d="M7 19 Q5 15.5 7 12.5 Q9 9.5 7 6.5 Q5 3.5 7 1" stroke="#60A5FA"/><path d="M13 19 Q11 15.5 13 12.5 Q15 9.5 13 6.5 Q11 3.5 13 1" stroke="#F97316"/></svg>',
-                description: 'Fire and Water fusion: scalds enemies with burning steam that also slows them - damage and slow both deepen with every upgrade.',
+                description: 'Burn damage that also slows enemies',
                 upgradeLevel: 0,  // 0-7 upgrades
                 maxUpgradeLevel: 7,
                 gems: { fire: 1, water: 1 }  // Required gems for each upgrade level
@@ -102,7 +102,7 @@ export class SuperWeaponLab extends Building {
                 id: 'magma',
                 name: 'Magma',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M10 1 Q15.5 6 15.5 11.5 Q15.5 17.5 10 19 Q4.5 17.5 4.5 11.5 Q4.5 6 10 1Z" fill="#EF4444"/><path d="M10 5 Q13 8.5 13 12 Q13 15.5 10 17 Q7 15.5 7 12 Q7 8.5 10 5Z" fill="#FBBF24" opacity="0.7"/></svg>',
-                description: 'Fire and Earth fusion: molten armor-piercing damage that burns on impact - shreds heavily-armored enemies more with every upgrade.',
+                description: 'Burning damage that pierces armor',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 7,
                 gems: { fire: 1, earth: 1 }
@@ -111,7 +111,7 @@ export class SuperWeaponLab extends Building {
                 id: 'tempest',
                 name: 'Tempest',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#60D5FA" stroke-linecap="round" stroke-width="2"><path d="M10 10 Q13 5 17 8 Q20 12 16 15 Q12 18 8 16 Q4 14 4 10 Q4 6 8 3 Q13 0 18 4"/><circle cx="10" cy="10" r="1.5" fill="#7DD3FC" stroke="none"/></svg>',
-                description: 'Air and Water fusion: chains lightning-fast between enemies while slowing them - chain range and slow both grow with every upgrade.',
+                description: 'Chains between enemies and slows them',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 7,
                 gems: { air: 1, water: 1 }
@@ -120,7 +120,7 @@ export class SuperWeaponLab extends Building {
                 id: 'meteor',
                 name: 'Meteor',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="3.5" fill="#F97316"/><circle cx="3" cy="5" r="1.5" fill="#78716C"/><circle cx="17" cy="5" r="1.5" fill="#78716C"/><circle cx="3" cy="15" r="1.5" fill="#78716C"/><circle cx="17" cy="15" r="1.5" fill="#78716C"/><line x1="6.5" y1="7" x2="7" y2="8" stroke="#78716C" stroke-width="1.2" stroke-linecap="round"/><line x1="13.5" y1="7" x2="13" y2="8" stroke="#78716C" stroke-width="1.2" stroke-linecap="round"/><line x1="6.5" y1="13" x2="7" y2="12" stroke="#78716C" stroke-width="1.2" stroke-linecap="round"/><line x1="13.5" y1="13" x2="13" y2="12" stroke="#78716C" stroke-width="1.2" stroke-linecap="round"/></svg>',
-                description: 'Air and Earth fusion: piercing impact that chains outward to nearby enemies - chain range and piercing both grow with every upgrade.',
+                description: 'Piercing impact that chains to nearby enemies',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 7,
                 gems: { air: 1, earth: 1 }

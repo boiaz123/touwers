@@ -29,7 +29,7 @@ export class MageEnemy extends BaseEnemy {
         this.sizeMultiplier = 1.1;
         
         this.attackDamage = 20;
-        this.attackSpeed = 4.0;
+        this.attackSpeed = 0.3;
         
         // Optimized particle system - reduced particle generation
         this.magicParticles = [];
