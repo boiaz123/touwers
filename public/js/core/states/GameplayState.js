@@ -29,6 +29,13 @@ const INITIAL_WAVE_COOLDOWN = 30;
 const BETWEEN_WAVE_COOLDOWN = 15;
 const ENEMY_CLICK_RADIUS = 28;
 
+// Most enemies a single frame will hand to Pixi for the first time (see _syncEnemyPixi).
+// Ordinary waves trickle in one at a time, so this never matters for them - it's for bursts,
+// chiefly a Goliath Frog's 20-strong brood appearing in a single frame: building 20 fresh
+// per-frog Graphics at once was a 10-40ms hitch, while 5 a frame is a barely-visible ~4 frame
+// stagger (the rest just show up a few frames later, still simulated normally meanwhile).
+const MAX_NEW_ENEMY_PIXI_REGISTRATIONS_PER_FRAME = 5;
+
 // Dev-only stress-spawn enemy roster (see _devStressSpawn below) - unrelated to sandbox
 // mode's actual wave format, which now comes from SandboxLevel.getWaveConfig() like any
 // other level.
@@ -2532,6 +2539,7 @@ export class GameplayState {
 
         if (this.enemyManager && this.enemyManager.enemies) {
             const enemies = this.enemyManager.enemies;
+            this._enemyPixiRegistrationsLeft = MAX_NEW_ENEMY_PIXI_REGISTRATIONS_PER_FRAME;
             for (let i = 0; i < enemies.length; i++) {
                 const enemy = enemies[i];
                 // Without this, a brand new enemy's first render(ctx) call draws its body
@@ -2543,12 +2551,10 @@ export class GameplayState {
                 if (pixiActive && !enemy.skipCanvas2DBodyRender && typeof enemy.renderStaticBack === 'function') {
                     enemy.skipCanvas2DBodyRender = true;
                 }
+                // Hit splatters are drawn by enemy.render() itself (every enemy class does),
+                // so drawing them again here just doubled the Canvas2D work - and the glow
+                // opacity - of every splatter on screen.
                 enemy.render(ctx);
-                if (enemy.hitSplatters && enemy.hitSplatters.length > 0) {
-                    for (let j = 0; j < enemy.hitSplatters.length; j++) {
-                        enemy.hitSplatters[j].render(ctx);
-                    }
-                }
                 if (pixiActive) {
                     this.performanceMonitor.beginSlot('renderSync');
                     this._syncEnemyPixi(enemy, ctx);
@@ -2822,6 +2828,13 @@ export class GameplayState {
             : (entity.radius ? entity.radius * 2 : 40);
 
         if (!this.enemyRenderAdapter.has(entity)) {
+            // Enemies (not loot bags, which have no such burst and would flash on Canvas2D in
+            // the meantime) get a per-frame registration budget - see the constant's doc.
+            // Over budget: skip for now, it's still unregistered and picked up next frame.
+            if (entity.lootId === undefined) {
+                if (this._enemyPixiRegistrationsLeft <= 0) return;
+                this._enemyPixiRegistrationsLeft--;
+            }
             this.enemyRenderAdapter.register(entity, sizeHint);
         }
 

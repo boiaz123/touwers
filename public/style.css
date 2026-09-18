@@ -2292,6 +2292,28 @@ body.game-paused .side-panel > * {
     white-space: nowrap;
 }
 
+/* Diamond stock readout in the Diamond Press panel header - the same faceted diamond icon
+   the top bar uses, with the count beside it, instead of a plain "Diamonds: X" text badge. */
+.diamond-stock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.25rem 0.7rem 0.25rem 0.5rem;
+    background: linear-gradient(135deg, rgba(100, 223, 255, 0.18), rgba(0, 0, 0, 0.35));
+    border: 1px solid rgba(100, 223, 255, 0.45);
+    border-radius: 0.3rem;
+    box-shadow: 0 0 8px rgba(100, 223, 255, 0.15);
+    white-space: nowrap;
+}
+
+.diamond-stock-count {
+    font-size: 1.1rem;
+    font-weight: bold;
+    line-height: 1;
+    color: #e6f7ff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
 .forge-benefits-list {
     font-size: 0.7rem;
     color: rgba(200, 200, 200, 0.85);

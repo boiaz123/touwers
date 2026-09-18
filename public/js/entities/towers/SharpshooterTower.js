@@ -27,6 +27,18 @@ export class SharpshooterTower extends ArcherTower {
         this.damage = 150;
         this.fireRate = 0.3;
         this.range = SharpshooterTower.MASSIVE_RANGE;
+
+        // Near-instant straight shot instead of the Archer Tower's lobbed 400px/s arc. That
+        // arc was built for a 140px range: over a map-spanning shot gravity dragged the arrow
+        // well below its target and the 3s life cap expired it before it could ever arrive,
+        // and a killing shot (most of them, at 150 damage) had its arrow deleted the frame
+        // after firing. Damage is applied at fire time either way - this is purely so the
+        // arrow visibly flies to the enemy it hit, in the same short time at any distance.
+        this.arrowFlightTime = 0.14;
+        this.arrowGravity = 0;
+        this.arrowArcRatio = 0;
+        this.arrowTrailLength = 140;
+        this.arrowCancelOnTargetDeath = false;
     }
 
     /**

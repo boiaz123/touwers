@@ -38,6 +38,15 @@ const SPIRE_KEYFRAMES = [
 const SPIRE_STONE_FACETS = { light: '#8a8690', dark: '#332f38' };
 const SPIRE_BRICK_FACETS = { light: '#a8624f', dark: '#4a231c' };
 
+// The two elements each combination spell is fused from - same pairs as the gems each
+// spell's upgrades cost in SuperWeaponLab.combinationSpells. See _damageTypeFor().
+const SPELL_ELEMENTS = {
+    steam:   ['fire', 'water'],
+    magma:   ['fire', 'earth'],
+    tempest: ['air', 'water'],
+    meteor:  ['air', 'earth']
+};
+
 export class CombinationTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
@@ -243,6 +252,24 @@ export class CombinationTower extends Tower {
         this.lightningBolts.push(bolt);
     }
 
+    /**
+     * The damage type to hit `enemy` with. A combination spell is two elements fused, but each
+     * cast used to deal ONE fixed type (steam -> fire, magma/meteor -> earth, tempest -> air).
+     * Elemental frogs (and the Frog King) are immune to every element except their single
+     * weakness - see ElementalFrogEnemy.takeDamage - so a fixed type meant a spell could never
+     * touch a frog weak to its OTHER element: Steam (fire + water) bounced off a Fire Frog
+     * (weak to water) even though it contains water. When the enemy declares a weakness that
+     * this spell contains, hit it with that element; otherwise keep the spell's usual type.
+     */
+    _damageTypeFor(enemy, defaultType) {
+        const weakness = enemy.vulnerableTo;
+        if (weakness && weakness !== defaultType) {
+            const elements = SPELL_ELEMENTS[this.selectedSpell];
+            if (elements && elements.includes(weakness)) return weakness;
+        }
+        return defaultType;
+    }
+
     chainToNearbyEnemies(originalTarget, damage, damageType, range = 100) {
         const chainRange = range;
         if (!this.enemies) return;
@@ -260,7 +287,7 @@ export class CombinationTower extends Tower {
                     const dist = Math.hypot(enemy.x - originalTarget.x, enemy.y - originalTarget.y);
                     if (dist <= chainRange) {
                         const chainDamage = Math.floor(damage * 0.5);
-                        enemy.takeDamage(chainDamage, 0, damageType);
+                        enemy.takeDamage(chainDamage, 0, this._damageTypeFor(enemy, damageType));
                     }
                 }
             }
@@ -271,7 +298,7 @@ export class CombinationTower extends Tower {
                     const dist = Math.hypot(enemy.x - originalTarget.x, enemy.y - originalTarget.y);
                     if (dist <= chainRange) {
                         const chainDamage = Math.floor(damage * 0.5);
-                        enemy.takeDamage(chainDamage, 0, damageType);
+                        enemy.takeDamage(chainDamage, 0, this._damageTypeFor(enemy, damageType));
                     }
                 }
             }
@@ -295,7 +322,7 @@ export class CombinationTower extends Tower {
                 switch(this.selectedSpell) {
                     case 'steam':
                         finalDamage += spell.damageBonus;
-                        this.target.takeDamage(finalDamage, 0, 'fire');
+                        this.target.takeDamage(finalDamage, 0, this._damageTypeFor(this.target, 'fire'));
                         // Burn effect
                         if (this.target.burnTimer) {
                             this.target.burnTimer = Math.max(this.target.burnTimer, 3);
@@ -314,7 +341,7 @@ export class CombinationTower extends Tower {
                     case 'magma':
                         finalDamage += spell.damageBonus;
                         const piercingDamage = finalDamage + spell.piercingBonus;
-                        this.target.takeDamage(piercingDamage, 100, 'earth'); // Earth damage with armor piercing
+                        this.target.takeDamage(piercingDamage, 100, this._damageTypeFor(this.target, 'earth')); // Earth damage with armor piercing
                         // Burn effect
                         if (this.target.burnTimer) {
                             this.target.burnTimer = Math.max(this.target.burnTimer, 3);
@@ -325,7 +352,7 @@ export class CombinationTower extends Tower {
                         break;
                         
                     case 'tempest':
-                        this.target.takeDamage(finalDamage, 0, 'air');
+                        this.target.takeDamage(finalDamage, 0, this._damageTypeFor(this.target, 'air'));
                         // Slow effect
                         const slowEffect = Math.max(0.3, 0.7 - spell.slowBonus);
                         if (this.target.speed > 20) {
@@ -337,7 +364,7 @@ export class CombinationTower extends Tower {
 
                     case 'meteor':
                         const meteorPiercingDamage = finalDamage + spell.piercingBonus;
-                        this.target.takeDamage(meteorPiercingDamage, 100, 'earth'); // Earth damage with armor piercing
+                        this.target.takeDamage(meteorPiercingDamage, 100, this._damageTypeFor(this.target, 'earth')); // Earth damage with armor piercing
                         // Chain to nearby enemies (splash damage) - upgraded Meteor widens the blast radius
                         this.chainToNearbyEnemies(this.target, meteorPiercingDamage, 'earth', 100 + spell.chainRange);
                         break;

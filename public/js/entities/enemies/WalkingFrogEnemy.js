@@ -60,7 +60,7 @@ export class WalkingFrogEnemy extends BaseEnemy {
         // scaling instead of always using a flat factor regardless of her actual speed.
         const speedMultiplier = actualSpeed / baseStats.speed;
         this.spawnOnDeath = [
-            { type: 'frog', count: 20, healthMultiplier: 1.5 * health_multiplier, speedMultiplier, baseSpeed: 45 }
+            { type: 'frog', count: 20, healthMultiplier: 0.8 * health_multiplier, speedMultiplier, baseSpeed: 45 }
         ];
 
         // Set by EnemyRenderAdapter once it has synced this enemy via Pixi.

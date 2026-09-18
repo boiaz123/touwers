@@ -77,6 +77,24 @@ export class BarricadeTower extends Tower {
         this.maxThrowInterval = 18.0;
         this.throwTimer = this.minThrowInterval + Math.random() * (this.maxThrowInterval - this.minThrowInterval);
 
+        // Whether this tower's rubble landings make noise - reassigned by TowerManager, which
+        // limits it to the first few barricade towers. Defaults to on so a tower outside a
+        // TowerManager (nothing to assign it) still sounds like it always did.
+        this.playsLandingSound = true;
+
+        // Redraw gates read by TowerRenderAdapter.sync() (see needsDynamicRedraw()/
+        // needsGroundRedraw()). Both layers are static for the overwhelming majority of a
+        // barricade's life - the throw cadence is one every 12-18s - yet an unconditional redraw
+        // rebuilds every shape of both as fresh Pixi Graphics geometry ~30 times a second per
+        // tower, which is where nearly all of a barricade's frame cost went. update() flags them
+        // only when something they draw actually changed. Start dirty so the first sync paints.
+        this._dynamicDirty = true;
+        this._groundDirty = true;
+        this._wasActive = false;
+        this._hadPuffs = false;
+        this._lastZoneQ = -1;
+        this._lastPulseQ = -1;
+
         // Store original values for upgrade calculations
         this.originalRange = this.range;
         this.originalEffectRadius = this.effectRadius;
@@ -160,6 +178,7 @@ export class BarricadeTower extends Tower {
         // Force the coverage strip + debris layout to rebuild next update() since the
         // anchor moved.
         this._coverageRadius = null;
+        this.invalidateRender();
     }
 
     _nearestPointOnSegment(px, py, p1, p2) {
@@ -433,6 +452,12 @@ export class BarricadeTower extends Tower {
         return false;
     }
 
+    /** Barricade never aims (see update()), so skip Tower.update()'s per-frame target scan -
+     *  it ran a spatial-grid query every frame just for update() to throw the result away. */
+    findTarget() {
+        return null;
+    }
+
     update(deltaTime, enemies) {
         super.update(deltaTime, enemies);
         // Barricade doesn't chase or target enemies - it periodically hurls rubble at a
@@ -507,6 +532,31 @@ export class BarricadeTower extends Tower {
         this.zoneIntensity += (targetIntensity - this.zoneIntensity) * Math.min(1, deltaTime * 2);
         this._landPulse = Math.max(0, this._landPulse - deltaTime * 2);
 
+        // Flag what actually needs repainting (see the redraw-gate note in the constructor).
+        // Defenders + barrels: anything mid-animation, plus one more frame after the last
+        // one settles so the final resting pose is drawn. Ground: the fade/flash levels are
+        // compared quantized (they ease asymptotically and would otherwise never "stop
+        // changing"), and live dust puffs animate every frame - again with one trailing
+        // frame so the last, faded puff is wiped.
+        let active = this.rollingBarrels.length > 0;
+        if (!active) {
+            for (let d = 0; d < this.defenders.length; d++) {
+                if (this.defenders[d].animPhase !== 'idle') { active = true; break; }
+            }
+        }
+        if (active || this._wasActive) this._dynamicDirty = true;
+        this._wasActive = active;
+
+        const zoneQ = Math.round(this.zoneIntensity * 100);
+        const pulseQ = Math.round(this._landPulse * 60);
+        const hasPuffs = this.impactPuffs.length > 0;
+        if (zoneQ !== this._lastZoneQ || pulseQ !== this._lastPulseQ || hasPuffs || this._hadPuffs) {
+            this._groundDirty = true;
+            this._lastZoneQ = zoneQ;
+            this._lastPulseQ = pulseQ;
+        }
+        this._hadPuffs = hasPuffs;
+
         if (!this._slowedSet) this._slowedSet = new Set();
         this._slowedSet.clear();
 
@@ -518,6 +568,7 @@ export class BarricadeTower extends Tower {
                 this._rebuildAtmosphere(effRadius);
                 this._rebuildBoundaryMarkers(effRadius);
                 this._coverageRadius = effRadius;
+                this._groundDirty = true;
             }
 
             // Broad-phase query circle around the anchor: any point within effRadius
@@ -631,8 +682,10 @@ export class BarricadeTower extends Tower {
     }
 
     landRubble() {
-        // Play impact sound when the barrel hits
-        if (this.audioManager) {
+        // Play impact sound when the barrel hits - capped to the first few barricade towers
+        // so a big barricade line isn't a wall of noise (see TowerManager's
+        // MAX_BARRICADE_SOUND_TOWERS).
+        if (this.audioManager && this.playsLandingSound) {
             this.audioManager.playSFX('barricade-tower');
         }
 
@@ -643,6 +696,7 @@ export class BarricadeTower extends Tower {
             this.debrisRevealed++;
         }
         this._landPulse = 1;
+        this._groundDirty = true;
 
         // Short-lived dust burst right at the impact point - the tower's only dust-cloud
         // visual (see the constructor's impactPuffs comment), so it's the one moment this
@@ -688,6 +742,29 @@ export class BarricadeTower extends Tower {
     /** Phase 5: ground-level rubble patch - present so TowerRenderAdapter.sync() can call this through its own Graphics layer, positioned BEHIND the tower's baked static-back sprite (see the `ground` layer's doc comment in TowerRenderAdapter.register()) rather than on top of it like renderProjectiles. */
     renderGroundEffects(ctx) {
         this.renderRubbleZone(ctx);
+    }
+
+    /** TowerRenderAdapter redraw gate for the dynamic layer (defenders + rolling barrels): true
+     *  if anything it draws changed since it was last painted. Consumes the flag - the adapter
+     *  repaints in response, so it must only be asked once per repaint. See the constructor. */
+    needsDynamicRedraw() {
+        const dirty = this._dynamicDirty;
+        this._dynamicDirty = false;
+        return dirty;
+    }
+
+    /** Same, for the ground layer (the rubble patch) - see needsDynamicRedraw(). */
+    needsGroundRedraw() {
+        const dirty = this._groundDirty;
+        this._groundDirty = false;
+        return dirty;
+    }
+
+    /** Called by TowerRenderAdapter.register() - a freshly created Graphics is empty, so both
+     *  layers must be painted on the next sync regardless of what update() has flagged. */
+    invalidateRender() {
+        this._dynamicDirty = true;
+        this._groundDirty = true;
     }
 
     /** Phase 5: rolling barrels - present so TowerRenderAdapter.sync() can call this through the same shim used for renderDynamicParts, preserving draw order (body, then projectiles on top). */

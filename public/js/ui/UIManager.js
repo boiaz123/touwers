@@ -897,7 +897,7 @@ export class UIManager {
                     const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
                     const diamondCount = academy ? (academy.gems.diamond || 0) : 0;
                     if (diamondCount < 5) {
-                        unlockHTML = `<div style="color: #ff9999;">Requires 5 ◆ (have ${diamondCount})</div>`;
+                        unlockHTML = '<div style="color: #ff9999;">Requires 5 ◆</div>';
                     }
                 }
                 break;
@@ -5038,7 +5038,10 @@ export class UIManager {
                             <div class="forge-name">Diamond Press</div>
                         </div>
                         <div class="forge-effects-row">
-                            <span class="effect-badge">Diamonds: ${diamond}</span>
+                            <span class="diamond-stock-badge" title="Diamonds in stock">
+                                ${this.getElementGemHTML('diamond', '20px')}
+                                <span class="diamond-stock-count">${diamond}</span>
+                            </span>
                         </div>
                     </div>
                 </div>

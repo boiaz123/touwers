@@ -49,19 +49,19 @@ export class HitSplatter {
     }
 
     static COLOR_MAP = {
-        fire: 'rgb(255, 80, 0)', water: 'rgb(50, 220, 255)', air: 'rgb(100, 200, 255)',
+        fire: 'rgb(255, 80, 0)', water: 'rgb(50, 220, 255)', air: 'rgb(255, 255, 255)',
         earth: 'rgb(220, 150, 30)', poison: 'rgb(100, 255, 100)', arcane: 'rgb(186, 85, 211)',
         magic: 'rgb(186, 85, 211)', ice: 'rgb(100, 220, 255)', electricity: 'rgb(255, 255, 100)',
         physical: 'rgb(255, 255, 200)'
     };
     static GLOW_MAP = {
-        fire: 'rgba(255, 100, 0, 0.6)', water: 'rgba(50, 220, 255, 0.6)', air: 'rgba(100, 200, 255, 0.5)',
+        fire: 'rgba(255, 100, 0, 0.6)', water: 'rgba(50, 220, 255, 0.6)', air: 'rgba(255, 255, 255, 0.5)',
         earth: 'rgba(220, 150, 30, 0.6)', poison: 'rgba(100, 255, 100, 0.6)', arcane: 'rgba(186, 85, 211, 0.6)',
         magic: 'rgba(186, 85, 211, 0.6)', ice: 'rgba(100, 220, 255, 0.6)', electricity: 'rgba(255, 255, 100, 0.6)',
         physical: 'rgba(255, 255, 200, 0.5)'
     };
     static GLOW_MID_MAP = {
-        fire: 'rgba(255, 100, 0, 0.4)', water: 'rgba(50, 220, 255, 0.4)', air: 'rgba(100, 200, 255, 0.4)',
+        fire: 'rgba(255, 100, 0, 0.4)', water: 'rgba(50, 220, 255, 0.4)', air: 'rgba(255, 255, 255, 0.4)',
         earth: 'rgba(220, 150, 30, 0.4)', poison: 'rgba(100, 255, 100, 0.4)', arcane: 'rgba(186, 85, 211, 0.4)',
         magic: 'rgba(186, 85, 211, 0.4)', ice: 'rgba(100, 220, 255, 0.4)', electricity: 'rgba(255, 255, 100, 0.4)',
         physical: 'rgba(255, 255, 200, 0.4)'

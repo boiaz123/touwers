@@ -14,6 +14,12 @@ const TOWER_SOUND_MAP = {
     'cannon':      'trebuchet-launch'
 };
 
+// Every barricade tower plays a landing sound each time it drops rubble, and they all throw
+// on independent 12-18s timers - past a few towers those overlap into a constant racket. Only
+// the first few (in placement order) get to play it; the rest still throw and slow enemies,
+// silently. See BarricadeTower.playsLandingSound and TowerManager.update()'s barricade cache.
+const MAX_BARRICADE_SOUND_TOWERS = 3;
+
 export class TowerManager {
     constructor(gameState, level) {
         this.gameState = gameState;
@@ -463,6 +469,11 @@ export class TowerManager {
             this._lastTowerCount = currentTowerCount;
             this._towerStatsNeedUpdate = true;
             this._barricadeTowers = this.towers.filter(t => t.type === 'barricade');
+            // Re-derived here every time the set of barricade towers can have changed, so
+            // selling one of the audible towers hands its slot to the next one in line.
+            for (let i = 0; i < this._barricadeTowers.length; i++) {
+                this._barricadeTowers[i].playsLandingSound = i < MAX_BARRICADE_SOUND_TOWERS;
+            }
         }
         
         // OPTIMIZATION: Only reapply building upgrade stats when something changed
@@ -1365,6 +1376,11 @@ export class TowerManager {
         // Force the per-frame stat-refresh block to recompute originalDamage/Range/
         // FireRate and reapply Forge/Training Grounds bonuses for the new instance.
         this._towerStatsNeedUpdate = true;
+
+        // The swap above keeps towers.length unchanged, so update()'s count-based check
+        // wouldn't notice it - without this, the cached barricade list (zone-slow lookups
+        // and the landing-sound slots) would keep pointing at the replaced instance.
+        this._lastTowerCount = -1;
 
         return newTower;
     }

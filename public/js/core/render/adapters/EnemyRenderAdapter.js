@@ -53,6 +53,20 @@ function _animFps(entity) {
  */
 const ANIM_FPS = 20;
 
+/**
+ * Mode B's per-entity rate above is fine for a handful of enemies, but every redraw
+ * tears down and rebuilds an entity's whole Graphics (each frog is ~100 shapes, including
+ * round-capped strokes that Pixi has to triangulate on the CPU), so cost scales with
+ * (live-Graphics enemies x their fps). A Goliath Frog's 20-strong brood at a frog's 40fps
+ * is 800 full redraws a second - measured, 40 frogs cost ~5ms of CPU per frame and dropped
+ * the frame rate below 60. Rather than a fixed rate that's wasteful for one enemy and too
+ * much for a crowd, this is a total budget shared by every Mode-B entity: each one keeps its
+ * own rate until the budget runs out, then all slow down together, never below the floor.
+ * Small crowds are untouched (a lone frog still gets its full 40fps).
+ */
+const MODE_B_REDRAW_BUDGET = 720; // total Mode-B redraws/second across all live-Graphics entities
+const MODE_B_MIN_FPS = 18;        // floor per entity - a hop is still legible at this rate
+
 // Health bar layout – in baseSize units, matching the convention used by all enemies.
 const HB_Y   = -2.1;   // y-offset above entity centre
 const HB_W   =  3.0;   // width
@@ -248,6 +262,8 @@ export class EnemyRenderAdapter {
         this.textureCache = textureCache;
         /** @type {Map<object, object>} */
         this._entries = new Map();
+        /** Live Mode-B entries - the divisor for MODE_B_REDRAW_BUDGET (see _syncModeB). */
+        this._modeBCount = 0;
     }
 
     has(entity) { return this._entries.has(entity); }
@@ -324,6 +340,7 @@ export class EnemyRenderAdapter {
                 // fix + measurement writeup in TowerRenderAdapter.js.
                 animPhaseOffset: Math.random() / ANIM_FPS,
             };
+            this._modeBCount++;
         }
 
         this._entries.set(entity, entry);
@@ -343,6 +360,7 @@ export class EnemyRenderAdapter {
         // they are shared across instances and persist for the process lifetime.
         entry.entryContainer.destroy({ children: true, texture: false });
         if (!entry.modeA) {
+            this._modeBCount--;
             entry.shim.destroyGradients();
             if (entry.healthBarShim) {
                 entry.healthBarShim.destroyGradients();
@@ -406,10 +424,15 @@ export class EnemyRenderAdapter {
     // ── Mode B ──────────────────────────────────────────────────────────────
 
     _syncModeB(entity, sizeHint, entry) {
-        // Rate-limit redraws to _animFps(entity) (defaults to ANIM_FPS).  Container position
+        // Rate-limit redraws to _animFps(entity) (defaults to ANIM_FPS), scaled down when many
+        // live-Graphics entities are on screen (see MODE_B_REDRAW_BUDGET).  Container position
         // already updated above, so the entity tracks smoothly even when the Graphics content
         // is cached.
-        const animKey = Math.floor((entity.animationTime + entry.animPhaseOffset) * _animFps(entity));
+        let fps = _animFps(entity);
+        if (this._modeBCount * fps > MODE_B_REDRAW_BUDGET) {
+            fps = Math.min(fps, Math.max(MODE_B_MIN_FPS, MODE_B_REDRAW_BUDGET / this._modeBCount));
+        }
+        const animKey = Math.floor((entity.animationTime + entry.animPhaseOffset) * fps);
         if (animKey === entry.lastAnimKey) return;
         entry.lastAnimKey = animKey;
 

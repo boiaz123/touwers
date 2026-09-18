@@ -156,6 +156,9 @@ export class TowerRenderAdapter {
             animPhaseOffset: Math.random() * 33,
         });
         tower.skipCanvas2DBodyRender = true;
+        // The layers above start empty - a tower that gates its redraws (see sync()) must be
+        // told to paint them regardless of what it last flagged (e.g. a re-registration).
+        if (typeof tower.invalidateRender === 'function') tower.invalidateRender();
 
         // Towers never move after placement: do the one-time position + zIndex set here
         // so sync() never has to touch them again.
@@ -204,25 +207,33 @@ export class TowerRenderAdapter {
         if (animKey === entry.lastAnimKey) return;
         entry.lastAnimKey = animKey;
 
-        entry.shim.reset();
-        entry.shim.level = level;
-        entry.shim.resolutionManager = level && level.resolutionManager;
-        tower.renderDynamicParts(entry.shim, gridSize);
+        // Optional redraw gate: a tower whose dynamic layer is unchanged most of the time
+        // (BarricadeTower's idle defenders) exposes needsDynamicRedraw() so an unchanged
+        // layer isn't torn down and rebuilt as fresh Graphics geometry every ~33ms - Pixi keeps
+        // showing what was last drawn. Towers without the hook redraw on every tick, as before.
+        if (typeof tower.needsDynamicRedraw !== 'function' || tower.needsDynamicRedraw()) {
+            entry.shim.reset();
+            entry.shim.level = level;
+            entry.shim.resolutionManager = level && level.resolutionManager;
+            tower.renderDynamicParts(entry.shim, gridSize);
 
-        // Phase 5: projectiles (arrows/rocks/fireballs/etc.) draw on top of the dynamic
-        // body parts into the SAME Graphics/shim, preserving the exact draw order the
-        // Canvas2D render() already used. Optional - towers not yet migrated to the
-        // renderProjectiles(ctx) convention simply don't have this method, and keep
-        // drawing their projectiles unconditionally on the Canvas2D layer via their own
-        // render() (see each tower's skipCanvas2DBodyRender-gated call site).
-        if (typeof tower.renderProjectiles === 'function') {
-            tower.renderProjectiles(entry.shim);
+            // Phase 5: projectiles (arrows/rocks/fireballs/etc.) draw on top of the dynamic
+            // body parts into the SAME Graphics/shim, preserving the exact draw order the
+            // Canvas2D render() already used. Optional - towers not yet migrated to the
+            // renderProjectiles(ctx) convention simply don't have this method, and keep
+            // drawing their projectiles unconditionally on the Canvas2D layer via their own
+            // render() (see each tower's skipCanvas2DBodyRender-gated call site).
+            if (typeof tower.renderProjectiles === 'function') {
+                tower.renderProjectiles(entry.shim);
+            }
         }
 
         // Ground-level effects (see the `ground` layer's doc comment in register()) draw
         // into their own Graphics beneath `back`, not the dynamic one above - same
-        // optional-hook convention as renderProjectiles.
-        if (typeof tower.renderGroundEffects === 'function') {
+        // optional-hook convention as renderProjectiles, and the same optional redraw gate
+        // (needsGroundRedraw) as the dynamic layer above.
+        if (typeof tower.renderGroundEffects === 'function' &&
+            (typeof tower.needsGroundRedraw !== 'function' || tower.needsGroundRedraw())) {
             entry.groundShim.reset();
             entry.groundShim.level = level;
             entry.groundShim.resolutionManager = level && level.resolutionManager;

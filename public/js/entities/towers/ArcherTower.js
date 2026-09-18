@@ -23,12 +23,22 @@ export class ArcherTower extends Tower {
         this.archerAngle = 0;
         this.drawTime = 0;
         this.arrows = [];
+
+        // Arrow flight tuning - defaults are the lobbed, gravity-arced shot every Archer
+        // Tower fires; SharpshooterTower overrides these for a near-instant straight shot.
+        this.arrowSpeed = 400;
+        this.arrowGravity = 200;
+        this.arrowArcRatio = 0.1;       // upward launch bias as a fraction of the shot distance
+        this.arrowFlightTime = 0;       // seconds; when > 0, every shot takes exactly this long regardless of distance (arrowSpeed is then ignored)
+        this.arrowTrailLength = 0;      // px of speed streak drawn behind the arrow (0 = none)
+        this.arrowCancelOnTargetDeath = true;
+
         // Phase 5: reuse arrow objects across shots instead of allocating a fresh literal
         // every time - acquire() in shoot(), release() once an arrow is dropped from the
         // compaction loop below.
         this._arrowPool = new ObjectPool(() => ({
             x: 0, y: 0, vx: 0, vy: 0, rotation: 0, life: 0, maxLife: 0,
-            targetX: 0, targetY: 0, target: null
+            targetX: 0, targetY: 0, target: null, startX: 0, startY: 0
         }));
         this.archers = [
             { angle: 0, drawback: 0, shootTimer: 0 },
@@ -69,15 +79,18 @@ export class ArcherTower extends Tower {
             const oldY = arrow.y;
             arrow.x += arrow.vx * deltaTime;
             arrow.y += arrow.vy * deltaTime;
-            arrow.vy += 200 * deltaTime; // Gravity effect
+            arrow.vy += this.arrowGravity * deltaTime; // Gravity effect
             arrow.life -= deltaTime;
             arrow.rotation = Math.atan2(arrow.vy, arrow.vx);
 
             // If the enemy it was aimed at has already died or reached the end (from
             // this shot's own damage, another tower, etc), there's nothing left to fly
             // toward - cancel it immediately instead of finishing the flight to a now-
-            // meaningless point.
-            if (arrow.target && (arrow.target.isDead() || arrow.target.reachedEnd)) {
+            // meaningless point. Skipped for towers whose flight is short enough that
+            // finishing it reads better than vanishing mid-air (a killing shot's arrow
+            // would otherwise be deleted the frame after it's fired, before it ever
+            // reaches the enemy it just killed).
+            if (this.arrowCancelOnTargetDeath && arrow.target && (arrow.target.isDead() || arrow.target.reachedEnd)) {
                 this._arrowPool.release(arrow);
                 continue;
             }
@@ -160,23 +173,31 @@ export class ArcherTower extends Tower {
             const archerIndex = Math.floor(Math.random() * this.archers.length);
             const archerPos = archerPositions[archerIndex];
             
-            // Predict where the target will be
-            const arrowSpeed = 400;
+            // Predict where the target will be. For a fixed-duration shot the speed depends
+            // on the distance, so lead the target using the speed implied by its current
+            // distance first, then re-derive the exact speed below once the aim point is known.
+            let arrowSpeed = this.arrowSpeed;
+            if (this.arrowFlightTime > 0) {
+                arrowSpeed = Math.hypot(this.target.x - archerPos.x, this.target.y - archerPos.y) / this.arrowFlightTime;
+            }
             const predicted = this.predictEnemyPosition(this.target, arrowSpeed);
-            
+
             // Calculate arrow trajectory with arc to predicted position
             const dx = predicted.x - archerPos.x;
             const dy = predicted.y - archerPos.y;
             const distance = Math.hypot(dx, dy);
-            const arcHeight = distance * 0.1; // Slight arc for realism
-            
+            const arcHeight = distance * this.arrowArcRatio; // Slight arc for realism
+            const flightSpeed = this.arrowFlightTime > 0 ? distance / this.arrowFlightTime : arrowSpeed;
+
             const arrow = this._arrowPool.acquire();
             arrow.x = archerPos.x;
             arrow.y = archerPos.y;
-            arrow.vx = distance > 0 ? (dx / distance) * arrowSpeed : 0;
-            arrow.vy = distance > 0 ? (dy / distance) * arrowSpeed - arcHeight : 0;
+            arrow.startX = archerPos.x;
+            arrow.startY = archerPos.y;
+            arrow.vx = distance > 0 ? (dx / distance) * flightSpeed : 0;
+            arrow.vy = distance > 0 ? (dy / distance) * flightSpeed - arcHeight : 0;
             arrow.rotation = shooter.angle;
-            arrow.life = Math.min(distance / Math.max(arrowSpeed, 1) + 0.5, 3.0);
+            arrow.life = Math.min(distance / Math.max(flightSpeed, 1) + 0.5, 3.0);
             arrow.maxLife = arrow.life;
             arrow.targetX = predicted.x;
             arrow.targetY = predicted.y;
@@ -693,7 +714,30 @@ export class ArcherTower extends Tower {
             ctx.rotate(arrow.rotation);
             
             const alpha = Math.min(1, arrow.life / arrow.maxLife);
-            
+
+            // Speed streak behind very fast arrows (see arrowTrailLength) - without it a shot
+            // covering tens of pixels per frame reads as a flickering dash instead of a
+            // projectile in flight. Clamped to the distance flown so it never extends back
+            // past the archer that fired it.
+            if (this.arrowTrailLength > 0) {
+                const trail = Math.min(this.arrowTrailLength, Math.hypot(arrow.x - arrow.startX, arrow.y - arrow.startY));
+                if (trail > 4) {
+                    ctx.lineCap = 'round';
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.18})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(-12, 0);
+                    ctx.lineTo(-12 - trail, 0);
+                    ctx.stroke();
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.4})`;
+                    ctx.beginPath();
+                    ctx.moveTo(-12, 0);
+                    ctx.lineTo(-12 - trail * 0.45, 0);
+                    ctx.stroke();
+                    ctx.lineCap = 'butt';
+                }
+            }
+
             // Arrow shaft
             ctx.strokeStyle = `rgba(139, 69, 19, ${alpha})`;
             ctx.lineWidth = 2;

@@ -266,9 +266,40 @@ export class CanvasGraphicsShim {
         const fontFamilyMatch = /px\s+(.+)$/.exec(this._font);
         const fontFamily = fontFamilyMatch ? fontFamilyMatch[1] : 'sans-serif';
 
+        // Canvas2D's fillStyle carries opacity inside an rgba() string, and callers animate it
+        // (e.g. a rune's `rgba(255, 255, 255, ${pulse})` changing every frame). For a Pixi Text
+        // any change to `style` throws away the rasterized glyph texture and rebuilds it, so
+        // that opacity is split off onto Text.alpha - a plain per-frame property - and only the
+        // opaque color goes into the style, where it stays constant.
+        let fill = this._fillStyle;
+        let alpha = 1;
+        if (typeof fill === 'string' && fill.charCodeAt(0) === 114 /* 'r' */) {
+            const rgba = CanvasGraphicsShim._RGBA_RE.exec(fill);
+            if (rgba) {
+                fill = `rgb(${rgba[1]}, ${rgba[2]}, ${rgba[3]})`;
+                alpha = rgba[4] === undefined ? 1 : Math.max(0, Math.min(1, parseFloat(rgba[4])));
+            }
+        }
+
         textObj.visible = true;
-        textObj.text = String(text);
-        textObj.style = { fontFamily, fontSize, fontWeight, fill: this._fillStyle };
+        // Assigning text/style is expensive (see above) even when the value is unchanged -
+        // Pixi can't tell, it just marks the texture dirty - so only touch them on a real
+        // change. Each pooled Text is claimed in the same order every frame, so a given draw
+        // call keeps getting the same object and its last-applied values stay comparable.
+        const str = String(text);
+        if (textObj._shimText !== str) {
+            textObj.text = str;
+            textObj._shimText = str;
+        }
+        if (textObj._shimFontSize !== fontSize || textObj._shimFontFamily !== fontFamily ||
+            textObj._shimFontWeight !== fontWeight || textObj._shimFill !== fill) {
+            textObj.style = { fontFamily, fontSize, fontWeight, fill };
+            textObj._shimFontSize = fontSize;
+            textObj._shimFontFamily = fontFamily;
+            textObj._shimFontWeight = fontWeight;
+            textObj._shimFill = fill;
+        }
+        textObj.alpha = alpha;
         textObj.position.set(p.x, p.y);
         textObj.rotation = rotation;
         textObj.anchor.set(
@@ -379,6 +410,10 @@ export class CanvasGraphicsShim {
             this.g.stroke({ width: this._lineWidth, color: this._strokeStyle, cap });
         }
     }
+
+    // Matches an "rgba(r, g, b, a)" / "rgb(r, g, b)" string (see fillText's alpha split).
+    // Deliberately doesn't match anything else, so unusual fill strings fall through to Pixi's own parser untouched.
+    static _RGBA_RE = /^rgba?\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*(?:,\s*([\d.]+(?:e-?\d+)?)\s*)?\)$/;
 
     // Normalizes rgba alpha in scientific notation (e.g. 1.32e-8) to a fixed-decimal string
     // that Pixi's color parser can handle. Only called when 'e' is in the string.
