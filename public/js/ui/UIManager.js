@@ -1,4 +1,5 @@
 import { SaveSystem } from '../core/systems/SaveSystem.js';
+import { eternalModeLabel } from '../core/systems/EternalOptions.js';
 import { EnemyIntelRegistry } from '../core/registries/EnemyIntelRegistry.js';
 import { InputManager } from '../core/managers/InputManager.js';
 import { ControlsScreen } from './ControlsScreen.js';
@@ -382,6 +383,7 @@ export class UIManager {
                     this.stateManager.audioManager.playSFX('button-click');
                 }
                 this.gameplayState.skipWaveCooldown();
+                waveCountdownBtn.blur();
             });
         }
 
@@ -420,6 +422,17 @@ export class UIManager {
                 }
                 this.openPauseMenu();
                 menuBtn.blur();
+            });
+        }
+
+        const saveEternalBtn = document.getElementById('save-eternal-btn');
+        if (saveEternalBtn) {
+            this._addListener(saveEternalBtn, 'click', () => {
+                if (this.stateManager.audioManager) {
+                    this.stateManager.audioManager.playSFX('button-click');
+                }
+                this.saveEternalRun();
+                saveEternalBtn.blur();
             });
         }
 
@@ -563,6 +576,9 @@ export class UIManager {
         // Update selection
         document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
+        // Selection is tracked by the .selected class, not DOM focus - a lingering focused
+        // button would also re-fire on Space/Enter (see the focus-ring note in style.css).
+        btn.blur();
         this.gameplayState.selectedTowerType = towerType;
         
         // Clear building selection
@@ -607,7 +623,8 @@ export class UIManager {
         document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
         document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
-        
+        btn.blur(); // see selectTower()
+
         // Clear tower selection
         this.gameplayState.selectedTowerType = null;
         this.gameplayState.selectedBuildingType = buildingType;
@@ -1144,6 +1161,7 @@ export class UIManager {
                     if (this.gameplayState.isPaused) {
                         return;
                     }
+                    btn.blur();
                     if (spell.currentCooldown === 0) {
                         this.gameplayState.activateSpellTargeting(spell.id);
                     }
@@ -1213,7 +1231,9 @@ export class UIManager {
             return; // Not in gameplay, don't update
         }
         
-        document.getElementById('gold').textContent = Math.floor(this.gameplayState.gameState.gold);
+        document.getElementById('gold').textContent = this.gameplayState.gameState.unlimitedGold
+            ? '∞'
+            : Math.floor(this.gameplayState.gameState.gold);
         
         // Show wave info differently for sandbox mode
         if (this.gameplayState.isSandbox) {
@@ -1227,7 +1247,7 @@ export class UIManager {
         // Show level
         const levelElement = document.getElementById('level');
         if (levelElement) {
-            levelElement.textContent = this.level?.levelName || 'Unknown Level';
+            levelElement.textContent = this.getLevelLabel();
         }
         
         // Gems UI is only relevant once a Magic Academy has been built in this level
@@ -3537,8 +3557,7 @@ export class UIManager {
         let transformButtonHTML = '';
         const transformDef = TowerTransformRegistry.getTransform(tower.type);
         if (transformDef && !tower.transformedType) {
-            const upgradeSystem = this.stateManager.upgradeSystem;
-            const transformUnlocked = upgradeSystem && upgradeSystem.hasUpgrade(transformDef.unlockId);
+            const transformUnlocked = this.towerManager.isTransformUnlocked(transformDef);
             const towerTypeReady = transformUnlocked && this.towerManager.canTransformTowerType(tower.type);
             if (towerTypeReady) {
                 // Per-type Transformation Tower cap (starts at 3, raised to 4/5 by the
@@ -5371,7 +5390,77 @@ export class UIManager {
             pauseMenuModal.classList.add('show');
         }
 
+        this.updateEternalSaveControls();
         this.updatePanelPauseState();
+    }
+
+    /**
+     * The name shown in the top bar's Level box. Eternal Mode adds its mode when it isn't
+     * plain Ranked, so a Hardcore or Custom run can't be mistaken for a normal one.
+     */
+    getLevelLabel() {
+        const name = this.level?.levelName || 'Unknown Level';
+        const gs = this.gameplayState;
+        if (gs.isSandbox && gs.eternalOptions && (gs.eternalOptions.hardcore || !gs.eternalOptions.ranked)) {
+            return `${name} · ${eternalModeLabel(gs.eternalOptions)}`;
+        }
+        return name;
+    }
+
+    /**
+     * Eternal Mode's Save Progress button and the line under it: shown for Eternal Mode only,
+     * replaced by a "saving is disabled" note in a Hardcore run, and otherwise explaining
+     * exactly which point in the run a save would resume from.
+     */
+    updateEternalSaveControls() {
+        const btn = document.getElementById('save-eternal-btn');
+        const note = document.getElementById('save-eternal-note');
+        if (!btn || !note) return;
+
+        const gs = this.gameplayState;
+        note.classList.remove('saved', 'error');
+
+        if (!gs.isSandbox) {
+            btn.style.display = 'none';
+            note.style.display = 'none';
+            return;
+        }
+
+        note.style.display = '';
+        if (!gs.canSaveRun()) {
+            btn.style.display = 'none';
+            note.textContent = 'Hardcore Ranked - saving is disabled for this run.';
+            return;
+        }
+
+        btn.style.display = '';
+        const snapshot = gs.getEternalSaveSnapshot();
+        if (!snapshot) {
+            note.textContent = 'Nothing to save yet - finish a wave first.';
+        } else if (snapshot.wave <= 1) {
+            note.textContent = 'Saves your run before the first wave - loading it resumes at the start of wave 1.';
+        } else {
+            note.textContent = `Saves your run as it stands after wave ${snapshot.wave - 1} - loading it resumes at the start of wave ${snapshot.wave}.`;
+        }
+    }
+
+    saveEternalRun() {
+        const note = document.getElementById('save-eternal-note');
+        const result = this.gameplayState.saveEternalRun();
+        if (!note) return;
+
+        note.classList.remove('saved', 'error');
+        if (result.ok) {
+            note.classList.add('saved');
+            note.textContent = `Progress saved - resumes at the start of wave ${result.wave}.`;
+            return;
+        }
+        note.classList.add('error');
+        note.textContent = {
+            'no-checkpoint': 'Nothing to save yet - finish a wave first.',
+            'no-slot': 'No save slot is active, so this run cannot be saved.',
+            'write-failed': 'Saving failed - the browser storage may be full.'
+        }[result.reason] || 'This run cannot be saved.';
     }
 
     closePauseMenu() {
@@ -5550,6 +5639,18 @@ export class UIManager {
     }
 
     quitLevel() {
+        // Eternal Mode: point out the way to keep the run before it's thrown away
+        const hint = document.getElementById('quit-warning-hint');
+        if (hint) {
+            const gs = this.gameplayState;
+            if (gs.isSandbox && gs.canSaveRun()) {
+                hint.textContent = 'Use Save Progress in the menu first if you want to keep this run.';
+            } else if (gs.isSandbox) {
+                hint.textContent = 'Hardcore Ranked runs cannot be saved.';
+            }
+            hint.style.display = gs.isSandbox ? '' : 'none';
+        }
+
         // Show quit warning modal instead of quitting directly
         const quitWarningModal = document.getElementById('quit-warning-modal');
         if (quitWarningModal) {
@@ -5576,7 +5677,12 @@ export class UIManager {
         this.gameplayState.setPaused(false);
 
         const isBonusLevel = !!this.gameplayState.level?.levelFlags?.isBonusLevel;
-        const destinationState = destination || (isBonusLevel ? 'settlementHub' : 'levelSelect');
+        let destinationState = destination || (isBonusLevel ? 'settlementHub' : 'levelSelect');
+        // Eternal Mode is started from the Campaigns screen (which is also where a saved run
+        // is loaded from), not from a campaign's level map - so "back" means back there.
+        if (this.gameplayState.isSandbox && destinationState === 'levelSelect') {
+            destinationState = 'campaignMenu';
+        }
 
         // Small delay to ensure menu closes visually before state change
         setTimeout(() => {

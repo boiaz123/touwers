@@ -6,6 +6,8 @@
  * upgrades, unlocks, and marketplace consumables.
  * 
  * No mid-game level saves are stored - saves are only created at settlement transitions.
+ * The one exception is Eternal Mode, which can keep a single saved run (`eternalSave`, captured
+ * between waves - see EternalSnapshot.js) so an endless run can be picked up again later.
  */
 export class SaveSystem {
     static NUM_SLOTS = 3;
@@ -138,7 +140,11 @@ export class SaveSystem {
             // Time (seconds) of the run that set each level's high score, same keys as levelHighScores
             levelHighScoreTimes: settlementData.levelHighScoreTimes || {},
             // Best sandbox/endless run: { wave, enemiesSlain, time } or null if never attempted
-            sandboxHighScore: settlementData.sandboxHighScore || null
+            sandboxHighScore: settlementData.sandboxHighScore || null,
+            // Same, for Hardcore Ranked Eternal Mode runs (kept on their own hiscore line)
+            sandboxHardcoreHighScore: settlementData.sandboxHardcoreHighScore || null,
+            // The saved Eternal Mode run, or null (see EternalSnapshot.js)
+            eternalSave: settlementData.eternalSave || null
         };
 
         try {
@@ -217,7 +223,9 @@ export class SaveSystem {
             playerLevels: updateData.playerLevels !== undefined ? updateData.playerLevels : (existingSave?.playerLevels || []),
             levelHighScores: updateData.levelHighScores !== undefined ? updateData.levelHighScores : (existingSave?.levelHighScores || {}),
             levelHighScoreTimes: updateData.levelHighScoreTimes !== undefined ? updateData.levelHighScoreTimes : (existingSave?.levelHighScoreTimes || {}),
-            sandboxHighScore: updateData.sandboxHighScore !== undefined ? updateData.sandboxHighScore : (existingSave?.sandboxHighScore || null)
+            sandboxHighScore: updateData.sandboxHighScore !== undefined ? updateData.sandboxHighScore : (existingSave?.sandboxHighScore || null),
+            sandboxHardcoreHighScore: updateData.sandboxHardcoreHighScore !== undefined ? updateData.sandboxHardcoreHighScore : (existingSave?.sandboxHardcoreHighScore || null),
+            eternalSave: updateData.eternalSave !== undefined ? updateData.eternalSave : (existingSave?.eternalSave || null)
         };
 
         const key = this.getSaveSlotKey(slotNumber);
@@ -331,7 +339,9 @@ export class SaveSystem {
             playerLevels: [],
             levelHighScores: {},
             levelHighScoreTimes: {},
-            sandboxHighScore: null
+            sandboxHighScore: null,
+            sandboxHardcoreHighScore: null,
+            eternalSave: null
         };
     }
 

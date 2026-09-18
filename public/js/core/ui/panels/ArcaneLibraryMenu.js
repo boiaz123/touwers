@@ -4,6 +4,7 @@ import { AchievementsContentView } from '../AchievementPanel.js';
 import { EnemyIntelRegistry } from '../../registries/EnemyIntelRegistry.js';
 import { LevelRegistry } from '../../../entities/levels/LevelRegistry.js';
 import { CampaignRegistry } from '../../../game/CampaignRegistry.js';
+import { drawCampaignEmblem, preloadCampaignEmblems } from '../../render/EmblemRenderer.js';
 
 // Short, player-facing tab labels for the Hiscores tab's campaign sub-tabs - the full
 // CampaignRegistry names ("The Verdant Woodlands" etc.) are too long to fit four across.
@@ -45,6 +46,7 @@ export class ArcaneLibraryMenu {
         this.hiscoreTabs = [];
         this.hiscoreActiveCampaign = null;
         this.sandboxHighScoreEntry = null;
+        this.hardcoreHighScoreEntry = null;
         this.sandboxUnlocked = false;
 
         // Achievements tab content — embedded inline so the Library's own tab bar
@@ -62,6 +64,7 @@ export class ArcaneLibraryMenu {
         // Image cache for enemy portraits
         this.enemyImageCache = {};
         this._loadEnemyImages();
+        preloadCampaignEmblems(); // Hiscores sub-tab emblems
 
         this.closeButtonHovered = false;
         this.leftArrowHovered = false;
@@ -99,8 +102,12 @@ export class ArcaneLibraryMenu {
         const unlockedCampaigns = saveData?.unlockedCampaigns || ['campaign-1'];
 
         this.sandboxUnlocked = !!(saveData?.completedCampaigns || []).includes('campaign-4');
+        // Ranked and Hardcore Ranked Eternal Mode runs are recorded separately (Custom runs aren't)
         this.sandboxHighScoreEntry = this.sandboxUnlocked
             ? SaveSystem.getSandboxHighScore(saveData?.sandboxHighScore)
+            : null;
+        this.hardcoreHighScoreEntry = this.sandboxUnlocked
+            ? SaveSystem.getSandboxHighScore(saveData?.sandboxHardcoreHighScore)
             : null;
 
         const tabs = [];
@@ -124,7 +131,12 @@ export class ArcaneLibraryMenu {
             tabs.push({
                 campaignId,
                 label: HISCORE_CAMPAIGN_LABELS[campaignId] || campaignInfo.name,
-                drawIcon: typeof campaignInfo.drawIcon === 'function' ? campaignInfo.drawIcon : null,
+                // Just what drawCampaignEmblem needs - the same emblem the Campaigns screen shows
+                emblemCampaign: {
+                    id: campaignId,
+                    drawIcon: typeof campaignInfo.drawIcon === 'function' ? campaignInfo.drawIcon : null,
+                    icon: campaignInfo.icon
+                },
                 levels,
                 totalScore,
                 hovered: false
@@ -955,10 +967,8 @@ export class ArcaneLibraryMenu {
             ctx.lineWidth = isActive ? 2 : 1;
             ctx.strokeRect(r.x, r.y, r.w, r.h);
 
-            if (r.tab.drawIcon) {
-                const iconSize = r.h * 0.75;
-                r.tab.drawIcon(ctx, r.x + r.h * 0.55, r.y + r.h / 2, iconSize);
-            }
+            // Same framed emblem picture the Campaigns screen uses for each campaign
+            drawCampaignEmblem(ctx, r.tab.emblemCampaign, r.x + r.h * 0.55, r.y + r.h / 2, r.h * 0.4, isActive, r.tab.hovered);
 
             ctx.font = isActive
                 ? `bold ${Math.round(12 * uiSf)}px Trebuchet MS, sans-serif`
@@ -975,7 +985,12 @@ export class ArcaneLibraryMenu {
 
         const showEndlessRow = activeTab.campaignId === 'campaign-4' && this.sandboxUnlocked;
         const endlessRowH = Math.round(46 * uiSf);
-        const listBottom = y + height - (showEndlessRow ? endlessRowH : 0);
+        // Eternal Mode gets one line per ranked mode: Ranked, and Hardcore Ranked
+        const endlessRows = showEndlessRow ? [
+            { label: 'ETERNAL MODE', entry: this.sandboxHighScoreEntry, labelColor: '#c99bf0', fillFrom: 'rgba(95, 30, 130, 0.22)', fillTo: 'rgba(30, 10, 45, 0.10)' },
+            { label: 'HARDCORE ETERNAL', entry: this.hardcoreHighScoreEntry, labelColor: '#f0a08a', fillFrom: 'rgba(140, 40, 25, 0.24)', fillTo: 'rgba(45, 12, 8, 0.10)' }
+        ] : [];
+        const listBottom = y + height - endlessRows.length * endlessRowH;
         const padding = Math.round(10 * uiSf);
 
         // ── Campaign total ───────────────────────────────────────────────────
@@ -1044,39 +1059,38 @@ export class ArcaneLibraryMenu {
             });
         }
 
-        // ── Endless mode line (campaign-4 only, once sandbox is unlocked) ──────
-        if (showEndlessRow) {
-            const rowY = y + height - endlessRowH;
+        // ── Eternal Mode lines (campaign-4 only, once sandbox is unlocked) ─────
+        endlessRows.forEach((line, i) => {
+            const rowY = y + height - (endlessRows.length - i) * endlessRowH;
             ctx.strokeStyle = 'rgba(212, 175, 55, 0.5)';
             ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(x + padding, rowY); ctx.lineTo(x + width - padding, rowY); ctx.stroke();
 
             const bg = ctx.createLinearGradient(x + padding, rowY, x + width - padding, rowY);
-            bg.addColorStop(0, 'rgba(95, 30, 130, 0.22)');
-            bg.addColorStop(1, 'rgba(30, 10, 45, 0.10)');
+            bg.addColorStop(0, line.fillFrom);
+            bg.addColorStop(1, line.fillTo);
             ctx.fillStyle = bg;
             ctx.fillRect(x + padding, rowY + Math.round(6 * uiSf), width - padding * 2, endlessRowH - Math.round(10 * uiSf));
 
             ctx.font = `bold ${Math.round(12 * uiSf)}px Trebuchet MS, sans-serif`;
-            ctx.fillStyle = '#c99bf0';
+            ctx.fillStyle = line.labelColor;
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
-            ctx.fillText('ETERNAL MODE', x + padding + Math.round(8 * uiSf), rowY + endlessRowH / 2);
+            ctx.fillText(line.label, x + padding + Math.round(8 * uiSf), rowY + endlessRowH / 2);
 
             ctx.font = `${Math.round(11 * uiSf)}px Trebuchet MS, sans-serif`;
             ctx.textAlign = 'right';
-            if (this.sandboxHighScoreEntry) {
-                const entry = this.sandboxHighScoreEntry;
+            if (line.entry) {
                 ctx.fillStyle = '#e8d4a0';
                 ctx.fillText(
-                    `Wave ${entry.wave}   Slain ${entry.enemiesSlain}   Survived ${this._formatHiscoreTime(entry.time)}`,
+                    `Wave ${line.entry.wave}   Slain ${line.entry.enemiesSlain}   Survived ${this._formatHiscoreTime(line.entry.time)}`,
                     x + width - padding - Math.round(8 * uiSf), rowY + endlessRowH / 2
                 );
             } else {
                 ctx.fillStyle = '#5a4a3a';
                 ctx.fillText('Not yet attempted', x + width - padding - Math.round(8 * uiSf), rowY + endlessRowH / 2);
             }
-        }
+        });
     }
 
     renderCollectionTab(ctx, x, y, width, height) {

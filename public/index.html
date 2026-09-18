@@ -55,16 +55,31 @@
                 <div class="stat gems-container" style="display: none;">
                     <div class="stat-label">Gems</div>
                     <div class="gems-display">
-                        <div class="gem fire-gem"></div>
-                        <span id="gems-fire">0</span>
-                        <div class="gem water-gem"></div>
-                        <span id="gems-water">0</span>
-                        <div class="gem air-gem"></div>
-                        <span id="gems-air">0</span>
-                        <div class="gem earth-gem"></div>
-                        <span id="gems-earth">0</span>
-                        <div class="gem diamond-gem"></div>
-                        <span id="gems-diamond">0</span>
+                        <div class="gem-row">
+                            <div class="gem fire-gem"></div>
+                            <span class="gem-name">Fire</span>
+                            <span id="gems-fire">0</span>
+                        </div>
+                        <div class="gem-row">
+                            <div class="gem water-gem"></div>
+                            <span class="gem-name">Water</span>
+                            <span id="gems-water">0</span>
+                        </div>
+                        <div class="gem-row">
+                            <div class="gem air-gem"></div>
+                            <span class="gem-name">Air</span>
+                            <span id="gems-air">0</span>
+                        </div>
+                        <div class="gem-row">
+                            <div class="gem earth-gem"></div>
+                            <span class="gem-name">Earth</span>
+                            <span id="gems-earth">0</span>
+                        </div>
+                        <div class="gem-row">
+                            <div class="gem diamond-gem"></div>
+                            <span class="gem-name">Diamond</span>
+                            <span id="gems-diamond">0</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -196,6 +211,9 @@
                 <div class="pause-menu-title">Menu</div>
             </div>
             <div class="pause-menu-buttons">
+                <!-- Eternal Mode only (shown by UIManager.updateEternalSaveControls) -->
+                <button id="save-eternal-btn" class="pause-menu-btn save-btn" style="display: none;">Save Progress</button>
+                <div id="save-eternal-note" class="pause-menu-note" style="display: none;"></div>
                 <button id="restart-btn" class="pause-menu-btn restart-btn">Restart Level</button>
                 <button id="quit-btn" class="pause-menu-btn quit-btn">Quit Level</button>
                 <button id="options-btn" class="pause-menu-btn options-btn">Options</button>
@@ -225,6 +243,7 @@
             </div>
             <div style="color: var(--primary-gold-light); text-align: center; margin-bottom: 2rem; position: relative; z-index: 1;">
                 <p>Current level progress will be lost.</p>
+                <p id="quit-warning-hint" style="display: none; font-size: 0.85em; opacity: 0.85;"></p>
                 <p>Where would you like to go?</p>
             </div>
             <div class="pause-menu-buttons">

@@ -688,6 +688,16 @@ export class CombinationTower extends Tower {
         }
     }
 
+    /**
+     * Puts back a previously chosen spell when a saved Eternal Mode run is loaded, i.e. before
+     * availableSpells has been filled in (which is what setSpell() validates against). Applies
+     * the spell's base stats exactly as setSpell() does.
+     */
+    restoreSelectedSpell(spellId) {
+        this.selectedSpell = spellId;
+        this._applySpellStats(spellId);
+    }
+
     setSpell(spellId) {
         if (this.availableSpells.some(s => s.id === spellId)) {
             this.selectedSpell = spellId;

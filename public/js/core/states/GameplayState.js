@@ -9,6 +9,13 @@ import { LevelRegistry } from '../../entities/levels/LevelRegistry.js';
 import { UIManager } from '../../ui/UIManager.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { AchievementSystem } from '../systems/AchievementSystem.js';
+import {
+    normalizeEternalOptions, canSaveEternalRun, eternalHighScoreField,
+    UNLIMITED_GOLD, UNLIMITED_GOLD_AMOUNT
+} from '../systems/EternalOptions.js';
+import {
+    captureEternalSnapshot, restoreEternalSnapshot, isValidEternalSnapshot
+} from '../systems/EternalSnapshot.js';
 
 import { ResultsScreen } from './ResultsScreen.js';
 import { LootManager } from '../../entities/loot/LootManager.js';
@@ -109,7 +116,14 @@ export class GameplayState {
         this.waveInProgress = false;
         this.waveCompleted = false;
         this.superWeaponLab = null;
-        
+
+        // Eternal Mode: the run's options (Ranked / Hardcore / Custom - see EternalOptions.js),
+        // the saved run being resumed (if any), and the snapshot taken when the last wave was
+        // completed, which is what the pause menu's Save Progress writes.
+        this.eternalOptions = null;
+        this.eternalResume = null;
+        this._eternalCheckpoint = null;
+
         // Wave cooldown system
         this.waveCooldownTimer = INITIAL_WAVE_COOLDOWN;
         this.waveCooldownDuration = INITIAL_WAVE_COOLDOWN;
@@ -223,12 +237,16 @@ export class GameplayState {
             health: 20,  // Default castle health
             gold: 200,   // Default starting gold (before upgrades)
             wave: 1,     // ALWAYS start at wave 1
+            // Eternal Mode custom runs can start with unlimited gold: spending never lowers
+            // it, and update() holds `gold` at UNLIMITED_GOLD_AMOUNT so the many places that
+            // subtract from it directly can't run it dry either.
+            unlimitedGold: false,
             canAfford: function(cost) {
                 return this.gold >= cost;
             },
             spend: function(amount) {
                 if (this.canAfford(amount)) {
-                    this.gold -= amount;
+                    if (!this.unlimitedGold) this.gold -= amount;
                     return true;
                 }
                 return false;
@@ -237,6 +255,7 @@ export class GameplayState {
                 this.health = 20;
                 this.gold = 200;
                 this.wave = 1;
+                this.unlimitedGold = false;
             }
         };
         return state;
@@ -289,9 +308,36 @@ export class GameplayState {
         this.currentCampaignId = levelInfo.campaignId || 'campaign-1';
         this.levelType = levelInfo.type || 'campaign';
         this.levelName = levelInfo.name || 'Unknown Level';
-        
-        // Apply upgrade bonuses to starting gold
-        if (this.stateManager.upgradeSystem) {
+
+        // Eternal Mode run options (Ranked by default) and the saved run being resumed, if any.
+        // A saved run always plays under the options it was saved with.
+        this.eternalOptions = null;
+        this.eternalResume = null;
+        this._eternalCheckpoint = null;
+        if (this.levelType === 'sandbox') {
+            this.eternalOptions = normalizeEternalOptions(levelInfo.eternalOptions);
+            if (levelInfo.eternalResume) {
+                if (isValidEternalSnapshot(levelInfo.eternalResume)) {
+                    this.eternalResume = levelInfo.eternalResume;
+                    this.eternalOptions = normalizeEternalOptions(levelInfo.eternalResume.options);
+                } else {
+                    console.warn('GameplayState: ignoring an Eternal Mode save this version cannot load');
+                }
+            }
+        }
+        const customEternalRun = !!this.eternalOptions && !this.eternalOptions.ranked;
+
+        if (customEternalRun) {
+            // Custom run: the player picked the exact starting gold - the settlement's
+            // starting-gold bonus doesn't apply on top of it.
+            if (this.eternalOptions.startingGold === UNLIMITED_GOLD) {
+                this.gameState.unlimitedGold = true;
+                this.gameState.gold = UNLIMITED_GOLD_AMOUNT;
+            } else {
+                this.gameState.gold = this.eternalOptions.startingGold;
+            }
+        } else if (this.stateManager.upgradeSystem) {
+            // Apply upgrade bonuses to starting gold
             const goldBonus = this.stateManager.upgradeSystem.getStartingGoldBonus();
             this.gameState.gold += goldBonus;
         }
@@ -413,6 +459,11 @@ export class GameplayState {
             this.towerManager.unlockSystem.onSuperweaponLabUnlockPurchased();
         }
 
+        // Eternal Mode custom option: every tower and building available from the start
+        if (this.eternalOptions && this.eternalOptions.unlockAll) {
+            this.towerManager.unlockSystem.unlockEverything();
+        }
+
         // Apply campaign-specific loot drop rates to the enemy manager
         this.enemyManager.campaignLootConfig = this.getCampaignLootConfig(this.currentCampaignId);
         
@@ -425,6 +476,28 @@ export class GameplayState {
         this.uiManager.updateUI(); // Initial UI update through UIManager
         this.uiManager.updateUIAvailability(); // Update button visibility based on unlocks
         this.uiManager.showSpeedControls(); // Show speed controls during gameplay
+
+        // Resuming a saved Eternal Mode run: put back everything that was built, then carry
+        // on from the start of the wave after the one the save was taken at.
+        if (this.eternalResume) {
+            try {
+                restoreEternalSnapshot(this, this.eternalResume);
+                this.waveInProgress = false;
+                this.waveCompleted = true;
+                this.isInWaveCooldown = true;
+                this.waveCooldownTimer = BETWEEN_WAVE_COOLDOWN;
+                this.waveCooldownDuration = BETWEEN_WAVE_COOLDOWN;
+                // Until the next wave completes, the loaded state is itself the latest checkpoint
+                // (so saving straight after loading keeps the run rather than failing).
+                this._eternalCheckpoint = this.eternalResume;
+                this.uiManager.forceSpellUIRebuild = true;
+                this.uiManager.setupSpellUI();
+                this.uiManager.updateUI();
+                this.uiManager.updateUIAvailability();
+            } catch (error) {
+                console.error('GameplayState: failed to restore the saved Eternal Mode run:', error);
+            }
+        }
 
         // Apply level-specific flags (e.g. no-tower-building, auto-placed superweapon)
         if (this.level && this.level.levelFlags) {
@@ -509,8 +582,8 @@ export class GameplayState {
         // Eternal Mode is meant to test a build on its own merits, so purchased
         // consumables/boons never apply here - and since we never call resetForNewLevel(),
         // nothing gets marked as used either, so nothing is silently wasted on a run
-        // that was never going to consume it.
-        if (this.isSandbox) {
+        // that was never going to consume it. (A custom run can opt back in to them.)
+        if (this.isSandbox && !(this.eternalOptions && this.eternalOptions.allowConsumables)) {
             marketplace.clearPerLevelState();
             marketplace.rabbitFootActive = false;
             return;
@@ -2058,6 +2131,12 @@ export class GameplayState {
         // doing so previously squared the multiplier (x3 simulated as x9).
         const adjustedDeltaTime = deltaTime;
 
+        // Unlimited-gold Eternal Mode run: everything that spends gold - including the many
+        // places that subtract from it directly - is topped back up here every frame.
+        if (this.gameState.unlimitedGold) {
+            this.gameState.gold = UNLIMITED_GOLD_AMOUNT;
+        }
+
         this._updateWaveCooldown(adjustedDeltaTime);
         this._updatePendingDamage(adjustedDeltaTime);
         const guardPostTowers = this._updateDefenderPositions(adjustedDeltaTime);
@@ -2438,9 +2517,70 @@ export class GameplayState {
                 this.waveCooldownTimer = BETWEEN_WAVE_COOLDOWN;
                 this.waveCooldownDuration = BETWEEN_WAVE_COOLDOWN;
                 this.gameState.wave++;
+                this._captureEternalCheckpoint();
             }
         }
         return false;
+    }
+
+    /**
+     * Eternal Mode: remembers the run exactly as it stands the moment a wave is completed -
+     * the battlefield is empty, so it's a state that can be resumed faithfully - ready for
+     * the pause menu's Save Progress. Nothing is kept for Hardcore runs (no saving there).
+     */
+    _captureEternalCheckpoint() {
+        if (!this.isSandbox || !canSaveEternalRun(this.eternalOptions)) return;
+        try {
+            this._eternalCheckpoint = captureEternalSnapshot(this);
+        } catch (error) {
+            console.error('GameplayState: failed to capture the Eternal Mode checkpoint:', error);
+        }
+    }
+
+    /** Whether the pause menu should offer Save Progress: Eternal Mode, and not Hardcore. */
+    canSaveRun() {
+        return this.isSandbox && canSaveEternalRun(this.eternalOptions);
+    }
+
+    /**
+     * The snapshot Save Progress would write right now, or null if there isn't one yet.
+     * Between waves the live state already is "the start of the next wave", so it's captured
+     * fresh - purchases made during the cooldown are kept. While a wave is being fought,
+     * the checkpoint from when the last wave completed is used instead.
+     */
+    getEternalSaveSnapshot() {
+        if (!this.canSaveRun()) return null;
+        if (this.isInWaveCooldown && !this.waveInProgress) {
+            try {
+                return captureEternalSnapshot(this);
+            } catch (error) {
+                console.error('GameplayState: failed to capture the Eternal Mode run:', error);
+            }
+        }
+        return this._eternalCheckpoint;
+    }
+
+    /**
+     * Writes the run to the current save slot (Save Progress in the pause menu). Only the
+     * saved run itself is written - the rest of the save file is left exactly as it is.
+     * @returns {{ok: boolean, wave?: number, reason?: string}}
+     */
+    saveEternalRun() {
+        if (!this.canSaveRun()) return { ok: false, reason: 'not-allowed' };
+
+        const snapshot = this.getEternalSaveSnapshot();
+        if (!snapshot) return { ok: false, reason: 'no-checkpoint' };
+
+        const sm = this.stateManager;
+        if (!sm.currentSaveData || !sm.currentSaveSlot) return { ok: false, reason: 'no-slot' };
+
+        sm.currentSaveData.eternalSave = snapshot;
+        if (!SaveSystem.updateAndSaveSettlementData(sm.currentSaveSlot, { eternalSave: snapshot })) {
+            return { ok: false, reason: 'write-failed' };
+        }
+        // Desktop build: also refresh the on-disk .sav file, as the settlement's own save does
+        SaveSystem.persistToFile(sm.currentSaveSlot);
+        return { ok: true, wave: snapshot.wave };
     }
 
     _updateSpellEffects(adjustedDeltaTime) {
@@ -2501,12 +2641,17 @@ export class GameplayState {
             // Sandbox never "completes" (see completeLevel()'s early return above), so
             // gameOver (castle destroyed) is the only run-ending event it ever reaches -
             // record the run's result here, keeping only the best (highest wave) attempt.
+            // Ranked and Hardcore Ranked runs each have their own hiscore line; Custom
+            // (unranked) runs aren't recorded at all.
             if (this.isSandbox) {
-                const runTimeTaken = Math.round((Date.now() / 1000) - this.levelStartTime);
-                this.stateManager.currentSaveData.sandboxHighScore = SaveSystem.recordSandboxHighScore(
-                    this.gameState.wave, this.enemiesDefeated, runTimeTaken,
-                    this.stateManager.currentSaveData.sandboxHighScore
-                );
+                const scoreField = eternalHighScoreField(this.eternalOptions);
+                if (scoreField) {
+                    const runTimeTaken = Math.round((Date.now() / 1000) - this.levelStartTime);
+                    this.stateManager.currentSaveData[scoreField] = SaveSystem.recordSandboxHighScore(
+                        this.gameState.wave, this.enemiesDefeated, runTimeTaken,
+                        this.stateManager.currentSaveData[scoreField]
+                    );
+                }
             }
 
             // Save upgrades and marketplace with consumed items

@@ -36,7 +36,8 @@ export class BuildingManager {
         }
         
         // Check if building requires an upgrade
-        if (buildingType.requiresUpgrade) {
+        // ("Everything unlocked" Eternal Mode runs skip it - see UnlockSystem.unlockEverything)
+        if (buildingType.requiresUpgrade && !this.unlockSystem?.allUnlocked) {
             const upgradeSystem = this.stateManager?.upgradeSystem;
             if (!upgradeSystem || !upgradeSystem.hasUpgrade(buildingType.requiresUpgrade)) {
                 console.warn(`BuildingManager: Building '${type}' requires upgrade '${buildingType.requiresUpgrade}'`);

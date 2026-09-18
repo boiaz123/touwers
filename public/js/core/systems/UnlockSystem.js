@@ -37,6 +37,98 @@ export class UnlockSystem {
         
         // IMPORTANT: Magic Tower starts LOCKED - only unlocked when Academy is built (level 1)
         this.magicTowerUnlockedByAcademy = false;
+
+        // Eternal Mode's custom "everything unlocked" option - see unlockEverything()
+        this.allUnlocked = false;
+    }
+
+    /**
+     * Opens every progression gate up front (Eternal Mode's custom "everything unlocked"
+     * option): every tower and building is available from the start, the settlement
+     * upgrades that would normally gate them count as purchased, and tower transforms no
+     * longer need their marketplace unlock (see TowerManager.transformTower). Resource costs
+     * and per-building limits still apply - this only removes the *unlock* requirements, not
+     * what things cost or how many of them can exist.
+     */
+    unlockEverything() {
+        this.allUnlocked = true;
+
+        this.magicAcademyUnlockPurchased = true;
+        this.superweaponLabUnlockPurchased = true;
+        this.superweaponUnlocked = true;
+        this.gemMiningResearched = true;
+        this.magicTowerUnlockedByAcademy = true;
+        this.maxGuardPosts = Math.max(this.maxGuardPosts, 1);
+
+        for (const tower of ['basic', 'barricade', 'archer', 'poison', 'cannon', 'magic', 'guard-post', 'combination']) {
+            this.unlockedTowers.add(tower);
+        }
+        for (const building of ['forge', 'mine', 'academy', 'training', 'superweapon', 'diamond-press']) {
+            this.unlockedBuildings.add(building);
+        }
+    }
+
+    /**
+     * Plain-JSON snapshot of everything this system tracks, for Eternal Mode's saved runs
+     * (see EternalSnapshot.js).
+     */
+    serialize() {
+        return {
+            forgeLevel: this.forgeLevel,
+            hasForge: this.hasForge,
+            forgeCount: this.forgeCount,
+            mineCount: this.mineCount,
+            academyCount: this.academyCount,
+            academyLevel: this.academyLevel,
+            trainingGroundsCount: this.trainingGroundsCount,
+            superweaponCount: this.superweaponCount,
+            diamondPressCount: this.diamondPressCount,
+            guardPostCount: this.guardPostCount,
+            maxGuardPosts: this.maxGuardPosts,
+            magicAcademyUnlockPurchased: this.magicAcademyUnlockPurchased,
+            superweaponLabUnlockPurchased: this.superweaponLabUnlockPurchased,
+            gemMiningResearched: this.gemMiningResearched,
+            superweaponUnlocked: this.superweaponUnlocked,
+            magicTowerUnlockedByAcademy: this.magicTowerUnlockedByAcademy,
+            allUnlocked: this.allUnlocked,
+            unlockedTowers: Array.from(this.unlockedTowers),
+            unlockedBuildings: Array.from(this.unlockedBuildings),
+            unlockedUpgrades: Array.from(this.unlockedUpgrades),
+            unlockedCombinationSpells: Array.from(this.unlockedCombinationSpells)
+        };
+    }
+
+    /**
+     * Applies a serialize() snapshot on top of a freshly set-up system. Progress (levels,
+     * counts) is taken from the snapshot; unlocks and purchase flags are merged with what
+     * this system already has, so anything the settlement unlocked since the run was saved
+     * (a marketplace purchase, say) is never taken away by loading it.
+     */
+    restore(data) {
+        if (!data) return;
+        const numbers = [
+            'forgeLevel', 'forgeCount', 'mineCount', 'academyCount', 'academyLevel',
+            'trainingGroundsCount', 'superweaponCount', 'diamondPressCount', 'guardPostCount'
+        ];
+        for (const key of numbers) {
+            if (Number.isFinite(data[key])) this[key] = data[key];
+        }
+        if (Number.isFinite(data.maxGuardPosts)) {
+            this.maxGuardPosts = Math.max(this.maxGuardPosts, data.maxGuardPosts);
+        }
+
+        const flags = [
+            'hasForge', 'magicAcademyUnlockPurchased', 'superweaponLabUnlockPurchased',
+            'gemMiningResearched', 'superweaponUnlocked', 'magicTowerUnlockedByAcademy', 'allUnlocked'
+        ];
+        for (const key of flags) {
+            this[key] = this[key] || !!data[key];
+        }
+
+        const sets = ['unlockedTowers', 'unlockedBuildings', 'unlockedUpgrades', 'unlockedCombinationSpells'];
+        for (const key of sets) {
+            for (const item of (data[key] || [])) this[key].add(item);
+        }
     }
     
     onForgeBuilt() {

@@ -30,6 +30,8 @@ export class TowerManager {
         // Initialize unlock system and building manager
         this.unlockSystem = new UnlockSystem();
         this.buildingManager = new BuildingManager(gameState, level);
+        // BuildingManager consults it for the "everything unlocked" bypass of building upgrade requirements
+        this.buildingManager.unlockSystem = this.unlockSystem;
         
         // Track occupied grid positions by towers only
         this.occupiedPositions = new Set();
@@ -1291,6 +1293,8 @@ export class TowerManager {
      * (see UpgradeRegistry.js). Applies uniformly to every transformable base type.
      */
     getTransformSlotLimit() {
+        // "Everything unlocked" (Eternal Mode custom run) has every Workshop upgrade
+        if (this.unlockSystem.allUnlocked) return 5;
         const upgradeSystem = this.stateManager && this.stateManager.upgradeSystem;
         let limit = 3;
         if (upgradeSystem && upgradeSystem.hasUpgrade('transform-workshop-expansion')) limit = 4;
@@ -1322,6 +1326,16 @@ export class TowerManager {
     }
 
     /**
+     * Whether the settlement unlock for a transform has been purchased - or every unlock is
+     * open anyway (Eternal Mode's custom "everything unlocked" option).
+     */
+    isTransformUnlocked(transform) {
+        if (this.unlockSystem.allUnlocked) return true;
+        const upgradeSystem = this.stateManager && this.stateManager.upgradeSystem;
+        return !!(upgradeSystem && upgradeSystem.hasUpgrade(transform.unlockId));
+    }
+
+    /**
      * Transform a placed tower into its advanced variant in place (same tile). Requires
      * the settlement unlock for this transform to have been purchased, this tower type's
      * own Tower Forge and Training Grounds upgrades both maxed this level, the per-type
@@ -1332,14 +1346,23 @@ export class TowerManager {
         const transform = this.getTowerTransform(tower);
         if (!transform) return false;
 
-        const upgradeSystem = this.stateManager && this.stateManager.upgradeSystem;
-        if (!upgradeSystem || !upgradeSystem.hasUpgrade(transform.unlockId)) return false;
+        if (!this.isTransformUnlocked(transform)) return false;
         if (!this.canTransformTowerType(tower.type)) return false;
         if (this.getTransformedCount(tower.type) >= this.getTransformSlotLimit()) return false;
         if (this.gameState.gold < transform.transformCost) return false;
 
         this.gameState.gold -= transform.transformCost;
 
+        return this.applyTransform(tower, transform);
+    }
+
+    /**
+     * The in-place class swap behind transformTower(), with none of its requirements or its
+     * gold cost - also used to rebuild an already-transformed tower when a saved Eternal
+     * Mode run is loaded (see EternalSnapshot.js).
+     * @returns {Object} - the new tower instance
+     */
+    applyTransform(tower, transform) {
         const NewClass = transform.class;
         const newTower = new NewClass(tower.x, tower.y, tower.gridX, tower.gridY);
         newTower.type = tower.type; // keep the base type so Forge/Training Grounds bonuses keep applying

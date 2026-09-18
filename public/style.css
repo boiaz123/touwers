@@ -370,23 +370,48 @@ body {
     font-size: clamp(0.95rem, 2vw, 1.15rem);
 }
 
-/* Gems Display - Medieval jewel rack */
+/* Gems Display - Medieval jewel rack. A label on the left and one row per gem type
+   (icon, name, right-aligned count) so each stock reads on its own line. Five rows are
+   taller than the other stat plates, so the box is trimmed and pulled into the beam's own
+   vertical padding (negative margin) - the bar, and with it the canvas below, keeps the
+   exact height it has without a Magic Academy instead of jumping when one is built. */
 .gems-container {
     flex-direction: row !important;
+    gap: 0.9rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    margin-block: -0.4rem;
 }
 
 .gems-display {
     display: flex;
-    gap: 0.35rem;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 6.5rem;
+}
+
+.gem-row {
+    display: flex;
     align-items: center;
-    margin-top: 0.3rem;
-    flex-wrap: wrap;
+    gap: 0.45rem;
+    line-height: 1.1;
+}
+
+.gem-name {
+    flex: 1;
+    font-size: 0.65rem;
+    font-weight: bold;
+    letter-spacing: 0.6px;
+    text-align: left;
+    color: rgba(180, 155, 110, 0.8);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
 /* Gem stones - set in iron bezels */
 .gem {
-    width: clamp(0.7rem, 3vw, 1rem);
-    height: clamp(0.7rem, 3vw, 1rem);
+    width: 0.7rem;
+    height: 0.7rem;
+    flex-shrink: 0;
     position: relative;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
     /* Iron bezel ring around each gem */
@@ -433,8 +458,11 @@ body {
 
 #gems-fire, #gems-water, #gems-air, #gems-earth, #gems-diamond {
     color: rgba(220, 195, 150, 0.9);
-    font-size: clamp(0.8rem, 1.5vw, 0.95rem);
+    font-size: 0.72rem;
     font-weight: bold;
+    text-align: right;
+    min-width: 1.6rem;
+    font-variant-numeric: tabular-nums;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
 }
 
@@ -828,6 +856,17 @@ body {
     border-color: var(--primary-gold);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 12px rgba(212, 175, 55, 0.6);
     transform: scale(1.03);
+}
+
+/* The browser's default keyboard-focus ring (a white rounded box) appears on whichever HUD
+   button was last clicked as soon as any key is pressed - even after right-click has
+   cancelled the selection, since right-clicking the canvas never moves focus. The game
+   has its own selected/hover styling and hotkeys, so the ring is never wanted here. */
+#game-area button:focus,
+#game-area button:focus-visible,
+#stats-bar button:focus,
+#stats-bar button:focus-visible {
+    outline: none;
 }
 
 .tower-btn.selected {
@@ -3411,6 +3450,23 @@ button[style*="#ff4444"]:hover:not(:disabled) {
 .pause-menu-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* Small explanatory line in the pause menu's button column (e.g. under Save Progress) */
+.pause-menu-note {
+    margin-top: -0.3rem;
+    font-size: clamp(0.72rem, 1.4vw, 0.85rem);
+    line-height: 1.35;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.pause-menu-note.saved {
+    color: #8fd18a;
+}
+
+.pause-menu-note.error {
+    color: #e0836f;
 }
 
 /* All pause menu buttons share the same flat Settlement Hub tab/button styling */

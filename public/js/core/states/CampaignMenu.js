@@ -1,14 +1,10 @@
 ﻿import { CampaignRegistry } from '../../game/CampaignRegistry.js';
-import { drawCoverImage, drawMedallion } from '../render/EmblemRenderer.js';
-
-// Unified stone base with campaign-specific accent colours
-const CAMPAIGN_BIOME = {
-    'campaign-1': { from: '#1c1810', to: '#130f09', accent: '#4e8c42' },  // Forest emerald accent
-    'campaign-2': { from: '#1c1810', to: '#130f09', accent: '#5c84b8' },  // Mountain slate accent
-    'campaign-3': { from: '#1c1810', to: '#130f09', accent: '#c47c30' },  // Desert amber accent
-    'campaign-4': { from: '#1c1810', to: '#130f09', accent: '#8840c0' },  // Frog King violet accent
-    'sandbox': { from: '#1c1810', to: '#130f09', accent: '#d4af37' },     // Eternal Mode gold accent
-};
+import { CAMPAIGN_BIOME, drawCampaignEmblem, preloadCampaignEmblems } from '../render/EmblemRenderer.js';
+import {
+    ETERNAL_GOLD_STEPS, ETERNAL_DEFAULT_CUSTOM_GOLD,
+    defaultEternalOptions, normalizeEternalOptions, eternalModeLabel, formatEternalGold
+} from '../systems/EternalOptions.js';
+import { isValidEternalSnapshot } from '../systems/EternalSnapshot.js';
 
 /** Draws a glowing infinity loop over a starfield - Eternal Mode's "waves without end" icon. */
 function _drawEternalIcon(ctx, cx, cy, size) {
@@ -62,16 +58,6 @@ function _drawEternalIcon(ctx, cx, cy, size) {
     });
 }
 
-// Emblem art — drop a same-named file in public/assets/campaigns/ to replace any of these.
-// Missing/unloaded files fall back to the campaign's vector drawIcon() automatically.
-const CAMPAIGN_EMBLEM_IMAGE = {
-    'campaign-1': 'assets/campaigns/campaign-1.jpg',
-    'campaign-2': 'assets/campaigns/campaign-2.jpg',
-    'campaign-3': 'assets/campaigns/campaign-3.jpg',
-    'campaign-4': 'assets/campaigns/campaign-4.jpg',
-    'campaign-5': 'assets/campaigns/campaign-5.jpg',
-};
-
 export class CampaignMenu {
     constructor(stateManager) {
         this.stateManager = stateManager;
@@ -80,6 +66,15 @@ export class CampaignMenu {
         this.hoveredCampaignId = null;
         this.hoveredStartButton = false;
         this.hoveredExitButton = false;
+
+        // Eternal Mode's run options, as the player is editing them (see EternalOptions.js) -
+        // startingGold etc. are kept even while Ranked is ticked (where they're ignored) so
+        // toggling Ranked off and on again doesn't lose what was set. The saved run (if any)
+        // is read from the save slot each time the screen is entered.
+        this.eternalDraft = { ...defaultEternalOptions(), startingGold: ETERNAL_DEFAULT_CUSTOM_GOLD };
+        this.eternalSave = null;
+        this.hoveredEternalControl = null;
+        this.hoveredLoadButton = false;
 
         // Layout — large full-width cards left, compact info panel right.
         // bottomPadding is shared by the card column and the detail panel so
@@ -95,18 +90,9 @@ export class CampaignMenu {
             titleY: 56,
         };
 
-        this.emblemImageCache = {};
-        this._loadEmblemImages();
-    }
-
-    /** Preloads campaign emblem art; missing files silently fall back to drawIcon(). */
-    _loadEmblemImages() {
-        for (const [id, path] of Object.entries(CAMPAIGN_EMBLEM_IMAGE)) {
-            const img = new Image();
-            img.onload = () => { this.emblemImageCache[id] = img; };
-            img.onerror = () => { this.emblemImageCache[id] = null; };
-            img.src = path;
-        }
+        // Emblem art is shared with the Hiscores tabs (see EmblemRenderer.js); missing
+        // files silently fall back to each campaign's vector drawIcon().
+        preloadCampaignEmblems();
     }
 
     enter() {
@@ -132,6 +118,12 @@ export class CampaignMenu {
         this.hoveredCampaignId = null;
         this.hoveredExitButton = false;
         this.hoveredStartButton = false;
+        this.hoveredEternalControl = null;
+        this.hoveredLoadButton = false;
+
+        // Eternal Mode always opens on the standard Ranked setup - a Custom run is opt-in every time
+        this.eternalDraft = { ...defaultEternalOptions(), startingGold: ETERNAL_DEFAULT_CUSTOM_GOLD };
+        this.eternalSave = isValidEternalSnapshot(saveData?.eternalSave) ? saveData.eternalSave : null;
 
         // Pre-select first unlocked campaign
         const firstUnlocked = this.campaigns.find(c => !c.locked);
@@ -185,15 +177,118 @@ export class CampaignMenu {
 
     /** Launches Eternal Mode directly, mirroring the launch code that used to live in
      *  PlayerWorkshop's Sandbox Mode button (now removed - see PlayerWorkshop.js). */
-    _launchSandbox() {
+    _launchSandbox(resumeSave = null) {
         if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('open-campaign');
         this.stateManager.selectedLevelInfo = {
             id: 'sandbox-workshop',
             name: 'Eternal Mode',
             type: 'sandbox',
-            campaignId: 'campaign-5'
+            campaignId: 'campaign-5',
+            // A loaded run plays under the options it was saved with (GameplayState reads them
+            // back out of the save), otherwise the ones picked on this screen.
+            eternalOptions: resumeSave ? resumeSave.options : normalizeEternalOptions(this.eternalDraft),
+            eternalResume: resumeSave
         };
         this.stateManager.changeState('game');
+    }
+
+    // ── Eternal Mode options + saved run ──────────────────────────────────
+
+    _isEternalSelected() {
+        return this.selectedCampaignId === 'sandbox';
+    }
+
+    /**
+     * Geometry of the Run Options block and the Load Saved Run button, laid out upward from
+     * the Start button so they hold still no matter how long the story text above is. Shared
+     * by rendering, hover and click so hitboxes always match what's drawn. Each control's
+     * `enabled` flag says whether it applies in the current mode (e.g. the gold stepper does
+     * nothing while Ranked is ticked).
+     */
+    _getEternalLayout() {
+        const panel = this.getDetailPanelBounds();
+        const pad = 32;
+        const x = panel.x + pad;
+        const w = panel.width - pad * 2;
+        const start = this.getStartButtonBounds();
+        const loadBtn = { x: start.x, y: start.y - 12 - start.height, width: start.width, height: start.height };
+
+        const draft = this.eternalDraft;
+        const rowH = 38;
+        const rowGap = 6;
+        const titleH = 34;
+        const hintH = 30;
+        const blockH = titleH + 5 * (rowH + rowGap) + hintH;
+        const top = loadBtn.y - 22 - blockH;
+        const rowY = (i) => top + titleH + i * (rowH + rowGap);
+
+        const stepW = 36;
+        const stepperRight = x + w;
+        const goldY = rowY(2);
+        const goldEnabled = !draft.ranked;
+
+        return {
+            x, w, top, blockH, titleH, hintY: top + titleH + 5 * (rowH + rowGap), loadBtn,
+            controls: {
+                ranked:      { x, y: rowY(0), w, h: rowH, enabled: true },
+                hardcore:    { x: x + 34, y: rowY(1), w: w - 34, h: rowH, enabled: draft.ranked },
+                goldMinus:   { x: stepperRight - 190, y: goldY + 3, w: stepW, h: rowH - 6, enabled: goldEnabled },
+                goldPlus:    { x: stepperRight - stepW, y: goldY + 3, w: stepW, h: rowH - 6, enabled: goldEnabled },
+                consumables: { x, y: rowY(3), w, h: rowH, enabled: !draft.ranked },
+                unlockAll:   { x, y: rowY(4), w, h: rowH, enabled: !draft.ranked }
+            },
+            goldRow: { x, y: goldY, w, h: rowH, enabled: goldEnabled, valueX: stepperRight - 190 + stepW, valueW: 190 - stepW * 2 }
+        };
+    }
+
+    /** The enabled option control under (x, y), or null. */
+    _eternalControlAt(x, y) {
+        const controls = this._getEternalLayout().controls;
+        for (const key of Object.keys(controls)) {
+            const c = controls[key];
+            if (c.enabled && this._inBounds(x, y, { x: c.x, y: c.y, width: c.w, height: c.h })) return key;
+        }
+        return null;
+    }
+
+    _activateEternalControl(key) {
+        const d = this.eternalDraft;
+        switch (key) {
+            case 'ranked':
+                d.ranked = !d.ranked;
+                if (!d.ranked) d.hardcore = false;
+                break;
+            case 'hardcore':
+                d.hardcore = !d.hardcore;
+                break;
+            case 'goldMinus':
+            case 'goldPlus': {
+                const i = ETERNAL_GOLD_STEPS.indexOf(d.startingGold);
+                const from = i === -1 ? ETERNAL_GOLD_STEPS.indexOf(ETERNAL_DEFAULT_CUSTOM_GOLD) : i;
+                const next = Math.max(0, Math.min(ETERNAL_GOLD_STEPS.length - 1, from + (key === 'goldPlus' ? 1 : -1)));
+                d.startingGold = ETERNAL_GOLD_STEPS[next];
+                break;
+            }
+            case 'consumables':
+                d.allowConsumables = !d.allowConsumables;
+                break;
+            case 'unlockAll':
+                d.unlockAll = !d.unlockAll;
+                break;
+        }
+    }
+
+    _hitLoadButton(x, y) {
+        if (!this._isEternalSelected() || !this.eternalSave) return false;
+        const b = this._getEternalLayout().loadBtn;
+        return this._inBounds(x, y, b);
+    }
+
+    _formatSaveDate(timestamp) {
+        const d = new Date(timestamp);
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + ' ' +
+            d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
     }
 
     // ============ GAMEPAD BUTTON NAVIGATION ============
@@ -368,6 +463,15 @@ export class CampaignMenu {
             pointerCursor = true;
         }
 
+        // Eternal Mode: Run Options controls and Load Saved Run
+        this.hoveredEternalControl = null;
+        this.hoveredLoadButton = false;
+        if (this._isEternalSelected()) {
+            this.hoveredEternalControl = this._eternalControlAt(x, y);
+            this.hoveredLoadButton = this._hitLoadButton(x, y);
+            if (this.hoveredEternalControl || this.hoveredLoadButton) pointerCursor = true;
+        }
+
         this.stateManager.canvas.style.cursor = pointerCursor ? 'pointer' : 'default';
     }
 
@@ -378,6 +482,20 @@ export class CampaignMenu {
             if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
             this.stateManager.changeState('settlementHub');
             return;
+        }
+
+        // Eternal Mode: Run Options controls and Load Saved Run
+        if (this._isEternalSelected()) {
+            const control = this._eternalControlAt(x, y);
+            if (control) {
+                if (this.stateManager.audioManager) this.stateManager.audioManager.playSFX('button-click');
+                this._activateEternalControl(control);
+                return;
+            }
+            if (this._hitLoadButton(x, y)) {
+                this._launchSandbox(this.eternalSave);
+                return;
+            }
         }
 
         // Start button
@@ -626,45 +744,9 @@ export class CampaignMenu {
         ctx.fill();
     }
 
-    /**
-     * Draws a campaign's scene art as a framed medallion emblem — a bevelled
-     * metal ring around a circular "photo" crop, zoomed in on the campaign's
-     * icon artwork so it reads as a scenic portrait rather than a flat glyph.
-     * Ring color is gold when selected, warm pewter otherwise. Delegates the
-     * actual ring/bevel/vignette chrome to the shared EmblemRenderer so this
-     * stays visually identical to the achievement panel's medallions.
-     */
+    /** Campaign emblem medallion - see drawCampaignEmblem in EmblemRenderer.js (shared with the Hiscores tabs). */
     _drawEmblem(ctx, campaign, x, y, radius, biome, isSelected, isHovered) {
-        let ringColors;
-        if (isSelected) {
-            ringColors = { top: '#f6e29a', mid: '#d4af37', bottom: '#8a651c' };
-        } else if (isHovered) {
-            ringColors = { top: '#c8b488', mid: '#8f7748', bottom: '#4a3c22' };
-        } else {
-            ringColors = { top: '#8c7a5c', mid: '#5c4c32', bottom: '#332a1a' };
-        }
-
-        const emblemImg = this.emblemImageCache[campaign.id];
-        drawMedallion(ctx, {
-            x, y, radius,
-            ringColors,
-            accent: biome.accent || '#a08040',
-            backdrop: biome.to || '#141414',
-            drawContent: (ctx, cx, cy, r) => {
-                if (emblemImg) {
-                    // Real picture — cover-fit crop so it fills the circle edge-to-edge with no gaps
-                    drawCoverImage(ctx, emblemImg, cx - r, cy - r, r * 2, r * 2);
-                } else if (campaign.drawIcon) {
-                    // Image not loaded/available yet — fall back to the vector scene art, zoomed to fill the frame
-                    campaign.drawIcon(ctx, cx, cy, r * 1.9);
-                } else {
-                    ctx.font = `${Math.round(r * 1.3)}px serif`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(campaign.icon, cx, cy);
-                }
-            }
-        });
+        drawCampaignEmblem(ctx, campaign, x, y, radius, isSelected, isHovered);
     }
 
     _renderUnlockedCard(ctx, campaign, b, isSelected, biome, isHovered) {
@@ -894,8 +976,170 @@ export class CampaignMenu {
             }
         }
 
+        // Eternal Mode: run options + saved run, just above the Start button
+        if (campaign.id === 'sandbox') {
+            this._renderEternalOptions(ctx, biome);
+            this._renderLoadButton(ctx);
+        }
+
         // Start button
         this._renderStartButton(ctx, campaign);
+    }
+
+    _renderEternalOptions(ctx, biome) {
+        const L = this._getEternalLayout();
+        const d = this.eternalDraft;
+        const hover = this.hoveredEternalControl;
+
+        // Section header
+        this._drawDivider(ctx, L.x, L.top, L.w, biome.accent);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.font = 'bold 17px serif';
+        ctx.fillStyle = biome.accent;
+        ctx.fillText('\u2726  Run Options', L.x, L.top + L.titleH / 2 + 4);
+
+        const row = (key, label, description, checked) => {
+            const c = L.controls[key];
+            const isHover = hover === key && c.enabled;
+            if (isHover) {
+                ctx.fillStyle = 'rgba(212,175,55,0.08)';
+                ctx.fillRect(c.x, c.y, c.w, c.h);
+            }
+            this._drawCheckbox(ctx, c.x + 6, c.y + (c.h - 22) / 2, 22, checked, c.enabled, isHover);
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.font = 'bold 17px serif';
+            ctx.fillStyle = !c.enabled ? '#5a4a3a' : (isHover ? '#ffd700' : '#e8d49a');
+            ctx.fillText(label, c.x + 40, c.y + c.h / 2);
+            ctx.font = '13px serif';
+            ctx.textAlign = 'right';
+            ctx.fillStyle = c.enabled ? '#a08040' : '#4a3c2c';
+            ctx.fillText(description, c.x + c.w - 6, c.y + c.h / 2);
+        };
+
+        row('ranked', 'Ranked', 'Standard rules \u00B7 your best wave is recorded', d.ranked);
+        row('hardcore', 'Hardcore', 'No saving \u00B7 recorded on its own hiscore line', d.ranked && d.hardcore);
+
+        // Starting gold stepper - fixed while Ranked (the normal starting gold applies)
+        const g = L.goldRow;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.font = 'bold 17px serif';
+        ctx.fillStyle = g.enabled ? '#e8d49a' : '#5a4a3a';
+        ctx.fillText('Starting gold', g.x + 40, g.y + g.h / 2);
+        for (const key of ['goldMinus', 'goldPlus']) {
+            this._drawStepperButton(ctx, L.controls[key], key === 'goldPlus', hover === key);
+        }
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 18px serif';
+        ctx.fillStyle = g.enabled ? '#ffd700' : '#5a4a3a';
+        ctx.fillText(d.ranked ? 'Standard' : formatEternalGold(d.startingGold), g.valueX + g.valueW / 2, g.y + g.h / 2);
+
+        row('consumables', 'Allow consumables', 'Marketplace items apply and are used up', !d.ranked && d.allowConsumables);
+        row('unlockAll', 'Everything unlocked', 'Every tower and building from the start', !d.ranked && d.unlockAll);
+
+        // What the current choice means
+        const mode = normalizeEternalOptions(d);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.font = 'italic 14px serif';
+        ctx.fillStyle = mode.ranked ? '#b8c8a8' : '#d8a878';
+        const hint = !mode.ranked
+            ? 'Custom run \u2014 nothing is recorded on the Hiscores.'
+            : (mode.hardcore
+                ? 'Hardcore Ranked \u2014 standard rules, but saving is not allowed.'
+                : 'Ranked \u2014 standard rules, and you can save your run from the game menu.');
+        ctx.fillText(hint, L.x + 6, L.hintY + 14);
+    }
+
+    _drawCheckbox(ctx, x, y, size, checked, enabled, hovered) {
+        ctx.fillStyle = enabled ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.25)';
+        ctx.fillRect(x, y, size, size);
+        ctx.strokeStyle = !enabled ? 'rgba(120,100,70,0.3)' : (hovered ? '#ffd700' : '#a08040');
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+        if (checked) {
+            ctx.save();
+            ctx.strokeStyle = enabled ? '#ffd700' : 'rgba(200,170,90,0.4)';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x + size * 0.22, y + size * 0.55);
+            ctx.lineTo(x + size * 0.42, y + size * 0.76);
+            ctx.lineTo(x + size * 0.79, y + size * 0.27);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
+    _drawStepperButton(ctx, c, pointsRight, hovered) {
+        ctx.fillStyle = !c.enabled ? 'rgba(0,0,0,0.25)' : (hovered ? 'rgba(212,175,55,0.22)' : 'rgba(0,0,0,0.45)');
+        ctx.fillRect(c.x, c.y, c.w, c.h);
+        ctx.strokeStyle = !c.enabled ? 'rgba(120,100,70,0.3)' : (hovered ? '#ffd700' : '#a08040');
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(c.x + 0.5, c.y + 0.5, c.w - 1, c.h - 1);
+
+        const cx = c.x + c.w / 2;
+        const cy = c.y + c.h / 2;
+        const r = 7;
+        const dir = pointsRight ? 1 : -1;
+        ctx.fillStyle = !c.enabled ? '#4a3c2c' : (hovered ? '#ffd700' : '#d4af37');
+        ctx.beginPath();
+        ctx.moveTo(cx + dir * r * 0.8, cy);
+        ctx.lineTo(cx - dir * r * 0.6, cy - r);
+        ctx.lineTo(cx - dir * r * 0.6, cy + r);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    /** Load Saved Run: sits just above the Start button and reads as its sibling. */
+    _renderLoadButton(ctx) {
+        const btn = this._getEternalLayout().loadBtn;
+        const save = this.eternalSave;
+        const hovered = this.hoveredLoadButton && !!save;
+
+        const bg = ctx.createLinearGradient(btn.x, btn.y, btn.x, btn.y + btn.height);
+        if (!save) {
+            bg.addColorStop(0, '#242424');
+            bg.addColorStop(1, '#1c1c1c');
+        } else if (hovered) {
+            bg.addColorStop(0, '#5a4a7a');
+            bg.addColorStop(1, '#3f3258');
+        } else {
+            bg.addColorStop(0, '#4a3c66');
+            bg.addColorStop(1, '#33294a');
+        }
+        ctx.fillStyle = bg;
+        ctx.fillRect(btn.x, btn.y, btn.width, btn.height);
+
+        ctx.strokeStyle = !save ? '#3a3a3a' : (hovered ? '#c99bf0' : '#8b6fb0');
+        ctx.lineWidth = hovered ? 2.5 : 1.5;
+        ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const cx = btn.x + btn.width / 2;
+        if (save) {
+            ctx.font = 'bold 20px serif';
+            ctx.fillStyle = hovered ? '#ffffff' : '#e6d8ff';
+            ctx.fillText('LOAD SAVED RUN  \u25B6', cx, btn.y + btn.height * 0.36);
+            ctx.font = '14px serif';
+            ctx.fillStyle = '#c9b8e8';
+            const when = this._formatSaveDate(save.savedAt);
+            ctx.fillText(
+                `Wave ${save.wave} \u00B7 ${eternalModeLabel(save.options)}${when ? ' \u00B7 ' + when : ''}`,
+                cx, btn.y + btn.height * 0.7
+            );
+        } else {
+            ctx.font = 'bold 18px serif';
+            ctx.fillStyle = '#5a5a5a';
+            ctx.fillText('NO SAVED RUN', cx, btn.y + btn.height * 0.36);
+            ctx.font = '13px serif';
+            ctx.fillStyle = '#4a4a4a';
+            ctx.fillText('Use Save Progress in the in-game menu', cx, btn.y + btn.height * 0.7);
+        }
     }
 
     _renderStartButton(ctx, campaign) {
@@ -937,7 +1181,9 @@ export class CampaignMenu {
             ctx.lineWidth = isHovered ? 2.5 : 1.5;
             ctx.strokeRect(btn.x, btn.y, btn.width, btn.height);
 
-            const label = campaign.id === 'sandbox' ? 'ENTER ETERNAL MODE  \u25B6' : 'START CAMPAIGN  \u25B6';
+            const label = campaign.id === 'sandbox'
+                ? (this.eternalSave ? 'START NEW RUN  \u25B6' : 'ENTER ETERNAL MODE  \u25B6')
+                : 'START CAMPAIGN  \u25B6';
             ctx.font = 'bold 22px serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';

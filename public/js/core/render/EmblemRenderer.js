@@ -141,6 +141,96 @@ export function drawMedallion(ctx, opts) {
     ctx.restore();
 }
 
+// Campaign emblem art - one shared table so every screen that shows a campaign (the campaign
+// select cards, the Hiscores sub-tabs, ...) draws the very same picture in the very same frame.
+// Drop a same-named file in public/assets/campaigns/ to replace any of these; entries without
+// a file (e.g. Eternal Mode's 'sandbox') fall back to the campaign's own vector drawIcon().
+export const CAMPAIGN_EMBLEM_IMAGE = {
+    'campaign-1': 'assets/campaigns/campaign-1.jpg',
+    'campaign-2': 'assets/campaigns/campaign-2.jpg',
+    'campaign-3': 'assets/campaigns/campaign-3.jpg',
+    'campaign-4': 'assets/campaigns/campaign-4.jpg',
+    'campaign-5': 'assets/campaigns/campaign-5.jpg',
+};
+
+// Unified stone base with campaign-specific accent colours
+export const CAMPAIGN_BIOME = {
+    'campaign-1': { from: '#1c1810', to: '#130f09', accent: '#4e8c42' },  // Forest emerald accent
+    'campaign-2': { from: '#1c1810', to: '#130f09', accent: '#5c84b8' },  // Mountain slate accent
+    'campaign-3': { from: '#1c1810', to: '#130f09', accent: '#c47c30' },  // Desert amber accent
+    'campaign-4': { from: '#1c1810', to: '#130f09', accent: '#8840c0' },  // Frog King violet accent
+    'sandbox': { from: '#1c1810', to: '#130f09', accent: '#d4af37' },     // Eternal Mode gold accent
+};
+
+// id -> HTMLImageElement once loaded, null while loading or if the file is missing.
+const _campaignEmblemImages = {};
+
+/**
+ * Returns a campaign's emblem picture, or null if it has none / hasn't finished loading yet
+ * (callers then fall back to the vector drawIcon). The first call for an id starts the load,
+ * so the picture is ready by the time a later frame asks for it again.
+ */
+export function getCampaignEmblemImage(campaignId) {
+    if (!(campaignId in _campaignEmblemImages)) {
+        _campaignEmblemImages[campaignId] = null;
+        const path = CAMPAIGN_EMBLEM_IMAGE[campaignId];
+        if (path) {
+            const img = new Image();
+            img.onload = () => { _campaignEmblemImages[campaignId] = img; };
+            img.onerror = () => { _campaignEmblemImages[campaignId] = null; };
+            img.src = path;
+        }
+    }
+    return _campaignEmblemImages[campaignId];
+}
+
+/** Starts loading every campaign emblem up front so none pops in on first display. */
+export function preloadCampaignEmblems() {
+    for (const id of Object.keys(CAMPAIGN_EMBLEM_IMAGE)) getCampaignEmblemImage(id);
+}
+
+/**
+ * Draws a campaign's scene art as a framed medallion emblem - a bevelled metal ring around a
+ * circular "photo" crop, zoomed in on the campaign's icon artwork so it reads as a scenic
+ * portrait rather than a flat glyph. Ring color is gold when selected, warm pewter otherwise.
+ *
+ * `campaign` needs `id` and, for the no-picture fallback, `drawIcon` (vector scene art) and/or
+ * `icon` (a glyph).
+ */
+export function drawCampaignEmblem(ctx, campaign, x, y, radius, isSelected = false, isHovered = false) {
+    let ringColors;
+    if (isSelected) {
+        ringColors = { top: '#f6e29a', mid: '#d4af37', bottom: '#8a651c' };
+    } else if (isHovered) {
+        ringColors = { top: '#c8b488', mid: '#8f7748', bottom: '#4a3c22' };
+    } else {
+        ringColors = { top: '#8c7a5c', mid: '#5c4c32', bottom: '#332a1a' };
+    }
+
+    const biome = CAMPAIGN_BIOME[campaign.id] || CAMPAIGN_BIOME['sandbox'];
+    const emblemImg = getCampaignEmblemImage(campaign.id);
+    drawMedallion(ctx, {
+        x, y, radius,
+        ringColors,
+        accent: biome.accent || '#a08040',
+        backdrop: biome.to || '#141414',
+        drawContent: (ctx, cx, cy, r) => {
+            if (emblemImg) {
+                // Real picture - cover-fit crop so it fills the circle edge-to-edge with no gaps
+                drawCoverImage(ctx, emblemImg, cx - r, cy - r, r * 2, r * 2);
+            } else if (campaign.drawIcon) {
+                // Image not loaded/available yet - fall back to the vector scene art, zoomed to fill the frame
+                campaign.drawIcon(ctx, cx, cy, r * 1.9);
+            } else if (campaign.icon) {
+                ctx.font = `${Math.round(r * 1.3)}px serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(campaign.icon, cx, cy);
+            }
+        }
+    });
+}
+
 const CHEST_VARIANTS = {
     wooden: {
         bodyTop: '#a07040', bodyBottom: '#5c3010', edge: '#3a1e08',
