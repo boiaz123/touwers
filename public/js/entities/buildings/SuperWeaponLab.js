@@ -21,6 +21,7 @@ export class SuperWeaponLab extends Building {
             arcaneBlast: {
                 id: 'arcaneBlast',
                 name: 'Arcane Blast',
+                shortName: 'Arcane',  // compact label for the panel header's upgrade badges
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><polygon points="10,1 11.3,6.8 16.4,3.6 13.2,8.7 19,10 13.2,11.3 16.4,16.4 11.3,13.2 10,19 8.7,13.2 3.6,16.4 6.8,11.3 1,10 6.8,8.7 3.6,3.6 8.7,6.8" fill="#A855F7"/><circle cx="10" cy="10" r="2.5" fill="white" opacity="0.9"/></svg>',
                 description: 'Deals massive arcane damage to all enemies in radius',
                 baseLevel: 1,  // Unlocked at lab level 1
@@ -35,6 +36,7 @@ export class SuperWeaponLab extends Building {
             frostNova: {
                 id: 'frostNova',
                 name: 'Frozen Nova',
+                shortName: 'Frost',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#60D5FA" stroke-width="1.5" stroke-linecap="round"><line x1="10" y1="2" x2="10" y2="18"/><line x1="3.1" y1="14" x2="16.9" y2="6"/><line x1="3.1" y1="6" x2="16.9" y2="14"/><line x1="10" y1="4.5" x2="8" y2="7"/><line x1="10" y1="4.5" x2="12" y2="7"/><line x1="10" y1="15.5" x2="8" y2="13"/><line x1="10" y1="15.5" x2="12" y2="13"/><circle cx="10" cy="10" r="2" fill="#38BDF8" stroke="none"/></svg>',
                 description: 'Freezes all enemies for a duration',
                 baseLevel: 2,  // Unlocked at lab level 2
@@ -49,6 +51,7 @@ export class SuperWeaponLab extends Building {
             meteorStrike: {
                 id: 'meteorStrike',
                 name: 'Meteor Strike',
+                shortName: 'Meteor',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><circle cx="13" cy="13" r="4" fill="#EF4444"/><line x1="10" y1="10" x2="5" y2="5" stroke="#F97316" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="11" x2="3" y2="8" stroke="#FBBF24" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="9" x2="8" y2="3" stroke="#FBBF24" stroke-width="1.5" stroke-linecap="round"/></svg>',
                 description: 'Calls down meteors dealing fire damage that devastates enemies',
                 baseLevel: 3,  // Unlocked at lab level 3
@@ -64,6 +67,7 @@ export class SuperWeaponLab extends Building {
             chainLightning: {
                 id: 'chainLightning',
                 name: 'Chain Lightning',
+                shortName: 'Chain',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><polygon points="12,1 5,11 10,11 8,19 15,9 10,9" fill="#FDE047" stroke="#CA8A04" stroke-width="0.8" stroke-linejoin="round"/></svg>',
                 description: 'Electricity that jumps between enemies',
                 baseLevel: 4,  // Unlocked at lab level 4

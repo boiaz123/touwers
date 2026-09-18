@@ -557,6 +557,9 @@ export class UIManager {
             });
         }
         
+        // Placement and spell targeting are mutually exclusive
+        this.gameplayState.cancelSpellTargeting();
+
         // Update selection
         document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
@@ -597,6 +600,9 @@ export class UIManager {
             });
         }
         
+        // Placement and spell targeting are mutually exclusive
+        this.gameplayState.cancelSpellTargeting();
+
         // Update selection
         document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
         document.querySelectorAll('.tower-btn').forEach(b => b.classList.remove('selected'));
@@ -3650,18 +3656,22 @@ export class UIManager {
         const isMaxed = superWeaponLab.labLevel >= superWeaponLab.maxLabLevel;
         const canAfford = labUpgrade && labUpgrade.cost && this.gameState.gold >= labUpgrade.cost && (menuData.academy && (menuData.academy.gems.diamond || 0) >= (labUpgrade.diamondCost || 0));
         
-        // Build effect descriptions list based on unlocked spells
-        let effectsList = [];
+        // Header upgrade badges - same convention as the Forge / Academy / Training Grounds
+        // headers: one badge per upgrade path, appearing as it's unlocked/bought into, inside
+        // a .forge-effects-row whose min-height reserves three lines up front so filling it
+        // never shoves the panel below it down. Here that's every unlocked spell (tagged with
+        // its Spell Power level once upgraded) plus the Cooldown Reduction path.
+        const effectsList = [];
         Object.values(superWeaponLab.spells).forEach(spell => {
             if (spell.unlocked) {
-                effectsList.push(`${spell.icon} ${spell.name}`);
+                const powerTag = spell.upgradeLevel > 0 ? ` Lv ${spell.upgradeLevel}` : '';
+                effectsList.push(`<span class="effect-badge-icon">${spell.icon}</span>${spell.shortName || spell.name}${powerTag}`);
             }
         });
-        
-        // Track which spells are available and locked
-        const unlockedSpellCount = Object.values(superWeaponLab.spells).filter(s => s.unlocked).length;
-        const totalSpellCount = Object.keys(superWeaponLab.spells).length;
-        
+        if (superWeaponLab.cooldownReduction.level > 0) {
+            effectsList.push(`⏱ Cooldown -${Math.round(superWeaponLab.getCooldownReductionFraction() * 100)}%`);
+        }
+
         let contentHTML = '';
         
         // BUILD HEADER SECTION - Professional top panel
@@ -3678,6 +3688,9 @@ export class UIManager {
                         </div>
                         <div class="forge-level-bar">
                             <div class="forge-level-bar-fill" style="width: ${(superWeaponLab.labLevel / superWeaponLab.maxLabLevel) * 100}%"></div>
+                        </div>
+                        <div class="forge-effects-row">
+                            ${effectsList.map(effect => `<span class="effect-badge">${effect}</span>`).join('')}
                         </div>
                         <div class="forge-benefits-list">
                             <div class="forge-benefit-item">
@@ -4495,14 +4508,18 @@ export class UIManager {
             effectsList.push(`Trebuchet: +${ru.level * ru.effect}`);
         }
         
-        if (trainingGrounds.upgrades.barricadeSlowPower.level > 0) {
-            const slowBonus = Math.round(trainingGrounds.upgrades.barricadeSlowPower.level * trainingGrounds.upgrades.barricadeSlowPower.effect * 100);
-            effectsList.push(`Barricade: +${slowBonus}% slow`);
-        }
-        
+        // Poison before Barricade on purpose: "Barricade: +N% slow" is by far the longest
+        // badge, and in this order Trebuchet + Poison pack onto one line at the widest text
+        // scale (20px root, >=1920px viewports) so all five fit the three lines
+        // .forge-effects-row reserves - the other way round they need a fourth.
         if (trainingGrounds.upgrades.poisonArcherTowerFireRate.level > 0) {
             const fireRate = (0.25 + trainingGrounds.upgrades.poisonArcherTowerFireRate.level * 0.05).toFixed(2);
             effectsList.push(`Poison: ${fireRate}/sec`);
+        }
+
+        if (trainingGrounds.upgrades.barricadeSlowPower.level > 0) {
+            const slowBonus = Math.round(trainingGrounds.upgrades.barricadeSlowPower.level * trainingGrounds.upgrades.barricadeSlowPower.effect * 100);
+            effectsList.push(`Barricade: +${slowBonus}% slow`);
         }
         
         // Build HTML with professional header

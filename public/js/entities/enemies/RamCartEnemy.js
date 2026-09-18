@@ -48,8 +48,8 @@ export class RamCartEnemy extends BaseEnemy {
         // speed, independent of the cart's health_multiplier.
         const childHealthMultiplier = 1.5 * health_multiplier;
         this.spawnOnDeath = [
-            { type: 'basic', count: 19, healthMultiplier: childHealthMultiplier, speedMultiplier: 1.2 },
-            { type: 'beefyenemy', count: 1, healthMultiplier: childHealthMultiplier, speedMultiplier: 1.2 }
+            { type: 'basic', count: 19, healthMultiplier: childHealthMultiplier, speedMultiplier: 1 },
+            { type: 'beefyenemy', count: 1, healthMultiplier: childHealthMultiplier, speedMultiplier: 1 }
         ];
 
         // Set by EnemyRenderAdapter once it has synced this enemy via Pixi.

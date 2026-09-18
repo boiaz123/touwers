@@ -270,6 +270,9 @@ export class MageEnemy extends BaseEnemy {
             this.renderDynamicParts(ctx, baseSize);
         }
 
+        // Always drawn here in world space, whether or not Pixi owns the body.
+        this.renderBlockadeProjectile(ctx);
+
         // Hit splatters
         for (let i = 0; i < this.hitSplatters.length; i++) {
             this.hitSplatters[i].render(ctx);
@@ -1109,46 +1112,7 @@ export class MageEnemy extends BaseEnemy {
 
         ctx.restore();
 
-        // Draw blockade projectile (world space)
-        if (this.blockadeProjectile) {
-            const proj = this.blockadeProjectile;
-            const pulse = 0.5 + 0.5 * Math.sin(this.animationTime * 10);
-
-            // Trail
-            for (let i = 0; i < proj.trail.length; i++) {
-                const t = proj.trail[i];
-                const lifeRatio = 1 - t.age / 0.25;
-                ctx.fillStyle = `rgba(155, 0, 215, ${lifeRatio * 0.55})`;
-                ctx.beginPath();
-                ctx.arc(t.x, t.y, 5 * lifeRatio, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            // Outer glow
-            ctx.fillStyle = `rgba(175, 0, 255, ${0.22 + pulse * 0.13})`;
-            ctx.beginPath();
-            ctx.arc(proj.x, proj.y, 14, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Main orb body
-            ctx.fillStyle = 'rgba(85, 0, 185, 0.92)';
-            ctx.beginPath();
-            ctx.arc(proj.x, proj.y, 7, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Orb rim
-            ctx.strokeStyle = `rgba(215, 125, 255, ${0.65 + pulse * 0.35})`;
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.arc(proj.x, proj.y, 7, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // Specular highlight
-            ctx.fillStyle = `rgba(230, 155, 255, ${0.55 + pulse * 0.45})`;
-            ctx.beginPath();
-            ctx.arc(proj.x - 2.5, proj.y - 2.5, 2.5, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        // The blockade orb is deliberately not drawn here - see BaseEnemy.renderBlockadeProjectile.
 
         // Health bar - positioned above hat tip
         this.renderHealthBar(ctx, baseSize, { widthMul: 3.2, heightMul: 0.42, yOffsetMul: -3.8 });

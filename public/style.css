@@ -2272,24 +2272,48 @@ body.game-paused .side-panel > * {
     align-content: flex-start;
     align-items: flex-start;
     gap: 0.4rem;
-    /* Reserves room for up to two wrapped lines of badges up front, since this row only
+    /* Reserves room for up to three wrapped lines of badges up front, since this row only
        ever grows over the course of a run (each badge appears once its matching upgrade
        path is first leveled - see UIManager's effectsList.push() calls - and nothing
        ever removes one). Without a stable min-height here, every first purchase into a
        new upgrade path grows this row and shoves the whole upgrade button list below it
-       down the panel. Sized off .effect-badge's own box (font-size + vertical padding +
-       border) rather than a guessed pixel value, so it stays in sync if that changes. */
-    min-height: calc(2 * (0.7rem * 1.3 + 0.4rem + 2px) + 0.4rem);
+       down the panel. Three lines because the Forge and Training Grounds each have five
+       upgrade paths, which wrap onto a third line at the panel's narrower widths. Sized
+       off .effect-badge's own box (font-size + line-height + vertical padding + border)
+       rather than a guessed pixel value, so it stays in sync if that changes. */
+    min-height: calc(3 * (0.7rem * 1.3 + 0.4rem + 2px) + 2 * 0.4rem);
 }
 
 .effect-badge {
     font-size: 0.7rem;
+    /* Pinned to the 1.3 the row's min-height above assumes - inheriting `normal` made a
+       badge a pixel or two taller than that calc, which a full third line would then
+       spill past. */
+    line-height: 1.3;
     color: rgba(200, 200, 200, 0.85);
     background: rgba(0, 0, 0, 0.3);
     padding: 0.2rem 0.4rem;
     border-radius: 0.2rem;
     border: 1px solid rgba(212, 175, 55, 0.2);
     white-space: nowrap;
+}
+
+/* Small inline spell icon inside an .effect-badge (Super Weapon Lab header). The spell icons
+   are 16px SVGs; sized in em and vertically centered so one can't make its badge taller than
+   the line-height the row's reserved min-height is computed from. */
+.effect-badge-icon {
+    display: inline-flex;
+    width: 1.1em;
+    height: 1.1em;
+    /* Negative vertical margins: the icon still centers on the text, but its margin box is
+       shorter than the line, so it can't stretch the badge (and the reserved row) taller. */
+    margin: -0.2em 0.25em -0.2em 0;
+    vertical-align: middle;
+}
+
+.effect-badge-icon svg {
+    width: 100%;
+    height: 100%;
 }
 
 /* Diamond stock readout in the Diamond Press panel header - the same faceted diamond icon

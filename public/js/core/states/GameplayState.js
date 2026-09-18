@@ -36,6 +36,21 @@ const ENEMY_CLICK_RADIUS = 28;
 // stagger (the rest just show up a few frames later, still simulated normally meanwhile).
 const MAX_NEW_ENEMY_PIXI_REGISTRATIONS_PER_FRAME = 5;
 
+// Meteor Strike's impact radius in px. Shared by the damage check, the impact ring and the
+// targeting preview (see getSpellCastRadius) so they can't drift apart. Unlike Arcane Blast /
+// Frozen Nova this isn't part of the spell's own data (spell.radius) and Spell Power
+// upgrades don't change it.
+const METEOR_STRIKE_RADIUS = 80;
+
+// "r, g, b" per super weapon spell for the targeting overlay (see renderSpellTargeting) -
+// matches the hue of each spell's icon and cast effect.
+const SPELL_TARGET_COLORS = {
+    arcaneBlast: '168, 85, 247',
+    frostNova: '96, 213, 250',
+    meteorStrike: '249, 115, 22',
+    chainLightning: '253, 224, 71'
+};
+
 // Dev-only stress-spawn enemy roster (see _devStressSpawn below) - unrelated to sandbox
 // mode's actual wave format, which now comes from SandboxLevel.getWaveConfig() like any
 // other level.
@@ -84,6 +99,11 @@ export class GameplayState {
         this.uiManager = null;
         this.selectedTowerType = null;
         this.selectedBuildingType = null;
+        // Super weapon spell armed for casting on the next canvas click (see
+        // activateSpellTargeting), and whether the pointer is currently over the canvas -
+        // the targeting overlay is only drawn while it is.
+        this.selectedSpell = null;
+        this._pointerOverCanvas = false;
         this.currentLevel = 1;
         this.waveIndex = 0;
         this.waveInProgress = false;
@@ -833,6 +853,8 @@ export class GameplayState {
         this.uiManager = null;
         this.selectedTowerType = null;
         this.selectedBuildingType = null;
+        this.selectedSpell = null;
+        this._pointerOverCanvas = false;
         this.spellEffects = [];
         this.waveInProgress = false;
         this.waveCompleted = false;
@@ -852,6 +874,11 @@ export class GameplayState {
         // Mouse move listener for placement preview
         this.mouseMoveHandler = (e) => this.handleMouseMove(e);
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
+        // Fires when the pointer moves onto any element overlapping the canvas too (sidebar,
+        // panels, top bar), which is exactly when a spell's casting area should disappear:
+        // clicking there can't cast.
+        this.mouseLeaveHandler = () => { this._pointerOverCanvas = false; };
+        this.stateManager.canvas.addEventListener('mouseleave', this.mouseLeaveHandler);
 
         // NOTE: no click listener registered here - game.js already has a single global
         // canvas 'click' listener that routes through GameStateManager.handleClick() to
@@ -877,6 +904,11 @@ export class GameplayState {
         if (this.mouseMoveHandler) {
             this.stateManager.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
             this.mouseMoveHandler = null;
+        }
+
+        if (this.mouseLeaveHandler) {
+            this.stateManager.canvas.removeEventListener('mouseleave', this.mouseLeaveHandler);
+            this.mouseLeaveHandler = null;
         }
 
         if (this._stressTestKeyHandler) {
@@ -957,6 +989,7 @@ export class GameplayState {
         const y = (e.clientY - rect.top) * scaleY;
         this.lastMouseX = x;
         this.lastMouseY = y;
+        this._pointerOverCanvas = true;
 
         if (!this.selectedTowerType && !this.selectedBuildingType) {
             this.level.setPlacementPreview(0, 0, false);
@@ -991,6 +1024,7 @@ export class GameplayState {
     handleTouchMove(x, y) {
         this.lastMouseX = x;
         this.lastMouseY = y;
+        this._pointerOverCanvas = true;
 
         if (!this.selectedTowerType && !this.selectedBuildingType) {
             this.level.setPlacementPreview(0, 0, false);
@@ -1006,8 +1040,10 @@ export class GameplayState {
     }
 
     activateSpellTargeting(spellId) {
+        // Placement and spell targeting are mutually exclusive - both would otherwise want
+        // the next canvas click and draw their own preview under the pointer.
+        this.clearPlacementSelection();
         this.selectedSpell = spellId;
-        this.stateManager.canvas.style.cursor = 'crosshair';
         
         // Deselect all towers and buildings during spell targeting
         if (this.towerManager) {
@@ -1019,23 +1055,81 @@ export class GameplayState {
         
         // Spell targeting is handled inside handleClick() (gated on this.selectedSpell) so it
         // always runs before any other click logic, regardless of listener registration order.
-
-        // Allow right-click to cancel
-        this.spellCancelHandler = (e) => {
-            e.preventDefault();
-            this.cancelSpellTargeting();
-        };
-        this.stateManager.canvas.addEventListener('contextmenu', this.spellCancelHandler, { once: true });
+        // The pointer itself becomes the spell's icon (see cursorIcon) with its casting area
+        // drawn around it (see renderSpellTargeting). Right-click deselects via
+        // cancelSelection() - a `contextmenu` listener on the canvas can't do that job, since
+        // game.js swallows that event in the capture phase before it ever reaches the canvas.
     }
     
     cancelSpellTargeting() {
         this.selectedSpell = null;
-        this.stateManager.canvas.style.cursor = 'default';
+    }
 
-        if (this.spellCancelHandler) {
-            this.stateManager.canvas.removeEventListener('contextmenu', this.spellCancelHandler);
-            this.spellCancelHandler = null;
+    /**
+     * Icon the pointer should be drawn as right now, or null for the normal sword cursor.
+     * Read every frame by CursorOverlay (which owns the game's cursor - see its render()) -
+     * while a spell is armed the pointer becomes that spell's icon.
+     */
+    get cursorIcon() {
+        if (!this.selectedSpell || this.isPaused) return null;
+        if (this.resultsScreen && this.resultsScreen.isShowing) return null;
+        const spell = this.superWeaponLab && this.superWeaponLab.spells[this.selectedSpell];
+        return spell ? { id: spell.id, svg: spell.icon } : null;
+    }
+
+    /**
+     * Radius (px) of the area a spell hits around its cast point, or 0 for a spell with no
+     * area (Chain Lightning strikes its nearest targets map-wide instead - see
+     * findChainLightningTargets). What the targeting overlay outlines.
+     */
+    getSpellCastRadius(spell) {
+        switch (spell.id) {
+            case 'meteorStrike': return METEOR_STRIKE_RADIUS;
+            case 'chainLightning': return 0;
+            default: return spell.radius || 0;
         }
+    }
+
+    /**
+     * The `chainCount` enemies nearest to (x, y), nearest first - who Chain Lightning hits,
+     * in that order (each successive hit is weaker, see castSpellAtPosition). Used by the cast
+     * itself and by the targeting preview so the preview always shows exactly who will be hit.
+     *
+     * Chain lightning has unlimited range by design (SuperWeaponLab.js's spell definition has
+     * no range cap, only chainCount), so it must consider every enemy - SpatialGrid's cell
+     * partitioning can't narrow the search the way tower targeting does when the query has to
+     * cover the whole map anyway. The actual cost was the full array copy plus O(N log N)
+     * sort (with a Math.hypot call per comparison) just to grab the nearest few; a bounded
+     * top-K selection removes both without changing which enemies get hit, since chainCount
+     * is single digits.
+     */
+    findChainLightningTargets(x, y, chainCount) {
+        const enemies = this.enemyManager.enemies;
+        const targets = [];
+        const pickCount = Math.min(chainCount, enemies.length);
+        if (pickCount > 0) {
+            const distSq = new Array(enemies.length);
+            for (let i = 0; i < enemies.length; i++) {
+                const dx = enemies[i].x - x;
+                const dy = enemies[i].y - y;
+                distSq[i] = dx * dx + dy * dy;
+            }
+            const used = new Array(enemies.length).fill(false);
+            for (let k = 0; k < pickCount; k++) {
+                let bestIdx = -1;
+                let bestDist = Infinity;
+                for (let i = 0; i < enemies.length; i++) {
+                    if (!used[i] && distSq[i] < bestDist) {
+                        bestDist = distSq[i];
+                        bestIdx = i;
+                    }
+                }
+                if (bestIdx === -1) break; // only enemies with non-finite positions left
+                used[bestIdx] = true;
+                targets.push(enemies[bestIdx]);
+            }
+        }
+        return targets;
     }
     
     castSpellAtPosition(spellId, x, y) {
@@ -1105,7 +1199,7 @@ export class GameplayState {
                         this.enemyManager.enemies.forEach(enemy => {
                             if (!enemy.isDead()) {
                                 const dist = Math.hypot(enemy.x - x, enemy.y - y);
-                                if (dist <= 80) {
+                                if (dist <= METEOR_STRIKE_RADIUS) {
                                     if (!isBonusLevel && enemy.freezeTimer > 0 && this.stateManager.gameStatistics) {
                                         this.stateManager.gameStatistics.markFrostShatter();
                                     }
@@ -1123,39 +1217,7 @@ export class GameplayState {
                 
             case 'chainLightning': {
                 this.stateManager.audioManager.playSFX('chain-lightning');
-                // Chain lightning has unlimited range by design (SuperWeaponLab.js's
-                // spell definition has no range cap, only chainCount), so it must
-                // consider every enemy - SpatialGrid's cell partitioning can't narrow
-                // the search the way tower targeting does when the query has to cover
-                // the whole map anyway. The actual cost was the full array copy plus
-                // O(N log N) sort (with a Math.hypot call per comparison) just to grab
-                // the nearest few; a bounded top-K selection removes both without
-                // changing which enemies get hit, since chainCount is single digits.
-                const enemies = this.enemyManager.enemies;
-                const chainCount = spell.chainCount;
-                const targets = [];
-                const pickCount = Math.min(chainCount, enemies.length);
-                if (pickCount > 0) {
-                    const distSq = new Array(enemies.length);
-                    for (let i = 0; i < enemies.length; i++) {
-                        const dx = enemies[i].x - x;
-                        const dy = enemies[i].y - y;
-                        distSq[i] = dx * dx + dy * dy;
-                    }
-                    const used = new Array(enemies.length).fill(false);
-                    for (let k = 0; k < pickCount; k++) {
-                        let bestIdx = -1;
-                        let bestDist = Infinity;
-                        for (let i = 0; i < enemies.length; i++) {
-                            if (!used[i] && distSq[i] < bestDist) {
-                                bestDist = distSq[i];
-                                bestIdx = i;
-                            }
-                        }
-                        used[bestIdx] = true;
-                        targets.push(enemies[bestIdx]);
-                    }
-                }
+                const targets = this.findChainLightningTargets(x, y, spell.chainCount);
 
                 targets.forEach((enemy, index) => {
                     setTimeout(() => {
@@ -1302,7 +1364,7 @@ export class GameplayState {
             impact.y = y;
             impact.vx = undefined;
             impact.vy = undefined;
-            impact.maxRadius = 80;
+            impact.maxRadius = METEOR_STRIKE_RADIUS;
             impact.life = 0.3;
             impact.maxLife = 0.3;
             impact.color = '#F97316';
@@ -1690,7 +1752,8 @@ export class GameplayState {
         return null;
     }
 
-    cancelSelection() {
+    /** Drop any tower/building picked from the sidebar for placement, and its preview. */
+    clearPlacementSelection() {
         // Cancel tower selection
         if (this.selectedTowerType) {
             this.selectedTowerType = null;
@@ -1704,7 +1767,17 @@ export class GameplayState {
             document.querySelectorAll('.building-btn').forEach(b => b.classList.remove('selected'));
             this.level.setPlacementPreview(0, 0, false);
         }
-        
+    }
+
+    /** Right-click on the canvas (and touch long-press): deselect whatever is armed and close open menus. */
+    cancelSelection() {
+        // Disarm a super weapon spell (drops its icon cursor and casting area)
+        if (this.selectedSpell) {
+            this.cancelSpellTargeting();
+        }
+
+        this.clearPlacementSelection();
+
         // Close any open menus
         this.uiManager.closeAllPanels();
     }
@@ -2470,6 +2543,80 @@ export class GameplayState {
         });
     }
     
+    /**
+     * Shows where the armed super weapon spell (see activateSpellTargeting) will land: its
+     * casting area outlined around the pointer for Arcane Blast / Frozen Nova / Meteor
+     * Strike; for Chain Lightning, which has no area, the enemies it would strike instead.
+     * Drawn on the Canvas2D layer, which paints above Pixi, in canvas coordinates - the very
+     * space the cast's distance checks run in, so the outline is the real radius with no
+     * scaling. Only drawn while the pointer is over the canvas (clicking anywhere else can't
+     * cast); the pointer itself is drawn as the spell's icon by CursorOverlay.
+     */
+    renderSpellTargeting(ctx) {
+        if (!this.selectedSpell || !this._pointerOverCanvas || this.isPaused || !this.superWeaponLab) return;
+        if (this.resultsScreen && this.resultsScreen.isShowing) return;
+
+        const spell = this.superWeaponLab.spells[this.selectedSpell];
+        if (!spell) return;
+
+        const x = this.lastMouseX;
+        const y = this.lastMouseY;
+        const rgb = SPELL_TARGET_COLORS[spell.id] || '255, 255, 255';
+
+        ctx.save();
+        if (spell.id === 'chainLightning') {
+            this._renderChainLightningPreview(ctx, spell, x, y, rgb);
+        } else {
+            const radius = this.getSpellCastRadius(spell);
+            if (radius > 0) {
+                const fill = ctx.createRadialGradient(x, y, 0, x, y, radius);
+                fill.addColorStop(0, `rgba(${rgb}, 0.06)`);
+                fill.addColorStop(1, `rgba(${rgb}, 0.26)`);
+                ctx.fillStyle = fill;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Marching dashes, so it reads as a live targeting overlay rather than a
+                // static shape sitting on the map.
+                ctx.strokeStyle = `rgba(${rgb}, 0.9)`;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([8, 6]);
+                ctx.lineDashOffset = -(performance.now() / 40) % 14;
+                ctx.stroke();
+            }
+        }
+        ctx.restore();
+    }
+
+    /** Chain Lightning has no area: ring the enemies it would strike and link them in strike order, fading with the same 0.8x-per-hit falloff the damage uses. */
+    _renderChainLightningPreview(ctx, spell, x, y, rgb) {
+        const targets = this.findChainLightningTargets(x, y, spell.chainCount);
+        ctx.lineWidth = 2;
+
+        let fromX = x;
+        let fromY = y;
+        for (let i = 0; i < targets.length; i++) {
+            const enemy = targets[i];
+            const strength = Math.pow(0.8, i);
+            ctx.strokeStyle = `rgba(${rgb}, ${0.35 + 0.55 * strength})`;
+
+            ctx.setLineDash([6, 5]);
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(enemy.x, enemy.y);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, 16, 0, Math.PI * 2);
+            ctx.stroke();
+
+            fromX = enemy.x;
+            fromY = enemy.y;
+        }
+    }
+
     render(ctx) {
         if (!this.level || !this.towerManager || !this.enemyManager) {
             return; // Skip rendering if not fully initialized
@@ -2698,6 +2845,9 @@ export class GameplayState {
 
         // Render active boons
         this.renderActiveBoons(ctx);
+
+        // Casting area of the armed super weapon spell, centered on the pointer
+        this.renderSpellTargeting(ctx);
 
         // Render results screen overlay on top of the still-visible battlefield
         if (this.resultsScreen && this.resultsScreen.isShowing) {

@@ -405,7 +405,62 @@ export class BaseEnemy {
         target.lineWidth = strokeWidth;
         target.strokeRect(this.x - barWidth/2, barY, barWidth, barHeight);
     }
-    
+
+    /**
+     * Draws a blockade-spell orb (MageEnemy / FrogKingEnemy) in true world space onto the
+     * real Canvas2D layer. Call it from render(ctx) - NOT from renderDynamicParts.
+     *
+     * Both casters have a magicParticles array, so EnemyRenderAdapter draws them in Mode B:
+     * renderDynamicParts() runs against a Graphics that sits inside a container positioned
+     * at the caster's world position (and mirrored when it faces left), with entity.x/y
+     * zeroed for the duration of the draw. Anything drawn there with world coordinates - like
+     * this orb - therefore lands offset by the caster's own position, and mirrored around it
+     * when the caster faces left, instead of where the projectile really is. Mode B also
+     * only redraws ~20 times a second, so even a correctly-placed orb would stutter.
+     * Drawing it here, every frame, on the layer that paints above Pixi avoids both.
+     */
+    renderBlockadeProjectile(ctx) {
+        const proj = this.blockadeProjectile;
+        if (!proj) return;
+
+        const pulse = 0.5 + 0.5 * Math.sin(this.animationTime * 10);
+
+        // Trail
+        for (let i = 0; i < proj.trail.length; i++) {
+            const t = proj.trail[i];
+            const lifeRatio = 1 - t.age / 0.25;
+            ctx.fillStyle = `rgba(155, 0, 215, ${lifeRatio * 0.55})`;
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, 5 * lifeRatio, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Outer glow
+        ctx.fillStyle = `rgba(175, 0, 255, ${0.22 + pulse * 0.13})`;
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main orb body
+        ctx.fillStyle = 'rgba(85, 0, 185, 0.92)';
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Orb rim
+        ctx.strokeStyle = `rgba(215, 125, 255, ${0.65 + pulse * 0.35})`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, 7, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Specular highlight
+        ctx.fillStyle = `rgba(230, 155, 255, ${0.55 + pulse * 0.45})`;
+        ctx.beginPath();
+        ctx.arc(proj.x - 2.5, proj.y - 2.5, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
     darkenColor(color, factor) { return darkenColor(color, factor); }
     lightenColor(color, factor) { return lightenColor(color, factor); }
 

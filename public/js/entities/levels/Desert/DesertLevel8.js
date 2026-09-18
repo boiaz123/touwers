@@ -97,7 +97,7 @@ export class DesertLevel8 extends LevelBase {
             enemyHealth_multiplier: 1, 
             speedMultiplier: 0.7, 
             spawnInterval: 4, 
-            pattern: [{ type: 'beefyenemy', count: 12, healthMultiplier: 1 }, { type: 'shieldknight', count: 6, healthMultiplier: 2 }, { type: 'mage', count: 2 }, { type: 'knight', count: 1 }, { type: 'archer', count: 7, healthMultiplier: 2, speedMultiplier: 1.5 }] 
+            pattern: [{ type: 'beefyenemy', count: 12, healthMultiplier: 1 }, { type: 'shieldknight', count: 6, healthMultiplier: 2 }, { type: 'mage', count: 2,  speedMultiplier: 0.6 }, { type: 'knight', count: 1 }, { type: 'archer', count: 7, healthMultiplier: 2, speedMultiplier: 1.5 }] 
         }
         // Wave 2
         , { 
@@ -115,24 +115,24 @@ export class DesertLevel8 extends LevelBase {
         }
         // Wave 4
         , { 
-            enemyHealth_multiplier: 5, 
-            speedMultiplier: 0.8, 
-            spawnInterval: 10, 
-            pattern: [{ type: 'earthfrog', count: 1 }, { type: 'waterfrog', count: 1 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }] 
-        }
-        // Wave 5
-        , { 
             enemyHealth_multiplier: 2, 
             speedMultiplier: 1, 
             spawnInterval: 0.8, 
             pattern: [{ type: 'basic', count: 17 }, { type: 'villager', count: 12 }, { type: 'archer', count: 8, healthMultiplier: 3, speedMultiplier: 1.3 }] 
-        }
-        // Wave 6
+         }
+        // Wave 5
         , { 
             enemyHealth_multiplier: 7, 
             speedMultiplier: 0.9, 
             spawnInterval: 14, 
             pattern: [{ type: 'ramcart', count: 6 }] 
+        }
+        // Wave 6
+        , { 
+            enemyHealth_multiplier: 5, 
+            speedMultiplier: 0.8, 
+            spawnInterval: 10, 
+            pattern: [{ type: 'earthfrog', count: 1 }, { type: 'waterfrog', count: 1 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }] 
         }
         // Wave 7
         , { 
