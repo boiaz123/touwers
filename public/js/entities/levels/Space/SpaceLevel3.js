@@ -15,7 +15,7 @@ export class SpaceLevel3 extends LevelBase {
         this.levelNumber = SpaceLevel3.levelMetadata.order;
         this.difficulty = SpaceLevel3.levelMetadata.difficulty;
         this.campaign = SpaceLevel3.levelMetadata.campaign;
-        this.maxWaves = 45;
+        this.maxWaves = 12;
 
         // Set terrain elements (prevent tower placement on these areas)
         this.terrainElements = [
@@ -106,31 +106,31 @@ export class SpaceLevel3 extends LevelBase {
         const waveConfigs = [
         // Wave 1
         { 
-            enemyHealth_multiplier: 1.2, 
+            enemyHealth_multiplier: 1.5, 
             speedMultiplier: 1, 
-            spawnInterval: 0.86, 
-            pattern: [{ type: 'frog', count: 8 }, { type: 'frog', count: 9, healthMultiplier: 2, speedMultiplier: 1.2 }, { type: 'frog', count: 10, healthMultiplier: 3 }] 
+            spawnInterval: 2, 
+            pattern: [{ type: 'villager', count: 12, speedMultiplier: 0.8 }, { type: 'basic', count: 9, healthMultiplier: 2 }, { type: 'beefyenemy', count: 5, healthMultiplier: 1 }, { type: 'archer', count: 4, speedMultiplier: 0.9 }, { type: 'villager', count: 14, speedMultiplier: 0.8 }, { type: 'beefyenemy', count: 3, speedMultiplier: 0.8 }, { type: 'frog', count: 7, healthMultiplier: 1 }, { type: 'shieldknight', count: 2, healthMultiplier: 0.8 }, { type: 'archer', count: 6 }, { type: 'frog', count: 5 }, { type: 'beefyenemy', count: 3, healthMultiplier: 3, speedMultiplier: 0.5 }] 
         }
         // Wave 2
         , { 
-            enemyHealth_multiplier: 1.41, 
+            enemyHealth_multiplier: 2, 
             speedMultiplier: 1, 
-            spawnInterval: 1.14, 
-            pattern: [{ type: 'villager', count: 9 }, { type: 'villager', count: 11, healthMultiplier: 1.5 }, { type: 'basic', count: 7, healthMultiplier: 1.3 }] 
+            spawnInterval: 2, 
+            pattern: [{ type: 'ramcart', count: 2, healthMultiplier: 1 }, { type: 'beefyenemy', count: 4, healthMultiplier: 2, speedMultiplier: 0.6 }, { type: 'basic', count: 20 }, { type: 'archer', count: 10 }, { type: 'frog', count: 15, speedMultiplier: 1.2 }, { type: 'walkingfrog', count: 2, speedMultiplier: 0.6 }, { type: 'knight', count: 1, healthMultiplier: 1, speedMultiplier: 0.8 }, { type: 'shieldknight', count: 2, speedMultiplier: 0.6 }, { type: 'ramcart', count: 1 }, { type: 'basic', count: 10 }, { type: 'archer', count: 8 }, { type: 'frog', count: 4 }, { type: 'knight', count: 1 }] 
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 1.63, 
+            enemyHealth_multiplier: 5, 
             speedMultiplier: 1, 
-            spawnInterval: 0.96, 
-            pattern: [{ type: 'villager', count: 9, healthMultiplier: 1.8, speedMultiplier: 0.6 }, { type: 'basic', count: 11, healthMultiplier: 1.8 }, { type: 'archer', count: 4, speedMultiplier: 1.5 }] 
+            spawnInterval: 20, 
+            pattern: [{ type: 'firefrog', count: 1 }, { type: 'waterfrog', count: 1 }, { type: 'earthfrog', count: 1 }, { type: 'airfrog', count: 1 }] 
         }
         // Wave 4
         , { 
             enemyHealth_multiplier: 1.84, 
             speedMultiplier: 1, 
             spawnInterval: 0.78, 
-            pattern: [{ type: 'archer', count: 8, healthMultiplier: 2.5, speedMultiplier: 1.1 }, { type: 'frog', count: 11, healthMultiplier: 1.8 }, { type: 'mage', count: 3, healthMultiplier: 2 }, { type: 'archer', count: 4, healthMultiplier: 3, speedMultiplier: 1.5 }] 
+            pattern: [{ type: 'heavyfrog', count: 2, healthMultiplier: 2, speedMultiplier: 0.8 }, { type: 'knight', count: 5, healthMultiplier: 2 }, { type: 'mage', count: 3, healthMultiplier: 4 }, { type: 'archer', count: 16, healthMultiplier: 3, speedMultiplier: 1.2 }, { type: 'frog', count: 12, healthMultiplier: 3, speedMultiplier: 1 }, { type: 'ramcart', count: 3, healthMultiplier: 3, speedMultiplier: 1 }] 
         }
         // Wave 5
         , { 
@@ -180,244 +180,6 @@ export class SpaceLevel3 extends LevelBase {
             speedMultiplier: 0.8, 
             spawnInterval: 1, 
             pattern: [{ type: 'beefyenemy', count: 9, healthMultiplier: 3 }, { type: 'frog', count: 14 }, { type: 'shieldknight', count: 3, healthMultiplier: 2 }, { type: 'basic', count: 11 }, { type: 'villager', count: 10 }, { type: 'mage', count: 6 }, { type: 'archer', count: 9, healthMultiplier: 3, speedMultiplier: 2 }] 
-        }
-        // Wave 12
-        , { 
-            enemyHealth_multiplier: 3.34, 
-            speedMultiplier: 1, 
-            spawnInterval: 0.82, 
-            pattern: [{ type: 'frog', count: 9 }, { type: 'frog', count: 10, healthMultiplier: 2, speedMultiplier: 1.2 }, { type: 'frog', count: 11, healthMultiplier: 3 }] 
-        }
-        // Wave 13
-        , { 
-            enemyHealth_multiplier: 3.45, 
-            speedMultiplier: 1, 
-            spawnInterval: 0.66, 
-            pattern: [{ type: 'beefyenemy', count: 9 }, { type: 'frog', count: 3 }] 
-        }
-        // Wave 14
-        , { 
-            enemyHealth_multiplier: 3.56, 
-            speedMultiplier: 0.9, 
-            spawnInterval: 0.9, 
-            pattern: [{ type: 'knight', count: 4, healthMultiplier: 2.5 }, { type: 'mage', count: 7, healthMultiplier: 5 }, { type: 'frog', count: 12, speedMultiplier: 1.3 }, { type: 'archer', count: 11, speedMultiplier: 1.4 }, { type: 'beefyenemy', count: 8 }, { type: 'villager', count: 8 }] 
-        }
-        // Wave 15
-        , { 
-            enemyHealth_multiplier: 3.67, 
-            speedMultiplier: 1, 
-            spawnInterval: 0.76, 
-            pattern: [{ type: 'archer', count: 9, healthMultiplier: 2.5, speedMultiplier: 1.1 }, { type: 'frog', count: 13, healthMultiplier: 1.8 }, { type: 'mage', count: 4, healthMultiplier: 2 }, { type: 'archer', count: 5, healthMultiplier: 3, speedMultiplier: 1.5 }] 
-        }
-        // Wave 16
-        , { 
-            enemyHealth_multiplier: 3.77, 
-            speedMultiplier: 1, 
-            spawnInterval: 1, 
-            pattern: [{ type: 'shieldknight', count: 6, speedMultiplier: 0.6 }, { type: 'frog', count: 11, speedMultiplier: 1.2 }] 
-        }
-        // Wave 17
-        , { 
-            enemyHealth_multiplier: 3.88, 
-            speedMultiplier: 1, 
-            spawnInterval: 1, 
-            pattern: [{ type: 'knight', count: 3, healthMultiplier: 3 }, { type: 'mage', count: 4, healthMultiplier: 2 }, { type: 'shieldknight', count: 3, healthMultiplier: 2 }, { type: 'mage', count: 3, healthMultiplier: 4 }, { type: 'frog', count: 4 }] 
-        }
-        // Wave 18
-        , { 
-            enemyHealth_multiplier: 3.99, 
-            speedMultiplier: 0.8, 
-            spawnInterval: 0.7, 
-            pattern: [{ type: 'mage', count: 9 }, { type: 'frog', count: 3 }] 
-        }
-        // Wave 19
-        , { 
-            enemyHealth_multiplier: 4.1, 
-            speedMultiplier: 1, 
-            spawnInterval: 4.7, 
-            pattern: [{ type: 'firefrog', count: 2 }, { type: 'airfrog', count: 2 }, { type: 'firefrog', count: 2 }, { type: 'airfrog', count: 2 }] 
-        }
-        // Wave 20
-        , { 
-            enemyHealth_multiplier: 4.21, 
-            speedMultiplier: 1, 
-            spawnInterval: 4.4, 
-            pattern: [{ type: 'waterfrog', count: 3 }, { type: 'earthfrog', count: 3 }, { type: 'waterfrog', count: 3 }, { type: 'earthfrog', count: 3 }] 
-        }
-        // Wave 21
-        , { 
-            enemyHealth_multiplier: 4.32, 
-            speedMultiplier: 1.1, 
-            spawnInterval: 0.9, 
-            pattern: [{ type: 'mage', count: 6 }, { type: 'shieldknight', count: 4 }, { type: 'villager', count: 15 }, { type: 'mage', count: 5, healthMultiplier: 4 }, { type: 'beefyenemy', count: 13, healthMultiplier: 2 }, { type: 'shieldknight', count: 4 }, { type: 'frog', count: 22 }, { type: 'archer', count: 14, healthMultiplier: 5, speedMultiplier: 1.5 }, { type: 'mage', count: 4, healthMultiplier: 6 }] 
-        }
-        // Wave 22
-        , { 
-            enemyHealth_multiplier: 4.43, 
-            speedMultiplier: 1.3, 
-            spawnInterval: 0.8, 
-            pattern: [{ type: 'archer', count: 17 }, { type: 'villager', count: 20 }, { type: 'basic', count: 18 }, { type: 'frog', count: 4 }] 
-        }
-        // Wave 23
-        , { 
-            enemyHealth_multiplier: 4.54, 
-            speedMultiplier: 1, 
-            spawnInterval: 0.78, 
-            pattern: [{ type: 'frog', count: 14 }, { type: 'frog', count: 15, healthMultiplier: 2, speedMultiplier: 1.2 }, { type: 'frog', count: 16, healthMultiplier: 3 }] 
-        }
-        // Wave 24
-        , { 
-            enemyHealth_multiplier: 4.65, 
-            speedMultiplier: 1, 
-            spawnInterval: 4, 
-            pattern: [{ type: 'shieldknight', count: 1 }, { type: 'waterfrog', count: 1 }] 
-        }
-        // Wave 25
-        , { 
-            enemyHealth_multiplier: 4.76, 
-            speedMultiplier: 1.7, 
-            spawnInterval: 0.6, 
-            pattern: [{ type: 'archer', count: 15 }, { type: 'frog', count: 4 }] 
-        }
-        // Wave 26
-        , { 
-            enemyHealth_multiplier: 4.86, 
-            speedMultiplier: 0.8, 
-            spawnInterval: 1, 
-            pattern: [{ type: 'beefyenemy', count: 10, healthMultiplier: 3 }, { type: 'frog', count: 22 }, { type: 'shieldknight', count: 4, healthMultiplier: 2 }, { type: 'basic', count: 12 }, { type: 'villager', count: 11 }, { type: 'mage', count: 7 }, { type: 'archer', count: 10, healthMultiplier: 3, speedMultiplier: 2 }] 
-        }
-        // Wave 27
-        , { 
-            enemyHealth_multiplier: 4.97, 
-            speedMultiplier: 1, 
-            spawnInterval: 4, 
-            pattern: [{ type: 'waterfrog', count: 1 }, { type: 'earthfrog', count: 1 }, { type: 'firefrog', count: 1 }] 
-        }
-        // Wave 28
-        , { 
-            enemyHealth_multiplier: 5.08, 
-            speedMultiplier: 0.9, 
-            spawnInterval: 0.9, 
-            pattern: [{ type: 'knight', count: 5, healthMultiplier: 2.5 }, { type: 'mage', count: 8 }, { type: 'frog', count: 20, speedMultiplier: 1.3 }, { type: 'archer', count: 12, speedMultiplier: 1.4 }, { type: 'beefyenemy', count: 9 }, { type: 'villager', count: 9 }] 
-        }
-        // Wave 29
-        , { 
-            enemyHealth_multiplier: 5.19, 
-            speedMultiplier: 0.8, 
-            spawnInterval: 1, 
-            pattern: [{ type: 'firefrog', count: 1 }] 
-        }
-        // Wave 30
-        , { 
-            enemyHealth_multiplier: 5.3, 
-            speedMultiplier: 1, 
-            spawnInterval: 4.1, 
-            pattern: [{ type: 'firefrog', count: 4 }, { type: 'waterfrog', count: 4 }, { type: 'firefrog', count: 4 }, { type: 'waterfrog', count: 4 }] 
-        }
-        // Wave 31
-        , { 
-            enemyHealth_multiplier: 5.41, 
-            speedMultiplier: 0.8, 
-            spawnInterval: 1, 
-            pattern: [{ type: 'beefyenemy', count: 11, healthMultiplier: 3 }, { type: 'frog', count: 27 }, { type: 'shieldknight', count: 5, healthMultiplier: 2 }, { type: 'basic', count: 13 }, { type: 'villager', count: 12 }, { type: 'mage', count: 8 }, { type: 'archer', count: 11, healthMultiplier: 3, speedMultiplier: 2 }] 
-        }
-        // Wave 32
-        , { 
-            enemyHealth_multiplier: 5.52, 
-            speedMultiplier: 1, 
-            spawnInterval: 4, 
-            pattern: [{ type: 'ramcart', count: 1 }, { type: 'airfrog', count: 1 }] 
-        }
-        // Wave 33
-        , { 
-            enemyHealth_multiplier: 5.63, 
-            speedMultiplier: 1.7, 
-            spawnInterval: 0.6, 
-            pattern: [{ type: 'archer', count: 16 }, { type: 'frog', count: 5 }] 
-        }
-        // Wave 34
-        , { 
-            enemyHealth_multiplier: 5.74, 
-            speedMultiplier: 1.4, 
-            spawnInterval: 0.8, 
-            pattern: [{ type: 'archer', count: 18 }, { type: 'villager', count: 21 }, { type: 'basic', count: 19 }, { type: 'frog', count: 5 }] 
-        }
-        // Wave 35
-        , { 
-            enemyHealth_multiplier: 5.85, 
-            speedMultiplier: 1.1, 
-            spawnInterval: 0.9, 
-            pattern: [{ type: 'mage', count: 7, healthMultiplier: 8 }, { type: 'shieldknight', count: 5 }, { type: 'villager', count: 16 }, { type: 'mage', count: 6, healthMultiplier: 4 }, { type: 'beefyenemy', count: 14, healthMultiplier: 2 }, { type: 'shieldknight', count: 5 }, { type: 'frog', count: 33 }, { type: 'archer', count: 15, healthMultiplier: 5, speedMultiplier: 1.5 }, { type: 'mage', count: 5, healthMultiplier: 6 }] 
-        }
-        // Wave 36
-        , { 
-            enemyHealth_multiplier: 5.96, 
-            speedMultiplier: 1, 
-            spawnInterval: 0.72, 
-            pattern: [{ type: 'archer', count: 11, healthMultiplier: 2.5, speedMultiplier: 1.1 }, { type: 'frog', count: 25, healthMultiplier: 1.8 }, { type: 'mage', count: 6, healthMultiplier: 2 }, { type: 'archer', count: 7, healthMultiplier: 3, speedMultiplier: 1.5 }] 
-        }
-        // Wave 37
-        , { 
-            enemyHealth_multiplier: 6.07, 
-            speedMultiplier: 0.8, 
-            spawnInterval: 1, 
-            pattern: [{ type: 'earthfrog', count: 1 }] 
-        }
-        // Wave 38
-        , { 
-            enemyHealth_multiplier: 6.18, 
-            speedMultiplier: 0.9, 
-            spawnInterval: 0.9, 
-            pattern: [{ type: 'knight', count: 6, healthMultiplier: 2.5 }, { type: 'mage', count: 9, healthMultiplier: 2 }, { type: 'frog', count: 27, speedMultiplier: 1.3 }, { type: 'archer', count: 13, speedMultiplier: 1.4 }, { type: 'beefyenemy', count: 10 }, { type: 'villager', count: 10 }] 
-        }
-        // Wave 39
-        , { 
-            enemyHealth_multiplier: 6.29, 
-            speedMultiplier: 1, 
-            spawnInterval: 4, 
-            pattern: [{ type: 'waterfrog', count: 1 }, { type: 'airfrog', count: 1 }, { type: 'earthfrog', count: 1 }] 
-        }
-        // Wave 40
-        , { 
-            enemyHealth_multiplier: 6.4, 
-            speedMultiplier: 1, 
-            spawnInterval: 3.8, 
-            pattern: [{ type: 'airfrog', count: 5 }, { type: 'earthfrog', count: 5 }, { type: 'airfrog', count: 5 }, { type: 'earthfrog', count: 5 }] 
-        }
-        // Wave 41
-        , { 
-            enemyHealth_multiplier: 17.22, 
-            speedMultiplier: 1.1, 
-            spawnInterval: 0.9, 
-            pattern: [{ type: 'shieldknight', count: 8, healthMultiplier: 3 }, { type: 'mage', count: 6 }, { type: 'villager', count: 17 }, { type: 'shieldknight', count: 7, healthMultiplier: 4 }, { type: 'beefyenemy', count: 15, healthMultiplier: 2 }, { type: 'mage', count: 6 }, { type: 'frog', count: 38 }, { type: 'archer', count: 16, healthMultiplier: 5, speedMultiplier: 1.5 }, { type: 'shieldknight', count: 6, healthMultiplier: 6 }] 
-        }
-        // Wave 42
-        , { 
-            enemyHealth_multiplier: 10.11, 
-            speedMultiplier: 0.8, 
-            spawnInterval: 1, 
-            pattern: [{ type: 'beefyenemy', count: 12, healthMultiplier: 3 }, { type: 'frog', count: 35 }, { type: 'ramcart', count: 6, healthMultiplier: 2 }, { type: 'basic', count: 14 }, { type: 'villager', count: 13 }, { type: 'shieldknight', count: 9 }, { type: 'archer', count: 12, healthMultiplier: 3, speedMultiplier: 2 }] 
-        }
-        // Wave 43
-        , { 
-            enemyHealth_multiplier: 52.42, 
-            speedMultiplier: 0.8, 
-            spawnInterval: 1, 
-            pattern: [{ type: 'waterfrog', count: 1 }] 
-        }
-        // Wave 44
-        , { 
-            enemyHealth_multiplier: 20.59, 
-            speedMultiplier: 1.8, 
-            spawnInterval: 0.6, 
-            pattern: [{ type: 'archer', count: 17, healthMultiplier: 10 }, { type: 'earthfrog', count: 5 }] 
-        }
-        // Wave 45
-        , { 
-            enemyHealth_multiplier: 50, 
-            speedMultiplier: 0.5, 
-            spawnInterval: 0.7, 
-            pattern: [{ type: 'knight', count: 1}] 
         }
         ];
 

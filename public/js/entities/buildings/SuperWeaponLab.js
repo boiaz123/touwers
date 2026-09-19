@@ -1,5 +1,21 @@
 import { Building } from './Building.js';
 
+// What each Spell Power level adds to a spell (Lab Level 5+, one diamond per level, 50 levels).
+// Flat increments ensure steady, non-exponential growth. upgradeMainSpell() applies these and
+// getSpellPowerChanges() reads them for the Lab panel's hover text. Chain Lightning also gains
+// a chain target every 5 levels (handled next to the table's use).
+//   arcaneBlast:    +250 damage, +100 radius at max (total 400 / 220)
+//   frostNova:      +5s freeze, +100 radius at max (total 8s / 250)
+//   meteorStrike:   +450 damage at max (total 750). Its impact radius is fixed (see
+//                   GameplayState's METEOR_STRIKE_RADIUS), so Spell Power doesn't widen it
+//   chainLightning: +150 damage at max (total 230), +10 chains (total 15). It has no radius
+const SPELL_POWER_PER_LEVEL = {
+    arcaneBlast:    { damage: 5, radius: 2 },
+    frostNova:      { freezeDuration: 0.1, radius: 2 },
+    meteorStrike:   { damage: 9 },
+    chainLightning: { damage: 3 }
+};
+
 export class SuperWeaponLab extends Building {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY, 4);
@@ -53,13 +69,16 @@ export class SuperWeaponLab extends Building {
                 name: 'Meteor Strike',
                 shortName: 'Meteor',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><circle cx="13" cy="13" r="4" fill="#EF4444"/><line x1="10" y1="10" x2="5" y2="5" stroke="#F97316" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="11" x2="3" y2="8" stroke="#FBBF24" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="9" x2="8" y2="3" stroke="#FBBF24" stroke-width="1.5" stroke-linecap="round"/></svg>',
-                description: 'Calls down meteors dealing fire damage that devastates enemies',
+                description: 'Crushing earth and air impact that pierces armor and hits every enemy in the zone',
                 baseLevel: 3,  // Unlocked at lab level 3
                 upgradeLevel: 0,
                 maxUpgradeLevel: 50,
-                damage: 200,
-                burnDamage: 10,
-                burnDuration: 5,
+                damage: 300,
+                // Fused from earth and air, like the Combination Tower's Meteor - never fire. Hits
+                // as earth unless an elemental frog is weak to air (see pickDamageType). Earth
+                // damage also shreds armor on top of ignoring it.
+                elements: ['earth', 'air'],
+                armorPiercing: 100,
                 cooldown: 60,
                 currentCooldown: 0,
                 unlocked: false
@@ -1253,33 +1272,33 @@ export class SuperWeaponLab extends Building {
         // Increase upgrade level
         spell.upgradeLevel++;
         
-        // Apply balanced upgrade effects per level (max level 50)
-        // Flat increments ensure steady, non-exponential growth
-        switch(spell.id) {
-            case 'arcaneBlast':
-                spell.damage += 5;          // +5 dmg/level → +250 at max (total 400)
-                spell.radius += 2;          // +2 radius/level → +100 at max (total 220)
-                break;
-            case 'frostNova':
-                spell.freezeDuration += 0.1; // +0.1s/level → +5s at max (total 8s)
-                spell.radius += 2;          // +2 radius/level → +100 at max (total 250)
-                break;
-            case 'meteorStrike':
-                spell.damage += 7;          // +7 fire dmg/level → +350 at max (total 550)
-                spell.burnDamage += 0.5;    // +0.5/level → +25 at max (total 35/s)
-                spell.radius += 2;          // +2 radius/level → +100 at max (total ~180)
-                break;
-            case 'chainLightning':
-                spell.damage += 3;          // +3 elec dmg/level → +150 at max (total 230)
-                spell.radius += 2;          // +2 radius/level → +100 at max
-                // +1 chain target every 5 levels → +10 chains at max (total 15)
-                if (spell.upgradeLevel % 5 === 0) {
-                    spell.chainCount += 1;
-                }
-                break;
+        // Apply the per-level effects (see SPELL_POWER_PER_LEVEL)
+        for (const [stat, perLevel] of Object.entries(SPELL_POWER_PER_LEVEL[spell.id] || {})) {
+            spell[stat] += perLevel;
+        }
+        // +1 chain target every 5 levels → +10 chains at max (total 15)
+        if (spell.id === 'chainLightning' && spell.upgradeLevel % 5 === 0) {
+            spell.chainCount += 1;
         }
 
         return true;
+    }
+
+    /**
+     * What the next Spell Power level would change on `spellId`, as [{ stat, current, next }] -
+     * the same increments upgradeMainSpell applies, so the Lab panel's hover text can't drift
+     * from what a purchase really does.
+     */
+    getSpellPowerChanges(spellId) {
+        const spell = this.spells[spellId];
+        if (!spell) return [];
+        const changes = Object.entries(SPELL_POWER_PER_LEVEL[spellId] || {}).map(([stat, perLevel]) => (
+            { stat, current: spell[stat], next: spell[stat] + perLevel }
+        ));
+        if (spellId === 'chainLightning' && (spell.upgradeLevel + 1) % 5 === 0) {
+            changes.push({ stat: 'chainCount', current: spell.chainCount, next: spell.chainCount + 1 });
+        }
+        return changes;
     }
 
     // Upgrade combination spell using gold (anytime after lab level 2+)
@@ -1371,9 +1390,7 @@ export class SuperWeaponLab extends Building {
                 spell.radius += 2;
                 break;
             case 'meteorStrike':
-                spell.damage += 7;
-                spell.burnDamage += 0.5;
-                spell.radius += 2;
+                spell.damage += SPELL_POWER_PER_LEVEL.meteorStrike.damage;
                 break;
             case 'chainLightning':
                 spell.damage += 3;

@@ -1,7 +1,7 @@
 import { TowerRegistry } from './TowerRegistry.js';
 import { RubblePile } from './RubblePile.js';
 import { TowerTransformRegistry } from './TowerTransformRegistry.js';
-import { COMBO_SPELL_LEVEL_BONUS } from './CombinationTower.js';
+import { COMBO_SPELL_LEVEL_BONUS, COMBO_SPELL_BASE_STATS } from './CombinationTower.js';
 import { BuildingManager } from '../buildings/BuildingManager.js';
 import { UnlockSystem } from '../../core/systems/UnlockSystem.js';
 import { SpatialGrid } from '../../core/utils/SpatialGrid.js';
@@ -953,13 +953,9 @@ export class TowerManager {
                     if (tower.constructor.name === 'MagicTower') {
                         tower.isSelected = true;
                         this.playTowerSelectSound(tower);
-                        // Academy passed through so the UI can build a "current stats" hover
-                        // panel for each element button (see UIManager.showMagicTowerElementMenu)
-                        const academy = this.cachedAcademies && this.cachedAcademies[0];
                         return {
                             type: 'magic_tower_menu',
                             tower: tower,
-                            academy: academy,
                             elements: [
                                 { id: 'fire', name: 'Fire', icon: '▲', description: 'Burn damage over time' },
                                 { id: 'water', name: 'Water', icon: '▽', description: 'Slows and freezes enemies' },
@@ -982,11 +978,7 @@ export class TowerManager {
                                 description: spell.description,
                                 // The two elements this spell is fused from (the gem keys its
                                 // upgrades cost - same source SuperWeaponLab's combo tooltips use)
-                                elements: Object.keys(spell.gems || {}),
-                                // Passed through so the UI can build a "current stats" hover
-                                // panel for each spell button (see UIManager.showCombinationTowerMenu)
-                                upgradeLevel: spell.upgradeLevel,
-                                maxUpgradeLevel: spell.maxUpgradeLevel
+                                elements: Object.keys(spell.gems || {})
                             })),
                             currentSpell: tower.selectedSpell
                         };
@@ -1114,7 +1106,8 @@ export class TowerManager {
     
     /**
      * Compute what a newly placed tower of the given type would have for stats,
-     * accounting for all current building upgrades (forge, training grounds, etc).
+     * accounting for all current building upgrades (forge, training grounds, Magic Academy,
+     * Super Weapon Lab). These are the tower's real, current numbers - never a base/upgraded pair.
      * Returns numeric stats: { damage, range, fireRate, armorPiercing, splashRadius, radius, slowPercent }
      */
     getUpgradedTowerStats(type) {
@@ -1135,13 +1128,8 @@ export class TowerManager {
         const base = baseStats[type];
         if (!base) return null;
 
-        const result = { ...base, baseDamage: base.damage, baseRange: base.range, baseFireRate: base.fireRate };
-        if (base.splashRadius) result.baseSplashRadius = base.splashRadius;
-        if (base.radius !== undefined) {
-            result.baseRadius = base.radius;
-            result.baseSlowPercent = base.slowPercent;
-        }
-        
+        const result = { ...base };
+
         // 1. Apply building presence multipliers (defaults to 1.0; other buildings may modify)
         const upgrades = this.buildingManager.towerUpgrades;
         result.damage = base.damage * upgrades.damage;
@@ -1182,13 +1170,11 @@ export class TowerManager {
             // Special case: poison tick damage is separate from direct hit damage
             if (type === 'poison') {
                 result.poisonTickDamage = BASE_POISON_TICK_DAMAGE + (m.poisonDamageBonus || 0);
-                result.basePoisonTickDamage = BASE_POISON_TICK_DAMAGE;
             }
         } else {
             // No forge: just base poison tick damage
             if (type === 'poison') {
                 result.poisonTickDamage = BASE_POISON_TICK_DAMAGE;
-                result.basePoisonTickDamage = BASE_POISON_TICK_DAMAGE;
             }
         }
         
@@ -1221,10 +1207,27 @@ export class TowerManager {
                 result.fireRate = base.fireRate + (u.level * u.effect);
             }
         }
-        
+
+        // 4. Magic Academy / Super Weapon Lab. A fresh Magic Tower starts as Fire, so its real hit
+        // is Fire's damage plus Fire mastery (see MagicTower.shoot); a fresh Combination Tower
+        // starts on the lab's first spell (see setAvailableSpells), so it has that spell's own
+        // damage and rate plus that spell's upgrade levels (see applyAcademyUpgrades).
+        if (type === 'magic') {
+            const academy = this.cachedAcademies && this.cachedAcademies[0];
+            if (academy) result.damage += academy.getElementalBonuses().fire.damageBonus;
+        } else if (type === 'combination' && this.cachedAcademies && this.cachedAcademies.length > 0) {
+            const lab = this.cachedLabs && this.cachedLabs[0];
+            const firstSpell = lab && lab.combinationSpells[0];
+            const spellBase = firstSpell && COMBO_SPELL_BASE_STATS[firstSpell.id];
+            if (spellBase) {
+                result.damage = spellBase.damage + COMBO_SPELL_LEVEL_BONUS[firstSpell.id].damage * firstSpell.upgradeLevel;
+                result.fireRate = spellBase.fireRate;
+            }
+        }
+
         return result;
     }
-    
+
     getBuildingInfo(type) {
         const info = this.buildingManager.getBuildingInfo(type);
         if (info) {

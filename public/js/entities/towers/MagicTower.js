@@ -6,6 +6,20 @@ const BASE_SLOW_EFFECT = 0.7;
 // range or the tower retargets, instead of fading almost as soon as the hits stop.
 const FIRE_BURN_DURATION = 9;
 
+// Per-element base damage and fire rate (see setElement). Earth is the hard hitter: its damage
+// is high enough that even at its slow fire rate it leads every other element in sustained
+// damage output (90 * 0.7 = 63 dps vs. fire's 45, water's 36, air's 25), on top of already
+// having by far the biggest single hit.
+export const MAGIC_ELEMENT_BASE_STATS = {
+    fire:  { damage: 45, fireRate: 1.0 },
+    water: { damage: 30, fireRate: 1.2 },
+    air:   { damage: 25, fireRate: 1.0 },
+    earth: { damage: 90, fireRate: 0.7 }
+};
+
+// Air's chain lightning reaches this far from a struck enemy before Academy mastery widens it
+const BASE_CHAIN_RANGE = 50;
+
 export class MagicTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
@@ -186,7 +200,7 @@ export class MagicTower extends Tower {
     }
 
     chainLightning(originalTarget, damage = this.damage) {
-        const chainRange = 50 + this.elementalBonuses.air.chainRange;
+        const chainRange = BASE_CHAIN_RANGE + this.elementalBonuses.air.chainRange;
         // Each hop hits for 60% of the primary hit, so air's damage upgrades carry down the chain
         const chainDamage = Math.floor(damage * 0.6);
         const chainTargets = [originalTarget];
@@ -308,17 +322,8 @@ export class MagicTower extends Tower {
         if (['fire', 'water', 'air', 'earth'].includes(element)) {
             this.selectedElement = element;
 
-            // Set per-element base damage and fire rate. Earth is the hard hitter: its
-            // damage is high enough that even at its slow fire rate it leads every other
-            // element in sustained damage output (90 * 0.7 = 63 dps vs. fire's 45, water's
-            // 36, air's 25), on top of already having by far the biggest single hit.
-            const elementStats = {
-                fire:  { damage: 45, fireRate: 1.0 },
-                water: { damage: 30, fireRate: 1.2 },
-                air:   { damage: 25, fireRate: 1.0 },
-                earth: { damage: 90, fireRate: 0.7 }
-            };
-            const stats = elementStats[element];
+            // Set per-element base damage and fire rate (see MAGIC_ELEMENT_BASE_STATS)
+            const stats = MAGIC_ELEMENT_BASE_STATS[element];
             this.damage = stats.damage;
             this.fireRate = stats.fireRate;
             this.originalDamage = stats.damage;
@@ -343,6 +348,28 @@ export class MagicTower extends Tower {
     
     applyElementalBonuses(bonuses) {
         this.elementalBonuses = bonuses;
+    }
+
+    /**
+     * The real numbers this tower hits with right now as `element` (default: the selected one):
+     * that element's damage plus what its Academy mastery adds to every hit (see shoot()), its
+     * fire rate, and water's slow strength / air's chain range. For the selected element the
+     * damage and rate are the tower's own live values, so this always matches shoot(). What
+     * the on-field tower menu shows.
+     */
+    getElementStats(element = this.selectedElement) {
+        const base = MAGIC_ELEMENT_BASE_STATS[element];
+        const bonus = this.elementalBonuses[element] || {};
+        const selected = element === this.selectedElement;
+        const stats = {
+            damage: (selected || !base ? this.damage : base.damage) + (bonus.damageBonus || 0),
+            fireRate: selected || !base ? this.fireRate : base.fireRate
+        };
+        if (element === 'water') {
+            stats.slowPercent = Math.round((1 - Math.max(0.3, BASE_SLOW_EFFECT - (bonus.slowBonus || 0))) * 100);
+        }
+        if (element === 'air') stats.chainRange = BASE_CHAIN_RANGE + (bonus.chainRange || 0);
+        return stats;
     }
     
     getElementalColor() {

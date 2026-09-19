@@ -662,42 +662,35 @@ export class UIManager {
         const unlockSystem = this.towerManager.getUnlockSystem();
         const isUnlocked = unlockSystem.canBuildTower(towerType);
         
-        // Use computed upgraded stats (numeric, accounts for all upgrades)
+        // Computed stats (numeric, accounts for all upgrades): the tower's real, current numbers.
+        // Only these are shown - a base value next to the upgraded one belongs in the upgrade
+        // panels' hover text, not here.
         const s = info.upgradedStats;
-        
-        // Helper to show stat with optional base comparison
-        const statVal = (current, base, suffix = '') => {
+
+        const statVal = (current, suffix = '') => {
             const cur = typeof current === 'number' ? Math.round(current) : current;
-            const bas = typeof base === 'number' ? Math.round(base) : base;
-            if (cur !== bas && bas > 0) {
-                return `<span style="color: #FFD700;">${cur}${suffix}</span> <span style="color: #aaffaa; font-size: 0.7em;">(base: ${bas}${suffix})</span>`;
-            }
             return `<span style="color: #FFD700;">${cur}${suffix}</span>`;
         };
-        const statValDecimal = (current, base, suffix = '') => {
+        const statValDecimal = (current, suffix = '') => {
             const cur = typeof current === 'number' ? current.toFixed(1) : current;
-            const bas = typeof base === 'number' ? base.toFixed(1) : base;
-            if (cur !== bas && parseFloat(bas) > 0) {
-                return `<span style="color: #FFD700;">${cur}${suffix}</span> <span style="color: #aaffaa; font-size: 0.7em;">(base: ${bas}${suffix})</span>`;
-            }
             return `<span style="color: #FFD700;">${cur}${suffix}</span>`;
         };
-        
+
         // Tower-specific detailed info
         switch (towerType) {
             case 'basic':
                 statsHTML = `
-                    <div><span>Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
-                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    <div><span>Damage:</span> ${statVal(s.damage)}</div>
+                    <div><span>Range:</span> ${statVal(s.range)}</div>
+                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, '/sec')}</div>
                 `;
                 specialHTML = 'A reliable wooden watchtower with defenders hurling rocks. Upgradeable at the Tower Forge.';
                 break;
             case 'archer':
                 statsHTML = `
-                    <div><span>Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
-                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    <div><span>Damage:</span> ${statVal(s.damage)}</div>
+                    <div><span>Range:</span> ${statVal(s.range)}</div>
+                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, '/sec')}</div>
                     ${s.armorPiercing > 0 ? `<div><span>Armor Pierce:</span> <span style="color: #FFD700;">${s.armorPiercing}%</span></div>` : ''}
                 `;
                 specialHTML = 'Fast-firing tower with a shorter starting range than most towers, but scales the highest of any tower through Training Grounds upgrades. Gains armor piercing through Tower Forge upgrades.';
@@ -705,10 +698,10 @@ export class UIManager {
                 break;
             case 'cannon':
                 statsHTML = `
-                    <div><span>Damage:</span> ${statVal(s.damage, s.baseDamage)} <span style="color: #c9a876;">(AoE)</span></div>
-                    <div><span>Blast Radius:</span> ${statVal(s.splashRadius, s.baseSplashRadius || 50, 'px')}</div>
-                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    <div><span>Damage:</span> ${statVal(s.damage)} <span style="color: #c9a876;">(AoE)</span></div>
+                    <div><span>Blast Radius:</span> ${statVal(s.splashRadius, 'px')}</div>
+                    <div><span>Range:</span> ${statVal(s.range)}</div>
+                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, '/sec')}</div>
                 `;
                 specialHTML = 'Powerful stone tower with a massive trebuchet. Deals heavy area-of-effect damage at long range; blast radius upgradeable at the Tower Forge.';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 3</div>';
@@ -716,17 +709,17 @@ export class UIManager {
             case 'barricade':
                 statsHTML = `
                     <div><span>Effect:</span> <span style="color: #FFD700;">Continuously slows enemies</span></div>
-                    <div><span>Patch Radius:</span> ${statVal(s.radius, s.baseRadius, 'px')}</div>
-                    <div><span>Slow Amount:</span> ${statVal(Math.round(s.slowPercent * 100), Math.round(s.baseSlowPercent * 100), '%')}</div>
-                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
+                    <div><span>Patch Radius:</span> ${statVal(s.radius, 'px')}</div>
+                    <div><span>Slow Amount:</span> ${statVal(Math.round(s.slowPercent * 100), '%')}</div>
+                    <div><span>Range:</span> ${statVal(s.range)}</div>
                 `;
                 specialHTML = 'Defenders keep a permanent patch of rubble piled on the road ahead, continuously slowing every enemy standing in it. Patch size grows at the Tower Forge; slow strength grows at Training Grounds.';
                 break;
             case 'poison':
                 statsHTML = `
-                    <div><span>Poison Damage:</span> ${statVal(s.poisonTickDamage || 13, s.basePoisonTickDamage || 13, ' /2s')} <span style="color:#aaffaa; font-size:0.7em;">(permanent)</span></div>
-                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    <div><span>Poison Damage:</span> ${statVal(s.poisonTickDamage || 13, ' /2s')} <span style="color:#aaffaa; font-size:0.7em;">(permanent)</span></div>
+                    <div><span>Range:</span> ${statVal(s.range)}</div>
+                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, '/sec')}</div>
                 `;
                 specialHTML = "Ranger shoots poison arrows that apply a permanent toxin, dealing heavy damage over time until the enemy dies. Poison tick damage upgradeable at the Tower Forge; fire rate upgradeable at Training Grounds.";
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Forge Level 2</div>';
@@ -738,9 +731,9 @@ export class UIManager {
                 // separate native tooltip, so the player sees it alongside everything else.
                 const gemCost = this.towerManager.getMagicTowerGemCost();
                 statsHTML = `
-                    <div><span>Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
-                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    <div><span>Damage:</span> ${statVal(s.damage)}</div>
+                    <div><span>Range:</span> ${statVal(s.range)}</div>
+                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, '/sec')}</div>
                 `;
                 if (gemCost) {
                     costString += ` + <span class="gem-sm fire-gem"></span>${gemCost.fire}<span class="gem-sm water-gem"></span>${gemCost.water}<span class="gem-sm air-gem"></span>${gemCost.air}<span class="gem-sm earth-gem"></span>${gemCost.earth}`;
@@ -762,9 +755,9 @@ export class UIManager {
             case 'combination': {
                 const combinationDiamondCost = this.towerManager.getCombinationTowerDiamondCost();
                 statsHTML = `
-                    <div><span>Damage:</span> ${statVal(s.damage, s.baseDamage)}</div>
-                    <div><span>Range:</span> ${statVal(s.range, s.baseRange)}</div>
-                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, s.baseFireRate, '/sec')}</div>
+                    <div><span>Damage:</span> ${statVal(s.damage)}</div>
+                    <div><span>Range:</span> ${statVal(s.range)}</div>
+                    <div><span>Attack Speed:</span> ${statValDecimal(s.fireRate, '/sec')}</div>
                 `;
                 if (combinationDiamondCost) {
                     costString += ` + <span class="gem-sm diamond-gem"></span>${combinationDiamondCost.diamond}`;
@@ -906,10 +899,7 @@ export class UIManager {
                 }
                 break;
             case 'superweapon':
-                costString = `<span class="coin-xs"></span>${info.cost}`;
-                if (info.diamondCost) {
-                    costString += ` + ◆${info.diamondCost}`;
-                }
+                costString = this.getCostHTML({ gold: info.cost, diamond: info.diamondCost || 0 });
                 statsHTML = `
                     <div><span>Max Level:</span> <span style="color: #FFD700;">4</span></div>
                     <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
@@ -922,13 +912,13 @@ export class UIManager {
                     const academy = this.towerManager.buildingManager.buildings.find(b => b.constructor.name === 'MagicAcademy');
                     const diamondCount = academy ? (academy.gems.diamond || 0) : 0;
                     if (diamondCount < 5) {
-                        unlockHTML = '<div style="color: #ff9999;">Requires 5 ◆</div>';
+                        unlockHTML = `<div style="color: #ff9999;">Requires ${this.getCostHTML({ diamond: 5 })}</div>`;
                     }
                 }
                 break;
             case 'diamond-press':
                 statsHTML = `
-                    <div><span>Exchange:</span> <span style="color: #FFD700;">3 of each gem + 1000g → 1 ◆</span></div>
+                    <div><span>Exchange:</span> <span style="color: #FFD700;">3 of each gem + 1000g → ${this.getCostHTML({ diamond: 1 })}</span></div>
                     <div><span>Size:</span> <span style="color: #FFD700;">${info.size}</span></div>
                     <div><span>Limit:</span> <span style="color: #FFD700;">1 per game</span></div>
                 `;
@@ -1005,15 +995,14 @@ export class UIManager {
 
         // Show the effective cooldown (after the Cooldown Reduction upgrade path's bonus, see
         // SuperWeaponLab.getCooldownReductionFraction) so the hotbar tooltip matches what
-        // actually happens when the spell is cast, not just its unreduced base value.
+        // actually happens when the spell is cast. Just that number - the base value and the
+        // reduction belong in the Lab's upgrade panel.
         const superWeaponLab = this.towerManager.buildingManager.buildings.find(
             b => b.constructor.name === 'SuperWeaponLab'
         );
         const cdReduction = superWeaponLab ? superWeaponLab.getCooldownReductionFraction() : 0;
         const effectiveCooldown = spell.cooldown * (1 - cdReduction);
-        const cooldownHTML = cdReduction > 0
-            ? `<div><span>Cooldown:</span> <span style="color: #FFD700;">${effectiveCooldown.toFixed(1)}s</span> <span style="color: #aaffaa; font-size: 0.7rem;">(-${Math.round(cdReduction * 100)}%)</span></div>`
-            : `<div><span>Cooldown:</span> <span style="color: #FFD700;">${spell.cooldown}s</span></div>`;
+        const cooldownHTML = `<div><span>Cooldown:</span> <span style="color: #FFD700;">${+effectiveCooldown.toFixed(1)}s</span></div>`;
 
         switch (spell.id) {
             case 'arcaneBlast':
@@ -1030,13 +1019,18 @@ export class UIManager {
                     ${cooldownHTML}
                 `;
                 break;
-            case 'meteorStrike':
+            case 'meteorStrike': {
+                const elementsHTML = spell.elements.map(el =>
+                    `${this.getElementGemHTML(el, '0.95em')}${el.charAt(0).toUpperCase() + el.slice(1)}`).join(' + ');
                 statsHTML = `
                     <div><span>Damage:</span> <span style="color: #FFD700;">${spell.damage}</span></div>
-                    <div><span>Burn:</span> <span style="color: #FFD700;">${spell.burnDamage}/s for ${spell.burnDuration}s</span></div>
+                    <div><span>Radius:</span> <span style="color: #FFD700;">${this.gameplayState.getSpellCastRadius(spell)}</span></div>
+                    <div><span>Type:</span> <span style="color: #FFD700;">${elementsHTML}</span></div>
+                    <div><span>Armor Pierce:</span> <span style="color: #FFD700;">${spell.armorPiercing}%</span></div>
                     ${cooldownHTML}
                 `;
                 break;
+            }
             case 'chainLightning':
                 statsHTML = `
                     <div><span>Damage:</span> <span style="color: #FFD700;">${spell.damage}</span></div>
@@ -1538,8 +1532,13 @@ export class UIManager {
         const currentGold = this.gameState.gold;
         const currentGems = this.towerManager.getGemStocks();
 
+        // Buttons built from cost parts (Magic Academy, Super Weapon Lab) know their own price -
+        // see getCostHTML - so they're handled here, not by guessing from their text below
+        this._refreshCostAffordability(document);
+
         // Update compact upgrade buttons (forge, academy, training tower upgrades)
         document.querySelectorAll('.compact-upgrade-btn').forEach(btn => {
+            if (btn.dataset.gated !== undefined) return; // Academy / Lab button: handled above
             if (btn.textContent.trim() === 'MAX' || btn.textContent.trim() === 'max') return;
             const costMatch = btn.textContent.match(/(\d+)/);
             if (!costMatch) return;
@@ -1620,22 +1619,14 @@ export class UIManager {
 
         // Update forge/academy/training/superweapon level upgrade buttons
         document.querySelectorAll('.forge-level-upgrade-btn').forEach(btn => {
+            if (btn.dataset.gated !== undefined) return; // Academy / Lab button: handled above
             if (btn.textContent.includes('MAX')) return;
             const costEl = btn.querySelector('.btn-cost');
             if (!costEl) return;
             const costMatch = costEl.textContent.match(/(\d+)/);
             if (!costMatch) return;
             const cost = parseInt(costMatch[1]);
-
-            // Check if it also needs diamonds (superweapon lab)
-            const needsDiamonds = costEl.textContent.includes('◆') || costEl.textContent.includes('💎');
-            let canAfford = currentGold >= cost;
-            if (needsDiamonds) {
-                const diamondMatch = costEl.textContent.match(/[◆💎]\s*(\d+)/);
-                if (diamondMatch) {
-                    canAfford = canAfford && (currentGems.diamond || 0) >= parseInt(diamondMatch[1]);
-                }
-            }
+            const canAfford = currentGold >= cost;
 
             if (btn.disabled && canAfford) {
                 btn.disabled = false;
@@ -2056,37 +2047,132 @@ export class UIManager {
     }
 
     /**
-     * Combination-tower bonus text for a spell at `level` upgrade levels, straight from
-     * COMBO_SPELL_LEVEL_BONUS - the same table TowerManager.applyAcademyUpgrades applies - so a
-     * tooltip always matches what a purchase actually does. Every spell lists its damage first,
-     * then whatever extras it has (chain range, slow strength).
-     * `slowNote` is tacked onto the slow line (the per-level preview uses it to say where it caps).
+     * Inline cost: a gold coin and/or gem emblems, each followed by its amount - e.g.
+     * getCostHTML({ gold: 1500, diamond: 3 }) - so a price reads the same everywhere (the
+     * diamond is the same faceted emblem the top bar and the Combination Tower's build hover
+     * use, never a text glyph). `cost` keys: gold, fire, water, air, earth, diamond. Every part
+     * carries its resource and amount, so _refreshCostAffordability() can tint the ones the
+     * player can't cover without re-rendering the panel.
      */
-    getComboSpellBonusLines(spellId, level, slowNote = '') {
-        const perLevel = COMBO_SPELL_LEVEL_BONUS[spellId];
-        if (!perLevel) return '';
-        let html = `<div>Damage: +${perLevel.damage * level}</div>`;
-        // Base chain/splash radius is 100px (see CombinationTower.shoot()), so +Npx is +N%.
-        if (perLevel.chainRange) html += `<div>Chain Range: +${perLevel.chainRange * level}%</div>`;
-        if (perLevel.slow) html += `<div>Slow Strength: +${(perLevel.slow * level * 100).toFixed(1)}%${slowNote}</div>`;
+    getCostHTML(cost) {
+        const part = (res, iconHTML) =>
+            `<span class="cost-part" data-res="${res}" data-amount="${cost[res]}">${iconHTML}${cost[res]}</span>`;
+        const parts = [];
+        if (cost.gold) parts.push(part('gold', '<span class="coin-xs"></span>'));
+        for (const gem of ['fire', 'water', 'air', 'earth', 'diamond']) {
+            // em, not px: the emblem follows the text it sits in (see the forge-effects-row note)
+            if (cost[gem]) parts.push(part(gem, this.getElementGemHTML(gem, '0.95em')));
+        }
+        return parts.join('');
+    }
+
+    /** Whether the player can pay `cost` (same shape as getCostHTML). */
+    canAffordCost(cost) {
+        const gems = this.towerManager.getGemStocks();
+        return Object.entries(cost).every(([res, amount]) =>
+            !amount || (res === 'gold' ? this.gameState.gold : (gems[res] || 0)) >= amount);
+    }
+
+    /**
+     * Tints every cost part under `root` the player can't cover (.short) and enables/disables
+     * every panel button made of cost parts: affordable, and not `data-gated` (maxed / locked for
+     * a reason other than money). Called when a panel is built, when a hover panel opens, and on
+     * every resource change (updateMenuButtonAffordability), so a price turns red or normal live.
+     */
+    _refreshCostAffordability(root) {
+        const gems = this.towerManager.getGemStocks();
+        const have = res => (res === 'gold' ? this.gameState.gold : (gems[res] || 0));
+        root.querySelectorAll('.cost-part').forEach(part => {
+            part.classList.toggle('short', have(part.dataset.res) < Number(part.dataset.amount));
+        });
+        root.querySelectorAll('.panel-upgrade-btn').forEach(btn => {
+            if (!btn.querySelector('.cost-part')) return;
+            btn.disabled = btn.dataset.gated === 'true' || btn.querySelector('.cost-part.short') !== null;
+        });
+    }
+
+    /** Escapes a fragment of HTML for use inside a data-tooltip="..." attribute. */
+    _tooltipAttr(html) {
+        return html.replace(/"/g, '&quot;');
+    }
+
+    /**
+     * Hover-panel body for an upgrade in the Magic Academy / Super Weapon Lab: the name (with its
+     * level), an optional one-line blurb, what the next level changes as `current → next`, then
+     * the cost with its gem emblems. Kept to exactly that so the panel stays short and the cost is
+     * always the last thing read. `changes` is [{ label, current, next }] (already formatted);
+     * `notes` are one-line red reminders (locked / requirement). A maxed upgrade shows no
+     * changes or cost.
+     */
+    _buildUpgradeTooltipHTML({ title, level = '', blurb = '', changes = [], cost = null, notes = [], maxed = false }) {
+        let html = `<div class="tt-head"><span class="tt-title">${title}</span>${level ? `<span class="tt-level">${level}</span>` : ''}</div>`;
+        if (blurb) html += `<div class="tt-blurb">${blurb}</div>`;
+        if (maxed) {
+            html += '<div class="tt-maxed">Fully upgraded</div>';
+        } else {
+            if (changes.length) {
+                html += '<div class="tt-rows">' + changes.map(c =>
+                    `<div class="tt-row"><span class="tt-label">${c.label}</span><span class="tt-value">${c.current}<span class="tt-arrow">→</span>${c.next}</span></div>`
+                ).join('') + '</div>';
+            }
+            if (cost) html += `<div class="tt-cost"><span class="tt-label">Cost</span><span class="tt-cost-parts">${this.getCostHTML(cost)}</span></div>`;
+        }
+        notes.forEach(note => { html += `<div class="tt-note">${note}</div>`; });
         return html;
     }
 
     /**
-     * Per-level combination-tower bonus text for the Super Weapon Lab's combo spell tooltips.
+     * One row of the Super Weapon Lab's upgrade lists (spell power, cooldown reduction,
+     * combination spells): icon, name, a progress bar with its level count, and a button that
+     * shows what the next level costs - so every list reads the same and the price never hides
+     * behind a hover. `btnLabel` replaces the cost when there is nothing to buy (MAX) or it
+     * can't be bought yet (the requirement); `gated` keeps the button disabled even when the
+     * cost is covered. The whole row carries the hover panel.
      */
-    getComboSpellEffectPreview(spellId) {
-        return this.getComboSpellBonusLines(spellId, 1, ' (maxes out at Lv 7)');
+    _buildUpgradeRowHTML({ iconHTML, name, level, maxLevel, barClass, cost, btnLabel = '', btnData = '', gated = false, isMaxed = false, tooltipHTML = '', rowData = '' }) {
+        const pct = maxLevel ? Math.round(level / maxLevel * 100) : 0;
+        return `
+            <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''} ${gated && !isMaxed ? 'locked' : ''}" ${rowData} data-tooltip="${this._tooltipAttr(tooltipHTML)}">
+                <div class="compact-upgrade-left">
+                    <span class="compact-upgrade-icon">${iconHTML}</span>
+                    <div class="compact-upgrade-info">
+                        <div class="compact-upgrade-name">${name}</div>
+                        <div class="upgrade-progress">
+                            <div class="upgrade-bar"><div class="upgrade-bar-fill ${barClass}" style="width: ${pct}%"></div></div>
+                            <span class="upgrade-progress-text">${level}/${maxLevel}</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="compact-upgrade-btn panel-upgrade-btn" ${btnData} data-gated="${gated}" ${isMaxed || gated ? 'disabled' : ''}>${btnLabel || this.getCostHTML(cost)}</button>
+            </div>`;
     }
 
     /**
-     * Cumulative current stats for a combination spell at its current upgrade level. Used by the
-     * combination tower's own spell-select hover panel (see showCombinationTowerMenu) to
-     * show a condensed "current stats" summary, the same way the Magic Academy's elemental
-     * upgrade buttons show a current-bonus line.
+     * What a combination spell's upgrade levels add to the tower going from `level` to
+     * `level + 1`, as hover rows, straight from COMBO_SPELL_LEVEL_BONUS - the same table
+     * TowerManager.applyAcademyUpgrades applies - so a tooltip always matches what a purchase
+     * actually does. Every spell lists its damage first, then whatever extras it has. The base
+     * chain/splash radius is 100px (see CombinationTower.shoot()), so +Npx is +N%.
      */
-    getComboSpellCurrentStats(spellId, level) {
-        return this.getComboSpellBonusLines(spellId, level);
+    getComboSpellChanges(spellId, level) {
+        const perLevel = COMBO_SPELL_LEVEL_BONUS[spellId];
+        if (!perLevel) return [];
+        const rows = [{ label: 'Damage', current: `+${perLevel.damage * level}`, next: `+${perLevel.damage * (level + 1)}` }];
+        if (perLevel.chainRange) {
+            rows.push({
+                label: spellId === 'meteor' ? 'Blast Radius' : 'Chain Range',
+                current: `+${perLevel.chainRange * level}%`,
+                next: `+${perLevel.chainRange * (level + 1)}%`
+            });
+        }
+        if (perLevel.slow) {
+            rows.push({
+                label: 'Slow',
+                current: `+${(perLevel.slow * level * 100).toFixed(1)}%`,
+                next: `+${(perLevel.slow * (level + 1) * 100).toFixed(1)}%`
+            });
+        }
+        return rows;
     }
 
     /**
@@ -2106,18 +2192,34 @@ export class UIManager {
     }
 
     /**
-     * Cumulative current bonus for a Magic Tower element at the Magic Academy's current
-     * research level for that element. Used by the magic tower's own element-select hover
-     * panel (see showMagicTowerElementMenu).
+     * The stat badges an on-field Magic / Combination Tower panel shows: only the tower's real,
+     * current numbers (per-hit damage with every bonus already in it, range, fire rate, plus
+     * water's slow and air's chain range or the spell's own slow / chain radius) - never a base
+     * value next to an upgraded one. `stats` is MagicTower.getElementStats() /
+     * CombinationTower.getSpellStats(); `chainLabel` names its chainRange badge (Meteor's is a
+     * blast radius, Tempest's and Air's a chain range).
      */
-    getMagicElementCurrentStats(elementId, academy) {
-        const upg = academy && academy.elementalUpgrades && academy.elementalUpgrades[elementId];
-        if (!upg) return '';
-        const b = this.getMagicElementBonusAt(elementId, academy, upg.level);
-        let html = `<div>Damage Bonus: +${b.damage}</div>`;
-        if (elementId === 'water') html += `<div>Slow Bonus: +${b.slowPct}%</div>`;
-        if (elementId === 'air') html += `<div>Chain Range: +${b.chainPx}px</div>`;
+    _towerStatBadgesHTML(tower, stats, chainLabel = 'CHAIN') {
+        const badge = (label, value) => `<span class="effect-badge"><span class="forge-benefit-label">${label}</span> <span class="forge-benefit-value">${value}</span></span>`;
+        let html = badge('DMG', Math.round(stats.damage)) +
+            badge('RANGE', Math.round(tower.range)) +
+            badge('RATE', stats.fireRate.toFixed(1) + '/s');
+        if (stats.slowPercent !== undefined) html += badge('SLOW', stats.slowPercent + '%');
+        if (stats.chainRange !== undefined) html += badge(chainLabel, Math.round(stats.chainRange) + 'px');
         return html;
+    }
+
+    /**
+     * Hover panel for one choice card of the on-field Magic Tower (element) / Combination Tower
+     * (spell) menu: what it does, then the numbers this tower would really hit with if that
+     * choice were selected. `rows` is [[label, value], ...].
+     */
+    _buildChoiceTooltipHTML(title, description, rows, elementsHTML = '') {
+        return `<div class="tt-head"><span class="tt-title">${title}</span></div>` +
+            `<div class="tt-blurb">${description}</div>` +
+            elementsHTML +
+            `<div class="tt-rows">${rows.map(([label, value]) =>
+                `<div class="tt-row"><span class="tt-label">${label}</span><span class="tt-value">${value}</span></div>`).join('')}</div>`;
     }
 
     /**
@@ -2154,6 +2256,9 @@ export class UIManager {
                 `;
 
                 document.body.appendChild(tooltip);
+                // The tooltip text was built when the panel was, so re-check which cost parts
+                // the player can cover right now
+                this._refreshCostAffordability(tooltip);
 
                 const panelRect = panelEl.getBoundingClientRect();
                 const rect = item.getBoundingClientRect();
@@ -2481,7 +2586,7 @@ export class UIManager {
 
     clearAllFloatingTooltips() {
         const existingTooltips = document.querySelectorAll(
-            '[data-panel-tooltip], [data-forge-tooltip], [data-academy-tooltip], [data-superweapon-tooltip]'
+            '[data-panel-tooltip], [data-forge-tooltip]'
         );
         existingTooltips.forEach(tooltip => tooltip.remove());
     }
@@ -2601,9 +2706,13 @@ export class UIManager {
         
         // BUILD ACADEMY HEADER SECTION - Like forge header
         const isMaxed = academy.academyLevel >= academy.maxAcademyLevel;
-        const canAfford = academyUpgrade && academyUpgrade.cost
-            && this.gameState.gold >= academyUpgrade.cost
-            && (academy.gems.diamond || 0) >= (academyUpgrade.diamondCost || 0);
+        // What the level button costs, and its hover panel: just what the level unlocks and the price
+        const levelCost = academyUpgrade && academyUpgrade.cost
+            ? { gold: academyUpgrade.cost, diamond: academyUpgrade.diamondCost || 0 }
+            : null;
+        const levelTooltip = !isMaxed && levelCost
+            ? this._buildUpgradeTooltipHTML({ title: academyUpgrade.name, blurb: academyUpgrade.nextUnlock, cost: levelCost })
+            : '';
 
         // Calculate academy effects badges
         const effectsList = [];
@@ -2661,11 +2770,12 @@ export class UIManager {
                 <button class="forge-upgrade-btn forge-level-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}"
                         data-upgrade="academy_upgrade"
                         data-forge-level="true"
-                        ${!isMaxed && !canAfford ? 'disabled' : ''}
+                        data-gated="false"
+                        data-tooltip="${this._tooltipAttr(levelTooltip)}"
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
                         ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">ACADEMY UPGRADE</span>'}
-                        ${isMaxed ? '' : `<span class="btn-cost">${academyUpgrade && academyUpgrade.cost ? '<span class="coin-xs"></span> ' + academyUpgrade.cost + ' + ◆' + (academyUpgrade.diamondCost || 0) : '—'}</span>`}
+                        ${isMaxed ? '' : `<span class="btn-cost">${levelCost ? this.getCostHTML(levelCost) : '—'}</span>`}
                     </div>
                 </button>
             </div>
@@ -2685,8 +2795,6 @@ export class UIManager {
                     // Academy hasn't reached Level 2 yet - same "locked" convention Tower
                     // Forge uses for its own gated tower upgrades (calculateUpgradeCost()).
                     const isLocked = !isMaxed && !upgrade.cost;
-                    const gemCount = academy.gems[upgrade.gemType] || 0;
-                    const canUpgrade = upgrade.cost && gemCount >= upgrade.cost && !isLocked;
 
                     // Current and next values for elemental upgrades: flat damage (every element
                     // has it) on the main row, plus the element's own extra (water: slow, air:
@@ -2705,42 +2813,26 @@ export class UIManager {
                         extraNext = `+${nextBonus.chainPx}px chain`;
                     }
 
-                    // Build detailed tooltip for hover info (SuperWeaponLab style)
-                    let tooltipText = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${upgrade.name}</div>`;
-                    tooltipText += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.4rem;">${upgrade.description}</div>`;
-                    tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
-                    tooltipText += `<div>Level: <span style="color: #FFD700;">${upgrade.level}/${upgrade.maxLevel}</span></div>`;
-
-                    tooltipText += `<div>Damage Bonus: <span style="color: #FFD700;">+${currentBonus.damage}</span></div>`;
+                    // Hover panel: what the next level changes (current -> next) and its cost.
+                    // The row already names the upgrade and shows the same numbers, so nothing
+                    // else goes here.
+                    const changes = [{ label: 'Damage', current: `+${currentBonus.damage}`, next: `+${nextBonus.damage}` }];
                     if (upgrade.id === 'water') {
-                        tooltipText += `<div>\uD83D\uDCA7 Slow Effect: <span style="color: #FFD700;">+${currentBonus.slowPct}%</span></div>`;
+                        changes.push({ label: 'Slow', current: `+${currentBonus.slowPct}%`, next: `+${nextBonus.slowPct}%` });
                     } else if (upgrade.id === 'air') {
-                        tooltipText += `<div>\uD83D\uDCA8 Chain Range: <span style="color: #FFD700;">+${currentBonus.chainPx}px</span></div>`;
+                        changes.push({ label: 'Chain', current: `+${currentBonus.chainPx}px`, next: `+${nextBonus.chainPx}px` });
                     }
-
-                    if (!isMaxed) {
-                        const perLevel = this.getMagicElementBonusAt(upgrade.id, academy, 1);
-                        tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
-                        tooltipText += `<div style="font-weight: bold;">Next Upgrade (+1):</div>`;
-                        tooltipText += `<div>Damage: +${perLevel.damage}</div>`;
-                        if (upgrade.id === 'water') {
-                            tooltipText += `<div>Slow Effect: +${perLevel.slowPct}%</div>`;
-                        } else if (upgrade.id === 'air') {
-                            // Magic Tower's base lightning chain range is 50px (see MagicTower.chainLightning())
-                            tooltipText += `<div>Chain Range: +${Math.round(perLevel.chainPx / 50 * 100)}%</div>`;
-                        }
-                        if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;">${upgrade.icon}${upgrade.cost}</span></div>`;
-                        tooltipText += `</div>`;
-                    } else if (isLocked) {
-                        tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #ff9999;">`;
-                        tooltipText += `<div style="font-weight: bold;">\ud83d\udd12 Locked</div>`;
-                        tooltipText += `<div>Upgrade the Magic Academy to Level 2 to unlock</div>`;
-                        tooltipText += `</div>`;
-                    }
-                    tooltipText += `</div>`;
+                    const tooltipText = this._buildUpgradeTooltipHTML({
+                        title: upgrade.name,
+                        level: `Lv ${upgrade.level}/${upgrade.maxLevel}`,
+                        changes,
+                        cost: upgrade.cost ? { [upgrade.gemType]: upgrade.cost } : null,
+                        notes: isLocked ? ['Upgrade the Magic Academy to Level 2 to unlock'] : [],
+                        maxed: isMaxed
+                    });
 
                     contentHTML += `
-                        <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''} ${isLocked ? 'locked' : ''}" data-upgrade-id="${upgrade.id}" data-tooltip="${tooltipText.replace(/"/g, '&quot;')}">
+                        <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''} ${isLocked ? 'locked' : ''}" data-upgrade-id="${upgrade.id}" data-tooltip="${this._tooltipAttr(tooltipText)}">
                             <div class="compact-upgrade-left">
                                 <span class="compact-upgrade-icon">${this.getElementGemHTML(upgrade.id, '18px')}</span>
                                 <div class="compact-upgrade-info">
@@ -2757,8 +2849,9 @@ export class UIManager {
                             </div>
                             <button class="compact-upgrade-btn panel-upgrade-btn"
                                     data-upgrade="${upgrade.id}"
-                                    ${isMaxed || !canUpgrade || isLocked ? 'disabled' : ''}>
-                                ${isMaxed ? 'MAX' : (isLocked ? '\u2014' : (upgrade.cost ? `${this.getElementGemHTML(upgrade.id, '11px')} ${upgrade.cost}` : '\u2014'))}
+                                    data-gated="${isLocked}"
+                                    ${isMaxed || isLocked ? 'disabled' : ''}>
+                                ${isMaxed ? 'MAX' : (isLocked ? '\u2014' : this.getCostHTML({ [upgrade.gemType]: upgrade.cost }))}
                             </button>
                         </div>
                     `;
@@ -2776,7 +2869,9 @@ export class UIManager {
         if (contentContainer) {
             contentContainer.innerHTML = contentHTML;
         }
-        
+        // Enable/disable the buttons and tint unaffordable prices for the current stock
+        this._refreshCostAffordability(panel);
+
         // Show the panel
         panel.style.display = 'flex';
         panel.classList.remove('closing');
@@ -2837,118 +2932,8 @@ export class UIManager {
             }, { once: true });
         });
         
-        // Add hover info listener for main academy upgrade button - only when not maxed, since
-        // a maxed button has no further upgrade info to show (see SuperWeaponLab's matching fix).
-        const academyUpgradeBtn = panel.querySelector('.forge-level-upgrade-btn');
-        if (academyUpgradeBtn && academyUpgrade && !isMaxed) {
-            academyUpgradeBtn.addEventListener('mouseenter', () => {
-                if (!academyUpgrade || !academyUpgrade.description) return;
-                
-                // Clear existing tooltips
-                const existingTooltips = document.querySelectorAll('[data-academy-tooltip]');
-                existingTooltips.forEach(tooltip => tooltip.remove());
-                
-                // Create hover menu
-                const menu = document.createElement('div');
-                menu.className = 'building-info-menu';
-                menu.setAttribute('data-academy-tooltip', 'true');
-                menu.innerHTML = `
-                    <div class="info-title">${academyUpgrade.name}</div>
-                    <div class="info-description">${academyUpgrade.description}</div>
-                    <div style="border-top: 1px solid rgba(255, 215, 0, 0.3); padding-top: 0.3rem; margin-top: 0.3rem; color: #FFD700; font-size: 0.85rem;">${academyUpgrade.nextUnlock}</div>
-                `;
-                
-                document.body.appendChild(menu);
-                
-                // Position the menu - same as forge, to the left of the panel
-                const btnRect = academyUpgradeBtn.getBoundingClientRect();
-                const menuWidth = menu.offsetWidth;
-                const menuHeight = menu.offsetHeight;
-                const panelRect = panel.getBoundingClientRect();
-                
-                // Priority: Position to the left with good clearance from the panel
-                let left = panelRect.left - menuWidth - 30;
-                let top = btnRect.top;
-                
-                // If not enough space to the left, try above
-                if (left < 10) {
-                    left = Math.max(10, panelRect.left - menuWidth - 10);
-                    top = btnRect.top - menuHeight - 10;
-                }
-                
-                // Adjust if menu goes off bottom
-                if (top + menuHeight > window.innerHeight) {
-                    top = Math.max(10, btnRect.top - menuHeight - 10);
-                }
-                
-                menu.style.left = left + 'px';
-                menu.style.top = top + 'px';
-            });
-            
-            academyUpgradeBtn.addEventListener('mouseleave', () => {
-                const tooltips = document.querySelectorAll('[data-academy-tooltip]');
-                tooltips.forEach(tooltip => tooltip.remove());
-            });
-        }
-        
-        // Add hover info listeners for elemental upgrades (SuperWeaponLab style)
-        panel.querySelectorAll('.compact-upgrade-item').forEach(item => {
-            let tooltipTimeout;
-            
-            item.addEventListener('mouseenter', () => {
-                clearTimeout(tooltipTimeout);
-                
-                const existingTooltips = document.querySelectorAll('[data-panel-tooltip]');
-                existingTooltips.forEach(tooltip => tooltip.remove());
-                
-                const tooltipHTML = item.dataset.tooltip;
-                if (!tooltipHTML) return;
-                
-                const tooltip = document.createElement('div');
-                tooltip.setAttribute('data-panel-tooltip', 'true');
-                tooltip.innerHTML = tooltipHTML;
-                tooltip.style.cssText = `
-                    position: fixed;
-                    background: rgba(10, 10, 20, 0.95);
-                    border: 2px solid #FFD700;
-                    border-radius: 6px;
-                    padding: 0.8rem;
-                    font-size: 0.75rem;
-                    color: #ddd;
-                    max-width: 250px;
-                    z-index: 10001;
-                    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
-                    pointer-events: none;
-                `;
-                
-                document.body.appendChild(tooltip);
-                
-                const panelEl = document.getElementById('academy-panel');
-                const panelRect = panelEl.getBoundingClientRect();
-                const rect = item.getBoundingClientRect();
-                
-                let leftPos = panelRect.left - tooltip.offsetWidth - 10;
-                if (leftPos < 10) {
-                    leftPos = rect.right + 10;
-                }
-                
-                tooltip.style.left = leftPos + 'px';
-                tooltip.style.top = (rect.top - tooltip.offsetHeight / 2 + rect.height / 2) + 'px';
-                
-                const tooltipRect = tooltip.getBoundingClientRect();
-                if (tooltipRect.bottom > window.innerHeight) {
-                    tooltip.style.top = (window.innerHeight - tooltip.offsetHeight - 10) + 'px';
-                }
-                if (tooltipRect.top < 0) {
-                    tooltip.style.top = '10px';
-                }
-            });
-            
-            item.addEventListener('mouseleave', () => {
-                const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
-                activeTooltips.forEach(tooltip => tooltip.remove());
-            });
-        });
+        // Hover panels: the level button and every elemental row carry their own (data-tooltip)
+        this._setupTooltipHovers(panel.querySelectorAll('[data-tooltip]'), panel);
         
     }
 
@@ -2972,34 +2957,12 @@ export class UIManager {
         // Generate panel content with stats + element selection
         let contentHTML = '';
         
-        // Add tower stats panel at the top
+        // Tower stats panel at the top: the tower's real, current numbers only (per-hit damage
+        // with the element's Academy mastery already in it) - no base values to compare against
         const tower = towerData.tower;
-        const dmg = Math.round(tower.damage);
-        const baseDmg = tower.originalDamage || 30;
-        const bonuses = tower.elementalBonuses || {};
         const currentEl = towerData.currentElement || tower.selectedElement || 'fire';
-        
-        // Build active element bonus info: the damage every element's mastery adds, plus water's
-        // slow / air's chain range when the active element has that extra
-        let elementBonusHTML = '';
-        const elBonus = bonuses[currentEl];
-        if (elBonus) {
-            const parts = [];
-            if (elBonus.damageBonus > 0) parts.push(`+${elBonus.damageBonus} damage`);
-            if (elBonus.slowBonus > 0) parts.push(`+${(elBonus.slowBonus * 100).toFixed(0)}% slow`);
-            if (elBonus.chainRange > 0) parts.push(`+${elBonus.chainRange} chain range`);
-            if (parts.length > 0) {
-                const elName = currentEl.charAt(0).toUpperCase() + currentEl.slice(1);
-                elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem; display:flex; align-items:center; gap:4px;">${this.getElementGemHTML(currentEl)} ${elName} Bonus: <span style="color: #FFD700; font-weight: bold;">${parts.join(', ')}</span></div>`;
-            }
-        }
-        
-        const hasUpgrades = tower.originalDamage && (tower.damage !== tower.originalDamage || tower.range !== tower.originalRange);
-        
-        // Stat display with base value comparison
-        const dmgStr = dmg !== Math.round(baseDmg) ? `<span style="color: #FFD700; font-weight: bold;">${dmg}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${Math.round(baseDmg)})</span>` : `<span style="color: #FFD700; font-weight: bold;">${dmg}</span>`;
-        const rngStr = Math.round(tower.range) !== Math.round(tower.originalRange || 110) ? `<span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${Math.round(tower.originalRange || 110)})</span>` : `<span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span>`;
-        
+        const statBadgesHTML = this._towerStatBadgesHTML(tower, tower.getElementStats(currentEl), 'CHAIN');
+
         contentHTML = `
             <div class="forge-panel-header">
                 <div class="forge-header-top">
@@ -3014,35 +2977,29 @@ export class UIManager {
                             <div class="forge-name">Magic Tower</div>
                         </div>
                         <div class="forge-effects-row">
-                            <span class="effect-badge">${dmgStr}</span>
-                            <span class="effect-badge">${rngStr}</span>
-                            <span class="effect-badge">${tower.fireRate.toFixed(1)}/s</span>
+                            ${statBadgesHTML}
                         </div>
-                        ${elementBonusHTML}
-                        ${hasUpgrades ? '<div style="font-size: 0.65rem; color: #aaffaa; margin-top: 0.2rem;">✦ Includes academy bonuses</div>' : ''}
                     </div>
                 </div>
             </div>
         `;
-        
+
         // Element selection section header
         contentHTML += `<div class="upgrade-category" style="padding: 0.3rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.3);"><div style="font-size: 0.75rem; color: #FFD700; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Select Element</div></div>`;
-        
+
         contentHTML += '<div class="upgrade-category panel-select-list">';
         towerData.elements.forEach(element => {
             const isCurrent = element.id === towerData.currentElement;
 
-            // Condensed current-stats hover panel, in line with the Magic Academy's own
-            // elemental-upgrade hover tooltips (see getMagicElementCurrentStats).
-            const academy = towerData.academy;
-            const level = academy && academy.elementalUpgrades && academy.elementalUpgrades[element.id]
-                ? academy.elementalUpgrades[element.id].level : 0;
-            let elTooltip = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${element.name} Element</div>`;
-            elTooltip += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.3rem;">${element.description}</div>`;
-            elTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
-            elTooltip += `<div>Academy Level: <span style="color: #FFD700;">${level}/20</span></div>`;
-            elTooltip += this.getMagicElementCurrentStats(element.id, academy);
-            elTooltip += `</div>`;
+            // Hover panel: what this tower would really hit with as this element, Academy
+            // mastery included - so the elements can be compared at a glance
+            const stats = tower.getElementStats(element.id);
+            const rows = [
+                ['Damage', Math.round(stats.damage)],
+                ['Rate', stats.fireRate.toFixed(1) + '/s']
+            ];
+            if (stats.slowPercent !== undefined) rows.push(['Slow', stats.slowPercent + '%']);
+            if (stats.chainRange !== undefined) rows.push(['Chain Range', Math.round(stats.chainRange) + 'px']);
 
             contentHTML += this._buildSelectCardHTML({
                 dataKey: 'element',
@@ -3051,7 +3008,7 @@ export class UIManager {
                 name: `${element.name} Element`,
                 description: element.description,
                 isCurrent,
-                tooltipHTML: elTooltip
+                tooltipHTML: this._buildChoiceTooltipHTML(`${element.name} Element`, element.description, rows)
             });
         });
         contentHTML += '</div>';
@@ -3087,7 +3044,6 @@ export class UIManager {
                     this.showMagicTowerElementMenu({
                         type: 'magic_tower_menu',
                         tower: towerData.tower,
-                        academy: towerData.academy,
                         elements: towerData.elements,
                         currentElement: elementId
                     });
@@ -3132,17 +3088,13 @@ export class UIManager {
         // Generate panel content with stats + spell selection
         let contentHTML = '';
         
-        // Add tower stats panel at the top
+        // Tower stats panel at the top: the tower's real, current numbers only (per-hit damage
+        // with the spell's upgrade levels already in it) - no base values to compare against
         const tower = towerData.tower;
-        const dmg = Math.round(tower.damage);
-        const baseDmg = tower.originalDamage || 35;
-        
-        const hasUpgrades = tower.originalDamage && (tower.damage !== tower.originalDamage || tower.range !== tower.originalRange);
-        
-        // Stat display with base value comparison
-        const dmgStr = dmg !== Math.round(baseDmg) ? `<span style="color: #FFD700; font-weight: bold;">${dmg}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${Math.round(baseDmg)})</span>` : `<span style="color: #FFD700; font-weight: bold;">${dmg}</span>`;
-        const rngStr = Math.round(tower.range) !== Math.round(tower.originalRange || 110) ? `<span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base: ${Math.round(tower.originalRange || 110)})</span>` : `<span style="color: #FFD700; font-weight: bold;">${Math.round(tower.range)}</span>`;
-        
+        const currentSpell = towerData.currentSpell || tower.selectedSpell;
+        const chainLabelFor = spellId => (spellId === 'meteor' ? 'BLAST' : 'CHAIN');
+        const statBadgesHTML = this._towerStatBadgesHTML(tower, tower.getSpellStats(currentSpell), chainLabelFor(currentSpell));
+
         contentHTML = `
             <div class="forge-panel-header">
                 <div class="forge-header-top">
@@ -3157,38 +3109,37 @@ export class UIManager {
                             <div class="forge-name">Combination Tower</div>
                         </div>
                         <div class="forge-effects-row">
-                            <span class="effect-badge">${dmgStr}</span>
-                            <span class="effect-badge">${rngStr}</span>
-                            <span class="effect-badge">${tower.fireRate.toFixed(1)}/s</span>
+                            ${statBadgesHTML}
                         </div>
-                        ${hasUpgrades ? '<div style="font-size: 0.65rem; color: #aaffaa; margin-top: 0.2rem;">✦ Includes upgrade bonuses</div>' : ''}
                     </div>
                 </div>
             </div>
         `;
-        
+
         // Spell selection section header
         contentHTML += `<div class="upgrade-category" style="padding: 0.3rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.3);"><div style="font-size: 0.75rem; color: #FFD700; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Select Spell</div></div>`;
-        
+
         contentHTML += '<div class="upgrade-category panel-select-list">';
         towerData.spells.forEach(spell => {
             const isCurrent = spell.id === towerData.currentSpell;
 
-            // Condensed current-stats hover panel, in line with the Super Weapon Lab's own
-            // combination-spell upgrade hover tooltips (see getComboSpellCurrentStats).
-            const level = spell.upgradeLevel || 0;
-            let spellTooltip = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${spell.name} Spell</div>`;
-            spellTooltip += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.3rem;">${spell.description}</div>`;
-            // Which two elements are fused into this spell (gem icon + name each)
-            if (spell.elements && spell.elements.length) {
-                const elementLabels = spell.elements.map(el =>
-                    `${this.getElementGemHTML(el, '12px')}${el.charAt(0).toUpperCase() + el.slice(1)}`);
-                spellTooltip += `<div style="font-size: 0.75rem; margin-bottom: 0.3rem;"><span style="color: #aaa;">Elements:</span> ${elementLabels.join(' + ')}</div>`;
+            // Hover panel: which elements the spell is fused from, then the numbers this tower
+            // would really cast it with (its upgrade levels included) - so the spells can be
+            // compared at a glance
+            const stats = tower.getSpellStats(spell.id);
+            const rows = [
+                ['Damage', Math.round(stats.damage)],
+                ['Rate', stats.fireRate.toFixed(1) + '/s']
+            ];
+            if (stats.slowPercent !== undefined) rows.push(['Slow', stats.slowPercent + '%']);
+            if (stats.chainRange !== undefined) {
+                rows.push([spell.id === 'meteor' ? 'Blast Radius' : 'Chain Range', Math.round(stats.chainRange) + 'px']);
             }
-            spellTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
-            spellTooltip += `<div>Upgrade Level: <span style="color: #FFD700;">${level}/${spell.maxUpgradeLevel || 7}</span></div>`;
-            spellTooltip += level > 0 ? this.getComboSpellCurrentStats(spell.id, level) : '<div style="color: #aaa;">No upgrades invested yet</div>';
-            spellTooltip += `</div>`;
+            const elementLabels = (spell.elements || []).map(el =>
+                `${this.getElementGemHTML(el, '0.95em')}${el.charAt(0).toUpperCase() + el.slice(1)}`);
+            const elementsHTML = elementLabels.length
+                ? `<div class="tt-elements"><span class="tt-label">Elements</span> ${elementLabels.join(' + ')}</div>`
+                : '';
 
             contentHTML += this._buildSelectCardHTML({
                 dataKey: 'spell',
@@ -3197,7 +3148,7 @@ export class UIManager {
                 name: `${spell.name} Spell`,
                 description: spell.description,
                 isCurrent,
-                tooltipHTML: spellTooltip
+                tooltipHTML: this._buildChoiceTooltipHTML(`${spell.name} Spell`, spell.description, rows, elementsHTML)
             });
         });
         contentHTML += '</div>';
@@ -3736,34 +3687,59 @@ export class UIManager {
         }
     }
 
+    /**
+     * What a Spell Power level would change on `spellId`, as hover rows (current -> next). Read
+     * from SuperWeaponLab.getSpellPowerChanges, so the text can't drift from what a purchase does.
+     */
+    getSpellPowerChangeRows(lab, spellId) {
+        const stats = {
+            damage: ['Damage', ''],
+            radius: ['Radius', 'px'],
+            freezeDuration: ['Freeze', 's'],
+            chainCount: ['Chains', '']
+        };
+        // One decimal at most: freeze time accumulates 0.1s steps and would show float noise
+        const format = value => `${+Number(value).toFixed(1)}`;
+        return lab.getSpellPowerChanges(spellId).map(change => {
+            const [label, unit] = stats[change.stat] || [change.stat, ''];
+            return { label, current: format(change.current) + unit, next: format(change.next) + unit };
+        });
+    }
+
     showSuperWeaponMenu(menuData) {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('superweapon-panel');
-        
+
         // Play superweapon SFX only if menu type is changing
         if (this.stateManager.audioManager && this.activeMenuType !== 'superweapon') {
             this.stateManager.audioManager.playSFX('superweaponlab');
         }
-        
+
         // Track this as the active menu for real-time updates
         this.activeMenuType = 'superweapon';
         this.activeMenuData = menuData;
         this.lastGoldValue = this.gameState.gold;
         this.lastGemValues = { ...this.towerManager.getGemStocks() };
-        
+
         const panel = document.getElementById('superweapon-panel');
         const upgradesContainer = document.getElementById('superweapon-panel-content');
-        
+
         if (!panel || !upgradesContainer) {
             console.error('UIManager: SuperWeapon panel elements not found');
             return;
         }
-        
+
         const superWeaponLab = menuData.building;
         const labUpgrade = superWeaponLab.getLabUpgradeOption();
         const isMaxed = superWeaponLab.labLevel >= superWeaponLab.maxLabLevel;
-        const canAfford = labUpgrade && labUpgrade.cost && this.gameState.gold >= labUpgrade.cost && (menuData.academy && (menuData.academy.gems.diamond || 0) >= (labUpgrade.diamondCost || 0));
-        
+        // What the level button costs, and its hover panel: just what the level unlocks and the price
+        const levelCost = labUpgrade && labUpgrade.cost
+            ? { gold: labUpgrade.cost, diamond: labUpgrade.diamondCost || 0 }
+            : null;
+        const levelTooltip = !isMaxed && levelCost
+            ? this._buildUpgradeTooltipHTML({ title: labUpgrade.name, blurb: labUpgrade.nextUnlock, cost: levelCost })
+            : '';
+
         // Header upgrade badges - same convention as the Forge / Academy / Training Grounds
         // headers: one badge per upgrade path, appearing as it's unlocked/bought into, inside
         // a .forge-effects-row whose min-height reserves three lines up front so filling it
@@ -3781,7 +3757,7 @@ export class UIManager {
         }
 
         let contentHTML = '';
-        
+
         // BUILD HEADER SECTION - Professional top panel
         contentHTML += `
             <div class="forge-panel-header">
@@ -3808,411 +3784,147 @@ export class UIManager {
                         </div>
                     </div>
                 </div>
-                <button class="forge-upgrade-btn forge-level-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}" 
-                        data-upgrade="${labUpgrade ? labUpgrade.id : 'lab_upgrade'}" 
+                <button class="forge-upgrade-btn forge-level-upgrade-btn panel-upgrade-btn ${isMaxed ? 'maxed' : ''}"
+                        data-upgrade="${labUpgrade ? labUpgrade.id : 'lab_upgrade'}"
                         data-lab-level="true"
-                        ${!isMaxed && !canAfford ? 'disabled' : ''}
+                        data-gated="false"
+                        data-tooltip="${this._tooltipAttr(levelTooltip)}"
                         ${isMaxed ? 'disabled' : ''}>
                     <div class="forge-upgrade-btn-content">
                         ${isMaxed ? '<span class="max-level-text">MAX LEVEL REACHED</span>' : '<span class="btn-label">LAB UPGRADE</span>'}
-                        ${isMaxed ? '' : `<span class="btn-cost">${labUpgrade && labUpgrade.cost ? '<span class="coin-xs"></span> ' + labUpgrade.cost + ' + ◆' + (labUpgrade.diamondCost || 0) : '—'}</span>`}
+                        ${isMaxed ? '' : `<span class="btn-cost">${levelCost ? this.getCostHTML(levelCost) : '—'}</span>`}
                     </div>
                 </button>
             </div>
         `;
-        
-        // BUILD MAIN SPELL UPGRADES SECTION - Compact spell section with inline progress numbers
-        const mainSpells = Object.values(superWeaponLab.spells);
-        const unlockedMainSpells = mainSpells.filter(s => s.unlocked);
+
+        // The three upgrade lists below all use one row (see _buildUpgradeRowHTML): icon, name,
+        // progress bar with its level count, and a button that shows the price. Hovering a row
+        // shows what the next level changes and what it costs (see _buildUpgradeTooltipHTML).
+
+        // SPELL UPGRADES - Spell Power, one row per unlocked spell. Opens up at Lab Level 5 and
+        // costs one diamond per level.
+        const unlockedMainSpells = Object.values(superWeaponLab.spells).filter(s => s.unlocked);
         if (unlockedMainSpells.length > 0) {
-            contentHTML += `<div class="spell-upgrades-section">
-                <div class="spell-section-header">SPELL UPGRADES</div>
-                <div class="spell-bars-container">`;
-            
             const spellPowerUnlocked = superWeaponLab.labLevel >= 5;
-            unlockedMainSpells.forEach(spell => {
-                const isMaxed = spell.upgradeLevel >= spell.maxUpgradeLevel;
-                const canUpgrade = spellPowerUnlocked && spell.upgradeLevel < spell.maxUpgradeLevel && (menuData.academy && (menuData.academy.gems.diamond || 0) >= 1);
-
-                // Build tooltip for spelling hover info
-                let tooltipText = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${spell.name}</div>`;
-                tooltipText += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.4rem;">${spell.description || ''}</div>`;
-                tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
-                
-                // Show current stats
-                if (spell.damage) tooltipText += `<div>❖ Damage: <span style="color: #FFD700;">${Math.floor(spell.damage)}</span></div>`;
-                if (spell.radius) tooltipText += `<div>◯ Radius: <span style="color: #FFD700;">${Math.floor(spell.radius)}px</span></div>`;
-                if (spell.freezeDuration) tooltipText += `<div>Freeze: <span style="color: #FFD700;">${spell.freezeDuration.toFixed(1)}s</span></div>`;
-                if (spell.burnDuration) tooltipText += `<div>Burn: <span style="color: #FFD700;">${spell.burnDuration}s</span> (${Math.floor(spell.burnDamage)}/s)</div>`;
-                if (spell.chainCount) tooltipText += `<div>Chains: <span style="color: #FFD700;">${spell.chainCount}</span></div>`;
-
-                // Show effective cooldown (base cooldown minus the Cooldown Reduction upgrade
-                // path's current bonus, see SuperWeaponLab.getCooldownReductionFraction) so this
-                // matches what actually happens when the spell is cast, not just its base value.
-                const cdReduction = superWeaponLab.getCooldownReductionFraction();
-                const effectiveCooldown = spell.cooldown * (1 - cdReduction);
-                if (cdReduction > 0) {
-                    tooltipText += `<div>Cooldown: <span style="color: #FFD700;">${effectiveCooldown.toFixed(1)}s</span> <span style="color: #aaffaa; font-size: 0.7rem;">(base ${spell.cooldown.toFixed(1)}s &minus; ${Math.round(cdReduction * 100)}%)</span></div>`;
-                } else {
-                    tooltipText += `<div>Cooldown: <span style="color: #FFD700;">${spell.cooldown.toFixed(1)}s</span></div>`;
-                }
-                tooltipText += `<div style="font-size: 0.7rem; color: #aaa;">Level: <span style="color: #FFD700;">${spell.upgradeLevel}/${spell.maxUpgradeLevel}</span></div>`;
-                
-                // Show spell-specific per-level upgrade effects
-                if (!isMaxed) {
-                    tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
-                    tooltipText += `<div style="font-weight: bold;">Per Upgrade Level (+1 ◆):</div>`;
-                    if (spell.id === 'arcaneBlast') {
-                        // Base blast radius is 120px (see SuperWeaponLab spell definitions).
-                        const radiusPercent = Math.round(2 / 120 * 100);
-                        tooltipText += `<div>Magic Damage: +5</div>`;
-                        tooltipText += `<div>Radius: +${radiusPercent}%</div>`;
-                        tooltipText += `<div style="color: #bb88ff;">Classless — damages all enemies</div>`;
-                    } else if (spell.id === 'frostNova') {
-                        // Base freeze radius is 150px (see SuperWeaponLab spell definitions).
-                        const radiusPercent = Math.round(2 / 150 * 100);
-                        tooltipText += `<div>Freeze Duration: +0.1s</div>`;
-                        tooltipText += `<div>Radius: +${radiusPercent}%</div>`;
-                        tooltipText += `<div style="color: #88ddff;">Freeze always applies (ignores immunity)</div>`;
-                    } else if (spell.id === 'meteorStrike') {
-                        // No Radius line: Meteor Strike's impact radius is a hardcoded 80px
-                        // in GameplayState (both damage check and visual impact ring) and
-                        // never actually reads spell.radius, so upgrading it doesn't widen
-                        // the impact - showing a Radius bonus here would be misleading.
-                        tooltipText += `<div>Fire Damage: +7</div>`;
-                        tooltipText += `<div>Burn (per tick): +0.5/s</div>`;
-                        tooltipText += `<div style="color: #ff8844;">Effective vs Air Frogs</div>`;
-                    } else if (spell.id === 'chainLightning') {
-                        // No Radius line: Chain Lightning has no radius/AoE at all - it jumps
-                        // between the chainCount nearest enemies map-wide (see
-                        // GameplayState's 'chainLightning' cast handler), so spell.radius is
-                        // never read for it either.
-                        tooltipText += `<div>Electricity Damage: +3</div>`;
-                        tooltipText += `<div>Chain Targets: +1 every 5 levels</div>`;
-                        tooltipText += `<div style="color: #ffff88;">Bypasses frogs (use vs normal enemies)</div>`;
-                    }
-                    tooltipText += `</div>`;
-
-                    if (!spellPowerUnlocked) {
-                        tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #ff9999;">`;
-                        tooltipText += `<div style="font-weight: bold;">Locked</div>`;
-                        tooltipText += `<div>Upgrade the Lab to Level 5 to unlock Spell Power</div>`;
-                        tooltipText += `</div>`;
-                    }
-                }
-
-                tooltipText += `</div>`;
-
-                const progressPercent = (spell.upgradeLevel / spell.maxUpgradeLevel) * 100;
-
-                // Create compact spell bar item with progress on the bar itself
-                contentHTML += `
-                    <div class="compact-spell-bar ${isMaxed ? 'maxed' : ''} ${!spellPowerUnlocked && !isMaxed ? 'locked' : ''}" data-spell-id="${spell.id}">
-                        <div class="compact-spell-info">
-                            <span class="compact-spell-icon">${spell.icon}</span>
-                            <span class="compact-spell-name">${spell.name}</span>
-                        </div>
-                        <div class="compact-spell-progress-wrapper">
-                            <div style="height: 12px; background: rgba(0,0,0,0.6); border-radius: 2px; overflow: hidden; border: 1px solid rgba(212, 175, 55, 0.5); position: relative;">
-                                <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FFD700, #FFA500); transition: width 0.3s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 3px;">
-                                    <span style="font-size: 0.6rem; font-weight: bold; color: #000; text-shadow: 0 0 2px rgba(255,215,0,0.8);">${spell.upgradeLevel}</span>
-                                </div>
-                            </div>
-                        </div>
-                        ${spell.upgradeLevel < spell.maxUpgradeLevel ? `<button class="compact-spell-upgrade-btn panel-upgrade-btn spell-icon-hover"
-                                data-main-spell="${spell.id}"
-                                data-tooltip="${tooltipText.replace(/"/g, '&quot;')}"
-                                ${isMaxed || !canUpgrade ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : '+'}
-                        </button>` : `<button class="compact-spell-upgrade-btn panel-upgrade-btn" disabled>MAX</button>`}
-                    </div>
-                `;
-            });
-            
-            contentHTML += `</div></div>`;
-        }
-        
-        // BUILD COOLDOWN REDUCTION UPGRADE SECTION - Only shown once unlocked (Lab Level 3+).
-        // Replaces the old flat, unimplemented "20% cooldown reduction" text with a real
-        // 5-level upgrade path (gold + diamonds) ramping up to 50% cooldown reduction at max.
-        if (superWeaponLab.labLevel >= 3) {
-            const cdOption = superWeaponLab.getCooldownReductionOption();
-            const cdIsMaxed = cdOption.isMaxed;
-            const cdCanAfford = !cdIsMaxed && this.gameState.gold >= cdOption.goldCost && (menuData.academy && (menuData.academy.gems.diamond || 0) >= cdOption.diamondCost);
-
-            let cdTooltip = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${cdOption.name}</div>`;
-            cdTooltip += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.4rem;">${cdOption.description}</div>`;
-            cdTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
-            cdTooltip += `<div>Current Reduction: <span style="color: #FFD700;">${Math.round(cdOption.currentReduction * 100)}%</span></div>`;
-            cdTooltip += `<div>Level: <span style="color: #FFD700;">${cdOption.level}/${cdOption.maxLevel}</span></div>`;
-
-            if (!cdIsMaxed) {
-                cdTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
-                cdTooltip += `<div style="font-weight: bold;">Next Level:</div>`;
-                cdTooltip += `<div>Reduction: ${Math.round(cdOption.currentReduction * 100)}% &rarr; ${Math.round(cdOption.nextReduction * 100)}%</div>`;
-                cdTooltip += `</div>`;
-                cdTooltip += `<div style="margin-top: 0.3rem; color: #aaffaa; font-weight: bold;">Cost for Level ${cdOption.level + 1}:</div>`;
-                cdTooltip += `<div><span class="coin-xs"></span> ${cdOption.goldCost} gold</div>`;
-                cdTooltip += `<div>◆ ${cdOption.diamondCost} diamond${cdOption.diamondCost > 1 ? 's' : ''}</div>`;
-            } else {
-                cdTooltip += `<div style="margin-top: 0.3rem; color: #FFD700; font-weight: bold;">MAX LEVEL — 50% cooldown reduction active on all spells</div>`;
-            }
-            cdTooltip += `</div>`;
-
-            const cdProgress = (cdOption.level / cdOption.maxLevel) * 100;
+            const spellPowerCost = { diamond: 1 };
 
             contentHTML += `<div class="upgrade-category compact-upgrades">
-                <div class="upgrade-category-header">COOLDOWN REDUCTION</div>
-                <div class="compact-upgrade-item ${cdIsMaxed ? 'maxed' : ''}" data-tooltip="${cdTooltip.replace(/"/g, '&quot;')}">
-                    <div class="compact-upgrade-left">
-                        <span class="compact-upgrade-icon">⏱</span>
-                        <div class="compact-upgrade-info">
-                            <div class="compact-upgrade-name">Spell Cooldowns</div>
-                            <div style="height: 10px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden; border: 1px solid #666; position: relative; margin: 0.3rem 0;">
-                                <div style="height: 100%; width: ${cdProgress}%; background: linear-gradient(90deg, #60D5FA, #3B82F6); transition: width 0.3s ease;"></div>
-                            </div>
-                            <div style="font-size: 0.65rem; color: #aaa;">${cdOption.level}/${cdOption.maxLevel} &middot; -${Math.round(cdOption.currentReduction * 100)}% cooldown</div>
-                        </div>
-                    </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.2rem;">
-                        ${cdIsMaxed ? '<span style="font-size: 0.7rem; color: #FFD700;">MAX</span>' : `<span style="font-size: 0.7rem; ${cdCanAfford ? 'color:#aaffaa;' : 'color:#ff9999;'}"><span class="coin-xs"></span> ${cdOption.goldCost} + ◆${cdOption.diamondCost}</span>`}
-                    </div>
-                    <button class="compact-upgrade-btn panel-upgrade-btn"
-                            data-cooldown-reduction="true"
-                            ${cdIsMaxed || !cdCanAfford ? 'disabled' : ''}>
-                        ${cdIsMaxed ? 'MAX' : 'Upgrade'}
-                    </button>
-                </div>
-            </div>`;
+                <div class="upgrade-category-header">SPELL UPGRADES</div>`;
+
+            unlockedMainSpells.forEach(spell => {
+                const spellMaxed = spell.upgradeLevel >= spell.maxUpgradeLevel;
+                contentHTML += this._buildUpgradeRowHTML({
+                    iconHTML: spell.icon,
+                    name: spell.name,
+                    level: spell.upgradeLevel,
+                    maxLevel: spell.maxUpgradeLevel,
+                    barClass: 'spell',
+                    cost: spellPowerCost,
+                    btnLabel: spellMaxed ? 'MAX' : (spellPowerUnlocked ? '' : 'Lab Lv 5'),
+                    btnData: `data-main-spell="${spell.id}"`,
+                    gated: !spellPowerUnlocked,
+                    isMaxed: spellMaxed,
+                    tooltipHTML: this._buildUpgradeTooltipHTML({
+                        title: spell.name,
+                        level: `Lv ${spell.upgradeLevel}/${spell.maxUpgradeLevel}`,
+                        blurb: spell.description,
+                        changes: this.getSpellPowerChangeRows(superWeaponLab, spell.id),
+                        cost: spellPowerCost,
+                        notes: spellPowerUnlocked ? [] : ['Upgrade the Lab to Level 5 to unlock Spell Power'],
+                        maxed: spellMaxed
+                    })
+                });
+            });
+
+            contentHTML += `</div>`;
         }
 
-        // BUILD COMBINATION TOWER UPGRADES SECTION - Only show at level 2+
+        // COOLDOWN REDUCTION - only shown once unlocked (Lab Level 3+). A real 5-level upgrade
+        // path (gold + diamonds) ramping up to 50% cooldown reduction at max.
+        if (superWeaponLab.labLevel >= 3) {
+            const cdOption = superWeaponLab.getCooldownReductionOption();
+            const cdCost = { gold: cdOption.goldCost, diamond: cdOption.diamondCost };
+
+            contentHTML += `<div class="upgrade-category compact-upgrades">
+                <div class="upgrade-category-header">COOLDOWN REDUCTION</div>`;
+            contentHTML += this._buildUpgradeRowHTML({
+                iconHTML: '⏱',
+                name: 'Spell Cooldowns',
+                level: cdOption.level,
+                maxLevel: cdOption.maxLevel,
+                barClass: 'cooldown',
+                cost: cdCost,
+                btnLabel: cdOption.isMaxed ? 'MAX' : '',
+                btnData: 'data-cooldown-reduction="true"',
+                isMaxed: cdOption.isMaxed,
+                tooltipHTML: this._buildUpgradeTooltipHTML({
+                    title: cdOption.name,
+                    level: `Lv ${cdOption.level}/${cdOption.maxLevel}`,
+                    blurb: 'Shortens the cooldown of every Super Weapon spell',
+                    changes: [{
+                        label: 'Cooldown',
+                        current: `-${Math.round(cdOption.currentReduction * 100)}%`,
+                        next: cdOption.isMaxed ? '' : `-${Math.round(cdOption.nextReduction * 100)}%`
+                    }],
+                    cost: cdCost,
+                    maxed: cdOption.isMaxed
+                })
+            });
+            contentHTML += `</div>`;
+        }
+
+        // COMBINATION SPELLS - only shown at Lab Level 2+. Paid in elemental gems and gated
+        // behind the Magic Academy's elemental mastery (see getCombinationUpgradeOptions).
         if (superWeaponLab.labLevel >= 2) {
             const combinationUpgrades = superWeaponLab.getCombinationUpgradeOptions(menuData.academy);
             contentHTML += `<div class="upgrade-category compact-upgrades">
                 <div class="upgrade-category-header">COMBINATION SPELLS</div>`;
-            
+
             combinationUpgrades.forEach(upgrade => {
-                const isMaxed = upgrade.upgradeLevel >= upgrade.maxUpgradeLevel;
-                const isLocked = !isMaxed && !upgrade.elementLevelMet;
-                const canAfford = upgrade.canAfford;
+                const comboMaxed = upgrade.upgradeLevel >= upgrade.maxUpgradeLevel;
+                const isLocked = !comboMaxed && !upgrade.elementLevelMet;
                 const elementNames = (upgrade.elements || []).map(el => el.charAt(0).toUpperCase() + el.slice(1)).join(' & ');
 
-                // Build tooltip for combination spell hover info - same structure/CSS as Tower
-                // Forge's compact-upgrade-item tooltip (see setupForgePanelListeners) so both
-                // panels read as one consistent hover-info system rather than two bespoke ones.
-                let comboTooltip = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${upgrade.name}</div>`;
-                comboTooltip += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.3rem;">${upgrade.description || ''}</div>`;
-                comboTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
-                comboTooltip += `<div>Current Level: <span style="color: #FFD700;">${upgrade.upgradeLevel}/${upgrade.maxUpgradeLevel}</span></div>`;
-
-                if (!isMaxed) {
-                    comboTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
-                    comboTooltip += `<div style="font-weight: bold;">Next Level Effect:</div>`;
-                    comboTooltip += this.getComboSpellEffectPreview(upgrade.id);
-                    comboTooltip += `</div>`;
-
-                    comboTooltip += `<div style="margin-top: 0.3rem; color: #aaffaa; font-weight: bold;">Cost for Level ${upgrade.upgradeLevel + 1}:</div>`;
-                    for (const [gemType, cost] of Object.entries(upgrade.gemsRequired)) {
-                        comboTooltip += `<div>${this.getElementGemHTML(gemType, '12px')} ${gemType.charAt(0).toUpperCase() + gemType.slice(1)}: ${cost}</div>`;
-                    }
-
-                    if (isLocked) {
-                        comboTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #ff9999;">`;
-                        comboTooltip += `<div style="font-weight: bold;">Locked</div>`;
-                        comboTooltip += `<div>Requires ${elementNames} Mastery Level ${upgrade.requiredElementLevel}+ in the Magic Academy</div>`;
-                        comboTooltip += `</div>`;
-                    }
-                } else {
-                    comboTooltip += `<div style="margin-top: 0.3rem; color: #FFD700; font-weight: bold;">MAX LEVEL</div>`;
-                }
-                comboTooltip += `</div>`;
-
-                const progressPercent = (upgrade.upgradeLevel / upgrade.maxUpgradeLevel) * 100;
-
-                // Build gem cost display
-                let gemCostDisplay = '';
-                for (const [gemType, cost] of Object.entries(upgrade.gemsRequired)) {
-                    const hasGem = (menuData.academy && (menuData.academy.gems[gemType] || 0) >= cost);
-                    const style = hasGem ? 'color: #aaffaa;' : 'color: #ff9999;';
-                    gemCostDisplay += `<div style="font-size: 0.7rem; ${style};">${this.getElementGemHTML(gemType, '12px')} ${cost}</div>`;
-                }
-
-                contentHTML += `
-                    <div class="compact-upgrade-item ${isMaxed ? 'maxed' : ''} ${isLocked ? 'locked' : ''}" data-upgrade-id="${upgrade.id}" data-tooltip="${comboTooltip.replace(/"/g, '&quot;')}">
-                        <div class="compact-upgrade-left">
-                            <span class="compact-upgrade-icon">${upgrade.icon}</span>
-                            <div class="compact-upgrade-info">
-                                <div class="compact-upgrade-name">${upgrade.name}</div>
-                                <div style="height: 10px; background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden; border: 1px solid #666; position: relative; margin: 0.3rem 0;">
-                                    <div style="height: 100%; width: ${progressPercent}%; background: linear-gradient(90deg, #FF6BA6, #FF1493); transition: width 0.3s ease;"></div>
-                                </div>
-                                <div style="font-size: 0.65rem; color: #aaa;">${upgrade.upgradeLevel}/${upgrade.maxUpgradeLevel}${isLocked ? ` &middot; <span style="color:#ff9999;">needs Lv ${upgrade.requiredElementLevel}</span>` : ''}</div>
-                            </div>
-                        </div>
-                        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.2rem;">
-                            ${isMaxed ? '<span style="font-size: 0.7rem; color: #FFD700;">MAX</span>' : (isLocked ? `<span style="font-size: 0.65rem; color: #ff9999;">Lv ${upgrade.requiredElementLevel}</span>` : gemCostDisplay)}
-                        </div>
-                        <button class="compact-upgrade-btn panel-upgrade-btn combo-upgrade-btn"
-                                data-combo-spell="${upgrade.id}"
-                                ${isMaxed || isLocked || !canAfford ? 'disabled' : ''}>
-                            ${isMaxed ? 'MAX' : (isLocked ? 'Locked' : 'Upgrade')}
-                        </button>
-                    </div>
-                `;
+                contentHTML += this._buildUpgradeRowHTML({
+                    iconHTML: upgrade.icon,
+                    name: upgrade.name,
+                    level: upgrade.upgradeLevel,
+                    maxLevel: upgrade.maxUpgradeLevel,
+                    barClass: 'combo',
+                    cost: upgrade.gemsRequired,
+                    btnLabel: comboMaxed ? 'MAX' : (isLocked ? `Mastery ${upgrade.requiredElementLevel}` : ''),
+                    btnData: `data-combo-spell="${upgrade.id}"`,
+                    gated: isLocked,
+                    isMaxed: comboMaxed,
+                    rowData: `data-upgrade-id="${upgrade.id}"`,
+                    tooltipHTML: this._buildUpgradeTooltipHTML({
+                        title: upgrade.name,
+                        level: `Lv ${upgrade.upgradeLevel}/${upgrade.maxUpgradeLevel}`,
+                        blurb: upgrade.description,
+                        changes: this.getComboSpellChanges(upgrade.id, upgrade.upgradeLevel),
+                        cost: upgrade.gemsRequired,
+                        notes: isLocked ? [`Needs ${elementNames} Mastery Lv ${upgrade.requiredElementLevel} in the Magic Academy`] : [],
+                        maxed: comboMaxed
+                    })
+                });
             });
-            
+
             contentHTML += `</div>`;
         }
-        
+
         // Update container
         upgradesContainer.innerHTML = contentHTML;
-        
+        // Enable/disable the buttons and tint unaffordable prices for the current stock
+        this._refreshCostAffordability(panel);
+
         // Show the panel with animation
         panel.style.display = 'flex';
         panel.classList.remove('closing');
-        
-        // Setup spell icon hover tooltips (consistent with other menus)
-        const setupSpellTooltips = () => {
-            const spellIcons = upgradesContainer.querySelectorAll('.spell-icon-hover');
-            
-            spellIcons.forEach(icon => {
-                let tooltipTimeout;
-                
-                icon.addEventListener('mouseenter', (e) => {
-                    // Cancel any pending hide
-                    clearTimeout(tooltipTimeout);
-                    
-                    // Remove existing tooltips first
-                    const existingTooltips = document.querySelectorAll('[data-panel-tooltip]');
-                    existingTooltips.forEach(tooltip => tooltip.remove());
-                    
-                    const tooltipHTML = icon.dataset.tooltip;
-                    if (!tooltipHTML) return;
-                    
-                    // Create tooltip element with consistent styling
-                    const tooltip = document.createElement('div');
-                    tooltip.setAttribute('data-panel-tooltip', 'true');
-                    tooltip.innerHTML = tooltipHTML;
-                    tooltip.style.cssText = `
-                        position: fixed;
-                        background: rgba(10, 10, 20, 0.95);
-                        border: 2px solid #FFD700;
-                        border-radius: 6px;
-                        padding: 0.8rem;
-                        font-size: 0.75rem;
-                        color: #ddd;
-                        max-width: 250px;
-                        z-index: 10001;
-                        box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
-                        pointer-events: none;
-                    `;
-                    
-                    document.body.appendChild(tooltip);
-                    
-                    // Get panel position to position tooltip outside/left of panel
-                    const panel = document.getElementById('superweapon-panel');
-                    const panelRect = panel.getBoundingClientRect();
-                    const rect = icon.getBoundingClientRect();
-                    
-                    // Position tooltip to the left of the panel (or far left if needed)
-                    let leftPos = panelRect.left - tooltip.offsetWidth - 10;
-                    if (leftPos < 10) {
-                        // If no space on left, position on right side
-                        leftPos = rect.right + 10;
-                    }
-                    
-                    tooltip.style.left = leftPos + 'px';
-                    tooltip.style.top = (rect.top - tooltip.offsetHeight / 2 + rect.height / 2) + 'px';
-                    
-                    // Adjust if tooltip goes off screen
-                    const tooltipRect = tooltip.getBoundingClientRect();
-                    if (tooltipRect.bottom > window.innerHeight) {
-                        tooltip.style.top = (window.innerHeight - tooltip.offsetHeight - 10) + 'px';
-                    }
-                    if (tooltipRect.top < 0) {
-                        tooltip.style.top = '10px';
-                    }
-                });
-                
-                icon.addEventListener('mouseleave', () => {
-                    const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
-                    activeTooltips.forEach(tooltip => tooltip.remove());
-                });
-            });
-        };
-        
-        setupSpellTooltips();
-        
-        // Combination spell hover tooltips - hovering the whole card triggers it, same
-        // data-tooltip attribute and listener shape as Tower Forge's compact-upgrade-item
-        // (see setupForgePanelListeners) so both panels share one consistent hover-info system.
-        const setupComboTooltips = () => {
-            const comboElements = upgradesContainer.querySelectorAll('.compact-upgrade-item[data-tooltip]');
 
-            comboElements.forEach(element => {
-                let tooltipTimeout;
+        // Hover panels: the level button and every row carry their own (data-tooltip)
+        this._setupTooltipHovers(panel.querySelectorAll('[data-tooltip]'), panel);
 
-                element.addEventListener('mouseenter', (e) => {
-                    clearTimeout(tooltipTimeout);
-
-                    // Remove existing tooltips first
-                    const existingTooltips = document.querySelectorAll('[data-panel-tooltip]');
-                    existingTooltips.forEach(tooltip => tooltip.remove());
-
-                    const tooltipHTML = element.dataset.tooltip;
-                    if (!tooltipHTML) return;
-                    
-                    // Create tooltip element
-                    const tooltip = document.createElement('div');
-                    tooltip.setAttribute('data-panel-tooltip', 'true');
-                    tooltip.innerHTML = tooltipHTML;
-                    tooltip.style.cssText = `
-                        position: fixed;
-                        background: rgba(10, 10, 20, 0.95);
-                        border: 2px solid #FFD700;
-                        border-radius: 6px;
-                        padding: 0.8rem;
-                        font-size: 0.75rem;
-                        color: #ddd;
-                        max-width: 250px;
-                        z-index: 10001;
-                        box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.1);
-                        pointer-events: none;
-                    `;
-                    
-                    document.body.appendChild(tooltip);
-                    
-                    const panel = document.getElementById('superweapon-panel');
-                    const panelRect = panel.getBoundingClientRect();
-                    const rect = element.getBoundingClientRect();
-                    
-                    let leftPos = panelRect.left - tooltip.offsetWidth - 10;
-                    if (leftPos < 10) {
-                        leftPos = rect.right + 10;
-                    }
-                    
-                    tooltip.style.left = leftPos + 'px';
-                    tooltip.style.top = (rect.top - tooltip.offsetHeight / 2 + rect.height / 2) + 'px';
-                    
-                    const tooltipRect = tooltip.getBoundingClientRect();
-                    if (tooltipRect.bottom > window.innerHeight) {
-                        tooltip.style.top = (window.innerHeight - tooltip.offsetHeight - 10) + 'px';
-                    }
-                    if (tooltipRect.top < 0) {
-                        tooltip.style.top = '10px';
-                    }
-                });
-                
-                element.addEventListener('mouseleave', () => {
-                    const activeTooltips = document.querySelectorAll('[data-panel-tooltip]');
-                    activeTooltips.forEach(tooltip => tooltip.remove());
-                });
-            });
-        };
-        
-        setupComboTooltips();
-        
         // Setup event listeners
         this.setupSuperWeaponPanelListeners(menuData);
     }
@@ -4314,60 +4026,6 @@ export class UIManager {
         }
         panel._upgradeClickHandler = handleUpgradeClick;
         panel.addEventListener('click', panel._upgradeClickHandler);
-        
-        // Lab level upgrade button hover - only when not maxed, since a maxed button has no
-        // further upgrade info to show (the panel used to show a hollow "already at max" tooltip).
-        const labLevelBtn = panel.querySelector('.forge-level-upgrade-btn');
-        const labUpgrade = menuData.building.getLabUpgradeOption();
-        const labIsMaxed = menuData.building.labLevel >= menuData.building.maxLabLevel;
-        if (labLevelBtn && labUpgrade && !labIsMaxed) {
-            labLevelBtn.addEventListener('mouseenter', () => {
-                // Clear existing tooltips
-                const existingTooltips = document.querySelectorAll('[data-superweapon-tooltip]');
-                existingTooltips.forEach(tooltip => tooltip.remove());
-                
-                // Create hover menu
-                const menu = document.createElement('div');
-                menu.className = 'building-info-menu';
-                menu.setAttribute('data-superweapon-tooltip', 'true');
-                menu.innerHTML = `
-                    <div class="info-title">${labUpgrade.name}</div>
-                    <div class="info-description">${labUpgrade.description}</div>
-                    ${labUpgrade.nextUnlock ? `<div style="border-top: 1px solid rgba(255, 215, 0, 0.3); padding-top: 0.3rem; margin-top: 0.3rem; color: #FFD700; font-size: 0.85rem;">${labUpgrade.nextUnlock}</div>` : ''}
-                `;
-                
-                document.body.appendChild(menu);
-                
-                // Position the menu
-                const btnRect = labLevelBtn.getBoundingClientRect();
-                const menuWidth = menu.offsetWidth;
-                const menuHeight = menu.offsetHeight;
-                const panelRect = panel.getBoundingClientRect();
-                
-                // Priority: Position to the left with good clearance from the panel
-                let left = panelRect.left - menuWidth - 30;
-                let top = btnRect.top;
-                
-                // If not enough space to the left, try above
-                if (left < 10) {
-                    left = Math.max(10, panelRect.left - menuWidth - 10);
-                    top = btnRect.top - menuHeight - 10;
-                }
-                
-                // Adjust if menu goes off bottom
-                if (top + menuHeight > window.innerHeight) {
-                    top = Math.max(10, btnRect.top - menuHeight - 10);
-                }
-                
-                menu.style.left = left + 'px';
-                menu.style.top = top + 'px';
-            });
-            
-            labLevelBtn.addEventListener('mouseleave', () => {
-                const tooltips = document.querySelectorAll('[data-superweapon-tooltip]');
-                tooltips.forEach(tooltip => tooltip.remove());
-            });
-        }
     }
 
     showCastleUpgradeMenu(castleData) {

@@ -29,6 +29,7 @@ import { DefenderRenderAdapter } from '../render/adapters/DefenderRenderAdapter.
 import { TerrainRenderAdapter } from '../render/adapters/TerrainRenderAdapter.js';
 import { PixiTextureCache } from '../render/PixiTextureCache.js';
 import { ObjectPool } from '../utils/ObjectPool.js';
+import { pickDamageType } from '../utils/ElementalDamage.js';
 import { PerformanceMonitor } from '../utils/PerformanceMonitor.js';
 import { Container } from 'pixi.js';
 
@@ -1287,10 +1288,14 @@ export class GameplayState {
                                     if (!isBonusLevel && enemy.freezeTimer > 0 && this.stateManager.gameStatistics) {
                                         this.stateManager.gameStatistics.markFrostShatter();
                                     }
-                                    // Fire elemental damage - immune frogs (except AirFrog) take no damage but burn still applies via 'fire' ticks
-                                    enemy.takeDamage(spell.damage, 0, 'fire');
-                                    enemy.burnTimer = spell.burnDuration;
-                                    enemy.burnDamage = spell.burnDamage;
+                                    // Earth + air, never fire (like the Combination Tower's Meteor):
+                                    // earth unless an elemental frog is weak to air, so the frogs
+                                    // weak to either element feel it. Armor piercing on every hit.
+                                    enemy.takeDamage(
+                                        spell.damage,
+                                        spell.armorPiercing,
+                                        pickDamageType(enemy, spell.elements, 'earth')
+                                    );
                                 }
                             }
                         });

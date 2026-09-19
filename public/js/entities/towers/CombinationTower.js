@@ -1,5 +1,6 @@
 import { Tower } from './Tower.js';
 import { ObjectPool } from '../../core/utils/ObjectPool.js';
+import { pickDamageType } from '../../core/utils/ElementalDamage.js';
 
 const BASE_SLOW_EFFECT = 0.7;
 
@@ -63,6 +64,17 @@ export const COMBO_SPELL_LEVEL_BONUS = {
     magma:   { damage: 15 },
     tempest: { damage: 8, chainRange: 20, slow: 0.4 / COMBO_SPELL_MAX_LEVEL },
     meteor:  { damage: 10, chainRange: 20 }
+};
+
+// What each spell hits for and how often it casts before any upgrade levels (the per-hit damage
+// and fire rate the tower takes on when that spell is selected - see _applySpellStats). Read by
+// TowerManager.getUpgradedTowerStats so the build-button hover shows the numbers a fresh tower
+// really starts with.
+export const COMBO_SPELL_BASE_STATS = {
+    steam:   { damage: 45, fireRate: 1.0 },
+    magma:   { damage: 70, fireRate: 0.7 },
+    tempest: { damage: 30, fireRate: 1.1 },
+    meteor:  { damage: 50, fireRate: 0.8 }
 };
 
 export class CombinationTower extends Tower {
@@ -159,13 +171,7 @@ export class CombinationTower extends Tower {
     }
 
     _applySpellStats(spellId) {
-        const stats = {
-            steam:   { damage: 45, fireRate: 1.0 },
-            magma:   { damage: 70, fireRate: 0.7 },
-            tempest: { damage: 30, fireRate: 1.1 },
-            meteor:  { damage: 50, fireRate: 0.8 }
-        };
-        const s = stats[spellId];
+        const s = COMBO_SPELL_BASE_STATS[spellId];
         if (s) {
             this.damage = s.damage;
             this.fireRate = s.fireRate;
@@ -272,20 +278,34 @@ export class CombinationTower extends Tower {
 
     /**
      * The damage type to hit `enemy` with. A combination spell is two elements fused, but each
-     * cast used to deal ONE fixed type (steam -> fire, magma/meteor -> earth, tempest -> air).
-     * Elemental frogs (and the Frog King) are immune to every element except their single
-     * weakness - see ElementalFrogEnemy.takeDamage - so a fixed type meant a spell could never
-     * touch a frog weak to its OTHER element: Steam (fire + water) bounced off a Fire Frog
-     * (weak to water) even though it contains water. When the enemy declares a weakness that
-     * this spell contains, hit it with that element; otherwise keep the spell's usual type.
+     * cast used to deal ONE fixed type (steam -> fire, magma/meteor -> earth, tempest -> air),
+     * so a spell could never touch a frog weak to its OTHER element: Steam (fire + water)
+     * bounced off a Fire Frog (weak to water) even though it contains water. See pickDamageType.
      */
     _damageTypeFor(enemy, defaultType) {
-        const weakness = enemy.vulnerableTo;
-        if (weakness && weakness !== defaultType) {
-            const elements = SPELL_ELEMENTS[this.selectedSpell];
-            if (elements && elements.includes(weakness)) return weakness;
+        return pickDamageType(enemy, SPELL_ELEMENTS[this.selectedSpell] || [], defaultType);
+    }
+
+    /**
+     * The real numbers this tower casts `spellId` (default: the selected one) with right now: the
+     * spell's damage and fire rate plus what its upgrade levels have added on top (see
+     * COMBO_SPELL_LEVEL_BONUS), and its slow strength / chain (splash) range where it has one.
+     * For the selected spell the damage and rate are the tower's own live values, so this always
+     * matches what shoot() does. What the on-field tower menu shows.
+     */
+    getSpellStats(spellId = this.selectedSpell) {
+        const base = COMBO_SPELL_BASE_STATS[spellId];
+        const bonus = this.combinationBonuses[spellId] || {};
+        const selected = spellId === this.selectedSpell;
+        const stats = {
+            damage: (selected || !base ? this.damage : base.damage) + (bonus.damageBonus || 0),
+            fireRate: selected || !base ? this.fireRate : base.fireRate
+        };
+        if (bonus.slowBonus !== undefined) {
+            stats.slowPercent = Math.round((1 - Math.max(0.3, BASE_SLOW_EFFECT - bonus.slowBonus)) * 100);
         }
-        return defaultType;
+        if (bonus.chainRange !== undefined) stats.chainRange = 100 + bonus.chainRange;
+        return stats;
     }
 
     chainToNearbyEnemies(originalTarget, damage, damageType, range = 100) {
