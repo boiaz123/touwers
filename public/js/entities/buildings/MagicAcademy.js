@@ -22,11 +22,18 @@ export class MagicAcademy extends Building {
         // maxLevel 20 (up from an earlier 5-level cap) - per-level bonuses are correspondingly
         // smaller so the same max-level totals as the old 5-level cap are reached, just spread
         // across a much longer, more gradual grind instead of five big jumps.
+        //
+        // EVERY element's track adds flat damage per level (damageBonus) on top of its own
+        // effect: Fire and Earth are pure damage tracks, Water also slows harder (slowBonus) and
+        // Air also chains further (chainRange). Earth gets double the per-level damage of the
+        // others since its base hit is double Fire's (90 vs 45) - all four reach roughly the same
+        // relative gain at max level. (Earth's old "armor piercing" track never pierced anything -
+        // elemental damage ignores armor - it was just +1 flat damage under a misleading name.)
         this.elementalUpgrades = {
             fire: { level: 0, maxLevel: 20, baseCost: 150, damageBonus: 1 },
-            water: { level: 0, maxLevel: 20, baseCost: 150, slowBonus: 0.02 },
-            air: { level: 0, maxLevel: 20, baseCost: 150, chainRange: 5 },
-            earth: { level: 0, maxLevel: 20, baseCost: 150, armorPiercing: 1 }
+            water: { level: 0, maxLevel: 20, baseCost: 150, damageBonus: 1, slowBonus: 0.02 },
+            air: { level: 0, maxLevel: 20, baseCost: 150, damageBonus: 1, chainRange: 5 },
+            earth: { level: 0, maxLevel: 20, baseCost: 150, damageBonus: 2 }
         };
         
         // New: Gem storage for each element
@@ -1383,7 +1390,7 @@ export class MagicAcademy extends Building {
             {
                 id: 'water',
                 name: 'Water Mastery',
-                description: `Increase Magic Tower water slow effect by ${(this.elementalUpgrades.water.slowBonus * 100).toFixed(0)}% per level (up to Level ${this.elementalUpgrades.water.maxLevel})`,
+                description: `Increase Magic Tower water damage by ${this.elementalUpgrades.water.damageBonus} and slow effect by ${(this.elementalUpgrades.water.slowBonus * 100).toFixed(0)}% per level (up to Level ${this.elementalUpgrades.water.maxLevel})`,
                 level: this.elementalUpgrades.water.level,
                 maxLevel: this.elementalUpgrades.water.maxLevel,
                 cost: this.calculateElementalCost('water'),
@@ -1394,7 +1401,7 @@ export class MagicAcademy extends Building {
                 id: 'air',
                 name: 'Air Mastery',
                 // Magic Tower's base lightning chain range is 50px (see MagicTower.shoot()).
-                description: `Increase Magic Tower air chain range by ${Math.round(this.elementalUpgrades.air.chainRange / 50 * 100)}% per level (up to Level ${this.elementalUpgrades.air.maxLevel})`,
+                description: `Increase Magic Tower air damage by ${this.elementalUpgrades.air.damageBonus} and chain range by ${Math.round(this.elementalUpgrades.air.chainRange / 50 * 100)}% per level (up to Level ${this.elementalUpgrades.air.maxLevel})`,
                 level: this.elementalUpgrades.air.level,
                 maxLevel: this.elementalUpgrades.air.maxLevel,
                 cost: this.calculateElementalCost('air'),
@@ -1404,7 +1411,7 @@ export class MagicAcademy extends Building {
             {
                 id: 'earth',
                 name: 'Earth Mastery',
-                description: `Increase Magic Tower earth armor piercing by ${this.elementalUpgrades.earth.armorPiercing} per level (up to Level ${this.elementalUpgrades.earth.maxLevel})`,
+                description: `Increase Magic Tower earth damage by ${this.elementalUpgrades.earth.damageBonus} per level (up to Level ${this.elementalUpgrades.earth.maxLevel})`,
                 level: this.elementalUpgrades.earth.level,
                 maxLevel: this.elementalUpgrades.earth.maxLevel,
                 cost: this.calculateElementalCost('earth'),
@@ -1592,13 +1599,15 @@ export class MagicAcademy extends Building {
                 damageBonus: this.elementalUpgrades.fire.level * this.elementalUpgrades.fire.damageBonus
             },
             water: {
+                damageBonus: this.elementalUpgrades.water.level * this.elementalUpgrades.water.damageBonus,
                 slowBonus: this.elementalUpgrades.water.level * this.elementalUpgrades.water.slowBonus
             },
             air: {
+                damageBonus: this.elementalUpgrades.air.level * this.elementalUpgrades.air.damageBonus,
                 chainRange: this.elementalUpgrades.air.level * this.elementalUpgrades.air.chainRange
             },
             earth: {
-                armorPiercing: this.elementalUpgrades.earth.level * this.elementalUpgrades.earth.armorPiercing
+                damageBonus: this.elementalUpgrades.earth.level * this.elementalUpgrades.earth.damageBonus
             }
         };
     }

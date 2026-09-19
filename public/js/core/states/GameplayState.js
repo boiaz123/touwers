@@ -136,9 +136,12 @@ export class GameplayState {
         this.goldEarnedThisLevel = 0;
         this.startingGold = 200;
         
-        // Results screen for level completion / game over
+        // Results screen for level completion / game over. The battlefield UI stays fully
+        // usable until it actually appears (level completion waits a few real seconds first so
+        // loot can be picked up) and is shut down at that exact moment - see _onResultsScreenShown.
         this.resultsScreen = new ResultsScreen(stateManager);
-        
+        this.resultsScreen.onShown = () => this._onResultsScreenShown();
+
         // Level completion delay (5 seconds of real time before showing results)
         this.levelCompletionDelay = 0;
         this.levelCompletionTimestampStart = undefined;
@@ -279,7 +282,12 @@ export class GameplayState {
         // UIManager.updatePanelPauseState)
         this.isPaused = false;
         document.body.classList.remove('game-paused');
-        
+
+        // Fresh level: forget any results screen (or pending level-complete delay) left over
+        // from the last one and give the battlefield UI back - see _onResultsScreenShown
+        this.resultsScreen.reset();
+        document.body.classList.remove('results-showing');
+
         // IMPORTANT: Save settlement gold before starting level (so it's not lost)
         const settlementGoldBeforeLevel = this.stateManager.playerGold || 0;
         
@@ -781,7 +789,10 @@ export class GameplayState {
 
         // Clear reference to GameplayState
         this.stateManager.gameplayState = null;
-        
+
+        // Leaving gameplay (e.g. via the results screen's buttons) - drop the results-screen UI lock
+        document.body.classList.remove('results-showing');
+
         // Restore settlement gold to stateManager before leaving
         if (this.settlementGoldBackup !== undefined) {
             this.stateManager.playerGold = this.settlementGoldBackup;
@@ -1682,6 +1693,8 @@ export class GameplayState {
     // the collectGold hotkey, which should never dismiss a menu the player has open elsewhere.
     dispatchBuildingClickResult(clickResult, { closePanelOnCollect = true } = {}) {
         if (!clickResult) return false;
+        // No menus once the results screen is up (the victory animation / defeat screen)
+        if (this.resultsScreen && this.resultsScreen.isShowing) return false;
         if (clickResult.type === 'forge_menu') {
             this.uiManager.showForgeUpgradeMenu(clickResult);
             return true;
@@ -1854,7 +1867,19 @@ export class GameplayState {
         // Close any open menus
         this.uiManager.closeAllPanels();
     }
-    
+
+    /**
+     * The results screen just appeared - the first frame of the victory animation, or the
+     * defeat screen. This is THE moment the battlefield is finished with: drop any armed
+     * placement/spell, close every open panel and hover info panel, and make the rest of the
+     * in-game UI (sidebar, spell hotbar, wave button, pause/speed controls) inert. It stays that
+     * way - menus can't be reopened - until the next level's enter().
+     */
+    _onResultsScreenShown() {
+        this.cancelSelection();
+        if (this.uiManager) this.uiManager.lockForResults();
+    }
+
     getWaveConfig(level, wave) {
         // Get wave config from the level itself (sandbox included - SandboxLevel defines
         // its own 100-wave getWaveConfig() just like a campaign level).
@@ -1962,9 +1987,9 @@ export class GameplayState {
             return;
         }
 
-        // Close any open building/tower panels and clear placement selection so the
-        // victory screen shows a clean battlefield instead of a stuck-open menu
-        this.cancelSelection();
+        // Open panels / armed placement are deliberately NOT cleared here: the player keeps
+        // full control of the battlefield through the results screen's delay, and the UI is shut
+        // down when the victory animation actually starts (see _onResultsScreenShown).
 
         // --- Campaign completion detection (single source of truth for this whole method) ---
         // Derived from SaveSystem.getCampaignLevelSequence(), the same ordered level list
@@ -2606,10 +2631,8 @@ export class GameplayState {
     gameOver() {
         this.waveInProgress = false;
 
-        // Close any open building/tower panels and clear placement selection so the
-        // defeat screen shows a clean battlefield instead of a stuck-open menu
-        // (mirrors completeLevel()'s victory-screen handling above).
-        this.cancelSelection();
+        // (The battlefield UI is shut down by _onResultsScreenShown() as the defeat screen
+        // appears at the end of this method - same moment as the victory animation's start.)
 
         // Record defeat and playtime
         if (this.stateManager.gameStatistics) {

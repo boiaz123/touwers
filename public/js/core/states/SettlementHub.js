@@ -443,20 +443,33 @@ export class SettlementHub {
         // binding our own listener too would fire handleClick() twice per click.
         this.stateManager.canvas.addEventListener('mousemove', this.mouseMoveHandler);
 
-        // Add wheel event listener for scrolling in upgrade tiles
+        // Add wheel event listener for scrolling in upgrade tiles and the bard's score list
         this.wheelHandler = (e) => {
-            // Only handle wheel events when upgrades panel is open
-            if (this.activePopup === 'upgrades' && this.upgradesPopup && this.upgradesPopup.isOpen) {
+            // Only handle wheel events when a popup that scrolls is open
+            const scrollingPopup = this.activePopup === 'upgrades' ? this.upgradesPopup
+                : this.activePopup === 'musicalScores' ? this.musicalScoresPopup
+                : null;
+            if (scrollingPopup && scrollingPopup.isOpen) {
                 e.preventDefault();
-                const rect = this._getCanvasRect();
-                const scaleX = this.stateManager.canvas.width / rect.width;
-                const scaleY = this.stateManager.canvas.height / rect.height;
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
-                this.upgradesPopup.handleWheel(x, y, e.deltaY, e.deltaMode);
+                const { x, y } = this._eventToCanvasPoint(e);
+                scrollingPopup.handleWheel(x, y, e.deltaY, e.deltaMode);
             }
         };
         this.stateManager.canvas.addEventListener('wheel', this.wheelHandler, { passive: false });
+
+        // The bard's scrollbar thumb can be dragged: it needs the button press and, wherever the
+        // pointer ends up, the release (the drag itself rides on handleMouseMove's hover updates)
+        this.mouseDownHandler = (e) => {
+            if (e.button === 0 && this.activePopup === 'musicalScores' && this.musicalScoresPopup && this.musicalScoresPopup.isOpen) {
+                const { x, y } = this._eventToCanvasPoint(e);
+                this.musicalScoresPopup.handlePointerDown(x, y);
+            }
+        };
+        this.mouseUpHandler = () => {
+            if (this.musicalScoresPopup) this.musicalScoresPopup.handlePointerUp();
+        };
+        this.stateManager.canvas.addEventListener('mousedown', this.mouseDownHandler);
+        window.addEventListener('mouseup', this.mouseUpHandler);
     }
 
     removeMouseListeners() {
@@ -466,6 +479,20 @@ export class SettlementHub {
         if (this.wheelHandler) {
             this.stateManager.canvas.removeEventListener('wheel', this.wheelHandler);
         }
+        if (this.mouseDownHandler) {
+            this.stateManager.canvas.removeEventListener('mousedown', this.mouseDownHandler);
+        }
+        if (this.mouseUpHandler) {
+            window.removeEventListener('mouseup', this.mouseUpHandler);
+        }
+    }
+
+    // Mouse event -> canvas coordinates (accounting for CSS scaling), via the cached rect
+    _eventToCanvasPoint(e) {
+        const rect = this._getCanvasRect();
+        const scaleX = this.stateManager.canvas.width / rect.width;
+        const scaleY = this.stateManager.canvas.height / rect.height;
+        return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
     }
 
     // getBoundingClientRect() forces a synchronous layout read. handleMouseMove fires on

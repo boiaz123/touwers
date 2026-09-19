@@ -106,7 +106,7 @@ export class SuperWeaponLab extends Building {
                 id: 'magma',
                 name: 'Magma',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path d="M10 1 Q15.5 6 15.5 11.5 Q15.5 17.5 10 19 Q4.5 17.5 4.5 11.5 Q4.5 6 10 1Z" fill="#EF4444"/><path d="M10 5 Q13 8.5 13 12 Q13 15.5 10 17 Q7 15.5 7 12 Q7 8.5 10 5Z" fill="#FBBF24" opacity="0.7"/></svg>',
-                description: 'Burning damage that pierces armor',
+                description: 'Heavy burning damage',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 7,
                 gems: { fire: 1, earth: 1 }
@@ -124,7 +124,7 @@ export class SuperWeaponLab extends Building {
                 id: 'meteor',
                 name: 'Meteor',
                 icon: '<svg viewBox="0 0 20 20" width="16" height="16" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="3.5" fill="#F97316"/><circle cx="3" cy="5" r="1.5" fill="#78716C"/><circle cx="17" cy="5" r="1.5" fill="#78716C"/><circle cx="3" cy="15" r="1.5" fill="#78716C"/><circle cx="17" cy="15" r="1.5" fill="#78716C"/><line x1="6.5" y1="7" x2="7" y2="8" stroke="#78716C" stroke-width="1.2" stroke-linecap="round"/><line x1="13.5" y1="7" x2="13" y2="8" stroke="#78716C" stroke-width="1.2" stroke-linecap="round"/><line x1="6.5" y1="13" x2="7" y2="12" stroke="#78716C" stroke-width="1.2" stroke-linecap="round"/><line x1="13.5" y1="13" x2="13" y2="12" stroke="#78716C" stroke-width="1.2" stroke-linecap="round"/></svg>',
-                description: 'Piercing impact that chains to nearby enemies',
+                description: 'Crushing impact that chains to nearby enemies',
                 upgradeLevel: 0,
                 maxUpgradeLevel: 7,
                 gems: { air: 1, earth: 1 }

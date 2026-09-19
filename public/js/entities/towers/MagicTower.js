@@ -18,11 +18,13 @@ export class MagicTower extends Tower {
         
         // Element system - CORRECTED elements
         this.selectedElement = 'fire'; // Default element
+        // Every element's Magic Academy mastery adds flat damage (damageBonus); water and air
+        // also carry their own extra (slow strength / chain range) on top
         this.elementalBonuses = {
             fire: { damageBonus: 0 },
-            water: { slowBonus: 0 },
-            air: { chainRange: 0 },
-            earth: { armorPiercing: 0 }
+            water: { damageBonus: 0, slowBonus: 0 },
+            air: { damageBonus: 0, chainRange: 0 },
+            earth: { damageBonus: 0 }
         };
         
         // Animation properties
@@ -127,17 +129,18 @@ export class MagicTower extends Tower {
     
     shoot() {
         if (this.target) {
-            let finalDamage = this.damage;
-            
+            // The selected element's Academy mastery adds flat damage to every hit, whichever
+            // element it is (see MagicAcademy.elementalUpgrades)
+            const finalDamage = this.damage + (this.elementalBonuses[this.selectedElement]?.damageBonus || 0);
+
             // Play magic tower sound
             if (this.audioManager) {
                 this.audioManager.playSFX('magic-tower');
             }
-            
+
             // Apply elemental effects based on selected element
             switch(this.selectedElement) {
                 case 'fire':
-                    finalDamage += this.elementalBonuses.fire.damageBonus;
                     this.target.takeDamage(finalDamage, 0, 'fire');
                     // Apply burn effect
                     if (this.target.burnTimer) {
@@ -169,23 +172,23 @@ export class MagicTower extends Tower {
                 case 'air':
                     this.target.takeDamage(finalDamage, 0, 'air');
                     // Chain lightning to nearby enemies
-                    this.chainLightning(this.target);
+                    this.chainLightning(this.target, finalDamage);
                     break;
-                    
+
                 case 'earth':
-                    // Armor piercing: 100% ignores armor completely, and reduces enemy armor
-                    const piercingDamage = finalDamage + this.elementalBonuses.earth.armorPiercing;
-                    this.target.takeDamage(piercingDamage, 0, 'earth'); // Earth damage bypasses armor and reduces it
+                    this.target.takeDamage(finalDamage, 0, 'earth'); // Earth damage bypasses armor and reduces it
                     break;
             }
-            
+
             // Create appropriate visual effect
             this.createElementalEffect();
         }
     }
-    
-    chainLightning(originalTarget) {
+
+    chainLightning(originalTarget, damage = this.damage) {
         const chainRange = 50 + this.elementalBonuses.air.chainRange;
+        // Each hop hits for 60% of the primary hit, so air's damage upgrades carry down the chain
+        const chainDamage = Math.floor(damage * 0.6);
         const chainTargets = [originalTarget];
 
         // Find nearby enemies for chain lightning
@@ -220,7 +223,6 @@ export class MagicTower extends Tower {
                                     visited.add(enemy);
                                     chainTargets.push(enemy);
 
-                                    const chainDamage = Math.floor(this.damage * 0.6); // 60% damage
                                     enemy.takeDamage(chainDamage, 0, 'air');
                                 }
                             }
@@ -235,7 +237,6 @@ export class MagicTower extends Tower {
                                     visited.add(enemy);
                                     chainTargets.push(enemy);
 
-                                    const chainDamage = Math.floor(this.damage * 0.6); // 60% damage
                                     enemy.takeDamage(chainDamage, 0, 'air');
                                 }
                             }

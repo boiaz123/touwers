@@ -47,6 +47,24 @@ const SPELL_ELEMENTS = {
     meteor:  ['air', 'earth']
 };
 
+// What each combination spell gains per upgrade level (bought at the Super Weapon Lab - see
+// SuperWeaponLab.getCombinationUpgradeOptions). EVERY spell adds flat damage per level on top of
+// its own effect: Steam also slows harder, Tempest also chains further and slows harder, Meteor
+// also chains further, and Magma is a pure damage path. Read by TowerManager.applyAcademyUpgrades
+// (what a level actually does) and by UIManager's tooltip text (what it says a level does), so
+// the two can't drift apart.
+//   damage:     flat damage added to every hit
+//   slow:       cut to the enemy speed multiplier (BASE_SLOW_EFFECT 0.7, floored at 0.3) - tuned
+//               to reach that floor exactly at the last level
+//   chainRange: px added to the spell's base chain/splash radius of 100
+export const COMBO_SPELL_MAX_LEVEL = 7;
+export const COMBO_SPELL_LEVEL_BONUS = {
+    steam:   { damage: 10, slow: 0.4 / COMBO_SPELL_MAX_LEVEL },
+    magma:   { damage: 15 },
+    tempest: { damage: 8, chainRange: 20, slow: 0.4 / COMBO_SPELL_MAX_LEVEL },
+    meteor:  { damage: 10, chainRange: 20 }
+};
+
 export class CombinationTower extends Tower {
     constructor(x, y, gridX, gridY) {
         super(x, y, gridX, gridY);
@@ -60,9 +78,9 @@ export class CombinationTower extends Tower {
         this.availableSpells = []; // Set by tower manager when academy provides spells
         this.combinationBonuses = {
             steam: { damageBonus: 0, slowBonus: 0 },
-            magma: { damageBonus: 0, piercingBonus: 0 },
-            tempest: { chainRange: 0, slowBonus: 0 },
-            meteor: { chainRange: 0, piercingBonus: 0 }
+            magma: { damageBonus: 0 },
+            tempest: { damageBonus: 0, chainRange: 0, slowBonus: 0 },
+            meteor: { damageBonus: 0, chainRange: 0 }
         };
         
         // Animation properties
@@ -317,11 +335,14 @@ export class CombinationTower extends Tower {
             // If a spell is selected, use combination effects, otherwise do basic attack
             if (this.selectedSpell) {
                 const spell = this.combinationBonuses[this.selectedSpell];
-                
+
+                // Every spell's upgrade levels add flat damage on top of its own effect
+                // (see COMBO_SPELL_LEVEL_BONUS)
+                finalDamage += spell.damageBonus;
+
                 // Apply combination spell effects
                 switch(this.selectedSpell) {
                     case 'steam':
-                        finalDamage += spell.damageBonus;
                         this.target.takeDamage(finalDamage, 0, this._damageTypeFor(this.target, 'fire'));
                         // Burn effect
                         if (this.target.burnTimer) {
@@ -339,9 +360,7 @@ export class CombinationTower extends Tower {
                         break;
                         
                     case 'magma':
-                        finalDamage += spell.damageBonus;
-                        const piercingDamage = finalDamage + spell.piercingBonus;
-                        this.target.takeDamage(piercingDamage, 100, this._damageTypeFor(this.target, 'earth')); // Earth damage with armor piercing
+                        this.target.takeDamage(finalDamage, 100, this._damageTypeFor(this.target, 'earth')); // Earth damage with armor piercing
                         // Burn effect
                         if (this.target.burnTimer) {
                             this.target.burnTimer = Math.max(this.target.burnTimer, 3);
@@ -363,10 +382,9 @@ export class CombinationTower extends Tower {
                         break;
 
                     case 'meteor':
-                        const meteorPiercingDamage = finalDamage + spell.piercingBonus;
-                        this.target.takeDamage(meteorPiercingDamage, 100, this._damageTypeFor(this.target, 'earth')); // Earth damage with armor piercing
+                        this.target.takeDamage(finalDamage, 100, this._damageTypeFor(this.target, 'earth')); // Earth damage with armor piercing
                         // Chain to nearby enemies (splash damage) - upgraded Meteor widens the blast radius
-                        this.chainToNearbyEnemies(this.target, meteorPiercingDamage, 'earth', 100 + spell.chainRange);
+                        this.chainToNearbyEnemies(this.target, finalDamage, 'earth', 100 + spell.chainRange);
                         break;
                 }
                 

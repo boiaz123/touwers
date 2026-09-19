@@ -6,6 +6,7 @@ import { ControlsScreen } from './ControlsScreen.js';
 import { ResolutionSettings } from '../core/config/ResolutionSettings.js';
 import { TowerTransformRegistry } from '../entities/towers/TowerTransformRegistry.js';
 import { SharpshooterTower } from '../entities/towers/SharpshooterTower.js';
+import { COMBO_SPELL_LEVEL_BONUS } from '../entities/towers/CombinationTower.js';
 
 export class UIManager {
     constructor(gameplayState) {
@@ -743,7 +744,7 @@ export class UIManager {
                 if (gemCost) {
                     costString += ` + <span class="gem-sm fire-gem"></span>${gemCost.fire}<span class="gem-sm water-gem"></span>${gemCost.water}<span class="gem-sm air-gem"></span>${gemCost.air}<span class="gem-sm earth-gem"></span>${gemCost.earth}`;
                 }
-                specialHTML = 'Elemental tower with a selectable damage type — Fire, Water, Air, or Earth. Requires the Magic Academy; each element gains its own bonuses from Magic Academy elemental research.';
+                specialHTML = 'Elemental tower with a selectable damage type — Fire, Water, Air, or Earth. Requires the Magic Academy; every element gains bonus damage from Magic Academy elemental research, Water also slows harder and Air also chains further.';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Magic Academy</div>';
                 else if (gemCost) unlockHTML = '<div style="color: #ffd700;">Also requires a full set of elemental gems</div>';
                 break;
@@ -767,7 +768,7 @@ export class UIManager {
                 if (combinationDiamondCost) {
                     costString += ` + <span class="gem-sm diamond-gem"></span>${combinationDiamondCost.diamond}`;
                 }
-                specialHTML = 'Advanced tower that casts devastating combination spells. Requires Magic Academy Level 1; unlock individual spells by investing elemental gems at the Magic Academy.';
+                specialHTML = 'Advanced tower that casts devastating combination spells. Requires Magic Academy Level 1; unlock individual spells by investing elemental gems at the Magic Academy. Every spell upgrade adds damage on top of the spell\'s own effect.';
                 if (!isUnlocked) unlockHTML = '<div style="color: #ff6b6b;">Requires: Super Weapon Lab</div>';
                 else if (combinationDiamondCost) unlockHTML = '<div style="color: #ffd700;">Also requires a diamond</div>';
                 break;
@@ -991,6 +992,10 @@ export class UIManager {
     }
 
     showSpellInfo(spell, btn) {
+        // No hover tooltips over the victory/defeat screen
+        if (this.gameplayState.resultsScreen && this.gameplayState.resultsScreen.isShowing) {
+            return;
+        }
         this.clearAllHoverTooltips();
 
         // Build stats HTML per spell type
@@ -1157,8 +1162,8 @@ export class UIManager {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    // Prevent spell casting when game is paused
-                    if (this.gameplayState.isPaused) {
+                    // Prevent spell casting when game is paused or the victory/defeat screen is showing
+                    if (this.gameplayState.isPaused || (this.gameplayState.resultsScreen && this.gameplayState.resultsScreen.isShowing)) {
                         return;
                     }
                     btn.blur();
@@ -2050,70 +2055,68 @@ export class UIManager {
     }
 
     /**
-     * Per-level combination-tower bonus text for the Super Weapon Lab's combo spell tooltips -
-     * mirrors the per-level bonus values applied in TowerManager.applyAcademyUpgrades so the
-     * tooltip always matches what a purchase actually does.
+     * Combination-tower bonus text for a spell at `level` upgrade levels, straight from
+     * COMBO_SPELL_LEVEL_BONUS - the same table TowerManager.applyAcademyUpgrades applies - so a
+     * tooltip always matches what a purchase actually does. Every spell lists its damage first,
+     * then whatever extras it has (chain range, slow strength).
+     * `slowNote` is tacked onto the slow line (the per-level preview uses it to say where it caps).
      */
-    getComboSpellEffectPreview(spellId) {
-        switch (spellId) {
-            case 'steam':
-                return `<div>Fire Damage: +10</div><div>Slow Strength: +5.7% (maxes out at Lv 7)</div>`;
-            case 'magma':
-                return `<div>Fire Damage: +12</div><div>Armor Piercing: +3</div>`;
-            case 'tempest':
-                // Base chain jump range is 100px (see CombinationTower.shoot()); +20px/level = +20%.
-                return `<div>Chain Range: +20%</div><div>Slow Strength: +5.7% (maxes out at Lv 7)</div>`;
-            case 'meteor':
-                return `<div>Chain Range: +20%</div><div>Armor Piercing: +3</div>`;
-            default:
-                return '';
-        }
+    getComboSpellBonusLines(spellId, level, slowNote = '') {
+        const perLevel = COMBO_SPELL_LEVEL_BONUS[spellId];
+        if (!perLevel) return '';
+        let html = `<div>Damage: +${perLevel.damage * level}</div>`;
+        // Base chain/splash radius is 100px (see CombinationTower.shoot()), so +Npx is +N%.
+        if (perLevel.chainRange) html += `<div>Chain Range: +${perLevel.chainRange * level}%</div>`;
+        if (perLevel.slow) html += `<div>Slow Strength: +${(perLevel.slow * level * 100).toFixed(1)}%${slowNote}</div>`;
+        return html;
     }
 
     /**
-     * Cumulative current stats for a combination spell at its current upgrade level - same
-     * per-level rates as getComboSpellEffectPreview above, multiplied out. Used by the
+     * Per-level combination-tower bonus text for the Super Weapon Lab's combo spell tooltips.
+     */
+    getComboSpellEffectPreview(spellId) {
+        return this.getComboSpellBonusLines(spellId, 1, ' (maxes out at Lv 7)');
+    }
+
+    /**
+     * Cumulative current stats for a combination spell at its current upgrade level. Used by the
      * combination tower's own spell-select hover panel (see showCombinationTowerMenu) to
      * show a condensed "current stats" summary, the same way the Magic Academy's elemental
      * upgrade buttons show a current-bonus line.
      */
     getComboSpellCurrentStats(spellId, level) {
-        const slowStr = (5.7 * level).toFixed(1);
-        switch (spellId) {
-            case 'steam':
-                return `<div>Fire Damage: +${10 * level}</div><div>Slow Strength: +${slowStr}%</div>`;
-            case 'magma':
-                return `<div>Fire Damage: +${12 * level}</div><div>Armor Piercing: +${3 * level}</div>`;
-            case 'tempest':
-                return `<div>Chain Range: +${20 * level}%</div><div>Slow Strength: +${slowStr}%</div>`;
-            case 'meteor':
-                return `<div>Chain Range: +${20 * level}%</div><div>Armor Piercing: +${3 * level}</div>`;
-            default:
-                return '';
-        }
+        return this.getComboSpellBonusLines(spellId, level);
+    }
+
+    /**
+     * What a Magic Academy elemental mastery track grants at `level`: flat damage (every element
+     * has it) plus the element's own extra - water's slow strength (%), air's chain range (px).
+     * Mirrors MagicAcademy.getElementalBonuses() for an arbitrary level, so panels can preview
+     * the next level as well as show the current one.
+     */
+    getMagicElementBonusAt(elementId, academy, level) {
+        const upg = academy && academy.elementalUpgrades && academy.elementalUpgrades[elementId];
+        if (!upg) return { damage: 0, slowPct: 0, chainPx: 0 };
+        return {
+            damage: level * upg.damageBonus,
+            slowPct: upg.slowBonus ? Math.round(level * upg.slowBonus * 100) : 0,
+            chainPx: upg.chainRange ? level * upg.chainRange : 0
+        };
     }
 
     /**
      * Cumulative current bonus for a Magic Tower element at the Magic Academy's current
-     * research level for that element - mirrors the per-level rates in
-     * MagicAcademy's elementalUpgrades (see its constructor) multiplied out. Used by the
-     * magic tower's own element-select hover panel (see showMagicTowerElementMenu).
+     * research level for that element. Used by the magic tower's own element-select hover
+     * panel (see showMagicTowerElementMenu).
      */
     getMagicElementCurrentStats(elementId, academy) {
         const upg = academy && academy.elementalUpgrades && academy.elementalUpgrades[elementId];
         if (!upg) return '';
-        switch (elementId) {
-            case 'fire':
-                return `<div>Damage Bonus: +${upg.level * upg.damageBonus}</div>`;
-            case 'water':
-                return `<div>Slow Bonus: +${(upg.level * upg.slowBonus * 100).toFixed(0)}%</div>`;
-            case 'air':
-                return `<div>Chain Range: +${upg.level * upg.chainRange}px</div>`;
-            case 'earth':
-                return `<div>Armor Piercing: +${upg.level * upg.armorPiercing}</div>`;
-            default:
-                return '';
-        }
+        const b = this.getMagicElementBonusAt(elementId, academy, upg.level);
+        let html = `<div>Damage Bonus: +${b.damage}</div>`;
+        if (elementId === 'water') html += `<div>Slow Bonus: +${b.slowPct}%</div>`;
+        if (elementId === 'air') html += `<div>Chain Range: +${b.chainPx}px</div>`;
+        return html;
     }
 
     /**
@@ -2520,6 +2523,33 @@ export class UIManager {
         });
     }
 
+    /**
+     * The results screen just appeared (see GameplayState._onResultsScreenShown): the in-game UI
+     * is finished with. Closes every panel and hover info panel, dismisses any pause / options /
+     * quit / restart dialog (which would otherwise sit on top of the results screen and swallow
+     * its clicks), and flags <body> so the sidebar, spell hotbar, wave button and speed/pause
+     * controls stop reacting to the pointer (see `body.results-showing` in style.css). The
+     * code-side entry points (selectTower/Building, showTowerInfo/BuildingInfo/SpellInfo, the
+     * spell buttons, showEnemyIntelMenu, GameplayState.dispatchBuildingClickResult) check
+     * resultsScreen.isShowing themselves, so this stays true for keyboard/gamepad input too.
+     * Undone by GameplayState.enter() / exit().
+     */
+    lockForResults() {
+        const dialogIds = ['pause-menu-modal', 'ingame-options-modal', 'quit-warning-modal', 'restart-warning-modal'];
+        const dialogOpen = dialogIds.some(id => document.getElementById(id)?.classList.contains('show'));
+        if (dialogOpen || this.gameplayState.isPaused) {
+            dialogIds.forEach(id => document.getElementById(id)?.classList.remove('show'));
+            // Also resumes the game (the results screen animates in real time regardless) and
+            // resets the pause button / speed circles
+            this.closePauseMenu();
+        }
+
+        this.closeAllPanels();
+        this.activeMenuType = null;
+        this.activeMenuData = null;
+        document.body.classList.add('results-showing');
+    }
+
     showAcademyUpgradeMenu(academyData) {
         // Close other panels to prevent stacking
         this.closeOtherPanelsImmediate('academy-panel');
@@ -2556,18 +2586,15 @@ export class UIManager {
 
         // Calculate academy effects badges
         const effectsList = [];
-        if (academy.elementalUpgrades.fire.level > 0) {
-            effectsList.push(`${this.getElementGemHTML('fire')} Fire: +${academy.elementalUpgrades.fire.level * academy.elementalUpgrades.fire.damageBonus}`);
-        }
-        if (academy.elementalUpgrades.water.level > 0) {
-            effectsList.push(`${this.getElementGemHTML('water')} Water: +${(academy.elementalUpgrades.water.level * academy.elementalUpgrades.water.slowBonus * 100).toFixed(0)}%`);
-        }
-        if (academy.elementalUpgrades.air.level > 0) {
-            effectsList.push(`${this.getElementGemHTML('air')} Air: +${academy.elementalUpgrades.air.level * academy.elementalUpgrades.air.chainRange}px`);
-        }
-        if (academy.elementalUpgrades.earth.level > 0) {
-            effectsList.push(`${this.getElementGemHTML('earth')} Earth: +${academy.elementalUpgrades.earth.level * academy.elementalUpgrades.earth.armorPiercing}`);
-        }
+        ['fire', 'water', 'air', 'earth'].forEach(element => {
+            const level = academy.elementalUpgrades[element].level;
+            if (level <= 0) return;
+            const b = this.getMagicElementBonusAt(element, academy, level);
+            const parts = [`+${b.damage} dmg`];
+            if (b.slowPct) parts.push(`+${b.slowPct}% slow`);
+            if (b.chainPx) parts.push(`+${b.chainPx}px chain`);
+            effectsList.push(`${this.getElementGemHTML(element)} ${element.charAt(0).toUpperCase() + element.slice(1)}: ${parts.join(' ')}`);
+        });
         
         // Build header with prominent academy upgrade button
         contentHTML += `
@@ -2638,64 +2665,46 @@ export class UIManager {
                     const gemCount = academy.gems[upgrade.gemType] || 0;
                     const canUpgrade = upgrade.cost && gemCount >= upgrade.cost && !isLocked;
 
-                    // Current and next values for elemental upgrades
-                    let currentValue = '';
-                    let nextValue = '';
-                    
-                    if (upgrade.id === 'fire') {
-                        const currentBonus = academy.elementalUpgrades.fire.level * academy.elementalUpgrades.fire.damageBonus;
-                        const nextBonus = (academy.elementalUpgrades.fire.level + 1) * academy.elementalUpgrades.fire.damageBonus;
-                        currentValue = `+${currentBonus} dmg`;
-                        nextValue = `+${nextBonus} dmg`;
-                    } else if (upgrade.id === 'water') {
-                        const currentBonus = (academy.elementalUpgrades.water.level * academy.elementalUpgrades.water.slowBonus * 100).toFixed(0);
-                        const nextBonus = ((academy.elementalUpgrades.water.level + 1) * academy.elementalUpgrades.water.slowBonus * 100).toFixed(0);
-                        currentValue = `+${currentBonus}%`;
-                        nextValue = `+${nextBonus}%`;
+                    // Current and next values for elemental upgrades: flat damage (every element
+                    // has it) on the main row, plus the element's own extra (water: slow, air:
+                    // chain range) on a second row
+                    const currentBonus = this.getMagicElementBonusAt(upgrade.id, academy, upgrade.level);
+                    const nextBonus = this.getMagicElementBonusAt(upgrade.id, academy, upgrade.level + 1);
+                    const currentValue = `+${currentBonus.damage} dmg`;
+                    const nextValue = `+${nextBonus.damage} dmg`;
+                    let extraCurrent = '';
+                    let extraNext = '';
+                    if (upgrade.id === 'water') {
+                        extraCurrent = `+${currentBonus.slowPct}% slow`;
+                        extraNext = `+${nextBonus.slowPct}% slow`;
                     } else if (upgrade.id === 'air') {
-                        const currentBonus = academy.elementalUpgrades.air.level * academy.elementalUpgrades.air.chainRange;
-                        const nextBonus = (academy.elementalUpgrades.air.level + 1) * academy.elementalUpgrades.air.chainRange;
-                        currentValue = `+${currentBonus}px`;
-                        nextValue = `+${nextBonus}px`;
-                    } else if (upgrade.id === 'earth') {
-                        const currentBonus = academy.elementalUpgrades.earth.level * academy.elementalUpgrades.earth.armorPiercing;
-                        const nextBonus = (academy.elementalUpgrades.earth.level + 1) * academy.elementalUpgrades.earth.armorPiercing;
-                        currentValue = `+${currentBonus}`;
-                        nextValue = `+${nextBonus}`;
+                        extraCurrent = `+${currentBonus.chainPx}px chain`;
+                        extraNext = `+${nextBonus.chainPx}px chain`;
                     }
-                    
+
                     // Build detailed tooltip for hover info (SuperWeaponLab style)
                     let tooltipText = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${upgrade.name}</div>`;
                     tooltipText += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.4rem;">${upgrade.description}</div>`;
                     tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
                     tooltipText += `<div>Level: <span style="color: #FFD700;">${upgrade.level}/${upgrade.maxLevel}</span></div>`;
-                    
-                    if (upgrade.id === 'fire') {
-                        const curBonus = academy.elementalUpgrades.fire.level * academy.elementalUpgrades.fire.damageBonus;
-                        tooltipText += `<div>\uD83D\uDD25 Damage Bonus: <span style="color: #FFD700;">+${curBonus}</span></div>`;
-                    } else if (upgrade.id === 'water') {
-                        const curBonus = (academy.elementalUpgrades.water.level * academy.elementalUpgrades.water.slowBonus * 100).toFixed(0);
-                        tooltipText += `<div>\uD83D\uDCA7 Slow Effect: <span style="color: #FFD700;">+${curBonus}%</span></div>`;
+
+                    tooltipText += `<div>Damage Bonus: <span style="color: #FFD700;">+${currentBonus.damage}</span></div>`;
+                    if (upgrade.id === 'water') {
+                        tooltipText += `<div>\uD83D\uDCA7 Slow Effect: <span style="color: #FFD700;">+${currentBonus.slowPct}%</span></div>`;
                     } else if (upgrade.id === 'air') {
-                        const curBonus = academy.elementalUpgrades.air.level * academy.elementalUpgrades.air.chainRange;
-                        tooltipText += `<div>\uD83D\uDCA8 Chain Range: <span style="color: #FFD700;">+${curBonus}px</span></div>`;
-                    } else if (upgrade.id === 'earth') {
-                        const curBonus = academy.elementalUpgrades.earth.level * academy.elementalUpgrades.earth.armorPiercing;
-                        tooltipText += `<div>\uD83E\uDEA8 Armor Pierce: <span style="color: #FFD700;">+${curBonus}</span></div>`;
+                        tooltipText += `<div>\uD83D\uDCA8 Chain Range: <span style="color: #FFD700;">+${currentBonus.chainPx}px</span></div>`;
                     }
-                    
+
                     if (!isMaxed) {
+                        const perLevel = this.getMagicElementBonusAt(upgrade.id, academy, 1);
                         tooltipText += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; margin-top: 0.3rem; color: #aaffaa;">`;
                         tooltipText += `<div style="font-weight: bold;">Next Upgrade (+1):</div>`;
-                        if (upgrade.id === 'fire') {
-                            tooltipText += `<div>Damage: +${academy.elementalUpgrades.fire.damageBonus}</div>`;
-                        } else if (upgrade.id === 'water') {
-                            tooltipText += `<div>Slow Effect: +${(academy.elementalUpgrades.water.slowBonus * 100).toFixed(0)}%</div>`;
+                        tooltipText += `<div>Damage: +${perLevel.damage}</div>`;
+                        if (upgrade.id === 'water') {
+                            tooltipText += `<div>Slow Effect: +${perLevel.slowPct}%</div>`;
                         } else if (upgrade.id === 'air') {
-                            const chainRangePercent = Math.round(academy.elementalUpgrades.air.chainRange / 50 * 100);
-                            tooltipText += `<div>Chain Range: +${chainRangePercent}%</div>`;
-                        } else if (upgrade.id === 'earth') {
-                            tooltipText += `<div>Armor Pierce: +${academy.elementalUpgrades.earth.armorPiercing}</div>`;
+                            // Magic Tower's base lightning chain range is 50px (see MagicTower.chainLightning())
+                            tooltipText += `<div>Chain Range: +${Math.round(perLevel.chainPx / 50 * 100)}%</div>`;
                         }
                         if (upgrade.cost) tooltipText += `<div>Cost: <span style="color: #FFD700;">${upgrade.icon}${upgrade.cost}</span></div>`;
                         tooltipText += `</div>`;
@@ -2717,6 +2726,10 @@ export class UIManager {
                                         <span class="current-value">${currentValue}</span>
                                         ${!isMaxed && !isLocked && nextValue ? `<span class="next-value-arrow">\u2192</span><span class="next-value">${nextValue}</span>` : (isMaxed ? '<span class="maxed-text">MAX</span>' : '')}
                                     </div>
+                                    ${extraCurrent ? `<div class="compact-upgrade-values">
+                                        <span class="current-value">${extraCurrent}</span>
+                                        ${!isMaxed && !isLocked ? `<span class="next-value-arrow">\u2192</span><span class="next-value">${extraNext}</span>` : ''}
+                                    </div>` : ''}
                                 </div>
                             </div>
                             <button class="compact-upgrade-btn panel-upgrade-btn"
@@ -2943,16 +2956,19 @@ export class UIManager {
         const bonuses = tower.elementalBonuses || {};
         const currentEl = towerData.currentElement || tower.selectedElement || 'fire';
         
-        // Build active element bonus info
+        // Build active element bonus info: the damage every element's mastery adds, plus water's
+        // slow / air's chain range when the active element has that extra
         let elementBonusHTML = '';
-        if (currentEl === 'fire' && bonuses.fire && bonuses.fire.damageBonus > 0) {
-            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem; display:flex; align-items:center; gap:4px;">${this.getElementGemHTML('fire')} Fire Bonus: <span style="color: #FFD700; font-weight: bold;">+${bonuses.fire.damageBonus} damage</span></div>`;
-        } else if (currentEl === 'water' && bonuses.water && bonuses.water.slowBonus > 0) {
-            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem; display:flex; align-items:center; gap:4px;">${this.getElementGemHTML('water')} Water Bonus: <span style="color: #FFD700; font-weight: bold;">+${(bonuses.water.slowBonus * 100).toFixed(0)}% slow</span></div>`;
-        } else if (currentEl === 'air' && bonuses.air && bonuses.air.chainRange > 0) {
-            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem; display:flex; align-items:center; gap:4px;">${this.getElementGemHTML('air')} Air Bonus: <span style="color: #FFD700; font-weight: bold;">+${bonuses.air.chainRange} chain range</span></div>`;
-        } else if (currentEl === 'earth' && bonuses.earth && bonuses.earth.armorPiercing > 0) {
-            elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem; display:flex; align-items:center; gap:4px;">${this.getElementGemHTML('earth')} Earth Bonus: <span style="color: #FFD700; font-weight: bold;">+${bonuses.earth.armorPiercing} armor pierce</span></div>`;
+        const elBonus = bonuses[currentEl];
+        if (elBonus) {
+            const parts = [];
+            if (elBonus.damageBonus > 0) parts.push(`+${elBonus.damageBonus} damage`);
+            if (elBonus.slowBonus > 0) parts.push(`+${(elBonus.slowBonus * 100).toFixed(0)}% slow`);
+            if (elBonus.chainRange > 0) parts.push(`+${elBonus.chainRange} chain range`);
+            if (parts.length > 0) {
+                const elName = currentEl.charAt(0).toUpperCase() + currentEl.slice(1);
+                elementBonusHTML = `<div style="font-size: 0.8rem; color: #c9a876; margin-bottom: 0.4rem; display:flex; align-items:center; gap:4px;">${this.getElementGemHTML(currentEl)} ${elName} Bonus: <span style="color: #FFD700; font-weight: bold;">${parts.join(', ')}</span></div>`;
+            }
         }
         
         const hasUpgrades = tower.originalDamage && (tower.damage !== tower.originalDamage || tower.range !== tower.originalRange);
@@ -5214,6 +5230,8 @@ export class UIManager {
     // ============ ENEMY INTEL PANEL ============
 
     showEnemyIntelMenu(enemy) {
+        // No menus once the victory/defeat screen is up
+        if (this.gameplayState.resultsScreen && this.gameplayState.resultsScreen.isShowing) return;
         this.closeOtherPanelsImmediate('enemy-intel-panel');
 
         this.activeMenuType = 'enemy-intel';

@@ -606,14 +606,16 @@ export class MarketplaceRegistry {
         'music-frog-king-fanfare': {
             name: "The Frog King's Fanfare",
             description: 'The bombastic theme that heralds the Frog King himself striding onto the battlefield. Royalty announces its arrival.',
-            cost: 175,
+            cost: 5000,
             drawIcon: _drawMusicNote,
             category: 'music',
             type: 'music',
             musicId: 'frog-king-theme',
             effect: "Unlock the Frog King's fanfare to be played within the Arcane Library",
             requirements: ['musical-equipment'],
-            campaignRequirement: 'campaign-4'
+            // Only sold once the Frog King himself has been beaten (campaign-4 completed), not
+            // merely once his domain is unlocked - see UpgradesMenu.buildBuyItems.
+            completedCampaignRequirement: 'campaign-4'
         },
         'music-victory': {
             name: 'Victory Fanfare',

@@ -10,6 +10,10 @@ export class ResultsScreen {
     constructor(stateManager) {
         this.stateManager = stateManager;
         this.isShowing = false;
+        // Called (with the result type) the instant the screen appears - the first frame of the
+        // victory animation, or the defeat screen. GameplayState uses it to shut the battlefield
+        // UI down at exactly that moment (see GameplayState._onResultsScreenShown).
+        this.onShown = null;
         this.resultType = null; // 'levelComplete' or 'gameOver'
         this.resultData = null;
         this.acquiredLoot = []; // Array of loot IDs acquired (feeds transferLootToInventory - sellable)
@@ -161,6 +165,28 @@ export class ResultsScreen {
                 { label: 'RETURN TO SETTLEMENT', action: 'settlement' }
             ];
         }
+
+        // Game over shows immediately (level complete waits out its delay in update()), so its
+        // screen appears here - after everything above is set up for the hook to rely on.
+        if (this.isShowing) this._notifyShown();
+    }
+
+    /**
+     * Forget any result in progress. GameplayState is one long-lived instance re-entered for every
+     * level, so a level quit during the level-complete delay (isShowing still false, showDelay
+     * still counting) would otherwise pop the results screen up over the next level.
+     */
+    reset() {
+        this.isShowing = false;
+        this.showDelay = 0;
+        this.showDelayTimestamp = undefined;
+        this.resultType = null;
+        this.resultData = null;
+        this.phaseTime = 0;
+    }
+
+    _notifyShown() {
+        if (this.onShown) this.onShown(this.resultType);
     }
 
     /**
@@ -270,7 +296,8 @@ export class ResultsScreen {
 
                 this.isShowing = true;
                 this.showDelay = 0;
-                
+                this._notifyShown();
+
                 // For levelComplete, play victory tune at the start of the animation -
                 // fade the battle music out under the sting instead of a hard cut
                 if (this.resultType === 'levelComplete' && this.stateManager.audioManager) {

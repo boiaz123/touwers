@@ -1,5 +1,6 @@
 import { TowerRegistry } from './TowerRegistry.js';
 import { TowerTransformRegistry } from './TowerTransformRegistry.js';
+import { COMBO_SPELL_LEVEL_BONUS } from './CombinationTower.js';
 import { BuildingManager } from '../buildings/BuildingManager.js';
 import { UnlockSystem } from '../../core/systems/UnlockSystem.js';
 import { SpatialGrid } from '../../core/utils/SpatialGrid.js';
@@ -634,72 +635,21 @@ export class TowerManager {
                 // Set available spells
                 tower.setAvailableSpells(combinationSpells);
                 
-                // Build combination spell bonuses from upgrade levels
-                const comboSpellBonuses = {
-                    steam: { damageBonus: 0, slowBonus: 0 },
-                    magma: { damageBonus: 0, piercingBonus: 0 },
-                    tempest: { chainRange: 0, slowBonus: 0 },
-                    meteor: { chainRange: 0, piercingBonus: 0 }
-                };
-                
-                // Apply bonuses based on combination spell upgrade levels. Each spell has 7
-                // levels (gated behind Magic Academy elemental mastery 8/10/12/14/16/18/20 -
-                // see SuperWeaponLab.getCombinationUpgradeOptions), so these are deliberately
-                // large, late-game payoffs rather than the old 5-level scheme's small ticks:
-                // slowBonus is tuned to exactly floor out enemy speed (BASE_SLOW_EFFECT 0.7 -
-                // slowBonus, floored at 0.3 in CombinationTower.shoot()) right at level 7.
-                const COMBO_MAX_LEVEL = 7;
-                const COMBO_SLOW_PER_LEVEL = 0.4 / COMBO_MAX_LEVEL;
-                for (let i = 0; i < combinationSpells.length; i++) {
-                    const spell = combinationSpells[i];
-                    if (spell.upgradeLevel > 0) {
-                        const upgradeBonus = spell.upgradeLevel;
-
-                        switch(spell.id) {
-                            case 'steam':
-                                comboSpellBonuses.steam.damageBonus += upgradeBonus * 10;
-                                comboSpellBonuses.steam.slowBonus += upgradeBonus * COMBO_SLOW_PER_LEVEL;
-                                break;
-                            case 'magma':
-                                comboSpellBonuses.magma.damageBonus += upgradeBonus * 12;
-                                comboSpellBonuses.magma.piercingBonus += upgradeBonus * 3;
-                                break;
-                            case 'tempest':
-                                comboSpellBonuses.tempest.chainRange += upgradeBonus * 20;
-                                comboSpellBonuses.tempest.slowBonus += upgradeBonus * COMBO_SLOW_PER_LEVEL;
-                                break;
-                            case 'meteor':
-                                comboSpellBonuses.meteor.chainRange += upgradeBonus * 20;
-                                comboSpellBonuses.meteor.piercingBonus += upgradeBonus * 3;
-                                break;
-                        }
-                    }
+                // Build each spell's bonuses from its upgrade level. Each spell has
+                // COMBO_SPELL_MAX_LEVEL levels (gated behind Magic Academy elemental mastery
+                // 8/10/12/14/16/18/20 - see SuperWeaponLab.getCombinationUpgradeOptions), so the
+                // per-level values in COMBO_SPELL_LEVEL_BONUS are deliberately large, late-game
+                // payoffs. Every spell adds damage; the spell's own extras (slow, chain range) ride
+                // along - only the fields a spell actually has end up on its bonuses object.
+                const spellBonuses = {};
+                for (const [spellId, perLevel] of Object.entries(COMBO_SPELL_LEVEL_BONUS)) {
+                    const level = combinationSpells.find(s => s.id === spellId)?.upgradeLevel || 0;
+                    spellBonuses[spellId] = { damageBonus: perLevel.damage * level };
+                    if (perLevel.slow !== undefined) spellBonuses[spellId].slowBonus = perLevel.slow * level;
+                    if (perLevel.chainRange !== undefined) spellBonuses[spellId].chainRange = perLevel.chainRange * level;
                 }
-                
-                // Also apply elemental upgrades from academy
-                const elementalBonuses = academy.getElementalBonuses();
-                
-                // Merge both bonuses together
-                const mergedBonuses = {
-                    steam: { 
-                        damageBonus: (comboSpellBonuses.steam.damageBonus || 0) + (elementalBonuses.steam?.damageBonus || 0),
-                        slowBonus: (comboSpellBonuses.steam.slowBonus || 0) + (elementalBonuses.steam?.slowBonus || 0)
-                    },
-                    magma: { 
-                        damageBonus: (comboSpellBonuses.magma.damageBonus || 0) + (elementalBonuses.magma?.damageBonus || 0),
-                        piercingBonus: (comboSpellBonuses.magma.piercingBonus || 0) + (elementalBonuses.magma?.piercingBonus || 0)
-                    },
-                    tempest: { 
-                        chainRange: (comboSpellBonuses.tempest.chainRange || 0) + (elementalBonuses.tempest?.chainRange || 0),
-                        slowBonus: (comboSpellBonuses.tempest.slowBonus || 0) + (elementalBonuses.tempest?.slowBonus || 0)
-                    },
-                    meteor: { 
-                        chainRange: (comboSpellBonuses.meteor.chainRange || 0) + (elementalBonuses.meteor?.chainRange || 0),
-                        piercingBonus: (comboSpellBonuses.meteor.piercingBonus || 0) + (elementalBonuses.meteor?.piercingBonus || 0)
-                    }
-                };
-                
-                tower.applySpellBonuses(mergedBonuses);
+
+                tower.applySpellBonuses(spellBonuses);
             }
         }
     }
@@ -969,7 +919,7 @@ export class TowerManager {
                                 { id: 'fire', name: 'Fire', icon: '▲', description: 'Burn damage over time' },
                                 { id: 'water', name: 'Water', icon: '▽', description: 'Slows and freezes enemies' },
                                 { id: 'air', name: 'Air', icon: '▷', description: 'Chains to nearby enemies' },
-                                { id: 'earth', name: 'Earth', icon: '◆', description: 'Pierces armor' }
+                                { id: 'earth', name: 'Earth', icon: '◆', description: 'Heavy hits that shred armor' }
                             ],
                             currentElement: tower.selectedElement
                         };

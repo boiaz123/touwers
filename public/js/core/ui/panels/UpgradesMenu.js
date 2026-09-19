@@ -112,6 +112,16 @@ export class UpgradesMenu {
                 continue;
             }
 
+            // Same, but for items sold only once a campaign has actually been beaten (checked
+            // against completedCampaigns, which - unlike unlockedCampaigns - excludes a campaign
+            // that has merely been opened). An item the player already owns stays listed, so a
+            // save that bought it before this gate existed still sees it as OWNED.
+            if (itemData.completedCampaignRequirement
+                && !completedCampaigns.includes(itemData.completedCampaignRequirement)
+                && marketplaceSystem.getConsumableCount(itemId) === 0) {
+                continue;
+            }
+
             // Hide items whose upgrade prerequisites are not yet met
             if (itemData.requirements && itemData.requirements.length > 0) {
                 const unmet = itemData.requirements.some(req => !upgradeSystem.hasUpgrade(req));

@@ -2025,6 +2025,22 @@ body.game-paused .side-panel > * {
     pointer-events: none;
 }
 
+/* Once the results screen is up (the victory animation / the defeat screen) the whole
+   battlefield UI is finished with: the sidebar's tower/building/control buttons, the spell
+   hotbar, the next-wave button, the speed/pause controls and any side panel still sliding shut
+   stop reacting to the pointer - no clicks, no hover info panels, no hover styling. As with
+   body.game-paused above, only the CHILDREN lose pointer events: the containers keep swallowing
+   the pointer, so a click on a dead button lands on its container instead of falling through
+   to the results screen's own buttons underneath. Toggled by UIManager.lockForResults() and
+   cleared by GameplayState.enter()/exit(). */
+body.results-showing #tower-sidebar *,
+body.results-showing #spell-buttons-container *,
+body.results-showing #wave-countdown-container *,
+body.results-showing #speed-controls-top *,
+body.results-showing .side-panel * {
+    pointer-events: none;
+}
+
 @keyframes slideOutRight {
     from {
         transform: translateX(0);
