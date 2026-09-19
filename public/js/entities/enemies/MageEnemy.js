@@ -113,7 +113,7 @@ export class MageEnemy extends BaseEnemy {
                 let nearestDist = this.blockadeRange;
                 for (let i = 0; i < this._towersRef.length; i++) {
                     const tower = this._towersRef[i];
-                    if (tower.isDisabled || tower.type === 'guard-post') continue;
+                    if (tower.isDisabled || tower.type === 'guard-post' || tower.isRubble) continue;
                     const dx = tower.x - this.x;
                     const dy = tower.y - this.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);

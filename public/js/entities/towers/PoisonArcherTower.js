@@ -266,6 +266,7 @@ export class PoisonArcherTower extends Tower {
         let closestPoisonedDistSq = range * range;
 
         const consider = (enemy) => {
+            if (enemy.isShielded) return; // a shielded Heavy Frog can't be hurt - poison his escort
             const dx = enemy.x - this.x;
             const dy = enemy.y - this.y;
             const distSq = dx * dx + dy * dy;

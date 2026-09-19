@@ -53,7 +53,8 @@ export class PathDefender extends DefenderBase {
             let closestDistSq = this.attackRange * this.attackRange;
             for (let i = 0; i < enemies.length; i++) {
                 const enemy = enemies[i];
-                if (!enemy.isDead()) {
+                // A shielded Heavy Frog can't be hurt - go for his escort instead
+                if (!enemy.isDead() && !enemy.isShielded) {
                     const dx = enemy.x - this.x;
                     const dy = enemy.y - this.y;
                     const distSq = dx * dx + dy * dy;

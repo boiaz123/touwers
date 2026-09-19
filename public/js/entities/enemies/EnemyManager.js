@@ -1,6 +1,6 @@
 import { EnemyRegistry } from './EnemyRegistry.js';
 import { HitSplatter } from '../effects/HitSplatter.js';
-import { TOKEN_DROP_CHANCE } from '../../core/registries/WorkshopRegistry.js';
+import { getTokenDropChance } from '../../core/registries/WorkshopRegistry.js';
 
 export class EnemyManager {
     constructor(path) {
@@ -127,6 +127,7 @@ export class EnemyManager {
                 if (enemy) {
                     this._applyEnemyDefaults(enemy);
                     this.enemies.push(enemy);
+                    this._spawnCompanions(enemy, this.enemies);
                     this.spawnTimer = 0;
                 }
             }
@@ -204,7 +205,7 @@ export class EnemyManager {
         // and stop dropping for a given enemy type once the player has already unlocked it
         // in the Workshop - no point handing out more tokens for something already bought.
         const alreadyUnlockedInWorkshop = this.workshopSystem && this.workshopSystem.hasEnemyType(enemy.type);
-        enemy.workshopTokenChance = (this.workshopUnlocked && !alreadyUnlockedInWorkshop) ? TOKEN_DROP_CHANCE : 0;
+        enemy.workshopTokenChance = (this.workshopUnlocked && !alreadyUnlockedInWorkshop) ? getTokenDropChance(enemy.type) : 0;
     }
 
     /**
@@ -247,7 +248,33 @@ export class EnemyManager {
 
                 this._applyEnemyDefaults(child);
                 outBuffer.push(child);
+                this._spawnCompanions(child, outBuffer);
             }
+        }
+    }
+
+    /**
+     * Gives an enemy that travels with an escort (HeavyFrogEnemy's five minions) its companions,
+     * appended to `out` right after it so the leader always updates before the ones that follow him.
+     * They start standing on the leader; the minions place themselves in formation on their first
+     * update. Deliberately skips _applyEnemyDefaults: an escort carries no loot, tokens or
+     * campaign loot rates - they're a mechanic, not a drop.
+     */
+    _spawnCompanions(leader, out) {
+        const spec = leader.companions;
+        if (!spec) return;
+
+        for (let i = 0; i < spec.count; i++) {
+            const minion = EnemyRegistry.createEnemy(spec.type, this.path, spec.healthMultiplier ?? 1, leader.speed);
+            if (!minion) continue;
+            minion.x = leader.x;
+            minion.y = leader.y;
+            minion.currentPathIndex = leader.currentPathIndex;
+            minion.leader = leader;
+            minion.formationSlot = i;
+            if (this.audioManager) minion.audioManager = this.audioManager;
+            leader.minions.push(minion);
+            out.push(minion);
         }
     }
 

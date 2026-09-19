@@ -1,4 +1,5 @@
 import { TowerRegistry } from '../../entities/towers/TowerRegistry.js';
+import { RubblePile } from '../../entities/towers/RubblePile.js';
 import { TowerTransformRegistry } from '../../entities/towers/TowerTransformRegistry.js';
 import { BuildingRegistry } from '../../entities/buildings/BuildingRegistry.js';
 import { GuardPost } from '../../entities/towers/GuardPost.js';
@@ -177,7 +178,7 @@ function restoreCastle(castle, s) {
     castle.defenderDeadCooldown = s.defenderDeadCooldown || 0;
     if (s.defender) {
         const defender = new CastleDefender(s.defender.level);
-        defender.health = s.defender.health;
+        defender.health = Math.min(s.defender.health, defender.maxHealth); // runs saved before a max-HP change
         defender.x = castle.x - 60;
         defender.y = castle.y + 40;
         castle.defender = defender;
@@ -203,6 +204,8 @@ function captureTower(tower, cellSize) {
     }
 
     const saved = { type: tower.type, gridX: tower.gridX, gridY: tower.gridY };
+    // A Heavy Frog's wreckage outlives the wave that made it: the spot stays blocked until cleared
+    if (tower.isRubble) saved.wreckedType = tower.wreckedType;
     if (tower.transformedType) saved.transformedType = tower.transformedType;
     if (typeof tower.selectedElement === 'string') saved.selectedElement = tower.selectedElement;
     if (typeof tower.selectedSpell === 'string') saved.selectedSpell = tower.selectedSpell;
@@ -218,7 +221,7 @@ function restoreGuardPost(gs, s) {
 
     if (s.defender) {
         const defender = new PathDefender(s.defender.level);
-        defender.health = s.defender.health;
+        defender.health = Math.min(s.defender.health, defender.maxHealth);
         defender.x = post.defenderSpawnX;
         defender.y = post.defenderSpawnY;
         if (post.pathIndex !== null && post.gamePath) {
@@ -238,6 +241,16 @@ function restoreTower(gs, s) {
 
     const { level, towerManager } = gs;
     const { screenX, screenY } = level.gridToScreen(s.gridX, s.gridY);
+
+    if (s.type === 'rubble') {
+        const rubble = new RubblePile(screenX, screenY, s.gridX, s.gridY, s.wreckedType || null);
+        rubble.age = Infinity; // it's old wreckage: no collapse dust on load
+        towerManager.towers.push(rubble);
+        towerManager.markTowerPosition(s.gridX, s.gridY);
+        level.placeTower(s.gridX, s.gridY);
+        return;
+    }
+
     let tower = TowerRegistry.createTower(s.type, screenX, screenY, s.gridX, s.gridY);
     if (!tower) return;
 

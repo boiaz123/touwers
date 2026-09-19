@@ -4,6 +4,7 @@ import { EnemyIntelRegistry } from '../core/registries/EnemyIntelRegistry.js';
 import { InputManager } from '../core/managers/InputManager.js';
 import { ControlsScreen } from './ControlsScreen.js';
 import { ResolutionSettings } from '../core/config/ResolutionSettings.js';
+import { TowerRegistry } from '../entities/towers/TowerRegistry.js';
 import { TowerTransformRegistry } from '../entities/towers/TowerTransformRegistry.js';
 import { SharpshooterTower } from '../entities/towers/SharpshooterTower.js';
 import { COMBO_SPELL_LEVEL_BONUS } from '../entities/towers/CombinationTower.js';
@@ -2181,6 +2182,26 @@ export class UIManager {
         });
     }
 
+    /**
+     * One choice card for the Magic Tower's element menu and the Combination Tower's spell
+     * menu: just the icon, the name and what it does. The whole card is the button (no
+     * separate Select button, no "Free" / "Currently Selected" labels) and the chosen one is
+     * outlined green (.panel-select-card.selected). `dataKey` is the data-* attribute the
+     * click handler reads the id back from ('element' / 'spell'); `tooltipHTML` feeds
+     * _setupTooltipHovers.
+     */
+    _buildSelectCardHTML({ dataKey, id, iconHTML, name, description, isCurrent, tooltipHTML }) {
+        return `
+            <button type="button" class="panel-select-card ${isCurrent ? 'selected' : ''}" data-${dataKey}="${id}" aria-pressed="${isCurrent}" data-tooltip="${tooltipHTML.replace(/"/g, '&quot;')}">
+                <span class="select-card-icon">${iconHTML}</span>
+                <span class="select-card-text">
+                    <span class="upgrade-name">${name}</span>
+                    <span class="upgrade-description">${description}</span>
+                </span>
+            </button>
+        `;
+    }
+
     setupForgePanelListeners(forgeData, unlockSystem) {
         const panel = document.getElementById('forge-panel');
         if (!panel) return;
@@ -2593,7 +2614,10 @@ export class UIManager {
             const parts = [`+${b.damage} dmg`];
             if (b.slowPct) parts.push(`+${b.slowPct}% slow`);
             if (b.chainPx) parts.push(`+${b.chainPx}px chain`);
-            effectsList.push(`${this.getElementGemHTML(element)} ${element.charAt(0).toUpperCase() + element.slice(1)}: ${parts.join(' ')}`);
+            // 1em (not the 14px default): the badge's font shrinks with the viewport but a fixed
+            // 14px gem doesn't, so below the widest text scale it outgrew the badge's 1.3
+            // line-height and pushed every line past the height .forge-effects-row reserves.
+            effectsList.push(`${this.getElementGemHTML(element, '1em')} ${element.charAt(0).toUpperCase() + element.slice(1)}: ${parts.join(' ')}`);
         });
         
         // Build header with prominent academy upgrade button
@@ -2611,7 +2635,7 @@ export class UIManager {
                         <div class="forge-level-bar">
                             <div class="forge-level-bar-fill" style="width: ${(academy.academyLevel / academy.maxAcademyLevel) * 100}%"></div>
                         </div>
-                        <div class="forge-effects-row">
+                        <div class="forge-effects-row four-lines">
                             ${effectsList.map(effect => `<span class="effect-badge">${effect}</span>`).join('')}
                         </div>
                         <div class="forge-benefits-list">
@@ -2627,11 +2651,10 @@ export class UIManager {
                                 <span class="forge-benefit-label">Tower Leveling:</span>
                                 <span class="forge-benefit-value">${academy.academyLevel >= 2 ? 'Unlocked (Max Lv 20)' : 'Locked'}</span>
                             </div>
-                            ${unlockSystem.superweaponUnlocked ? `
-                            <div class="forge-benefit-item">
+                            <div class="forge-benefit-item ${unlockSystem.superweaponUnlocked ? '' : 'reserved'}"${unlockSystem.superweaponUnlocked ? '' : ' aria-hidden="true"'}>
                                 <span class="forge-benefit-label">Super Weapon Lab:</span>
                                 <span class="forge-benefit-value">Available</span>
-                            </div>` : ''}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3005,6 +3028,7 @@ export class UIManager {
         // Element selection section header
         contentHTML += `<div class="upgrade-category" style="padding: 0.3rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.3);"><div style="font-size: 0.75rem; color: #FFD700; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Select Element</div></div>`;
         
+        contentHTML += '<div class="upgrade-category panel-select-list">';
         towerData.elements.forEach(element => {
             const isCurrent = element.id === towerData.currentElement;
 
@@ -3020,28 +3044,18 @@ export class UIManager {
             elTooltip += this.getMagicElementCurrentStats(element.id, academy);
             elTooltip += `</div>`;
 
-            contentHTML += `
-                <div class="upgrade-category">
-                    <div class="panel-upgrade-item ${isCurrent ? 'selected-element' : ''}" data-tooltip="${elTooltip.replace(/"/g, '&quot;')}">
-                        <div class="upgrade-header-row">
-                            <div class="upgrade-icon-section" style="display:flex;align-items:center;justify-content:center;">${this.getElementGemHTML(element.id, '22px')}</div>
-                            <div class="upgrade-info-section">
-                                <div class="upgrade-name">${element.name} Element</div>
-                                <div class="upgrade-description">${element.description}</div>
-                                ${isCurrent ? '<div class="upgrade-current">Currently Selected</div>' : ''}
-                            </div>
-                        </div>
-                        <div class="upgrade-action-row">
-                            <div class="upgrade-cost-display">Free</div>
-                            <button class="upgrade-button panel-element-btn" data-element="${element.id}" ${isCurrent ? 'disabled' : ''}>
-                                ${isCurrent ? 'Active' : 'Select'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
+            contentHTML += this._buildSelectCardHTML({
+                dataKey: 'element',
+                id: element.id,
+                iconHTML: this.getElementGemHTML(element.id, '22px'),
+                name: `${element.name} Element`,
+                description: element.description,
+                isCurrent,
+                tooltipHTML: elTooltip
+            });
         });
-        
+        contentHTML += '</div>';
+
         // Update panel title and content
         const titleElement = panel.querySelector('.panel-title');
         if (titleElement) titleElement.textContent = 'Magic Tower Elements';
@@ -3061,12 +3075,13 @@ export class UIManager {
             closeBtn.addEventListener('click', () => this.closePanelWithAnimation('magic-tower-panel'), { once: true });
         }
         
-        // Add element selection handlers
-        panel.querySelectorAll('.panel-element-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const elementId = e.target.dataset.element;
-                
-                
+        // Element selection: the whole card is the button. Clicking the one that's already
+        // chosen does nothing.
+        panel.querySelectorAll('.panel-select-card[data-element]').forEach(card => {
+            card.addEventListener('click', () => {
+                const elementId = card.dataset.element;
+                if (elementId === towerData.currentElement) return;
+
                 if (this.towerManager.selectMagicTowerElement(towerData.tower, elementId)) {
                     // Refresh the menu
                     this.showMagicTowerElementMenu({
@@ -3077,12 +3092,12 @@ export class UIManager {
                         currentElement: elementId
                     });
                 }
-            }, { once: true });
+            });
         });
 
         // Element hover tooltips, in line with the other panels' upgrade-button hover info
         // (see _setupTooltipHovers).
-        this._setupTooltipHovers(panel.querySelectorAll('.panel-upgrade-item[data-tooltip]'), panel);
+        this._setupTooltipHovers(panel.querySelectorAll('.panel-select-card[data-tooltip]'), panel);
 
         // Add sell button listener
         const sellBtn = panel.querySelector('.sell-tower-btn');
@@ -3155,6 +3170,7 @@ export class UIManager {
         // Spell selection section header
         contentHTML += `<div class="upgrade-category" style="padding: 0.3rem 0.85rem; border-top: 1px solid rgba(255, 215, 0, 0.3);"><div style="font-size: 0.75rem; color: #FFD700; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Select Spell</div></div>`;
         
+        contentHTML += '<div class="upgrade-category panel-select-list">';
         towerData.spells.forEach(spell => {
             const isCurrent = spell.id === towerData.currentSpell;
 
@@ -3174,28 +3190,18 @@ export class UIManager {
             spellTooltip += level > 0 ? this.getComboSpellCurrentStats(spell.id, level) : '<div style="color: #aaa;">No upgrades invested yet</div>';
             spellTooltip += `</div>`;
 
-            contentHTML += `
-                <div class="upgrade-category">
-                    <div class="panel-upgrade-item ${isCurrent ? 'selected-element' : ''}" data-tooltip="${spellTooltip.replace(/"/g, '&quot;')}">
-                        <div class="upgrade-header-row">
-                            <div class="upgrade-icon-section">${spell.icon}</div>
-                            <div class="upgrade-info-section">
-                                <div class="upgrade-name">${spell.name} Spell</div>
-                                <div class="upgrade-description">${spell.description}</div>
-                                ${isCurrent ? '<div class="upgrade-current">Currently Active</div>' : ''}
-                            </div>
-                        </div>
-                        <div class="upgrade-action-row">
-                            <div class="upgrade-cost-display">Free</div>
-                            <button class="upgrade-button panel-spell-btn" data-spell="${spell.id}" ${isCurrent ? 'disabled' : ''}>
-                                ${isCurrent ? 'Active' : 'Select'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
+            contentHTML += this._buildSelectCardHTML({
+                dataKey: 'spell',
+                id: spell.id,
+                iconHTML: spell.icon,
+                name: `${spell.name} Spell`,
+                description: spell.description,
+                isCurrent,
+                tooltipHTML: spellTooltip
+            });
         });
-        
+        contentHTML += '</div>';
+
         // Update panel title and content
         const titleElement = panel.querySelector('.panel-title');
         if (titleElement) titleElement.textContent = 'Combination Tower Spells';
@@ -3215,12 +3221,13 @@ export class UIManager {
             closeBtn.addEventListener('click', () => this.closePanelWithAnimation('combination-tower-panel'), { once: true });
         }
         
-        // Add spell selection handlers
-        panel.querySelectorAll('.panel-spell-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const spellId = e.target.dataset.spell;
-                
-                
+        // Spell selection: the whole card is the button. Clicking the one that's already
+        // chosen does nothing.
+        panel.querySelectorAll('.panel-select-card[data-spell]').forEach(card => {
+            card.addEventListener('click', () => {
+                const spellId = card.dataset.spell;
+                if (spellId === towerData.currentSpell) return;
+
                 if (this.towerManager.selectCombinationTowerSpell(towerData.tower, spellId)) {
                     this.showCombinationTowerMenu({
                         type: 'combination_tower_menu',
@@ -3229,12 +3236,12 @@ export class UIManager {
                         currentSpell: spellId
                     });
                 }
-            }, { once: true });
+            });
         });
 
         // Spell hover tooltips, in line with the other panels' upgrade-button hover info
         // (see _setupTooltipHovers).
-        this._setupTooltipHovers(panel.querySelectorAll('.panel-upgrade-item[data-tooltip]'), panel);
+        this._setupTooltipHovers(panel.querySelectorAll('.panel-select-card[data-tooltip]'), panel);
 
         // Add sell button listener
         const sellBtn = panel.querySelector('.sell-tower-btn');
@@ -3323,9 +3330,9 @@ export class UIManager {
                 const defenderCosts = [200, 300, 450];
                 const defenderLabels = ['Level 1', 'Level 2 - Medium', 'Level 3 - Heavy'];
                 const defenderDescriptions = [
-                    'Fast defender (70 HP, 15 DMG). Good for early game.',
-                    'Balanced defender (100 HP, 20 DMG). Moderate stats.',
-                    'Heavily armored tank (140 HP, 30 DMG). Maximum strength.'
+                    'Fast defender (100 HP, 15 DMG). Good for early game.',
+                    'Balanced defender (150 HP, 20 DMG). Moderate stats.',
+                    'Heavily armored tank (200 HP, 30 DMG). Maximum strength.'
                 ];
                 const defenderIcons = [
                     "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><line x1='10' y1='35' x2='30' y2='8' stroke='#C8A030' stroke-width='3' stroke-linecap='round'/><rect x='6' y='20' width='12' height='3' rx='1.5' fill='#8A5A10' stroke='#3A2005' stroke-width='1' transform='rotate(-44 12 21.5)'/><circle cx='10' cy='35' r='3.5' fill='#7A4A10' stroke='#3A2005' stroke-width='1'/></svg>",
@@ -3667,6 +3674,66 @@ export class UIManager {
     showBasicTowerStatsMenu(towerData) {
         // Redirect to the unified tower stats menu
         this.showTowerStatsMenu(towerData);
+    }
+
+    /**
+     * The panel for a pile of rubble (RubblePile) a Heavy Frog left behind: just what stood there and
+     * a button to clear it. Clearing is free - there's nothing left to sell - and frees the spot.
+     */
+    showRubbleMenu(towerData) {
+        this.closeOtherPanelsImmediate('basic-tower-panel');
+
+        this.activeMenuType = 'rubble';
+        this.activeMenuData = towerData;
+
+        const rubble = towerData.tower;
+        const wreckedClass = rubble.wreckedType ? TowerRegistry.getTowerClass(rubble.wreckedType) : null;
+        const wreckedName = wreckedClass ? wreckedClass.getInfo().name : 'tower';
+        const imageKey = rubble.wreckedType && TowerRegistry.hasTowerType(rubble.wreckedType) ? rubble.wreckedType : 'basic';
+
+        const contentHTML = `
+            <div class="forge-panel-header">
+                <div class="forge-header-top">
+                    <div class="forge-icon-display" style="filter: grayscale(0.85) brightness(0.7);"><img src="assets/towers/${imageKey}.png" alt="Rubble" style="width: 100%; height: 100%; object-fit: contain;"></div>
+                    <div class="forge-info-wrapper">
+                        <div class="forge-title-row">
+                            <div class="forge-name">Rubble</div>
+                        </div>
+                        <div class="upgrade-description" style="margin-top: 0.3rem;">
+                            All that is left of your ${wreckedName}, stomped flat by a Heavy Frog. Nothing can be built here until it is cleared.
+                        </div>
+                    </div>
+                </div>
+                <button id="clear-rubble-btn-${rubble.gridX}-${rubble.gridY}" class="forge-upgrade-btn forge-level-upgrade-btn clear-rubble-btn">
+                    <div class="forge-upgrade-btn-content">
+                        <span class="btn-label">Clear Rubble</span>
+                        <span class="btn-cost">Free</span>
+                    </div>
+                </button>
+            </div>
+        `;
+
+        this.showPanelWithoutClosing('basic-tower-panel', 'Rubble', contentHTML);
+
+        const clearBtn = document.getElementById(`clear-rubble-btn-${rubble.gridX}-${rubble.gridY}`);
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                if (!this.towerManager.clearRubble(rubble)) return;
+                this.updateButtonStates();
+                this.level.setPlacementPreview(0, 0, false);
+                this.closePanelWithAnimation('basic-tower-panel');
+            });
+        }
+    }
+
+    /**
+     * Closes whatever panel is open for `tower`, if any. Called when a tower stops existing under the
+     * player's feet (a Heavy Frog stomping it to rubble) so a stale panel can't act on it.
+     */
+    closeMenuForTower(tower) {
+        if (this.activeMenuData && this.activeMenuData.tower === tower) {
+            this.closeAllPanels();
+        }
     }
 
     showSuperWeaponMenu(menuData) {

@@ -9,14 +9,15 @@ export class MusicRegistry {
      * Register a music track
      * @param {string} name - Unique identifier for the track
      * @param {string} path - Path to the audio file (relative to public/)
-     * @param {object} options - Additional options (loop, category, etc.)
+     * @param {object} options - Additional options (loop, category, title, etc.)
      */
     static registerMusic(name, path, options = {}) {
         this.registry[name] = {
             path: path,
             loop: options.loop !== false, // Default to true
             category: options.category || 'music', // 'music', 'menu', 'gameplay', etc.
-            volume: options.volume || 1.0
+            volume: options.volume || 1.0,
+            title: options.title || null // Display name, for tracks the marketplace doesn't sell (settlement songs)
         };
     }
     
@@ -98,6 +99,7 @@ export function initializeMusicRegistry() {
         {
             loop: true,
             category: 'settlement',
+            title: 'Hearthside',
             volume: 0.7
         }
     );
@@ -108,6 +110,7 @@ export function initializeMusicRegistry() {
         {
             loop: true,
             category: 'settlement',
+            title: 'Market Day',
             volume: 0.7
         }
     );
@@ -118,6 +121,7 @@ export function initializeMusicRegistry() {
         {
             loop: true,
             category: 'settlement',
+            title: 'Village Green',
             volume: 0.7
         }
     );
@@ -128,6 +132,7 @@ export function initializeMusicRegistry() {
         {
             loop: true,
             category: 'settlement',
+            title: 'Lantern Watch',
             volume: 0.7
         }
     );

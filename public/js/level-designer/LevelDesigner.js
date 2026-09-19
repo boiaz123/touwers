@@ -1191,7 +1191,9 @@ export class LevelDesigner {
         const BASE_ENEMY_HEALTH = {
             'basic': 100, 'villager': 100, 'archer': 120, 'beefyenemy': 200,
             'knight': 1500, 'shieldknight': 780, 'mage': 750, 'frog': 85,
-            'earthfrog': 340, 'waterfrog': 340, 'firefrog': 340, 'airfrog': 340, 'frogking': 500
+            'earthfrog': 340, 'waterfrog': 340, 'firefrog': 340, 'airfrog': 340, 'frogking': 500,
+            // The 5 minions that come with every Heavy Frog are worth gold too (90 HP each)
+            'heavyfrog': 1200 + 5 * 90
         };
         let cumulativeGold = 100;
 

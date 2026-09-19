@@ -2,6 +2,14 @@ import { LootRegistry } from '../../entities/loot/LootRegistry.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { WorkshopRegistry } from '../registries/WorkshopRegistry.js';
 
+// Normal pace of the SPOILS reveal. Only sped up when it would outlast the victory tune
+// (see ResultsScreen._planLootReveal).
+const LOOT_ITEMS_PER_SECOND = 1.0;
+// How long an item's bounce-in takes (renderLoot).
+const LOOT_BOUNCE_SECONDS = 0.32;
+// The pickup sound's length if it can't be read from the file (LootCollect.mp3 is 0.5s).
+const LOOT_PICKUP_SOUND_FALLBACK_SECONDS = 0.5;
+
 /**
  * ResultsScreen - In-game modal for displaying level completion with animations
  * Features: Count-up stats, sequential loot reveal, dopamine-driven animations
@@ -71,6 +79,7 @@ export class ResultsScreen {
         // Loot animation state
         this.lootAnimationIndex = 0;
         this.lootAnimationTime = 0; // Track cumulative time for loot animation (doesn't reset on phase change)
+        this.lootItemsPerSecond = LOOT_ITEMS_PER_SECOND; // Reveal pace, set as the loot phase begins (_planLootReveal)
         this.lootDisplayItems = []; // { lootId, x, y, animationTime }
 
         // Button state
@@ -140,10 +149,16 @@ export class ResultsScreen {
             displayScore: 0
         };
 
-        // Calculate loot phase duration based on number of items (1 item per second)
-        // No minimum - duration matches exactly the number of items
-        const itemsPerSecond = 1.0;
-        this.phaseDuration.loot = this.lootDisplayIds.length / itemsPerSecond;
+        // Loot phase duration at the normal pace (1 item per second), no minimum - duration
+        // matches exactly the number of items. Re-planned against the victory tune once the
+        // phase actually begins (_planLootReveal).
+        this.lootItemsPerSecond = LOOT_ITEMS_PER_SECOND;
+        this.phaseDuration.loot = this.lootDisplayIds.length / LOOT_ITEMS_PER_SECOND;
+
+        // Start reading the pickup sound's length now so it's known by the time the reveal starts
+        if (type === 'levelComplete' && this.stateManager.audioManager) {
+            this.stateManager.audioManager.getSFXDuration('loot-collect');
+        }
 
         // Setup buttons
         if (type === 'levelComplete') {
@@ -323,6 +338,7 @@ export class ResultsScreen {
             this.animationPhase = 'loot';
             this.phaseTime = 0;
             this.lootAnimationIndex = 0;
+            this._planLootReveal();
         } else if (this.animationPhase === 'loot' && this.phaseTime >= this.phaseDuration.loot) {
             this.animationPhase = 'buttons';
             this.phaseTime = 0;
@@ -356,8 +372,7 @@ export class ResultsScreen {
 
         // Update loot animations - synced with lootAnimationTime to match renderLoot timing
         if (this.animationPhase === 'loot') {
-            const itemsPerSecond = 1.0;
-            const expectedIndex = Math.floor(this.lootAnimationTime * itemsPerSecond);
+            const expectedIndex = Math.floor(this.lootAnimationTime * this.lootItemsPerSecond);
 
             while (this.lootAnimationIndex <= expectedIndex && this.lootAnimationIndex < this.lootDisplayIds.length) {
                 const lootId = this.lootDisplayIds[this.lootAnimationIndex];
@@ -379,6 +394,40 @@ export class ResultsScreen {
             p.y += p.vy * deltaTime;
             p.vy += p.gravity * deltaTime;
         }
+    }
+
+    /**
+     * Sets the pace of the SPOILS reveal as the loot phase begins. It runs at the normal
+     * LOOT_ITEMS_PER_SECOND unless that would still be going once the victory tune has ended
+     * (a big haul) - then the gaps between items shrink so the last item lands, bounce-in and
+     * pickup sound included, just as the tune finishes. The pickup sound itself is never sped
+     * up, only fired more often. A reveal that already ends before the tune is left alone, and
+     * so is one with no tune to line up with (not playing, or its length isn't known).
+     *
+     * Also (re)computes the phase length from the final item count, which can have grown
+     * during the results delay after show() first computed it.
+     */
+    _planLootReveal() {
+        const count = this.lootDisplayIds.length;
+        this.lootItemsPerSecond = LOOT_ITEMS_PER_SECOND;
+        this.phaseDuration.loot = count / LOOT_ITEMS_PER_SECOND;
+        if (count < 2) return;
+
+        const audio = this.stateManager.audioManager;
+        const tuneLeft = audio ? audio.getSFXTuneTimeRemaining() : null;
+        if (tuneLeft === null) return;
+
+        // What must be over by the time the tune is, after the last item is revealed
+        const pickupSound = audio.getSFXDuration('loot-collect') ?? LOOT_PICKUP_SOUND_FALLBACK_SECONDS;
+        const tail = Math.max(LOOT_BOUNCE_SECONDS, pickupSound);
+        const lastRevealAt = (count - 1) / LOOT_ITEMS_PER_SECOND;
+        if (lastRevealAt + tail <= tuneLeft) return;
+
+        // Overflow: reveal every item in the time before that tail. The floor only matters if
+        // the tune is practically over already, so the reveal never collapses to nothing.
+        const revealSpan = Math.max(tuneLeft - tail, 1);
+        this.lootItemsPerSecond = (count - 1) / revealSpan;
+        this.phaseDuration.loot = revealSpan + tail;
     }
 
     /**
@@ -1834,7 +1883,7 @@ export class ResultsScreen {
         // Calculate which items should be visible based on loot animation progress
         // Use lootAnimationTime which doesn't reset on phase transitions
         const lootTime = this.lootAnimationTime || 0;
-        const itemsPerSecond = 1.0; // 1 item per second
+        const itemsPerSecond = this.lootItemsPerSecond;
         const itemShowDuration = 1 / itemsPerSecond;
 
         let displayedCount = 0; // Count of items actually rendered on this page
@@ -1883,8 +1932,7 @@ export class ResultsScreen {
             const timeSinceReveal = lootTime - itemRevealTime;
 
             // Elastic bounce-in scale (0 → 1.18 → 1.0)
-            const bounceDuration = 0.32;
-            const bounceT = Math.min(timeSinceReveal / bounceDuration, 1);
+            const bounceT = Math.min(timeSinceReveal / LOOT_BOUNCE_SECONDS, 1);
             const bounceScale = bounceT >= 1 ? 1 : (
                 bounceT < 0.55
                     ? (bounceT / 0.55) * 1.18          // overshoot to 1.18

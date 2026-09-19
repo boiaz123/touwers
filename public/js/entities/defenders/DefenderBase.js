@@ -56,17 +56,17 @@ export class DefenderBase {
         // Base stats that scale with level
         switch(this.level) {
             case 1:
-                this.maxHealth = 400;
+                this.maxHealth = 100;
                 this.health = this.maxHealth;
                 this.armour = 3;
                 break;
             case 2:
-                this.maxHealth = 800;
+                this.maxHealth = 150;
                 this.health = this.maxHealth;
                 this.armour = 6;
                 break;
             case 3:
-                this.maxHealth = 1200;
+                this.maxHealth = 200;
                 this.health = this.maxHealth;
                 this.armour = 9;
                 break;

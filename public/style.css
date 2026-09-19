@@ -2385,8 +2385,16 @@ body.results-showing .side-panel * {
        down the panel. Three lines because the Forge and Training Grounds each have five
        upgrade paths, which wrap onto a third line at the panel's narrower widths. Sized
        off .effect-badge's own box (font-size + line-height + vertical padding + border)
-       rather than a guessed pixel value, so it stays in sync if that changes. */
-    min-height: calc(3 * (0.7rem * 1.3 + 0.4rem + 2px) + 2 * 0.4rem);
+       rather than a guessed pixel value, so it stays in sync if that changes.
+       --effect-lines is the number of lines reserved (3 unless a panel sets its own). */
+    min-height: calc(var(--effect-lines, 3) * (0.7rem * 1.3 + 0.4rem + 2px) + (var(--effect-lines, 3) - 1) * 0.4rem);
+}
+
+/* The Magic Academy has four elemental upgrade paths, and each badge there (gem icon + damage
+   + slow/chain range) is wide enough to take a line of its own at the panel's width, so it
+   needs a fourth reserved line or the 4th path's first purchase shoves the list down. */
+.forge-effects-row.four-lines {
+    --effect-lines: 4;
 }
 
 .effect-badge {
@@ -2458,6 +2466,12 @@ body.results-showing .side-panel * {
     display: flex;
     align-items: baseline;
     gap: 0.3rem;
+}
+
+/* Keeps a benefit row's space in the list while hiding what it says, for a benefit that only
+   shows up once unlocked - so unlocking it doesn't grow the header and shove the list down. */
+.forge-benefit-item.reserved {
+    visibility: hidden;
 }
 
 .forge-benefit-label {
@@ -3003,6 +3017,84 @@ body.results-showing .side-panel * {
 
 .panel-upgrade-item.maxed:hover {
     transform: none;
+}
+
+/* Whole-card choice buttons (Magic Tower elements, Combination Tower spells): just the icon,
+   the name and what it does. The entire card is the click target - there is no separate
+   Select button - and the chosen one is outlined green. */
+.panel-select-list {
+    display: grid;
+    /* Every card is as tall as the tallest one (an effect that wraps onto a second line), so
+       the cards are all one size and choosing one never resizes anything. */
+    grid-auto-rows: 1fr;
+    gap: 0.6rem;
+}
+
+.panel-select-card {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.75rem;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    background: linear-gradient(135deg, rgba(52, 36, 22, 0.9), rgba(38, 24, 14, 0.9));
+    border: 2px solid rgba(100, 80, 55, 0.7);
+    border-radius: 0.4rem;
+    box-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(180, 140, 80, 0.08),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+}
+
+.panel-select-card:hover {
+    border-color: var(--primary-gold);
+    background: linear-gradient(135deg, rgba(72, 52, 32, 0.95), rgba(55, 38, 22, 0.95));
+    box-shadow: 0 4px 14px rgba(212, 175, 55, 0.3), inset 0 1px 0 rgba(180, 140, 80, 0.12);
+    transform: translateY(-2px);
+}
+
+/* Same green the rest of the UI uses for "currently active" (.upgrade-current). Stays green
+   under the cursor so hovering the chosen card doesn't read as a different state. */
+.panel-select-card.selected,
+.panel-select-card.selected:hover {
+    border-color: #32CD32;
+    box-shadow:
+        0 0 0 1px #32CD32,
+        0 0 14px rgba(50, 205, 50, 0.35),
+        inset 0 1px 0 rgba(180, 140, 80, 0.08);
+}
+
+.panel-select-card:focus {
+    outline: none;
+}
+
+.panel-select-card:focus-visible {
+    outline: 2px solid var(--primary-gold-light);
+    outline-offset: 2px;
+}
+
+.select-card-icon {
+    flex: 0 0 auto;
+    min-width: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+
+.select-card-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* No trailing gap under the effect line - it would push the text off-centre in the card. */
+.select-card-text .upgrade-description {
+    margin-bottom: 0;
 }
 
 .upgrade-header-row {

@@ -77,6 +77,20 @@ export class EnemyIntelRegistry {
             stats: { health: 2000, speed: 30, armour: 12, magicResistance: 0.4, damage: 9 },
             abilities: ['High HP', 'Magic resistant', 'Bursts open on death', 'Releases a brood of frogs']
         },
+        'heavyfrog': {
+            name: 'Heavy Frog',
+            description: 'A plate-armoured brute of a frog that plods down the road behind five tiny squires in matching steel. Nothing can touch him while they live, and any tower he passes might get stomped into a pile of rubble that has to be cleared before you can build there again.',
+            image: 'assets/enemies/heavyfrog.png',
+            stats: { health: 1200, speed: 26, armour: 45, magicResistance: 0.25, damage: 14 },
+            abilities: ['Heavy armour', 'Invulnerable while his minions live', 'Stomps towers to rubble (up to 3 times)', 'Escorted by 5 minions']
+        },
+        'heavyfrogminion': {
+            name: 'Heavy Frog Minion',
+            description: 'A tiny copy of the Heavy Frog in matching steel. Five of them march in formation around their master, and he cannot be harmed until every one of them has been put down.',
+            image: 'assets/enemies/heavyfrogminion.png',
+            stats: { health: 90, speed: 26, armour: 6, magicResistance: 0.1, damage: 2 },
+            abilities: ['Shields the Heavy Frog', 'Keeps formation around him']
+        },
         // ELEMENTAL FROGS (Spy Report III)
         'earthfrog': {
             name: 'Frog of Earth',
@@ -112,7 +126,7 @@ export class EnemyIntelRegistry {
     static #intelMapping = {
         'intel-pack-1': ['basic', 'archer', 'beefyenemy', 'villager', 'knight'],
         'intel-pack-2': ['shieldknight', 'ramcart'],
-        'intel-pack-3': ['mage', 'frog', 'walkingfrog', 'earthfrog', 'waterfrog', 'firefrog', 'airfrog']
+        'intel-pack-3': ['mage', 'frog', 'walkingfrog', 'heavyfrog', 'heavyfrogminion', 'earthfrog', 'waterfrog', 'firefrog', 'airfrog']
     };
 
     /**

@@ -1716,6 +1716,9 @@ export class GameplayState {
         } else if (clickResult.type === 'tower_stats') {
             this.uiManager.showTowerStatsMenu(clickResult);
             return true;
+        } else if (clickResult.type === 'rubble_menu') {
+            this.uiManager.showRubbleMenu(clickResult);
+            return true;
         } else if (clickResult.type === 'guard_post_menu') {
             this.uiManager.showGuardPostMenu(clickResult);
             return true;
@@ -2403,8 +2406,24 @@ export class GameplayState {
                 if ((enemy.type === 'mage' || enemy.type === 'frogking') && this.towerManager && enemy._towersRef !== this.towerManager.towers) {
                     enemy._towersRef = this.towerManager.towers;
                 }
+                if (enemy.type === 'heavyfrog' && this.towerManager && enemy._towersRef !== this.towerManager.towers) {
+                    enemy._towersRef = this.towerManager.towers;
+                    if (!this._towerSmashHandler) this._towerSmashHandler = (tower) => this._onTowerSmashed(tower);
+                    enemy._towerSmashHandler = this._towerSmashHandler;
+                }
             }
         }
+    }
+
+    /**
+     * A Heavy Frog has finished stomping a tower (HeavyFrogEnemy._updateSmash): it becomes a pile of
+     * rubble, and anything the player had open for it - its stats/sell panel in particular - has to
+     * go, or its Sell button would refund a tower that no longer exists and free the rubble's cells.
+     */
+    _onTowerSmashed(tower) {
+        if (!this.towerManager.destroyTower(tower)) return;
+        this.uiManager.closeMenuForTower(tower);
+        this.uiManager.updateButtonStates();
     }
 
     _updateEnemyCombat(deltaTime, adjustedDeltaTime) {

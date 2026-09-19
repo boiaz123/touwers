@@ -479,15 +479,15 @@ export class MusicalScoresMenu {
         }
 
         // Settlement theme songs aren't sold individually in the marketplace -
-        // they auto-unlock as soon as the musical-equipment upgrade is owned.
+        // they auto-unlock as soon as the musical-equipment upgrade is owned, and carry
+        // their own titles in the MusicRegistry.
         const upgradeSystem = this.stateManager.upgradeSystem;
         if (upgradeSystem && upgradeSystem.hasUpgrade('musical-equipment')) {
             const settlementTracks = MusicRegistry.getMusicByCategory('settlement');
-            for (const musicId of Object.keys(settlementTracks)) {
-                const num = musicId.match(/(\d+)$/);
+            for (const [musicId, music] of Object.entries(settlementTracks)) {
                 this.unlockedMusicTracks.set(musicId, {
                     id: musicId,
-                    name: num ? `Settlement Theme ${num[1]}` : 'Settlement Theme',
+                    name: music.title || 'Settlement Theme',
                     musicId,
                     isPlaying: false
                 });
@@ -1087,9 +1087,7 @@ export class MusicalScoresMenu {
         ctx.textBaseline = 'top';
         const maxLines = 3;
         const lineHeight = 11;
-        // A trailing number stays glued to the word before it ("Settlement Theme 4" wraps as
-        // "Settlement / Theme 4", never "Settlement Theme / 4")
-        const words = track.name.replace(/ (\d+)$/, ' $1').split(' ');
+        const words = track.name.split(' ');
         const lines = [];
         let line = '';
         words.forEach(word => {

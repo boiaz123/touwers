@@ -333,7 +333,7 @@ export class MarketplaceRegistry {
             requirements: ['musical-equipment']
         },
         'music-forest-1': {
-            name: 'Forest Battle - Awakening',
+            name: 'Awakening',
             description: 'The sound of the forest coming alive. Ancient magic stirs as your defenders prepare for battle.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -344,7 +344,7 @@ export class MarketplaceRegistry {
             requirements: ['musical-equipment']
         },
         'music-forest-2': {
-            name: 'Forest Battle - Rising Tide',
+            name: 'Rising Tide',
             description: 'The intensity builds as enemies approach. Nature itself seems to join the fray.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -355,7 +355,7 @@ export class MarketplaceRegistry {
             requirements: ['musical-equipment']
         },
         'music-forest-3': {
-            name: 'Forest Battle - Triumph',
+            name: 'Triumph',
             description: 'A powerful theme that speaks of victory and dominance. Hear the triumph of the forest.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -366,7 +366,7 @@ export class MarketplaceRegistry {
             requirements: ['musical-equipment']
         },
         'music-forest-4': {
-            name: 'Forest Battle - Aftermath',
+            name: 'Aftermath',
             description: 'The dust settles over the battlefield. A reflective theme honoring the fallen and the victors alike.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -377,7 +377,7 @@ export class MarketplaceRegistry {
             requirements: ['musical-equipment']
         },
         'music-forest-5': {
-            name: 'Forest Battle - Last Stand',
+            name: 'Last Stand',
             description: 'When all seems lost, the forest rallies one final time. A desperate, defiant theme for the darkest hour.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -388,7 +388,7 @@ export class MarketplaceRegistry {
             requirements: ['musical-equipment']
         },
         'music-mountain-1': {
-            name: 'Mountain Battle - Foothills',
+            name: 'Foothills',
             description: 'Echoing through mountain peaks, this theme speaks of strength and unshakeable resolve.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -400,7 +400,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-2'
         },
         'music-mountain-2': {
-            name: 'Mountain Battle - Avalanche',
+            name: 'Avalanche',
             description: 'Snow and stone crash down as the battle intensifies. A relentless, thundering theme.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -412,7 +412,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-2'
         },
         'music-mountain-3': {
-            name: 'Mountain Battle - Summit',
+            name: 'Summit',
             description: 'High above the clouds, the final push begins. A soaring theme of grit and ascension.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -424,7 +424,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-2'
         },
         'music-mountain-4': {
-            name: 'Mountain Battle - Endurance',
+            name: 'Endurance',
             description: 'The mountain tests every warrior\'s resolve. A theme of stamina and unyielding will.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -436,7 +436,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-2'
         },
         'music-desert-1': {
-            name: 'Desert Battle - Sands of Time',
+            name: 'Sands of Time',
             description: 'The melody of endless dunes and ancient ruins. Timeless and mysterious.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -448,7 +448,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-3'
         },
         'music-desert-2': {
-            name: 'Desert Battle - Mirage',
+            name: 'Mirage',
             description: 'A disorienting yet beautiful theme that captures the desert\'s enigmatic nature.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -460,7 +460,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-3'
         },
         'music-desert-3': {
-            name: 'Desert Battle - Scorched Earth',
+            name: 'Scorched Earth',
             description: 'The sun shows no mercy. A searing, percussive theme for battles fought under a merciless sky.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -472,7 +472,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-3'
         },
         'music-desert-4': {
-            name: 'Desert Battle - Oasis',
+            name: 'Oasis',
             description: 'A fleeting moment of calm amid the dunes, before the storm of battle returns.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -484,7 +484,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-3'
         },
         'music-desert-5': {
-            name: 'Desert Battle - Sandstorm',
+            name: 'Sandstorm',
             description: 'Visibility fades as the winds rise. A swirling, chaotic theme for the desert\'s fiercest battles.',
             cost: 100,
             drawIcon: _drawMusicNote,
@@ -496,7 +496,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-3'
         },
         'music-frogkings-1': {
-            name: "Frog King's Domain - Arrival",
+            name: 'Arrival',
             description: "An eerie, otherworldly theme that greets you upon entering the Frog King's realm. Ancient power hums in the air.",
             cost: 125,
             drawIcon: _drawMusicNote,
@@ -508,7 +508,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-4'
         },
         'music-frogkings-2': {
-            name: "Frog King's Domain - Chaos",
+            name: 'Chaos',
             description: 'The realm descends into madness. Frenzied rhythms mirror the relentless assault of the Frog King\'s forces.',
             cost: 125,
             drawIcon: _drawMusicNote,
@@ -520,7 +520,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-4'
         },
         'music-frogkings-3': {
-            name: "Frog King's Domain - Dominion",
+            name: 'Dominion',
             description: 'The Frog King asserts his dominion. A commanding, oppressive theme that speaks of absolute power.',
             cost: 125,
             drawIcon: _drawMusicNote,
@@ -532,7 +532,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-4'
         },
         'music-frogkings-4': {
-            name: "Frog King's Domain - Reckoning",
+            name: 'Reckoning',
             description: 'A moment of reckoning arrives. Tension builds to a fever pitch as the fate of the realm hangs in the balance.',
             cost: 125,
             drawIcon: _drawMusicNote,
@@ -544,7 +544,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-4'
         },
         'music-frogkings-5': {
-            name: "Frog King's Domain - Defiance",
+            name: 'Defiance',
             description: 'Against all odds, your defenders stand firm. A defiant anthem for those who refuse to yield.',
             cost: 125,
             drawIcon: _drawMusicNote,
@@ -556,7 +556,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-4'
         },
         'music-frogkings-6': {
-            name: "Frog King's Domain - Final Stand",
+            name: 'Final Stand',
             description: 'The ultimate confrontation. A sweeping, climactic theme for the final battle against the Frog King himself.',
             cost: 150,
             drawIcon: _drawMusicNote,
@@ -568,7 +568,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-4'
         },
         'music-frogkings-7': {
-            name: "Frog King's Domain - Eclipse",
+            name: 'Eclipse',
             description: 'Shadows swallow the realm as ancient power gathers. A foreboding theme heralding worse to come.',
             cost: 125,
             drawIcon: _drawMusicNote,
@@ -580,7 +580,7 @@ export class MarketplaceRegistry {
             campaignRequirement: 'campaign-4'
         },
         'music-frogkings-8': {
-            name: "Frog King's Domain - Ascension",
+            name: 'Ascension',
             description: 'Power beyond reckoning rises to its peak. A grand, otherworldly theme for the realm\'s mightiest battles.',
             cost: 150,
             drawIcon: _drawMusicNote,
@@ -664,7 +664,7 @@ export class MarketplaceRegistry {
         },
         'intel-pack-3': {
             name: 'Spy Report III',
-            description: 'Arcane scholars decipher cryptic runes revealing secrets of magical foes. Unlock intel on Mage Enemies, Frog Enemies, the Goliath Frog, and the Elemental Frogs (Earth, Water, Fire, and Air). Master the arcane, and you master the battlefield.',
+            description: 'Arcane scholars decipher cryptic runes revealing secrets of magical foes. Unlock intel on Mage Enemies, Frog Enemies, the Goliath Frog, the Heavy Frog and its minions, and the Elemental Frogs (Earth, Water, Fire, and Air). Master the arcane, and you master the battlefield.',
             cost: 300,
             drawIcon: _drawMagnifier,
             category: 'intel',

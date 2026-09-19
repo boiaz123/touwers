@@ -13,6 +13,8 @@ import { AirFrogEnemy } from './AirFrogEnemy.js';
 import { FrogKingEnemy } from './FrogKingEnemy.js';
 import { RamCartEnemy } from './RamCartEnemy.js';
 import { WalkingFrogEnemy } from './WalkingFrogEnemy.js';
+import { HeavyFrogEnemy } from './HeavyFrogEnemy.js';
+import { HeavyFrogMinionEnemy } from './HeavyFrogMinionEnemy.js';
 
 /**
  * EnemyRegistry - Centralized registry for all enemy types
@@ -80,6 +82,16 @@ export class EnemyRegistry {
         'walkingfrog': {
             class: WalkingFrogEnemy,
             ...WalkingFrogEnemy.BASE_STATS
+        },
+        'heavyfrog': {
+            class: HeavyFrogEnemy,
+            ...HeavyFrogEnemy.BASE_STATS
+        },
+        // Never placed in a wave directly: EnemyManager._spawnCompanions() creates these alongside
+        // every 'heavyfrog' (see HeavyFrogEnemy.companions).
+        'heavyfrogminion': {
+            class: HeavyFrogMinionEnemy,
+            ...HeavyFrogMinionEnemy.BASE_STATS
         }
     };
 

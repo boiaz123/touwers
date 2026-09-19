@@ -941,7 +941,7 @@ export class Castle {
         options.push({
             id: 'defender_1',
             name: 'Hire Level 1 Defender',
-            description: 'Light armored soldier with sword and shield (400 HP, 15 DMG)',
+            description: 'Light armored soldier with sword and shield (100 HP, 15 DMG)',
             type: 'defender_hire',
             level: 1,
             cost: this.calculateDefenderCost(1),
@@ -954,7 +954,7 @@ export class Castle {
             options.push({
                 id: 'defender_2',
                 name: 'Hire Level 2 Defender',
-                description: 'Medium armored knight with a two-handed sword (800 HP, 20 DMG)',
+                description: 'Medium armored knight with a two-handed sword (150 HP, 20 DMG)',
                 type: 'defender_hire',
                 level: 2,
                 cost: this.calculateDefenderCost(2),
@@ -968,7 +968,7 @@ export class Castle {
             options.push({
                 id: 'defender_3',
                 name: 'Hire Level 3 Defender',
-                description: 'Heavy armored Paladin with a massive sword (1200 HP, 30 DMG)',
+                description: 'Heavy armored Paladin with a massive sword (200 HP, 30 DMG)',
                 type: 'defender_hire',
                 level: 3,
                 cost: this.calculateDefenderCost(3),

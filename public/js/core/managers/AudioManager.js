@@ -68,7 +68,8 @@ export class AudioManager {
         this._sfxPoolIndex = 0;
         this._sfxThrottles = new Map();
         this._sfxMinInterval = 80; // Min ms between same SFX name
-        
+        this._sfxDurationProbes = new Map(); // sfxName -> metadata-only Audio, see getSFXDuration()
+
         // Fade interval tracking (separate ids so a duck/restore fade on the "front"
         // element can never cancel an in-flight track transition, or vice versa)
         this._fadeIntervalId = null;
@@ -607,6 +608,35 @@ export class AudioManager {
     }
 
     /**
+     * Seconds of the current victory/defeat tune still to play, or null when no tune is
+     * actually playing (never started, blocked by the autoplay policy, already over) or its
+     * length isn't known yet.
+     */
+    getSFXTuneTimeRemaining() {
+        const tune = this.currentSFXTune;
+        if (!tune || tune.paused || tune.ended || !Number.isFinite(tune.duration)) return null;
+        return Math.max(0, tune.duration - tune.currentTime);
+    }
+
+    /**
+     * Length in seconds of a registered sound effect, or null until its metadata has loaded.
+     * The first ask starts loading it in the background, so ask well before the answer is
+     * needed.
+     */
+    getSFXDuration(sfxName) {
+        const sfxData = this.sfxRegistry[sfxName] || this.musicRegistry[sfxName];
+        if (!sfxData) return null;
+        let probe = this._sfxDurationProbes.get(sfxName);
+        if (!probe) {
+            probe = new Audio();
+            probe.preload = 'metadata';
+            probe.src = sfxData.path;
+            this._sfxDurationProbes.set(sfxName, probe);
+        }
+        return Number.isFinite(probe.duration) ? probe.duration : null;
+    }
+
+    /**
      * Pause current music
      */
     pauseMusic() {
@@ -774,10 +804,16 @@ export class AudioManager {
                 this.currentSFXTune = null;
             }
             
-            // Get next pool element (round-robin)
-            const sfxElement = this._sfxPool[this._sfxPoolIndex];
+            // Get next pool element (round-robin), but never the one still playing the
+            // victory/defeat tune: 24 quick effects in a row (the results screen's per-item
+            // pickup sounds) would otherwise wrap the pool and cut the tune off mid-song.
+            let sfxElement = this._sfxPool[this._sfxPoolIndex];
             this._sfxPoolIndex = (this._sfxPoolIndex + 1) % this._sfxPoolSize;
-            
+            if (sfxElement === this.currentSFXTune) {
+                sfxElement = this._sfxPool[this._sfxPoolIndex];
+                this._sfxPoolIndex = (this._sfxPoolIndex + 1) % this._sfxPoolSize;
+            }
+
             // Stop if currently playing something
             sfxElement.pause();
             sfxElement.currentTime = 0;

@@ -1,4 +1,5 @@
 import { TowerRegistry } from './TowerRegistry.js';
+import { RubblePile } from './RubblePile.js';
 import { TowerTransformRegistry } from './TowerTransformRegistry.js';
 import { COMBO_SPELL_LEVEL_BONUS } from './CombinationTower.js';
 import { BuildingManager } from '../buildings/BuildingManager.js';
@@ -398,6 +399,45 @@ export class TowerManager {
         }
     }
     
+    /**
+     * Whether an enemy can wreck this tower: anything standing on a grid footprint. Guard posts sit
+     * on the road with defenders of their own, and a pile of rubble is already wrecked.
+     */
+    isDestroyable(tower) {
+        return !!tower && tower.type !== 'guard-post' && !tower.isRubble;
+    }
+
+    /**
+     * A tower is stomped flat (HeavyFrogEnemy): it's replaced, in place in the tower list, by a
+     * RubblePile on the same 2x2 footprint. The occupancy sets are deliberately left alone, so the
+     * spot stays blocked until the rubble is cleared. No refund. Returns the rubble, or null if
+     * this tower isn't (or is no longer) something that can be destroyed.
+     */
+    destroyTower(tower) {
+        const index = this.towers.indexOf(tower);
+        if (index === -1 || !this.isDestroyable(tower)) return null;
+
+        const rubble = new RubblePile(tower.x, tower.y, tower.gridX, tower.gridY, tower.type);
+        if (this.audioManager) rubble.audioManager = this.audioManager;
+        this.towers[index] = rubble;
+        tower.isSelected = false;
+
+        // The swap keeps towers.length unchanged, so update()'s count-based check wouldn't notice it -
+        // force the barricade cache / stat refresh to re-derive (same reason transformTower() does).
+        this._lastTowerCount = -1;
+
+        if (this.audioManager) this.audioManager.playSFX('trebuchet-impact');
+        return rubble;
+    }
+
+    /** The player clears a pile of rubble: it goes, and the cells are free to build on again. Free, no refund. */
+    clearRubble(rubble) {
+        if (!rubble || !rubble.isRubble || this.towers.indexOf(rubble) === -1) return false;
+        if (this.level) this.level.removeTower(rubble.gridX, rubble.gridY);
+        this.removeTower(rubble);
+        return true;
+    }
+
     update(deltaTime, enemies) {
         // OPTIMIZATION: Cache building references instead of filtering every frame
         if (!this.cachedForges || !this.cachedAcademies || !this.cachedTrainingGrounds) {
@@ -905,6 +945,11 @@ export class TowerManager {
                 const towerBottomEdge = towerTopEdge + towerGridHeight;
                 
                 if (x >= towerLeftEdge && x < towerRightEdge && y >= towerTopEdge && y < towerBottomEdge) {
+                    if (tower.isRubble) {
+                        // Nothing to upgrade or sell - just the option to clear it
+                        tower.isSelected = true;
+                        return { type: 'rubble_menu', tower: tower, position: { x: tower.x, y: tower.y } };
+                    }
                     if (tower.constructor.name === 'MagicTower') {
                         tower.isSelected = true;
                         this.playTowerSelectSound(tower);

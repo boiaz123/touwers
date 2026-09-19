@@ -260,7 +260,7 @@ export class FrogKingEnemy extends BaseEnemy {
                 let nearestDist = this.blockadeRange;
                 for (let j = 0; j < this._towersRef.length; j++) {
                     const tower = this._towersRef[j];
-                    if (tower.isDisabled || tower.type === 'guard-post') continue;
+                    if (tower.isDisabled || tower.type === 'guard-post' || tower.isRubble) continue;
                     const dx = tower.x - this.x;
                     const dy = tower.y - this.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);

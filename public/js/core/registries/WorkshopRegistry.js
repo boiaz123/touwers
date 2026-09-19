@@ -10,6 +10,18 @@ import { drawMedallion, drawCoverImage } from '../render/EmblemRenderer.js';
 // once the Commander's Workshop upgrade has been purchased (see EnemyManager).
 export const TOKEN_DROP_CHANCE = 0.001;
 
+// These types only turn up in ones and twos per wave, so the flat rate above almost never
+// hands out their token - they roll a higher chance instead.
+const BOOSTED_TOKEN_DROP_CHANCE = 0.02;
+const BOOSTED_TOKEN_ENEMY_TYPES = new Set([
+    'earthfrog', 'waterfrog', 'firefrog', 'airfrog', 'ramcart', 'walkingfrog', 'heavyfrog'
+]);
+
+/** Token drop chance (0-1) for a killed enemy of this type, once its token can drop at all. */
+export function getTokenDropChance(enemyType) {
+    return BOOSTED_TOKEN_ENEMY_TYPES.has(enemyType) ? BOOSTED_TOKEN_DROP_CHANCE : TOKEN_DROP_CHANCE;
+}
+
 // ── Token icon cache (module-level so every draw call shares one Image per enemy) ──
 const _enemyImageCache = new Map();
 function _getEnemyImage(enemyId, imagePath) {
@@ -146,7 +158,8 @@ export function drawFrogKingTokenIcon(ctx, cx, cy, size) {
 const ENEMY_TIERS = [
     { ids: ['basic', 'archer', 'beefyenemy', 'villager', 'knight'], requiredIntelPack: 'intel-pack-1', cost: 150 },
     { ids: ['shieldknight', 'ramcart'], requiredIntelPack: 'intel-pack-2', cost: 250 },
-    { ids: ['mage', 'frog', 'walkingfrog', 'earthfrog', 'waterfrog', 'firefrog', 'airfrog'], requiredIntelPack: 'intel-pack-3', cost: 350 }
+    // The Heavy Frog's minions aren't listed: they only ever come with a Heavy Frog (see EnemyManager._spawnCompanions)
+    { ids: ['mage', 'frog', 'walkingfrog', 'heavyfrog', 'earthfrog', 'waterfrog', 'firefrog', 'airfrog'], requiredIntelPack: 'intel-pack-3', cost: 350 }
 ];
 
 // Campaign themes reuse the matching campaign's own emblem art wholesale - the exact

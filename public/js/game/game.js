@@ -503,12 +503,13 @@ export class Game {
             });
 
             // Sell (DEL) - sells whatever tower's upgrade panel is currently open, by reusing
-            // that panel's own Sell button (same refund/cleanup logic as clicking it). Special
-            // buildings (forge, academy, etc.) are immutable once built and have no sell button.
+            // that panel's own Sell button (same refund/cleanup logic as clicking it). A pile of
+            // rubble's panel has a Clear Rubble button instead, which DEL presses the same way.
+            // Special buildings (forge, academy, etc.) are immutable once built and have neither.
             this.inputManager.on('sell', () => {
                 const refs = getGameplayRefs();
                 if (!refs || refs.gameplayState.isPaused) return;
-                const sellBtn = Array.from(document.querySelectorAll('.sell-tower-btn'))
+                const sellBtn = Array.from(document.querySelectorAll('.sell-tower-btn, .clear-rubble-btn'))
                     .find(btn => btn.offsetParent !== null);
                 if (sellBtn) {
                     sellBtn.click();

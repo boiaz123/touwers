@@ -16,7 +16,7 @@ export class InputManager {
         'speed3': '3',          // 3
         'cancel': 'Escape',     // ESC
         'menu': 'm',            // M
-        'sell': 'Delete',       // DEL - sell selected tower
+        'sell': 'Delete',       // DEL - sell selected tower / clear selected rubble
 
         // Tower hotkeys
         'tower_basic': 'q',
@@ -53,7 +53,7 @@ export class InputManager {
         'speed3': 'Speed 3x',
         'cancel': 'Cancel / Close',
         'menu': 'Open Menu',
-        'sell': 'Sell Selected Tower',
+        'sell': 'Sell Tower / Clear Rubble',
         'tower_basic': 'Watch Tower',
         'tower_cannon': 'Trebuchet Tower',
         'tower_archer': 'Archer Tower',

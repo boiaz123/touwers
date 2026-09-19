@@ -350,14 +350,20 @@ export class EnemyRenderAdapter {
             entryContainer.addChild(bodySprite, healthBar);
             this.container.addChild(entryContainer);
 
+            // An enemy can keep its own bar proportions (same {widthMul, heightMul, yOffsetMul}
+            // options as BaseEnemy.renderHealthBar) via an optional getHealthBarLayout().
+            const healthLayout = typeof entity.getHealthBarLayout === 'function'
+                ? entity.getHealthBarLayout() : undefined;
+
             // Draw initial full-health bar; seed lastHealthBucket to match so
             // the first sync() doesn't redundantly redraw.
-            _drawHealthBar(healthBar, 1.0, sizeHint);
+            _drawHealthBar(healthBar, 1.0, sizeHint, healthLayout);
 
             entry = {
                 modeA:           true,
                 entryContainer,  bodySprite, healthBar, frames,
                 currentVariantKey: variantKey,
+                healthLayout,
                 lastHealthBucket:  HB_BUCKETS,
             };
 
@@ -582,8 +588,11 @@ export class EnemyRenderAdapter {
         const hb = Math.round(entity.health / entity.maxHealth * HB_BUCKETS);
         if (hb !== entry.lastHealthBucket) {
             entry.lastHealthBucket = hb;
-            _drawHealthBar(entry.healthBar, entity.health / entity.maxHealth, sizeHint);
+            _drawHealthBar(entry.healthBar, entity.health / entity.maxHealth, sizeHint, entry.healthLayout);
         }
+        // Optional: hold the bar back until the enemy has actually been hurt (a Heavy Frog's five
+        // escorts would otherwise paper their bars over the frog they surround).
+        if (entity.hideFullHealthBar) entry.healthBar.visible = hb < HB_BUCKETS;
     }
 
     // ── Mode B ──────────────────────────────────────────────────────────────

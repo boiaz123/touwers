@@ -383,7 +383,7 @@ export class SpaceLevel1 extends LevelBase {
             enemyHealth_multiplier: 3.89, 
             speedMultiplier: 0.8, 
             spawnInterval: 1, 
-            pattern: [{ type: 'earthfrog', count: 1 }] 
+            pattern: [{ type: 'heavyfrog', count: 1 }] 
         }
         // Wave 38
         , { 

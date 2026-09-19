@@ -84,6 +84,7 @@ export class Tower {
             let closestDistSq = range * range;
             for (let i = 0; i < count; i++) {
                 const enemy = buf[i];
+                if (enemy.isShielded) continue; // a shielded Heavy Frog can't be hurt - shoot his escort
                 const dx = enemy.x - this.x;
                 const dy = enemy.y - this.y;
                 const distSq = dx * dx + dy * dy;
@@ -110,6 +111,7 @@ export class Tower {
 
         for (let i = 0; i < enemies.length; i++) {
             const enemy = enemies[i];
+            if (enemy.isShielded) continue; // a shielded Heavy Frog can't be hurt - shoot his escort
             const dx = enemy.x - this.x;
             const dy = enemy.y - this.y;
             const distSq = dx * dx + dy * dy;
