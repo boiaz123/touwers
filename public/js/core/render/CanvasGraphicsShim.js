@@ -91,7 +91,7 @@ export class CanvasGraphicsShim {
         // FillGradient builds a GPU texture internally and must be destroyed explicitly
         // (per Pixi's own docs) once an entity is done with it, or every fresh-recreated-
         // every-frame gradient call leaks one texture per frame. But several entities
-        // (e.g. FrogEnemy.js's this._bodyGradient) deliberately cache a CanvasGradient
+        // (e.g. ElementalFrogEnemy.js's this._tipGlow) deliberately cache a CanvasGradient
         // object across frames and skip recreating it on cache-hit frames - blindly
         // destroying "whatever was created last frame" would destroy that still-in-use
         // object one frame after creation, leaving the entity rendering with a destroyed

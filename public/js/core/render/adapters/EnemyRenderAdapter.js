@@ -1,5 +1,6 @@
-import { Container, Sprite, Graphics, Texture } from 'pixi.js';
+import { Container, Sprite, Graphics, Texture, Rectangle } from 'pixi.js';
 import { CanvasGraphicsShim } from '../CanvasGraphicsShim.js';
+import { bakeRigAtlas } from '../../../entities/enemies/rendering/RigCommon.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -39,7 +40,7 @@ function _walkFreq(entity) {
 /**
  * Per-type override for the Mode B redraw rate below, mirroring _walkFreq() above. ANIM_FPS=20
  * was tuned for typical humanoid animation cycles (~0.6-1s), but a fast short-cycle animation
- * (e.g. base FrogEnemy's 0.4s hop) only gets ~8 redraws/cycle at that rate - visibly choppier
+ * (e.g. the elemental frogs' hop) only gets ~8 redraws/cycle at that rate - visibly choppier
  * than a longer-cycle type gets at the same fps. Falls back to ANIM_FPS for every type that
  * doesn't override it.
  */
@@ -63,6 +64,10 @@ const ANIM_FPS = 20;
  * much for a crowd, this is a total budget shared by every Mode-B entity: each one keeps its
  * own rate until the budget runs out, then all slow down together, never below the floor.
  * Small crowds are untouched (a lone frog still gets its full 40fps).
+ *
+ * (The measurements above were taken on the standard frog, which has since moved to Mode C -
+ * the sprite rig, ~0.6ms for 40 frogs instead of ~36ms - so this budget now only governs the
+ * enemies that still draw live: the elemental frogs, mages and the Frog King.)
  */
 const MODE_B_REDRAW_BUDGET = 720; // total Mode-B redraws/second across all live-Graphics entities
 const MODE_B_MIN_FPS = 18;        // floor per entity - a hop is still legible at this rate
@@ -74,7 +79,8 @@ const HB_H   =  0.35;  // height
 const HB_BUCKETS = 20; // resolution of health-change detection
 
 /**
- * Particle array fields found on FrogEnemy variants and MageEnemy.
+ * Particle array fields found on the elemental frogs, FrogKing and MageEnemy (and on the
+ * standard FrogEnemy, which takes Mode C first - see register()).
  * If any of these exist as an Array on an entity → Mode B is used.
  * They are also temporarily cleared during Mode-A baking to avoid baking
  * world-space particle positions into the shared frame textures.
@@ -212,13 +218,47 @@ function _frameIndex(entity, frameCount) {
     return Math.floor(phase / (2 * Math.PI) * frameCount) % frameCount;
 }
 
-/** Redraw the health bar Graphics in the entry container's local space. */
-function _drawHealthBar(g, healthFraction, sizeHint) {
+/**
+ * Shared texture atlases for rigged enemies (Mode C). Key: the rig spec's own `key`
+ * (type + variant + size). Like _frameCache these live for the process lifetime - a handful
+ * of small atlases, one per skin colour.
+ * @type {Map<string, {textures: Object<string, Texture>, cells: Object}>}
+ */
+const _rigAtlasCache = new Map();
+
+/**
+ * Bake a rig spec's drawables into ONE atlas canvas and cut a Texture frame out of it for each,
+ * so every sprite of every enemy sharing the spec draws from a single texture (one batch).
+ */
+function _getOrBakeRigAtlas(spec) {
+    let atlas = _rigAtlasCache.get(spec.key);
+    if (atlas) return atlas;
+
+    const { canvas, cells } = bakeRigAtlas(spec);
+    const base = Texture.from(canvas);
+    base.source.scaleMode = 'linear';
+
+    const textures = {};
+    for (const [id, c] of Object.entries(cells)) {
+        textures[id] = new Texture({ source: base.source, frame: new Rectangle(c.x, c.y, c.w, c.h) });
+    }
+    atlas = { textures, cells };
+    _rigAtlasCache.set(spec.key, atlas);
+    return atlas;
+}
+
+/**
+ * Redraw the health bar Graphics in the entry container's local space. `layout`
+ * ({widthMul, heightMul, yOffsetMul}, all in sizeHint units) lets an enemy keep its own bar
+ * proportions - the same options it would pass to BaseEnemy.renderHealthBar; omitted, the
+ * shared defaults below apply.
+ */
+function _drawHealthBar(g, healthFraction, sizeHint, layout) {
     g.clear();
-    const bw = sizeHint * HB_W;
-    const bh = sizeHint * HB_H;
+    const bw = sizeHint * (layout ? layout.widthMul : HB_W);
+    const bh = layout ? Math.max(2, sizeHint * layout.heightMul) : sizeHint * HB_H;
     const bx = -bw * 0.5;
-    const by = sizeHint * HB_Y;
+    const by = sizeHint * (layout ? layout.yOffsetMul : HB_Y);
 
     g.rect(bx, by, bw, bh).fill(0x000000);
     const col = healthFraction > 0.5 ? 0x4CAF50
@@ -233,7 +273,18 @@ function _drawHealthBar(g, healthFraction, sizeHint) {
 /**
  * Phase 4 of the Canvas2D → Pixi migration: enemy (and loot bag) rendering.
  *
- * TWO RENDERING MODES, chosen automatically per entity type at register() time:
+ * THREE RENDERING MODES, chosen automatically per entity type at register() time:
+ *
+ * ─── MODE C ── Sprite rig  (entities that provide getRigSpec() - the standard FrogEnemy) ───
+ *   • The entity describes itself as a handful of parts (see RigCommon.js). Each is baked
+ *     once per variant into a single shared texture atlas, and every enemy is then just a few
+ *     Sprites whose transforms are written from entity.updateRigPose() each frame.
+ *   • Per-frame cost: ~15 sprite transform writes per enemy - no Graphics tessellation at all,
+ *     and no redraw throttle, so the animation runs at the full frame rate. (This replaced
+ *     Mode B for the frog, which was the single most expensive enemy: ~100 vector shapes
+ *     re-triangulated on the CPU every redraw.)
+ *   • Poses are per-frame values rather than a fixed frame loop, so each hop can be different.
+ *   • Sparkles are pooled sprites in an un-mirrored layer; the health bar is Mode A's.
  *
  * ─── MODE A ── Pre-baked sprite animation  (particle-free enemies: Basic/Knight/etc.) ───
  *   • BAKE_FRAMES animation frames baked to PIXI.Textures once per (type, variant) pair,
@@ -273,17 +324,23 @@ export class EnemyRenderAdapter {
                               ? entity.getRenderVariantKey() : '';
         const frameCacheKey = `${entity.constructor.name}:${variantKey}`;
 
+        // Mode C (sprite rig) for entities that describe themselves as rig parts.
+        const modeC = typeof entity.getRigSpec === 'function';
+
         // Mode A (baked sprites) only for entities that have discrete health and no
         // continuously-varying particles. LootBag / RealmShardDrop lack maxHealth and
         // animate continuously (bob, sparkle, glow) - force them to Mode B so they don't
         // get baked into a small frame loop and don't accidentally receive a health bar.
-        const modeA = !PARTICLE_FIELDS.some(f => Array.isArray(entity[f]))
+        const modeA = !modeC
+                      && !PARTICLE_FIELDS.some(f => Array.isArray(entity[f]))
                       && typeof entity.maxHealth === 'number';
 
         const entryContainer = new Container();
         let entry;
 
-        if (modeA) {
+        if (modeC) {
+            entry = this._registerRig(entity, sizeHint, entryContainer);
+        } else if (modeA) {
             const frames    = _getOrBakeFrames(entity, sizeHint, frameCacheKey);
             const bodySprite = new Sprite(frames[0]);
             bodySprite.anchor.set(0.5, 0.5);
@@ -352,14 +409,70 @@ export class EnemyRenderAdapter {
         entryContainer.zIndex = _zIndexFor(entity);
     }
 
+    /**
+     * Build a rig entry: one Sprite per rig item (Containers for groups), all drawn from the
+     * spec's shared atlas, plus the un-mirrored sparkle pool and the health bar.
+     */
+    _registerRig(entity, sizeHint, entryContainer) {
+        const spec = entity.getRigSpec(sizeHint);
+        const atlas = _getOrBakeRigAtlas(spec);
+
+        const groups = {};
+        const items = [];
+        for (const item of spec.items) {
+            let obj;
+            if (item.group) {
+                obj = new Container();
+                groups[item.id] = obj;
+            } else {
+                obj = new Sprite(atlas.textures[item.tex]);
+                const cell = atlas.cells[item.tex];
+                obj.anchor.set(cell.ax, cell.ay);
+            }
+            (item.parent ? groups[item.parent] : entryContainer).addChild(obj);
+            items.push({ id: item.id, obj, isGroup: !!item.group, baseTex: item.tex, tex: null });
+        }
+
+        // Sparkles live in their own layer that's counter-flipped in sync(), so they trail
+        // behind the enemy on the correct side whichever way it faces (the entry container
+        // itself is mirrored for facing).
+        const particleLayer = new Container();
+        const particles = [];
+        if (spec.particles) {
+            const cell = atlas.cells[spec.particles.tex];
+            for (let i = 0; i < spec.particles.count; i++) {
+                const sprite = new Sprite(atlas.textures[spec.particles.tex]);
+                sprite.anchor.set(cell.ax, cell.ay);
+                sprite.visible = false;
+                particleLayer.addChild(sprite);
+                particles.push(sprite);
+            }
+        }
+        entryContainer.addChild(particleLayer);
+
+        const healthBar = new Graphics();
+        entryContainer.addChild(healthBar);
+        _drawHealthBar(healthBar, 1.0, sizeHint, spec.healthBar);
+        this.container.addChild(entryContainer);
+
+        return {
+            modeA: false, rig: true,
+            entryContainer, healthBar, particleLayer,
+            atlas, items, particles,
+            invBakeScale: 1 / spec.bakeScale,
+            healthLayout: spec.healthBar,
+            lastHealthBucket: HB_BUCKETS,
+        };
+    }
+
     unregister(entity) {
         const entry = this._entries.get(entity);
         if (!entry) return;
         this.container.removeChild(entry.entryContainer);
-        // texture: false → baked textures in _frameCache are NOT destroyed here;
-        // they are shared across instances and persist for the process lifetime.
+        // texture: false → baked textures in _frameCache / _rigAtlasCache are NOT destroyed
+        // here; they are shared across instances and persist for the process lifetime.
         entry.entryContainer.destroy({ children: true, texture: false });
-        if (!entry.modeA) {
+        if (!entry.modeA && !entry.rig) {
             this._modeBCount--;
             entry.shim.destroyGradients();
             if (entry.healthBarShim) {
@@ -388,11 +501,63 @@ export class EnemyRenderAdapter {
         // container flip above - only the body/model should mirror, the health bar (and
         // its fill direction) must stay upright regardless of facing direction.
         if (entry.healthBar) entry.healthBar.scale.x = entity.facingLeft ? -1 : 1;
+        if (entry.particleLayer) entry.particleLayer.scale.x = entity.facingLeft ? -1 : 1;
 
-        if (entry.modeA) {
+        if (entry.rig) {
+            this._syncRig(entity, sizeHint, entry);
+        } else if (entry.modeA) {
             this._syncModeA(entity, sizeHint, entry);
         } else {
             this._syncModeB(entity, sizeHint, entry);
+        }
+    }
+
+    // ── Mode C ──────────────────────────────────────────────────────────────
+
+    _syncRig(entity, sizeHint, entry) {
+        // The entity computes this frame's pose (plain numbers)...
+        const nodes = entity.updateRigPose(sizeHint);
+        const inv = entry.invBakeScale;
+        const textures = entry.atlas.textures;
+
+        // ...and it's copied onto the sprites. Sprite scale folds in 1/bakeScale because the
+        // atlas is baked supersampled (see the spec's bakeScale) while node values are in
+        // logical px.
+        const items = entry.items;
+        for (let i = 0; i < items.length; i++) {
+            const it = items[i], n = nodes[it.id], o = it.obj;
+            o.visible = n.visible;
+            if (!n.visible) continue;
+            o.position.set(n.x, n.y);
+            o.rotation = n.rotation;
+            o.alpha = n.alpha;
+            if (it.isGroup) {
+                o.pivot.set(n.pivotX, n.pivotY);
+            } else {
+                o.scale.set(n.scaleX * inv, n.scaleY * inv);
+                if (n.tex !== it.tex) {
+                    it.tex = n.tex;
+                    o.texture = textures[n.tex || it.baseTex];
+                }
+            }
+        }
+
+        const pn = nodes.particles, ps = entry.particles;
+        for (let i = 0; i < ps.length; i++) {
+            const n = pn[i], o = ps[i];
+            o.visible = n.visible;
+            if (!n.visible) continue;
+            o.position.set(n.x, n.y);
+            o.scale.set(n.scaleX * inv, n.scaleY * inv);
+            o.alpha = n.alpha;
+            o.tint = n.tint;
+        }
+
+        // Health bar: redraw only when health changes by >= 1/HB_BUCKETS (same as Mode A).
+        const hb = Math.round(entity.health / entity.maxHealth * HB_BUCKETS);
+        if (hb !== entry.lastHealthBucket) {
+            entry.lastHealthBucket = hb;
+            _drawHealthBar(entry.healthBar, entity.health / entity.maxHealth, sizeHint, entry.healthLayout);
         }
     }
 

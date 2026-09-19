@@ -985,6 +985,9 @@ export class TowerManager {
                                 name: spell.name,
                                 icon: spell.icon,
                                 description: spell.description,
+                                // The two elements this spell is fused from (the gem keys its
+                                // upgrades cost - same source SuperWeaponLab's combo tooltips use)
+                                elements: Object.keys(spell.gems || {}),
                                 // Passed through so the UI can build a "current stats" hover
                                 // panel for each spell button (see UIManager.showCombinationTowerMenu)
                                 upgradeLevel: spell.upgradeLevel,

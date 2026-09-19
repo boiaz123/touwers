@@ -43,7 +43,15 @@ export class AudioManager {
         // can start playing *after* the track that replaced it, since loads can finish
         // out of order.
         this._playToken = 0;
-        
+
+        // > 0 while GameStateManager.changeState() is switching screens (see beginScreenSwitch).
+        // A track change requested inside that window belongs to the new screen, so playMusic()
+        // cuts over to it directly instead of running the fade-out/pause/fade-in transition
+        // that's reserved for tracks changing within a screen (playlist advance, next/prev,
+        // Arcane Library picks). A depth counter rather than a flag so nested changeState()
+        // calls (a state's enter() redirecting elsewhere) can't end the window early.
+        this._screenSwitchDepth = 0;
+
         // Volume settings (0.0 - 1.0) – loaded from localStorage if available
         const _savedMusic = parseFloat(localStorage.getItem('touwers_musicVolume'));
         const _savedSFX   = parseFloat(localStorage.getItem('touwers_sfxVolume'));
@@ -149,9 +157,27 @@ export class AudioManager {
     }
     
     /**
+     * Mark the start of a screen switch (GameStateManager.changeState). Until the matching
+     * endScreenSwitch(), playMusic() cuts straight to the requested track instead of fading
+     * the current one out first - the smooth transition is for music changing *within* a
+     * screen (in-level and settlement playlists), whereas a new screen should just start
+     * with its own music.
+     */
+    beginScreenSwitch() {
+        this._screenSwitchDepth++;
+    }
+
+    /** Close the window opened by beginScreenSwitch(). */
+    endScreenSwitch() {
+        this._screenSwitchDepth = Math.max(0, this._screenSwitchDepth - 1);
+    }
+
+    /**
      * Play a background music track. If another track is already playing, this
      * transitions smoothly: the outgoing track fades out, silence holds for a short
      * beat, then the new track starts - instead of hard-cutting or overlapping them.
+     * The one exception is a screen switch (see beginScreenSwitch): then the current
+     * track is cut and the new one starts right away.
      * @param {string} trackName - Name of the track to play
      * @param {boolean} fadeIn - Whether to fade in from silence (only applies when nothing is currently playing)
      * @param {boolean} preservePlaylistMode - Internal use: keep playlist mode/category active
@@ -192,7 +218,14 @@ export class AudioManager {
         this.isMusicPlaying = true;
         const token = ++this._playToken;
 
-        if (wasPlaying) {
+        if (wasPlaying && this._screenSwitchDepth > 0) {
+            // New screen, new music: drop whatever the old screen had going (including a
+            // fade/transition that may still be mid-flight) and start the new track directly.
+            this._cancelMusicTransition();
+            this.musicElement.pause();
+            this.musicElement.currentTime = 0;
+            this._startTrackOnElement(this.musicElement, trackData, trackName, fadeIn, token);
+        } else if (wasPlaying) {
             this._transitionToTrack(trackData, trackName, token);
         } else {
             this._startTrackOnElement(this.musicElement, trackData, trackName, fadeIn, token);
@@ -497,25 +530,19 @@ export class AudioManager {
     }
 
     /**
-     * Stop background music
-     * @param {boolean} fadeOut - Whether to fade out (optional)
+     * Cancel everything a track transition (or a fade) may still have in flight - the
+     * preloaded next track, both elements' playlist-advance listeners, the fade intervals and
+     * the pause-between-songs timeout - and silence the backup element, so whatever happens
+     * next (stopping, or a screen switch cutting straight to a new track) starts from a clean
+     * slate instead of a half-finished swap firing afterwards. Leaves the front element's own
+     * playback to the caller.
      */
-    stopMusic(fadeOut = false) {
-        if (!this.musicElement) return;
-
-        // Invalidate any track load still in flight so it can't start playing
-        // after we've just been told to stop.
-        this._playToken++;
-
-        // Stop playlist mode
-        this.musicPlaylistMode = false;
-        this.currentMusicCategory = null;
+    _cancelMusicTransition() {
         this._preloadedTrack = null;
 
         this._clearPlaylistAdvanceListener(this.musicElement);
         this._clearPlaylistAdvanceListener(this._musicElementB);
 
-        // In case a transition was mid-flight, silence and stop the backup element too
         if (this._fadeIntervalId) {
             clearInterval(this._fadeIntervalId);
             this._fadeIntervalId = null;
@@ -533,6 +560,25 @@ export class AudioManager {
             this._musicElementB.currentTime = 0;
             this._musicElementB.volume = 0;
         }
+    }
+
+    /**
+     * Stop background music
+     * @param {boolean} fadeOut - Whether to fade out (optional)
+     */
+    stopMusic(fadeOut = false) {
+        if (!this.musicElement) return;
+
+        // Invalidate any track load still in flight so it can't start playing
+        // after we've just been told to stop.
+        this._playToken++;
+
+        // Stop playlist mode
+        this.musicPlaylistMode = false;
+        this.currentMusicCategory = null;
+        this._preloadedTrack = null;
+
+        this._cancelMusicTransition();
 
         if (fadeOut) {
             this.fadeOutMusic(500, () => {

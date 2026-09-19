@@ -36,22 +36,10 @@
                 </div>
             </div>
 
-            <div id="stats">
-                <div class="stat">
-                    <div class="stat-label">Gold</div>
-                    <div class="gold-display">
-                        <div class="gold-coin"></div>
-                        <span id="gold">500</span>
-                    </div>
-                </div>
-                <div class="stat">
-                    <div class="stat-label">Wave</div>
-                    <span id="wave">1/10</span>
-                </div>
-                <div class="stat">
-                    <div class="stat-label">Level</div>
-                    <span id="level">1</span>
-                </div>
+            <!-- Gem stock: sits to the left of the Gold/Wave/Level plates, between the speed
+                 controls and them. It lives in its own flank, with an equal (empty) flank on the
+                 other side of #stats, so the plates stay put whether or not the gems are showing. -->
+            <div class="stats-flank stats-flank-left">
                 <div class="stat gems-container" style="display: none;">
                     <div class="stat-label">Gems</div>
                     <div class="gems-display">
@@ -83,6 +71,26 @@
                     </div>
                 </div>
             </div>
+
+            <div id="stats">
+                <div class="stat">
+                    <div class="stat-label">Gold</div>
+                    <div class="gold-display">
+                        <div class="gold-coin"></div>
+                        <span id="gold">500</span>
+                    </div>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Wave</div>
+                    <span id="wave">1/10</span>
+                </div>
+                <div class="stat">
+                    <div class="stat-label">Level</div>
+                    <span id="level">1</span>
+                </div>
+            </div>
+
+            <div class="stats-flank stats-flank-right"></div>
         </div>
 
         <!-- Game area with canvas and sidebar -->

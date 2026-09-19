@@ -44,6 +44,13 @@ export class GameStateManager {
             return false;
         }
         
+        // Music the outgoing/incoming state starts during this switch (exit()/enter()) belongs to
+        // a new screen, so the AudioManager cuts straight to it rather than fading the old
+        // screen's track out - see AudioManager.beginScreenSwitch().
+        const audio = this.audioManager;
+        if (audio && audio.beginScreenSwitch) audio.beginScreenSwitch();
+        let pendingEnter = null;
+
         try {
             // Store previous state name before exiting
             this.previousState = this.currentStateName;
@@ -60,14 +67,26 @@ export class GameStateManager {
             this.currentState = this.states[stateName];
             
             if (this.currentState.enter) {
-                this.currentState.enter();
+                pendingEnter = this.currentState.enter();
             }
-            
+
             return true;
         } catch (error) {
             console.error(`GameStateManager: Error changing to state '${stateName}':`, error);
             console.error('Stack trace:', error.stack);
             return false;
+        } finally {
+            if (audio && audio.endScreenSwitch) {
+                // An async enter() (GameplayState awaits its level's castle before it starts the
+                // level music) makes its music call after changeState() has already returned, so
+                // keep the switch open until that promise settles - otherwise the level's music
+                // would still fade in behind the previous screen's track.
+                if (pendingEnter && typeof pendingEnter.finally === 'function') {
+                    pendingEnter.finally(() => audio.endScreenSwitch());
+                } else {
+                    audio.endScreenSwitch();
+                }
+            }
         }
     }
     

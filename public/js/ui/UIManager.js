@@ -3147,6 +3147,12 @@ export class UIManager {
             const level = spell.upgradeLevel || 0;
             let spellTooltip = `<div style="font-weight: bold; margin-bottom: 0.3rem;">${spell.name} Spell</div>`;
             spellTooltip += `<div style="font-size: 0.75rem; color: #ddd; margin-bottom: 0.3rem;">${spell.description}</div>`;
+            // Which two elements are fused into this spell (gem icon + name each)
+            if (spell.elements && spell.elements.length) {
+                const elementLabels = spell.elements.map(el =>
+                    `${this.getElementGemHTML(el, '12px')}${el.charAt(0).toUpperCase() + el.slice(1)}`);
+                spellTooltip += `<div style="font-size: 0.75rem; margin-bottom: 0.3rem;"><span style="color: #aaa;">Elements:</span> ${elementLabels.join(' + ')}</div>`;
+            }
             spellTooltip += `<div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.3rem; font-size: 0.75rem;">`;
             spellTooltip += `<div>Upgrade Level: <span style="color: #FFD700;">${level}/${spell.maxUpgradeLevel || 7}</span></div>`;
             spellTooltip += level > 0 ? this.getComboSpellCurrentStats(spell.id, level) : '<div style="color: #aaa;">No upgrades invested yet</div>';

@@ -230,7 +230,21 @@ body {
     justify-content: center;
     position: relative;
     z-index: 1;
-    margin: 0 auto;
+    margin: 0;
+}
+
+/* The two flanks either side of #stats split the bar's free space evenly - exactly what
+   `margin: 0 auto` on #stats used to do - so the Gold/Wave/Level plates stay centred in the
+   space right of the speed controls. The left flank also hosts the gem stock (.gems-container),
+   centred between the speed controls and the Gold plate; the right flank stays empty and only
+   exists to balance it, so showing/hiding the gems (they appear with the Magic Academy) never
+   shifts the other plates. If the gems ever need more than an equal share they simply grow the
+   flank (min-width: auto) and #stats slides right, instead of anything overlapping. */
+.stats-flank {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Medieval shield-style stat containers */
@@ -381,6 +395,19 @@ body {
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
     margin-block: -0.4rem;
+}
+
+/* Where the bar isn't wrapping (see the small-screen rules below), the gem stock sits in its
+   own flank between the speed controls and the Gold plate. It gets the same gap to the Gold
+   plate that #stats puts between its own plates (the speed panel already has its own
+   margin-right on the other side), so at narrower widths it never ends up touching a
+   neighbour and the row's total width is exactly what it was when the gems sat at the far
+   end - the margin counts toward the flank's min-content, so the flank grows to fit rather
+   than overlapping. */
+@media (min-width: 641px) {
+    .gems-container {
+        margin-right: clamp(1.5rem, 4vw, 3rem);
+    }
 }
 
 .gems-display {
@@ -1538,15 +1565,38 @@ body.orientation-portrait .side-panel {
     width: min(92vw, 420px);
 }
 
+/* Phones and small tablets: too narrow for the speed controls, gem stock and the Gold/Wave/
+   Level plates to share one row, so the bar wraps (as the phone rules below already did for
+   the speed controls + plates). The equal-flank centering used on wider screens is dropped:
+   the gem stock just becomes a regular wrapping item of the bar, right after the speed
+   controls (i.e. still to the left of the plates), and the empty balancing flank goes away. */
+@media (max-width: 1023px) {
+    #stats-bar {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    #stats {
+        margin: 0 auto;
+    }
+
+    .stats-flank-left {
+        display: contents;
+    }
+
+    .stats-flank-right {
+        display: none;
+    }
+
+    .gems-container {
+        margin-right: 0;
+    }
+}
+
 /* Small screens */
 @media (max-width: 640px) {
     html {
         font-size: clamp(14px, 2vw, 16px);
-    }
-
-    #stats-bar {
-        flex-wrap: wrap;
-        gap: 0.75rem;
     }
 
     /* #stats/.stat below used rem/vw floors tuned for desktop widths (1.5rem

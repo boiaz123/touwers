@@ -175,49 +175,49 @@ export class DesertLevel10 extends LevelBase {
         { 
             enemyHealth_multiplier: 2, 
             speedMultiplier: 0.7, 
-            spawnInterval: 15, 
-            pattern: [{ type: 'earthfrog', count: 1 }, { type: 'waterfrog', count: 1 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }] 
+            spawnInterval: 50, 
+            pattern: [{ type: 'earthfrog', count: 1, healthMultiplier: 1 }, { type: 'waterfrog', count: 1 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }] 
         }
         // Wave 2
         , { 
             enemyHealth_multiplier: 3, 
             speedMultiplier: 0.7, 
-            spawnInterval: 13, 
-            pattern: [{ type: 'earthfrog', count: 1 }, { type: 'waterfrog', count: 1 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }] 
+            spawnInterval: 45, 
+            pattern: [{ type: 'waterfrog', count: 1 },{ type: 'earthfrog', count: 1, healthMultiplier: 1.2 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }] 
         }
         // Wave 3
         , { 
-            enemyHealth_multiplier: 5, 
+            enemyHealth_multiplier: 4, 
             speedMultiplier: 0.7, 
-            spawnInterval: 11, 
-            pattern: [{ type: 'earthfrog', count: 1 }, { type: 'waterfrog', count: 1 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }] 
+            spawnInterval: 35, 
+            pattern: [{ type: 'firefrog', count: 1 }, { type: 'earthfrog', count: 1, healthMultiplier: 1.2 }, { type: 'waterfrog', count: 1 }, { type: 'airfrog', count: 1 }] 
         }
         // Wave 4
         , { 
-            enemyHealth_multiplier: 7, 
+            enemyHealth_multiplier: 5, 
             speedMultiplier: 0.7, 
-            spawnInterval: 10, 
+            spawnInterval: 35, 
             pattern: [{ type: 'earthfrog', count: 1 }, { type: 'waterfrog', count: 1 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }] 
         }
         // Wave 5
         , { 
             enemyHealth_multiplier: 8, 
             speedMultiplier: 0.7, 
-            spawnInterval: 9, 
+            spawnInterval: 25, 
             pattern: [{ type: 'earthfrog', count: 1 }, { type: 'waterfrog', count: 1 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }] 
         }
         // Wave 6
         , { 
             enemyHealth_multiplier: 10, 
             speedMultiplier: 0.7, 
-            spawnInterval: 8, 
+            spawnInterval: 15, 
             pattern: [{ type: 'earthfrog', count: 1 }, { type: 'waterfrog', count: 1 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }] 
         }
         // Wave 7
         , { 
             enemyHealth_multiplier: 12, 
             speedMultiplier: 0.7, 
-            spawnInterval: 7, 
+            spawnInterval: 10, 
             pattern: [{ type: 'earthfrog', count: 1 }, { type: 'waterfrog', count: 1 }, { type: 'firefrog', count: 1 }, { type: 'airfrog', count: 1 }] 
         }
         // Wave 8

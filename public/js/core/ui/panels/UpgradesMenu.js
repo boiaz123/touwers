@@ -13,6 +13,11 @@ import { WorkshopSystem } from '../../systems/WorkshopSystem.js';
 // below - handleWheel() converts raw wheel pixels into this many px per line.
 const UPGRADE_DESC_LINE_HEIGHT = 14;
 
+// The one and only text an already-owned item shows in place of its price - every tab
+// (upgrades, consumables, intel, music) and the click-feedback float use this same string
+// instead of each tab's own wording ("Item already owned", "Unlocked", ...).
+const OWNED_LABEL = 'Already Owned';
+
 export class UpgradesMenu {
     constructor(stateManager, settlementHub) {
         this.stateManager = stateManager;
@@ -100,7 +105,8 @@ export class UpgradesMenu {
             
             let canPurchase = MarketplaceRegistry.canPurchase(itemId, upgradeSystem, marketplaceSystem);
             let requirementMsg = MarketplaceRegistry.getRequirementMessage(itemId, upgradeSystem, marketplaceSystem);
-            
+            let isOwned = false;
+
             // Check campaign requirement — hide the item entirely if not yet unlocked
             if (itemData.campaignRequirement && !unlockedCampaigns.includes(itemData.campaignRequirement)) {
                 continue;
@@ -116,28 +122,32 @@ export class UpgradesMenu {
             // Music items should only be purchased once
             if (itemData.category === 'music' && marketplaceSystem.getConsumableCount(itemId) > 0) {
                 canPurchase = false;
-                requirementMsg = 'Item already owned';
+                requirementMsg = OWNED_LABEL;
+                isOwned = true;
             }
-            
+
             // Special check: if it's an Intel item and player already has it, mark as unavailable
             // Intel items are one-time purchases like music
             if (itemData.category === 'intel' && marketplaceSystem.unlockedEnemyIntel && marketplaceSystem.unlockedEnemyIntel.has(itemId)) {
                 canPurchase = false;
-                requirementMsg = 'Unlocked';
+                requirementMsg = OWNED_LABEL;
+                isOwned = true;
             }
-            
+
             // Special check: Consumables (forge-materials, magic-tower-flatpack, training-materials, etc.)
             // are stackable but should be greyed out when player already owns one (until it's consumed at level end)
             if (itemData.type === 'consumable' && itemData.category !== 'music' && itemData.category !== 'intel' && marketplaceSystem.getConsumableCount(itemId) > 0) {
                 canPurchase = false;
-                requirementMsg = 'Item already owned';
+                requirementMsg = OWNED_LABEL;
+                isOwned = true;
             }
-            
+
             // Special check: if it's the Frog King's Bane (boon type), prevent re-purchase
             // Boons are one-time purchases like music and intel
             if (itemId === 'frog-king-bane' && marketplaceSystem.getConsumableCount('frog-king-bane') > 0) {
                 canPurchase = false;
-                requirementMsg = 'Item already owned';
+                requirementMsg = OWNED_LABEL;
+                isOwned = true;
             }
             
             // Combine loot and boon into consumable category
@@ -160,10 +170,11 @@ export class UpgradesMenu {
                 effect: itemData.effect,
                 hovered: false,
                 canPurchase: canPurchase,
+                isOwned: isOwned,
                 requirementMsg: requirementMsg
             });
         }
-        
+
         // Add upgrades as items with 'upgrade' category
         const upgradeData = [
             {
@@ -801,10 +812,9 @@ export class UpgradesMenu {
                 continue;
             }
 
-            // If already purchased, set requirement message to "Already Owned" (matches
-            // the wording consumables/music/intel already use for the same state)
+            // If already purchased, use the same "Already Owned" wording as every other tab
             if (isPurchased) {
-                requirementMsg = 'Already Owned';
+                requirementMsg = OWNED_LABEL;
             }
 
             items.push({
@@ -818,6 +828,7 @@ export class UpgradesMenu {
                 effect: upgrade.effect,
                 hovered: false,
                 isPurchased: isPurchased,
+                isOwned: isPurchased,
                 canPurchase: canPurchase,
                 requirementMsg: requirementMsg
             });
@@ -2560,6 +2571,9 @@ export class UpgradesMenu {
             ctx.fillStyle = priceColor;
             ctx.textAlign = 'right';
             ctx.fillText(priceText, groupRight, buttonCenterY);
+        } else if (item.isOwned) {
+            // Already owned: the button carries just the ownership label - no coin, no price
+            this.renderOwnedLabel(ctx, buttonX + buttonWidth / 2, buttonCenterY);
         } else {
             // Buy button: coin icon + price centered
             ctx.font = 'bold 19px Arial';
@@ -2573,6 +2587,15 @@ export class UpgradesMenu {
             ctx.textAlign = 'left';
             ctx.fillText(displayPrice.toString(), priceTextX, buttonCenterY);
         }
+    }
+
+    /** The label an owned item's button shows in place of its price (see OWNED_LABEL). */
+    renderOwnedLabel(ctx, centerX, centerY) {
+        ctx.font = 'bold 17px Arial';
+        ctx.fillStyle = '#8a8a8a';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(OWNED_LABEL, centerX, centerY);
     }
 
     renderCoinIconInline(ctx, x, y, radius, color) {
@@ -2755,21 +2778,12 @@ export class UpgradesMenu {
             ctx.restore();
         }
         
-        // Disabled overlay and message
+        // Disabled overlay (the reason - "Already Owned" - is the button's own label below)
         if (isDisabled) {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
             ctx.fillRect(x, y, width, height);
-            
-            ctx.font = '8px Arial';
-            ctx.fillStyle = '#ffaa00';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            const displayMsg = item.requirementMsg || 'Not Available';
-            const msgLines = this.wrapNameToLines(ctx, displayMsg, width - 10, 2);
-            const msgBaseY = y + height - 18 - (msgLines.length - 1) * 9;
-            msgLines.forEach((line, i) => ctx.fillText(line, x + width / 2, msgBaseY + i * 9));
         }
-        
+
         // Action button
         const buttonWidth = width - 14;
         const buttonHeight = 36;
@@ -2788,14 +2802,21 @@ export class UpgradesMenu {
         ctx.lineWidth = isDisabled ? 1 : (item.hovered ? 2 : 1);
         ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
         
+        const buttonCenterY = buttonY + buttonHeight / 2;
+
+        // Already owned: the button carries just the ownership label - no coin, no price
+        if (item.isOwned) {
+            this.renderOwnedLabel(ctx, buttonX + buttonWidth / 2, buttonCenterY);
+            return;
+        }
+
         // Render coin icon and price
         ctx.font = 'bold 19px Arial';
         ctx.fillStyle = isDisabled ? '#8a8a8a' : (item.hovered ? '#ffd700' : '#d4af37');
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
-        
+
         // Draw coin icon and price text
-        const buttonCenterY = buttonY + buttonHeight / 2;
         const coinRadius = 8;
         const coinX = buttonX + buttonWidth / 2 - 17;
         const priceTextX = buttonX + buttonWidth / 2 + 2;

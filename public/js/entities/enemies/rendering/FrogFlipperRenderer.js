@@ -1,7 +1,8 @@
 /**
- * Shared toe-pad foot shape for all frog-family enemies (base FrogEnemy,
- * ElementalFrogEnemy and its four elements, and FrogKingEnemy all import this one
- * function, so a fix here applies everywhere instead of drifting out of sync).
+ * Shared toe-pad foot shape for the live-drawn frog-family enemies (ElementalFrogEnemy and its
+ * four elements, and FrogKingEnemy all import this one function, so a fix here applies
+ * everywhere instead of drifting out of sync). The standard FrogEnemy no longer does: it's a
+ * sprite rig with its own webbed feet (see rendering/FrogRig.js).
  *
  * Matches the classic frog-foot silhouette: a rounded palm with a handful of
  * distinct toes fanning out from it, each toe a thin neck ending in a bulbous round
